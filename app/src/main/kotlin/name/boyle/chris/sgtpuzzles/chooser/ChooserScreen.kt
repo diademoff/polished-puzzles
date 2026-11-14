@@ -51,6 +51,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.SpanStyle
@@ -137,20 +138,23 @@ fun ChooserScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
-                    IconButton(onClick = onLoad) {
+                    IconButton(onClick = onLoad, modifier = Modifier.size(48.dp)) {
                         Icon(
                             painterResource(R.drawable.ic_action_load),
                             contentDescription = stringResource(R.string.Load_),
                         )
                     }
-                    IconButton(onClick = onSettings) {
+                    IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
                         Icon(
                             painterResource(R.drawable.ic_action_settings),
                             contentDescription = stringResource(R.string.Settings),
                         )
                     }
                     Box {
-                        IconButton(onClick = { helpMenuOpen = true }) {
+                        IconButton(
+                            onClick = { helpMenuOpen = true },
+                            modifier = Modifier.size(48.dp),
+                        ) {
                             Icon(
                                 painterResource(R.drawable.ic_action_help),
                                 contentDescription = stringResource(R.string.Help),
@@ -269,6 +273,7 @@ private fun SectionHeader(@StringRes title: Int) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier
             .fillMaxWidth()
+            .semantics { heading() }
             .testTag("section-$title")
             .padding(top = 16.dp, bottom = 4.dp),
     )
