@@ -201,6 +201,13 @@ For a change that affects UI, rendering, startup, or generation:
   available device, and the Phase 1 comparison is made against it. Until
   then, Phase 1 cannot close.
 - **Phase 2** — the renderer is not worse than the baseline on frames.
+  The Compose renderer was measured on the emulator, release build,
+  fifteen 4x4 with ten taps. P50 matches the old bitmap renderer
+  (27–29 ms vs 29 ms); P90 and P99 are worse (40–48 ms vs 32 ms, and
+  48–65 ms vs 38 ms). The AVD uses `swiftshader_indirect`, and the
+  measurement is one short run, so this is a warning, not an absolute
+  verdict. The absolute check needs a physical device; it is D-09 in
+  `ROADMAP.md`.
 - **Phase 3** — the KMP core is not slower than C on the parity corpus.
 - **Phase 4** — every game passes the frame and time budgets.
 - **Phase 5** — final budgets, Macrobenchmark, Baseline Profiles.

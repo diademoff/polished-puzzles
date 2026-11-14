@@ -102,9 +102,12 @@ ported only when both implementations pass the parity matrix.
 ### ViewCallbacks
 
 C draws with primitives: lines, polygons, circles, text, blitter, and
-clip. `GameView` turns them into a Bitmap/Canvas. The target renderer
-is a Compose Canvas that accepts the same stream. Geometry is checked
-against the oracle, and the theme is applied on top.
+clip. `BoardRecorder` implements `ViewCallbacks` and turns them into a
+`BoardFrame` display list. `BoardCanvas` draws that list on a Compose
+Canvas. `GameView` keeps input, zoom, and the view transform; it no
+longer draws the board in production. The design is in
+`docs/adr/0004-compose-display-list-renderer.md`. Geometry is checked
+against the oracle; the theme does not change the board.
 
 ### SAVEFILE
 
@@ -128,7 +131,8 @@ GameChooser
   -> midend_new / midend_game_id / midend_new_game
   -> GameView receives ViewCallbacks
   -> user input -> GameEngine.keyEvent -> midend_process_key
-  -> draw -> android_draw_* -> ViewCallbacks -> canvas
+  -> draw -> android_draw_* -> ViewCallbacks -> BoardRecorder
+  -> BoardCanvas -> Compose Canvas
 ```
 
 ## 6. Save flow

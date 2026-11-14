@@ -148,7 +148,7 @@ C wins.
 |---|---|---|
 | `midend` | C | C |
 | `grid`, `loopgen`, `latin` | C | C |
-| `renderer` | new: trace contract and oracle recorder | C traces |
+| `renderer` | new: Compose display-list renderer; C geometry | C traces |
 | games (see the table below) | not started | C |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;

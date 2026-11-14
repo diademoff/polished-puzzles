@@ -181,11 +181,18 @@ Shell tests:
 - `ChooserScreenshotsTest` runs the chooser under fastlane only: it
   skips itself when the `device_type` argument is absent. It is a
   screenshot producer for the store, not a behavior gate.
+- `BoardRecorderTest` is a JVM test over all 288 oracle traces. It feeds
+  each trace through `BoardRecorder`, the same `ViewCallbacks` seam that
+  the C engine uses, and compares the resulting `DrawOp` list. It
+  proves that the renderer model represents every primitive of every
+  game and preset without a device. The Compose half is checked by the
+  instrumentation suite and visually on fifteen, galaxies, and map.
 
 Device run on the API 36 emulator, 2026-11-14:
 
 - 56 tests, 53 passed, 3 skipped (the fastlane screenshot tests skip
-  themselves without the fastlane argument), 0 failed.
+  themselves without the fastlane argument), 0 failed. The Compose
+  renderer is active in all game tests.
 - `GamePlayParameterizedTest[Palisade 2x3n3:d33]` was stale, not a
   shell regression. It sent `L`, which only toggles an edge in the
   legacy half-grid cursor mode; Palisade defaults to the full-grid

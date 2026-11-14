@@ -76,6 +76,13 @@ Exit criteria:
   ≤ 10%;
 - blitter and clip behave the same.
 
+Status: the trace contract, the oracle recorder, the normalizer, the
+Compose display-list renderer, and strict traces for all 288 presets are
+in place. The theme does not change the board. Blitter and clip are
+implemented and checked visually on Galaxies and Map. The frame budget
+is measured on the emulator only: P50 matches the old renderer, P90/P99
+are worse on the software GPU. The absolute verdict is D-09.
+
 ## Phase 3 — Infrastructure
 
 Port infrastructure, not games.
@@ -184,3 +191,4 @@ the work is started.
 | D-04 | Testing | Screenshot goldens are local and git-ignored by decision, so CI cannot gate pixels and a fresh checkout skips the comparison. | The owner asked not to commit binary screenshots. | Either the goldens are committed, or a host renderer (for example Paparazzi or Roborazzi) is adopted by an ADR. |
 | D-06 | CI | No workflow has ever run on GitHub. `jvm`, `android`, `upstream-diff`, `oracle-current`, and `fuzz` exist and were exercised locally only. | The repository owner must push and start the first run. | Five green runs on GitHub, with branch protection requiring them. |
 | D-07 | CI | No emulator job. Instrumentation and the accessibility checks run on the local `puzzles_api36` AVD only. | An emulator workflow is unverified until it runs on GitHub. | The Android job starts an AVD and runs `connectedDebugAndroidTest` green on GitHub. |
+| D-09 | Performance | The Compose renderer's frame budget is measured on the emulator only. P50 matches the old bitmap renderer; P90/P99 are worse on `swiftshader_indirect`. | The absolute budget needs a physical device, and the renderer may need a retained-surface optimization once hardware evidence exists. | A physical device meets the frame budget and the P90 regression is at most 10%, or the renderer is optimized to that level on the reference AVD. |

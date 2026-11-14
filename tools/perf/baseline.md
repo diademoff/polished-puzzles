@@ -144,3 +144,20 @@ Notes:
 Not recorded. The numbers must come from the tier A, tier B, and tablet
 devices in section 1. Until then, the Phase 0 exit criterion "the
 baseline is recorded" stays open.
+
+### Compose renderer (relative only)
+
+Scene: fifteen 4x4, release build signed with the debug key, ten taps
+on the board, `adb shell dumpsys gfxinfo ... reset` before the taps.
+The old row is commit `ec188da2` (Bitmap/Canvas renderer); the new row
+is the Compose display-list renderer from ADR 0004. One run each, on the
+same AVD; this is a warning, not an absolute result.
+
+| Renderer | Frames | Janky | P50 | P90 | P99 |
+|---|---:|---:|---:|---:|---:|
+| Bitmap/Canvas (`ec188da2`) | 22 | 40.9% | 29 ms | 32 ms | 38 ms |
+| Compose display list | 36 | 36.1% | 27 ms | 48 ms | 65 ms |
+
+The emulator uses a software GPU. Both renderers exceed the 16.7 ms
+budget on this AVD, so the absolute budget and the ten-run method in
+`PERFORMANCE.md` still need a physical device.
