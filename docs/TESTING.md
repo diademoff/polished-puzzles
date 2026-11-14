@@ -151,25 +151,33 @@ Shell tests:
 - `ChooserScreenTest` runs the chooser screen on a device or emulator
   without the activity: click, long press, the starred section order,
   and compact mode.
-- `ChooserScreenshotsTest` runs the chooser through a Compose rule, but
-  only under fastlane: it skips itself when the `device_type`
-  instrumentation argument is absent. It is a screenshot producer, not a
-  behavior gate.
-- Pixel screenshot comparison is open. The fastlane screenshots are
-  store artifacts, not a regression gate. A comparison needs a
-  deterministic device or a host renderer, so the phase exit criterion
-  "screenshot tests are green" is still debt.
+- `ChooserAccessibilityTest` checks the rules from `DESIGN.md` section
+  11 that a test can check: every clickable node has a spoken label,
+  every target is at least 48dp, the star toggle is exposed as a long
+  click action, and the section labels are headings.
+- `ChooserScreenshotTest` is the pixel comparison gate: light list,
+  dark list, light grid, on the reference AVD. The status bar is
+  excluded, toasts are waited out, and a frame that is still settling
+  is retried. The goldens are recorded locally in
+  `app/src/androidTest/assets/screens/`, which is git-ignored, so a
+  fresh checkout skips these tests. Record them on the reference AVD
+  with the procedure in the test class; another density, renderer, or
+  font changes every pixel.
+- `ChooserScreenshotsTest` runs the chooser under fastlane only: it
+  skips itself when the `device_type` argument is absent. It is a
+  screenshot producer for the store, not a behavior gate.
 
 Device run on the API 36 emulator, 2026-11-14:
 
-- 49 tests, 45 passed, 3 skipped (the fastlane screenshot tests skip
+- 56 tests, 52 passed, 3 skipped (the fastlane screenshot tests skip
   themselves without the fastlane argument), 1 failed.
 - The failure is `GamePlayParameterizedTest[Palisade 2x3n3:d33]`: the
   key sequence does not complete the puzzle on this emulator. The same
   failure exists at commit `1cd9f4cb`, before the Compose shell, so it
   is not a shell regression. Keep the case visible; do not delete it to
   make the suite green.
-- The four chooser screen tests pass.
+- The four screen tests, the four accessibility tests, and the three
+  screenshot comparisons pass.
 
 ## 9. CI
 
