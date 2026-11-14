@@ -254,6 +254,11 @@ Engine tests:
   `fifteen` file in the corpus into the Kotlin midend, rewrites it byte
   for byte, and makes the oracle load both versions. It also makes the
   oracle load a Kotlin-written new game.
+- `FifteenInputFuzzTest` is semantic and deterministic. It sends 120
+  random steps per case to C and to Kotlin at the same viewport: clicks,
+  drags, releases, cursor keys, the hint key, undo, redo, solve, and
+  points in the letterbox margin. The seed is frozen, and a failure
+  names the case, step, key, and point.
 - `FifteenInputParityTest` is semantic. It asks the oracle to choose a
   board size for phone, tablet, landscape, and tiny viewports, then
   compares the Kotlin layout and the C/Kotlin state after clicking the
