@@ -198,7 +198,8 @@ class GamePlayScreenshotsTest {
             scenario.onActivity { a: GamePlay ->
                 val gameEngine = a.gameEngine
                 gameEngine.setCursorVisibility(false)
-                a.gameViewResized() // redraw
+                a.getGameView().drawToBitmap = true
+                a.gameViewResized() // redraw into the bitmap for the icon crop
                 if (backend in setOf(FIFTEEN, FLIP, NETSLIDE, SIXTEEN, TWIDDLE)) {
                     gameEngine.freezePartialRedo()
                 }

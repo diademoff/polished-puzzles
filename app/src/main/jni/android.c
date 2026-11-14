@@ -85,6 +85,8 @@ static jmethodID
 	purgingStates,
 	allowFlash,
 	clipRect,
+	startDraw,
+	endDraw,
 	setTitle,
 	addString,
 	addBoolean,
@@ -146,8 +148,10 @@ void android_status_bar(drawing *dr, const char *text)
 	(*fe->env)->DeleteLocalRef(fe->env, js);
 }
 
-void android_start_draw(__attribute__((unused)) drawing *dr)
+void android_start_draw(drawing *dr)
 {
+	HANDLE_TO_FE_OR_RETURN
+	(*fe->env)->CallVoidMethod(fe->env, fe->viewCallbacks, startDraw);
 }
 
 void android_clip(drawing *dr, int x, int y, int w, int h)
@@ -262,6 +266,7 @@ void android_blitter_load(drawing *dr, blitter *bl, int x, int y)
 void android_end_draw(drawing *dr)
 {
 	HANDLE_TO_FE_OR_RETURN
+	(*fe->env)->CallVoidMethod(fe->env, fe->viewCallbacks, endDraw);
 	(*fe->env)->CallVoidMethod(fe->env, fe->viewCallbacks, postInvalidate);
 }
 
@@ -1065,6 +1070,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, __attribute__((unused)) void *res
 	blitterLoad    = (*env)->GetMethodID(env, ViewCallbacks, "blitterLoad", "(III)V");
 	blitterSave    = (*env)->GetMethodID(env, ViewCallbacks, "blitterSave", "(III)V");
 	clipRect       = (*env)->GetMethodID(env, ViewCallbacks, "clipRect", "(IIII)V");
+	startDraw      = (*env)->GetMethodID(env, ViewCallbacks, "startDraw", "()V");
+	endDraw        = (*env)->GetMethodID(env, ViewCallbacks, "endDraw", "()V");
 	drawCircle     = (*env)->GetMethodID(env, ViewCallbacks, "drawCircle", "(FFFFII)V");
 	drawLine       = (*env)->GetMethodID(env, ViewCallbacks, "drawLine", "(FFFFFI)V");
 	drawPoly       = (*env)->GetMethodID(env, ViewCallbacks, "drawPoly", "(F[IIIII)V");

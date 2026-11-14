@@ -24,6 +24,12 @@ interface GameEngine {
 
     @UsedByJNI
     interface ViewCallbacks {
+        /** Called by the engine at the start of one drawing pass. */
+        fun startDraw()
+
+        /** Called by the engine at the end of one drawing pass. */
+        fun endDraw()
+
         fun blitterAlloc(w: Int, h: Int): Int
         fun blitterFree(i: Int)
         fun blitterLoad(i: Int, x: Int, y: Int)

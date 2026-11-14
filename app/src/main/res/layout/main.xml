@@ -44,16 +44,31 @@
             android:importantForAccessibility="no"
             android:text="" />
 
-        <name.boyle.chris.sgtpuzzles.GameView
-            android:id="@+id/game_view"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <FrameLayout
+            android:id="@+id/game_area"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:layout_above="@+id/status_bar"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
             android:background="@color/game_background">
-            <requestFocus/>
-        </name.boyle.chris.sgtpuzzles.GameView>
+
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/game_canvas"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clickable="false"
+                android:focusable="false"
+                android:importantForAccessibility="no" />
+
+            <name.boyle.chris.sgtpuzzles.GameView
+                android:id="@+id/game_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:background="@android:color/transparent">
+                <requestFocus/>
+            </name.boyle.chris.sgtpuzzles.GameView>
+        </FrameLayout>
 
     </RelativeLayout>
 

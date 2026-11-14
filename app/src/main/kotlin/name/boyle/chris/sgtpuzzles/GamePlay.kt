@@ -62,6 +62,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_AUTO
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_OFF
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_ON
@@ -152,6 +154,8 @@ import java.util.concurrent.Future
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.roundToInt
+import name.boyle.chris.sgtpuzzles.render.BoardCanvas
+import name.boyle.chris.sgtpuzzles.ui.SgTPuzzlesTheme
 
 class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, GameGenerator.Callback,
     ConfigBuilder.ActivityCallbacks, GameEngine.ActivityCallbacks {
@@ -357,6 +361,16 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         mainLayout = _binding.mainLayout
         statusBar = _binding.statusBar
         gameView = _binding.gameView
+        _binding.gameCanvas?.setContent {
+            SgTPuzzlesTheme {
+                BoardCanvas(
+                    frame = gameView.renderFrame.value,
+                    colours = gameView.renderColours.value,
+                    matrix = gameView.renderMatrix.value,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
         ViewCompat.setOnApplyWindowInsetsListener(gameView) { v, windowInsets ->
             gameViewResized()
             WindowInsetsCompat.CONSUMED

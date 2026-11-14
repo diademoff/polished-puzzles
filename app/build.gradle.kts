@@ -102,6 +102,14 @@ androidComponents {
     }
 }
 
+// The renderer round-trip test reads the committed oracle traces.
+tasks.withType<Test>().configureEach {
+    systemProperty(
+        "testdata",
+        rootProject.layout.projectDirectory.dir("testdata").asFile.absolutePath,
+    )
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:2.2.0")

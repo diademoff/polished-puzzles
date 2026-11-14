@@ -3,7 +3,6 @@ package name.boyle.chris.sgtpuzzles
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
@@ -13,9 +12,7 @@ import android.graphics.Point
 import android.graphics.PointF
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.Shader
 import android.graphics.Typeface
-import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.os.Build.VERSION_CODES
 import android.util.AttributeSet
@@ -60,6 +57,8 @@ import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
 import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.view.MotionEventCompat
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_AUTO
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_OFF
@@ -67,6 +66,8 @@ import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_ON
 import name.boyle.chris.sgtpuzzles.backend.BackendName
 import name.boyle.chris.sgtpuzzles.backend.GameEngine.ViewCallbacks
 import name.boyle.chris.sgtpuzzles.backend.UsedByJNI
+import name.boyle.chris.sgtpuzzles.render.BoardFrame
+import name.boyle.chris.sgtpuzzles.render.BoardRecorder
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -84,8 +85,20 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         strokeCap = Paint.Cap.SQUARE
         strokeWidth = 1f // will be scaled with everything else as long as it's non-zero
     }
-    private val checkerboardPaint = Paint()
     private val blitters: Array<Bitmap?> = arrayOfNulls(512)
+
+    private val boardRecorder = BoardRecorder()
+    private val _renderFrame = mutableStateOf<BoardFrame?>(null)
+    private val _renderColours = mutableStateOf(IntArray(0))
+    private val _renderMatrix = mutableStateOf(FloatArray(16))
+
+    val renderFrame: MutableState<BoardFrame?> get() = _renderFrame
+    val renderColours: MutableState<IntArray> get() = _renderColours
+    val renderMatrix: MutableState<FloatArray> get() = _renderMatrix
+
+    init {
+        boardRecorder.onFrame = { _renderFrame.value = it }
+    }
 
     @ColorInt
     private var colours = IntArray(0)
@@ -106,6 +119,8 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
     var hasRightMouse = false
     var alwaysLongPress = false
     var mouseBackSupport = true
+    /** Draw into the bitmap as well. Off in production; the Compose Canvas is visible. */
+    var drawToBitmap = false
 
     private enum class TouchState {
         IDLE, WAITING_LONG_PRESS, DRAGGING, PINCH
@@ -250,6 +265,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         }
         canvas.setMatrix(zoomMatrix)
         invertZoomMatrix() // now with our changes
+        publishTransform()
     }
 
     private fun hitEdge(edge: Int, delta: Float, displacement: Float) {
@@ -316,6 +332,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         resetZoomMatrix()
         canvas.setMatrix(zoomMatrix)
         invertZoomMatrix()
+        publishTransform()
     }
 
     private fun resetZoomMatrix() {
@@ -337,12 +354,34 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         }
     }
 
+    private fun publishTransform() {
+        val m = Matrix()
+        m.preTranslate(-overdrawX.toFloat(), -overdrawY.toFloat())
+        m.preConcat(zoomInProgressMatrix)
+        m.preConcat(zoomMatrix)
+        val a = FloatArray(9)
+        m.getValues(a)
+        // Compose matrices are 4x4, column-major. Android Matrix is a
+        // row-major 3x3 affine transform.
+        val c = FloatArray(16)
+        c[0] = a[0]
+        c[1] = a[3]
+        c[4] = a[1]
+        c[5] = a[4]
+        c[10] = 1f
+        c[12] = a[2]
+        c[13] = a[5]
+        c[15] = 1f
+        _renderMatrix.value = c
+    }
+
     private fun redrawForInitOrZoomChange() {
         zoomMatrixUpdated(false) // constrains zoomInProgressMatrix
         zoomMatrix.postConcat(zoomInProgressMatrix)
         zoomInProgressMatrix.reset()
         canvas.setMatrix(zoomMatrix)
         invertZoomMatrix()
+        publishTransform()
         if (!isInEditMode) {
             clear()
             parent.gameViewResized() // not just forceRedraw() - need to reallocate blitters
@@ -676,36 +715,8 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
             super.dispatchKeyEvent(event)
 
     override fun onDraw(c: Canvas) {
-        tempDrawMatrix.reset()
-        tempDrawMatrix.preTranslate(-overdrawX.toFloat(), -overdrawY.toFloat())
-        tempDrawMatrix.preConcat(zoomInProgressMatrix)
-        c.withMatrix(tempDrawMatrix) {
-            val f = floatArrayOf(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
-            tempDrawMatrix.mapPoints(f)
-            if (f[0] > 0 || f[1] < w || f[2] < 0 || f[3] > h) {
-                c.drawPaint(checkerboardPaint)
-            }
-            c.drawBitmap(bitmap, 0f, 0f, null)
-        }
-        var keepAnimating = false
-        for (i in 0..3) {
-            if (!edges[i].isFinished) {
-                keepAnimating = true
-                c.withRotation((i * 90).toFloat()) {
-                    when (i) {
-                        1 -> c.translate(0f, -w.toFloat())
-                        2 -> c.translate(-w.toFloat(), -h.toFloat())
-                        3 -> c.translate(-h.toFloat(), 0f)
-                    }
-                    val flip = i % 2 > 0
-                    edges[i].setSize(if (flip) h else w, if (flip) w else h)
-                    edges[i].draw(c)
-                }
-            }
-        }
-        if (keepAnimating) {
-            postInvalidateOnAnimation()
-        }
+        // The board is drawn by the Compose Canvas. This view stays
+        // transparent and only handles input, zoom, and geometry.
     }
 
     override fun onSizeChanged(viewW: Int, viewH: Int, oldW: Int, oldH: Int) {
@@ -755,6 +766,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         canvasRestoreJustAfterCreation = canvas.save()
         resetZoomForClear()
         redrawForInitOrZoomChange()
+        publishTransform()
     }
 
     private val maxTextureSize: Point
@@ -772,17 +784,13 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         }
 
     fun clear() {
-        bitmap.eraseColor(backgroundColour)
+        if (drawToBitmap) {
+            bitmap.eraseColor(backgroundColour)
+        }
+        boardRecorder.reset()
     }
 
     fun refreshColours(whichBackend: BackendName, newColours: FloatArray) {
-        val checkerboardDrawable = checkNotNull(ContextCompat.getDrawable(
-            context,
-            if (night) R.drawable.checkerboard_night else R.drawable.checkerboard
-        )) { "Missing R.drawable.checkerboard" }
-        val checkerboard = (checkerboardDrawable as BitmapDrawable).bitmap
-        checkerboardPaint.shader =
-            BitmapShader(checkerboard, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
         colours = IntArray(newColours.size / 3)
         for (i in 0 until newColours.size / 3) {
             val colour = Color.rgb(
@@ -807,10 +815,11 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
             }
         }
         if (colours.isNotEmpty()) {
-            setBackgroundColor(colours[0])
+            backgroundColour = colours[0]
         } else {
-            setBackgroundColor(defaultBackgroundColour)
+            backgroundColour = defaultBackgroundColour
         }
+        _renderColours.value = colours.copyOf()
     }
 
     override fun setBackgroundColor(@ColorInt colour: Int) {
@@ -827,15 +836,44 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         get() = ContextCompat.getColor(context, R.color.fake_game_background_to_derive_colours_from)
 
     @UsedByJNI
+    override fun startDraw() {
+        boardRecorder.startDraw()
+    }
+
+    private var compacting = false
+
+    @UsedByJNI
+    override fun endDraw() {
+        boardRecorder.endDraw()
+        if (boardRecorder.shouldCompact && !compacting) {
+            compacting = true
+            post {
+                boardRecorder.reset()
+                parent.gameViewResized()
+                compacting = false
+            }
+        }
+    }
+
+    @UsedByJNI
     override fun clipRect(x: Int, y: Int, w: Int, h: Int) {
+        if (!drawToBitmap) {
+            boardRecorder.clipRect(x, y, w, h)
+            return
+        }
         canvas.restoreToCount(canvasRestoreJustAfterCreation)
         canvasRestoreJustAfterCreation = canvas.save()
         canvas.setMatrix(zoomMatrix)
         canvas.clipRect(RectF(x - 0.5f, y - 0.5f, x + w - 0.5f, y + h - 0.5f))
+        boardRecorder.clipRect(x, y, w, h)
     }
 
     @UsedByJNI
     override fun unClip(left: Int, top: Int, right: Int, bottom: Int) {
+        if (!drawToBitmap) {
+            boardRecorder.unClip(left, top, right, bottom)
+            return
+        }
         canvas.restoreToCount(canvasRestoreJustAfterCreation)
         canvasRestoreJustAfterCreation = canvas.save()
         canvas.setMatrix(zoomMatrix)
@@ -845,10 +883,15 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
             right - 1.5f,
             bottom - 1.5f
         )
+        boardRecorder.unClip(left, top, right, bottom)
     }
 
     @UsedByJNI
     override fun fillRect(x: Int, y: Int, w: Int, h: Int, colour: Int) {
+        if (!drawToBitmap) {
+            boardRecorder.fillRect(x, y, w, h, colour)
+            return
+        }
         paint.color = colours[colour]
         paint.style = Paint.Style.FILL
         paint.isAntiAlias = false // required for regions in Map to look continuous (and by API)
@@ -866,6 +909,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
             canvas.drawRect(x - 0.5f, y - 0.5f, x + w - 0.5f, y + h - 0.5f, paint)
         }
         paint.isAntiAlias = true
+        boardRecorder.fillRect(x, y, w, h, colour)
     }
 
     @UsedByJNI
@@ -877,10 +921,15 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         y2: Float,
         colour: Int
     ) {
+        if (!drawToBitmap) {
+            boardRecorder.drawLine(thickness, x1, y1, x2, y2, colour)
+            return
+        }
         paint.color = colours[colour]
         paint.strokeWidth = thickness.coerceAtLeast(1f)
         canvas.drawLine(x1, y1, x2, y2, paint)
         paint.strokeWidth = 1f
+        boardRecorder.drawLine(thickness, x1, y1, x2, y2, colour)
     }
 
     @UsedByJNI
@@ -892,6 +941,10 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         line: Int,
         fill: Int
     ) {
+        if (!drawToBitmap) {
+            boardRecorder.drawPoly(thickness, points, ox, oy, line, fill)
+            return
+        }
         val path = Path()
         path.moveTo((points[0] + ox).toFloat(), (points[1] + oy).toFloat())
         for (i in 1 until points.size / 2) {
@@ -904,6 +957,7 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         if (disableAntiAlias) paint.isAntiAlias = false
         drawPoly(thickness, path, line, fill)
         paint.isAntiAlias = true
+        boardRecorder.drawPoly(thickness, points, ox, oy, line, fill)
     }
 
     private fun drawPoly(thickness: Float, p: Path, lineColour: Int, fillColour: Int) {
@@ -928,6 +982,11 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         lineColour: Int,
         fillColour: Int
     ) {
+        if (!drawToBitmap) {
+            boardRecorder.drawCircle(thickness, x, y, r, lineColour, fillColour)
+            return
+        }
+        boardRecorder.drawCircle(thickness, x, y, r, lineColour, fillColour)
         drawCircleInternal(
             thickness,
             x,
@@ -962,6 +1021,10 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
 
     @UsedByJNI
     override fun drawText(x: Int, y: Int, flags: Int, size: Int, colour: Int, text: String) {
+        if (!drawToBitmap) {
+            boardRecorder.drawText(x, y, flags, size, colour, text)
+            return
+        }
         paint.color = colours[colour]
         paint.style = Paint.Style.FILL
         paint.typeface =
@@ -975,15 +1038,20 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
             Paint.Align.RIGHT else paint.textAlign = Paint.Align.LEFT
         val alignedY = if (flags and ALIGN_V_CENTRE != 0) y + (asc - (asc + desc) / 2).toInt() else y
         canvas.drawText(text, x.toFloat(), alignedY.toFloat(), paint)
+        boardRecorder.drawText(x, y, flags, size, colour, text)
     }
 
     @UsedByJNI
     override fun blitterAlloc(w: Int, h: Int): Int {
+        if (!drawToBitmap) {
+            return boardRecorder.blitterAlloc(w, h)
+        }
         for (i in blitters.indices) {
             if (blitters[i] == null) {
                 val zoom = getXScale(zoomMatrix)
                 blitters[i] =
                     createBitmap((zoom * w).roundToInt(), (zoom * h).roundToInt(), BITMAP_CONFIG)
+                boardRecorder.allocate(i, w, h)
                 return i
             }
         }
@@ -992,8 +1060,13 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
 
     @UsedByJNI
     override fun blitterFree(i: Int) {
+        if (!drawToBitmap) {
+            boardRecorder.blitterFree(i)
+            return
+        }
         blitters[i]?.recycle()
         blitters[i] = null
+        boardRecorder.blitterFree(i)
     }
 
     private fun blitterPosition(x: Int, y: Int, save: Boolean): PointF {
@@ -1010,22 +1083,33 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
 
     @UsedByJNI
     override fun blitterSave(i: Int, x: Int, y: Int) {
+        if (!drawToBitmap) {
+            boardRecorder.blitterSave(i, x, y)
+            return
+        }
         blitters[i]?.let {
             val blitterPosition = blitterPosition(x, y, true)
             Canvas(it).drawBitmap(bitmap, blitterPosition.x, blitterPosition.y, null)
         }
+        boardRecorder.blitterSave(i, x, y)
     }
 
     @UsedByJNI
     override fun blitterLoad(i: Int, x: Int, y: Int) {
+        if (!drawToBitmap) {
+            boardRecorder.blitterLoad(i, x, y)
+            return
+        }
         blitters[i]?.let {
             val blitterPosition = blitterPosition(x, y, false)
             Canvas(bitmap).drawBitmap(it, blitterPosition.x, blitterPosition.y, null)
         }
+        boardRecorder.blitterLoad(i, x, y)
     }
 
     @VisibleForTesting
     fun screenshot(gameCoords: Rect, gameSizeInGameCoords: Point): Bitmap {
+        check(drawToBitmap) { "screenshot needs drawToBitmap = true and a redraw" }
         val offX = (wDip - gameSizeInGameCoords.x) / 2
         val offY = (hDip - gameSizeInGameCoords.y) / 2
         val r = RectF(
