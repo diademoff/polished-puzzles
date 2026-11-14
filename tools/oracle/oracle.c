@@ -1486,7 +1486,9 @@ static void do_tdq(const jobject *req)
     long n = 0;
     tdq *queue;
     const char *p;
-    int emitted = 0;
+    int *removed = NULL;
+    int removed_count = 0, removed_capacity = 0;
+    int i;
 
     if (!field_int(req, "n", &n) || n < 1 || n > 1000000) {
         put_error("tdq needs 1 <= n <= 1000000");
@@ -1506,6 +1508,7 @@ static void do_tdq(const jobject *req)
         op = *p++;
         if (op == 'a') {
             if (!parse_next_long(&p, &k) || k < 0 || k >= n) {
+                sfree(removed);
                 tdq_free(queue);
                 put_error("tdq add needs a valid index");
                 return;
@@ -1513,13 +1516,15 @@ static void do_tdq(const jobject *req)
             tdq_add(queue, (int)k);
         } else if (op == 'r') {
             int value = tdq_remove(queue);
-            if (emitted == 0)
-                fputs("{\"ok\":true,\"removed\":[", stdout);
-            printf("%s%d", emitted ? "," : "", value);
-            emitted++;
+            if (removed_count == removed_capacity) {
+                removed_capacity = removed_capacity ? removed_capacity * 2 : 32;
+                removed = sresize(removed, removed_capacity, int);
+            }
+            removed[removed_count++] = value;
         } else if (op == 'f') {
             tdq_fill(queue);
         } else {
+            sfree(removed);
             tdq_free(queue);
             put_error("tdq ops support a, r, and f");
             return;
@@ -1530,14 +1535,18 @@ static void do_tdq(const jobject *req)
         int value = tdq_remove(queue);
         if (value < 0)
             break;
-        if (emitted == 0)
-            fputs("{\"ok\":true,\"removed\":[", stdout);
-        printf("%s%d", emitted ? "," : "", value);
-        emitted++;
+        if (removed_count == removed_capacity) {
+            removed_capacity = removed_capacity ? removed_capacity * 2 : 32;
+            removed = sresize(removed, removed_capacity, int);
+        }
+        removed[removed_count++] = value;
     }
-    if (emitted == 0)
-        fputs("{\"ok\":true,\"removed\":[", stdout);
+
+    fputs("{\"ok\":true,\"removed\":[", stdout);
+    for (i = 0; i < removed_count; i++)
+        printf("%s%d", i ? "," : "", removed[i]);
     fputs("]}\n", stdout);
+    sfree(removed);
     tdq_free(queue);
 }
 
@@ -1561,11 +1570,12 @@ static void do_tree(const jobject *req)
     const char *ops = field_string(req, "ops");
     tree234 *tree = newtree234(tree_compare);
     struct tree_elem **allocated = NULL;
+    long *results = NULL;
     int alloc_count = 0, alloc_capacity = 0;
+    int result_count = 0, result_capacity = 0;
     const char *p = ops ? ops : "";
-    int emitted = 0, i;
+    int i;
 
-    fputs("{\"ok\":true,\"results\":[", stdout);
     while (*p) {
         char op;
         long a = 0, b = 0, result = -1;
@@ -1633,9 +1643,16 @@ static void do_tree(const jobject *req)
                 sfree(elem);
             }
         }
-        printf("%s%ld", emitted ? "," : "", result);
-        emitted++;
+        if (result_count == result_capacity) {
+            result_capacity = result_capacity ? result_capacity * 2 : 64;
+            results = sresize(results, result_capacity, long);
+        }
+        results[result_count++] = result;
     }
+
+    fputs("{\"ok\":true,\"results\":[", stdout);
+    for (i = 0; i < result_count; i++)
+        printf("%s%ld", i ? "," : "", results[i]);
     fputs("],\"items\":[", stdout);
     for (i = 0;; i++) {
         struct tree_elem *elem = index234(tree, i);
@@ -1645,6 +1662,7 @@ static void do_tree(const jobject *req)
     }
     fputs("]}\n", stdout);
 
+    sfree(results);
     for (i = 0; i < alloc_count; i++)
         sfree(allocated[i]);
     sfree(allocated);
@@ -1652,6 +1670,7 @@ static void do_tree(const jobject *req)
     return;
 
   fail:
+    sfree(results);
     for (i = 0; i < alloc_count; i++)
         sfree(allocated[i]);
     sfree(allocated);
