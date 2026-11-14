@@ -30,6 +30,8 @@ Minimal scenario:
 ```
 new(game, params, seed) -> state
 key(state, x, y, k)     -> state + flags
+keySized(state, w, h, x, y, k) -> state after resizing
+layout(state, w, h)     -> game size after midend_size
 keys(state, seq)        -> state + flags
 undo/redo(state)        -> state + flags
 serialise(state)        -> savefile
@@ -54,6 +56,13 @@ that a Kotlin-written file is accepted by C.
 `keys` replays a whole sequence in one midend. It is required for
 cursor games: the cursor lives in the frontend state (`game_ui`), which
 is not part of the save file, so separate `key` requests would reset it.
+
+`layout` runs `midend_size(..., user_size = true)` for a viewport and
+reports the resulting board size. `keySized` does the same, then sends a
+game-local key, so a differential test can exercise input at a tile size
+other than the preferred size. The ordinary `key` operation uses the
+preferred size and cannot see a mismatch between the drawn and the input
+geometry.
 
 `trace` records one `midend_redraw` through the recording drawing API.
 `traceNew` creates the game first, so a trace does not depend on the
@@ -206,7 +215,9 @@ Engine tests:
 - `FifteenTest` checks parameter and description validation, a save
   round trip, solve with undo and redo, the hint solver, input at a
   resized tile size, invalid moves, the text format, the palette, and
-  an invalid save.
+  an invalid save. One test derives every cell rectangle from the
+  drawing sink at tile sizes 48, 63, 82, and 100, then feeds the cell
+  centers back into `processKey`; drawing and input must agree.
 - `RandomParityTest` is strict. It compares `random_bits` for every
   bit width 1..31 and `random_upto` for limits up to 2^27, across ten
   seeds, and transfers encoded generator state in both directions.
@@ -234,6 +245,10 @@ Engine tests:
   `fifteen` file in the corpus into the Kotlin midend, rewrites it byte
   for byte, and makes the oracle load both versions. It also makes the
   oracle load a Kotlin-written new game.
+- `FifteenInputParityTest` is semantic. It asks the oracle to choose a
+  board size for phone, tablet, landscape, and tiny viewports, then
+  compares the Kotlin layout and the C/Kotlin state after clicking the
+  gap, every in-board neighbour, and a diagonal cell at that size.
 - `FifteenTraceTest` is strict. It draws the Kotlin board through
   `KotlinTraceSink`, normalises it with the same `TraceNormalizer` as
   the oracle, and compares the result with a fresh oracle trace and

@@ -151,6 +151,8 @@ A game is ported only after every item passes at the declared level.
 | `.sgtp` from C into Kotlin | strict/semantic | deserialization |
 | `.sgtp` from Kotlin into C | strict/semantic | serialization |
 | Solver (if present) | semantic | correctness and uniqueness |
+| `midend_size` layout | semantic | board size for a viewport |
+| Input at the displayed size | semantic | taps, drags, and clicks map to cells |
 | Draw primitives | strict | geometry and colors |
 | Screenshots | ui | layout and theme |
 

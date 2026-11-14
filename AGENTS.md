@@ -121,6 +121,8 @@ If a command does not work, do not work around it. Fix it or report it.
 - New behavior has a test; a fixed bug has a regression fixture.
 - A new deviation is in `docs/DEVIATIONS.md` and pinned by a test.
 - Accessibility: TalkBack, targets ≥ 48dp, contrast, font scale 200%.
+- Ported-game input: a real tap/swipe instrumentation test, plus input
+  at a non-default tile size. Drawing and input use one geometry.
 - Performance: the budgets in `docs/PERFORMANCE.md` are not exceeded.
 - No edits to vendored or generated files.
 - Documentation is updated if rules or structure changed.
