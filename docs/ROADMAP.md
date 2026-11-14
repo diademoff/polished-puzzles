@@ -168,3 +168,21 @@ These run all the time, not as separate phases:
   and two releases.
 - Any roadmap change goes through an ADR or a separate PR with a
   reason.
+
+## Open debt
+
+Work that is known to be missing, deferred, or unverified. Debt is not a
+deviation: it is unfinished work. Each item names what closes it. An
+item leaves this table only when the closing evidence exists, not when
+the work is started.
+
+| ID | Area | What is missing | Why it is deferred | Closes when |
+|---|---|---|---|---|
+| D-01 | Accessibility, P0 | The game board has no screen-reader semantics. `GameView` draws from C and exposes no virtual nodes, so TalkBack cannot read a cell or make a move. The shell is labeled; the board is not. | The Kotlin layer has no game state. Per-cell nodes need the engine seam, which is the Phase 2 renderer and the Phase 3 state mirror. | The board exposes cells, edges, and the cursor as virtual nodes, and a spoken audit on a device passes. |
+| D-02 | Performance | No absolute baseline. Only emulator numbers exist in `tools/perf/baseline.md`. | No physical tier A, tier B, or tablet device is available. | The device table in `tools/perf/baseline.md` is filled and `docs/PERFORMANCE.md` has the verdicts. |
+| D-03 | Accessibility | No spoken TalkBack pass. Labels, 48dp targets, headings, contrast, RTL, and 200% are checked automatically; pronunciation, traversal order, and announcements are not. | TalkBack needs a person listening to the device. | A written audit of every shell screen with no P0/P1, attached to the phase report. |
+| D-04 | Testing | Screenshot goldens are local and git-ignored by decision, so CI cannot gate pixels and a fresh checkout skips the comparison. | The owner asked not to commit binary screenshots. | Either the goldens are committed, or a host renderer (for example Paparazzi or Roborazzi) is adopted by an ADR. |
+| D-05 | Design | The action icons are the old PNG set, not Material Symbols. They are tinted for the light and dark themes. | The symbol assets are not available offline, and a wrong replacement is worse than the current set. | Vector symbol assets replace the PNGs in all toolbars and menus. |
+| D-06 | CI | No workflow has ever run on GitHub. `jvm`, `android`, `upstream-diff`, `oracle-current`, and `fuzz` exist and were exercised locally only. | The repository owner must push and start the first run. | Five green runs on GitHub, with branch protection requiring them. |
+| D-07 | CI | No emulator job. Instrumentation and the accessibility checks run on the local `puzzles_api36` AVD only. | An emulator workflow is unverified until it runs on GitHub. | The Android job starts an AVD and runs `connectedDebugAndroidTest` green on GitHub. |
+| D-08 | Testing | `GamePlayParameterizedTest[Palisade 2x3n3:d33]` fails on API 36. The same failure exists at `1cd9f4cb`, before the Compose shell. | It is a pre-existing key-sequence case, outside the shell work. | The case passes, or the sequence is corrected with an explanation; it stays in the suite until then. |
