@@ -147,7 +147,8 @@ class KotlinTraceSink : DrawSink {
          * The same redraw as [stateTrace], at an explicit [tileSize].
          * A sized oracle trace draws at the tile size its viewport
          * chose, which is not always the preferred size. The draw
-         * sequence follows [Midend.recordRedraw].
+         * sequence follows [Midend.recordRedraw], and the trace header
+         * reports the size the draw uses.
          */
         fun stateTrace(midend: Midend, tileSize: Int): JsonValue.Obj {
             val size = midend.game.computeSize(midend.params, tileSize)
@@ -187,8 +188,8 @@ class KotlinTraceSink : DrawSink {
                 "params" to JsonValue.Str(
                     midend.game.encodeParams(midend.currentParams, true),
                 ),
-                "w" to num(midend.size.width),
-                "h" to num(midend.size.height),
+                "w" to num(size.width),
+                "h" to num(size.height),
                 "palette" to palette,
                 "ops" to JsonValue.Arr(sink.ops),
             )

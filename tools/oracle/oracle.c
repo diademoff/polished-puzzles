@@ -2392,6 +2392,13 @@ static void do_points_sized(const jobject *req)
         w = (int)view_width;
         h = (int)view_height;
         midend_size(fe.me, &w, &h, true, 1.0);
+        /*
+         * The state fields and the trace header report the frontend
+         * size. It must be the size the midend draws at, not the
+         * preferred size that open_state reported before sizing.
+         */
+        fe.width = w;
+        fe.height = h;
         ox = ((int)view_width - w) / 2;
         oy = ((int)view_height - h) / 2;
     }

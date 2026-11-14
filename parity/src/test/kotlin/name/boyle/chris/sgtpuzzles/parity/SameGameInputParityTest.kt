@@ -70,6 +70,41 @@ class SameGameInputParityTest {
     }
 
     @Test
+    fun `the sized trace header reports the drawn size`() = OracleClient().use { oracle ->
+        for (case in viewports) {
+            val start = oracle.newGame("samegame", case.params, SEED)
+            val midend = Midend.newGame(SameGame, case.params, SEED)
+            val geometry = midend.geometryFor(case.width, case.height)
+            val preferred = SameGame.computeSize(
+                SameGame.decodeParams(case.params),
+                SameGame.preferredTileSize,
+            )
+            val where = "${case.label}: '${case.params}' in ${case.width} x ${case.height}"
+
+            assertNotEquals(
+                "the drawn size must differ from the preferred size $where",
+                preferred.width,
+                geometry.width,
+            )
+
+            val expected = oracle.pointsSized(
+                start.state,
+                emptyList(),
+                case.width,
+                case.height,
+                recordTrace = true,
+            ).trace
+            assertTraceSize("C trace $where", expected, geometry.width, geometry.height)
+            assertTraceSize(
+                "Kotlin trace $where",
+                KotlinTraceSink.stateTrace(midend, geometry.tileSize),
+                geometry.width,
+                geometry.height,
+            )
+        }
+    }
+
+    @Test
     fun `two pointer taps remove a group at every viewport`() =
         OracleClient().use { oracle ->
             for (case in viewports) {
@@ -275,6 +310,12 @@ class SameGameInputParityTest {
             }
         }
         return status
+    }
+
+    private fun assertTraceSize(what: String, trace: JsonValue.Obj?, width: Int, height: Int) {
+        requireNotNull(trace) { "$what: the oracle sent no trace" }
+        assertEquals("width $what", width.toLong(), trace.number("w"))
+        assertEquals("height $what", height.toLong(), trace.number("h"))
     }
 
     private fun assertTrace(what: String, expected: JsonValue.Obj?, actual: JsonValue.Obj) {

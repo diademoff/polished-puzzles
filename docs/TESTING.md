@@ -75,7 +75,9 @@ release, and it checks that a swipe does not add more moves than C does.
 and applies every click inside one midend, so a game whose two-step
 removal keeps the first step in `game_ui` can be compared with C. The
 optional `w` and `h` size the midend to a viewport and remove the
-letterbox origin, like `keySized`. With `trace: 1` the response also
+letterbox origin, like `keySized`. The state fields and the trace
+header then report the size the midend draws at, not the preferred
+size. With `trace: 1` the response also
 holds one final redraw. The drawing layer caches the last status text,
 so the tool resets that cache before the final redraw: the trace carries
 the status line exactly once, including the selection text that is not

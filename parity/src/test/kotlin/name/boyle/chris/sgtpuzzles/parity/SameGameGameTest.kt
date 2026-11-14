@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
@@ -15,16 +16,15 @@ import org.junit.Test
  * Level: semantic. Game: samegame.
  *
  * New games, text, status text, selection, group removal, score,
- * gravity, completion, impossibility, and undo/redo are compared with
- * the oracle.
+ * gravity, completion, impossibility, requested keys, and undo/redo are
+ * compared with the oracle.
  *
- * A pointer removal needs two taps, but no oracle operation replays two
- * pointer taps inside one midend. The tests therefore drive the Kotlin
- * pointer path and compare each result with the oracle's keyboard path
- * for the same cell (cursor moves plus two selects). The selection
- * status text has no oracle surface because the drawing layer caches
- * the last status; it is pinned by `SameGameTest` and by the status
- * expected after each state change here.
+ * A pointer removal needs two taps. This test drives the Kotlin pointer
+ * path and compares each result with the oracle's keyboard path for the
+ * same cell (cursor moves plus two selects), so the two paths are
+ * cross-checked. `SameGameInputParityTest` compares the taps directly:
+ * the oracle's `pointsSized` operation replays both taps inside one
+ * midend, and its final redraw carries the selection status text.
  */
 class SameGameGameTest {
 
@@ -44,6 +44,22 @@ class SameGameGameTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun `requested keys match the oracle`() = OracleClient().use { oracle ->
+        val state = oracle.newGame("samegame", "5x5c3s2", SEED)
+        val expected = oracle.requestKeys(state.state)
+        val actual = SameGame.requestKeys(SameGame.decodeParams("5x5c3s2"))
+
+        assertEquals("arrow mode", arrowMode(expected.arrowMode), actual.arrowMode)
+        assertEquals(
+            "key labels",
+            expected.labels.map { it.label },
+            actual.labels.map { it.name },
+        )
+        assertTrue("C requests no extra keys", expected.labels.isEmpty())
+        assertTrue("Kotlin requests no extra keys", actual.labels.isEmpty())
     }
 
     @Test
@@ -267,6 +283,13 @@ class SameGameGameTest {
         }
         val state = SameGame.newState(SameGame.Params(2, 2, 3, 2, true), "1,2,3,1")
         assertEquals(null, SameGame.executeMove(state, "X1"))
+    }
+
+    private fun arrowMode(oracleMode: Int): ArrowMode = when (oracleMode) {
+        1 -> ArrowMode.ARROWS_ONLY
+        2 -> ArrowMode.ARROWS_LEFT
+        3 -> ArrowMode.ARROWS_LEFT_RIGHT
+        else -> ArrowMode.NONE
     }
 
     private data class Crafted(val params: String, val desc: String, val moves: List<String>)
