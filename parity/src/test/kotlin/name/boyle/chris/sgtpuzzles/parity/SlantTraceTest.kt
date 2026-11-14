@@ -70,6 +70,10 @@ class SlantTraceTest {
         val midend = Midend.newGame(Slant, params, SEED)
         val ui = midend.ui as Slant.Ui
         assertFalse("the cursor starts hidden", ui.curVisible)
+        val save = midend.serialise().serialise()
+        val id = midend.id()
+        val canUndo = midend.canUndo
+        val canRedo = midend.canRedo
 
         assertEquals(
             "the cursor key must be used",
@@ -79,6 +83,11 @@ class SlantTraceTest {
         assertTrue("the cursor must be visible", ui.curVisible)
         assertEquals("cursor x", 1, ui.curX)
         assertEquals("cursor y", 0, ui.curY)
+
+        assertEquals("the cursor must not change the save", save, midend.serialise().serialise())
+        assertEquals("the cursor must not change the id", id, midend.id())
+        assertEquals("the cursor must not change undo", canUndo, midend.canUndo)
+        assertEquals("the cursor must not change redo", canRedo, midend.canRedo)
 
         val actual = TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend), upstream)
         val expected = TraceNormalizer.normalize(

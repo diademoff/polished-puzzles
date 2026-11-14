@@ -340,6 +340,7 @@ typedef struct {
     sbuf ops;
     int nops;
     int blitters;
+    bool suppress_blitter_free;
 } trace_ctx;
 
 static void tc_printf(trace_ctx *t, const char *fmt, ...)
@@ -539,6 +540,7 @@ static void tr_start_draw(drawing *dr)
     tc_op_start(t);
     tc_printf(t, "\"op\":\"start_draw\"");
     tc_op_end(t);
+    t->suppress_blitter_free = false;
 }
 
 static void tr_end_draw(drawing *dr)
@@ -579,9 +581,16 @@ static void tr_blitter_free(drawing *dr, blitter *bl)
 {
     trace_ctx *t = tc_of(dr);
 
-    tc_op_start(t);
-    tc_printf(t, "\"op\":\"blitter_free\",\"id\":%d", bl->id);
-    tc_op_end(t);
+    /*
+     * A replacement drawstate frees the old one before its first
+     * start_draw. Those frees belong to a drawstate that is not in the
+     * trace, so do not record them.
+     */
+    if (!t->suppress_blitter_free) {
+        tc_op_start(t);
+        tc_printf(t, "\"op\":\"blitter_free\",\"id\":%d", bl->id);
+        tc_op_end(t);
+    }
     sfree(bl);
 }
 
@@ -1352,14 +1361,17 @@ static void do_trace(const jobject *req)
          * A cursor key only changes game_ui, and processing it redraws
          * into the trace. Drop those operations and start a fresh
          * drawstate, so the response has the shape of a first redraw.
-         * This path has no blitters in the drawstate, so resetting the
-         * id counter is safe.
+         * The old drawstate may own blitters, and freeing it appends
+         * blitter_free operations. Suppress them: they describe a
+         * drawstate that is not in the trace. The first start_draw of
+         * the replacement drawstate clears the flag.
          */
         trace.ops.len = 0;
         if (trace.ops.buf)
             trace.ops.buf[0] = '\0';
         trace.nops = 0;
         trace.blitters = 0;
+        trace.suppress_blitter_free = true;
         midend_force_redraw(fe.me);
     } else {
         midend_redraw(fe.me);

@@ -49,9 +49,11 @@ at all.
    midend clears the window with colour 0. That clear is part of the
    trace, so a renderer must do it too. Traces are therefore tied to a
    state, not to a device or to a repaint history. The `game_ui` is
-   fresh as well: the cursor is hidden at its default position. Cursor
-   position is frontend state and is not serialised, so it is not part
-   of the trace.
+   fresh as well: the cursor is hidden at its default position. The
+   UI is never serialised. An explicit `seq` replays keys before the
+   traced redraw, so it may move the UI and the trace may contain
+   cursor-driven drawing. `prefs` may change drawing in the same way.
+   Neither field changes the schema or the normalizer.
 8. **A Kotlin normalizer owns the canonical form.** It validates the
    schema, rejects unknown operations, and writes one operation per
    line. Goldens are stored in that form, so a change is reviewable in

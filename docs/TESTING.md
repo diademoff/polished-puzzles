@@ -286,6 +286,11 @@ Engine tests:
 - `SlantInputParityTest` compares layout and clicks at several
   viewports, including the letterbox margin, and a swipe that must
   change only its start cell.
+- `OracleTraceSequenceTest` checks the `seq` field of a `trace`
+  request. It replays one key on an `inertia` game that uses blitters
+  and asserts that the trace starts with `blitter_new`, has no stale
+  `blitter_free` before the first `start_draw`, and really differs from
+  the trace of the same state without a sequence.
 - `KotlinGamesTest` pins the app-side selection and checks that the
   generated save is the frozen oracle save.
 - `GamePlayParameterizedTest` asserts that the running `fifteen` engine
