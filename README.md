@@ -4,6 +4,9 @@ Android port of Simon Tatham's Puzzles
 This is [Simon Tatham's Portable Puzzle Collection](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/),
 ported to Android.
 
+Upstream revision: [790f585](https://git.tartarus.org/?p=simon/puzzles.git;a=commit;h=790f5851507be5845164d3ae7b32b2f86717fe50), synced 2025-10-21.
+
+
 The easiest way to install it is [from Google Play](https://play.google.com/store/apps/details?id=name.boyle.chris.sgtpuzzles).
 
 If you'd like to get involved, read on:

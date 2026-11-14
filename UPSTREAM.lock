@@ -2,29 +2,29 @@
 #
 # The single machine-readable source of truth for the upstream
 # revision the project is synced with. The README contains only a
-# link generated from this file.
+# line generated from this file.
 #
-# Filled in Phase 0 by tools/sync-upstream.sh.
+# Filled by tools/sync-upstream.sh --write-lock on 2026-11-14.
 # Do not edit by hand during normal work.
 #
 # CI checks:
 #   1. the commit exists in the upstream repository;
 #   2. merge_base matches the real merge base;
 #   3. the README line matches this file;
-#   4. the oracle builds from this commit.
+#   4. the vendored tree still builds the oracle.
 
 upstream:
-  repo: "https://github.com/sgtatham/puzzles"
+  repo: "https://git.tartarus.org/simon/puzzles.git"
   remote: "simon"
   branch: "main"
-  commit: "UNSET"
+  commit: "790f5851507be5845164d3ae7b32b2f86717fe50"
 
 integration:
-  repo: "https://github.com/chrisboyle/sgtpuzzles"
-  branch: "upstream"
-  commit: "UNSET"
-  merge_base: "UNSET"
-  synced_at: "UNSET"
+  repo: "https://github.com/diademoff/polished-puzzles"
+  branch: "main"
+  commit: "6b32b3fa7a9819305e6d05e34827cabf48f39c6f"
+  merge_base: "790f5851507be5845164d3ae7b32b2f86717fe50"
+  synced_at: "2025-10-21"
 
 contract:
   oracle_protocol: 1
@@ -33,5 +33,20 @@ contract:
   rng: "random.c-bit-exact"
 
 notes: |
-  Fill this in Phase 0. Until then, parity tests are invalid and the
-  CI upstream-diff job must fail.
+  The GitHub mirror github.com/sgtatham/puzzles returns 404. The
+  canonical repository, linked from the project home page, is
+  https://git.tartarus.org/simon/puzzles.git.
+
+  upstream.commit is the merge base of simon/main and the integration
+  branch. It is the upstream revision the vendored C is based on, not
+  the current upstream tip (616da16f25da428ccda805536209095bd062676e).
+
+  integration.commit is the last merge that touched the vendored
+  tree. This repository has no long-lived "upstream" branch, so the
+  field names a commit on the integration branch instead of a branch
+  tip. See the branch layout note in docs/UPSTREAM-SYNC.md, step 2.
+
+  The vendored tree is not identical to upstream.commit: the port
+  carries an Android patch layer inside upstream files. The hashes in
+  app/src/main/jni/UPSTREAM-FILES.txt are the reference, and
+  tools/check-upstream-diff.sh --report lists the differences.

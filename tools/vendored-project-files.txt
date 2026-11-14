@@ -1,0 +1,12 @@
+# Files in app/src/main/jni that are project code, not upstream code.
+#
+# The list is used by tools/gen-vendored-manifest.sh. It must match the
+# "Code ownership" table in docs/ARCHITECTURE.md.
+android.c
+android.h
+executable/android-gen.c
+cmake/platforms/android.cmake
+icons/android_icons.sh
+icons/loopy_8x14.sav
+icons/solo_4x4.sav
+icons/tracks_15x10.sav
