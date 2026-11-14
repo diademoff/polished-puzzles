@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import name.boyle.chris.sgtpuzzles.R
@@ -333,7 +334,11 @@ private fun GameItem(
             Spacer(Modifier.width(12.dp))
             Text(
                 text = annotatedDescription(game),
-                style = MaterialTheme.typography.bodyMedium,
+                // The descriptions are English; in an RTL layout they still
+                // read left to right and keep their punctuation at the end.
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    textDirection = TextDirection.Content,
+                ),
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.fillMaxWidth(),
             )

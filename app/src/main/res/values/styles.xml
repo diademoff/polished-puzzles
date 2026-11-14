@@ -6,7 +6,9 @@
 
     <!-- The completed-game prompt is a bottom panel, not a modal dialog.
          It does not dim the board, so the finished game stays visible. -->
-    <style name="Dialog.Completed" parent="Theme.Material3.DayNight.Dialog">
+    <style name="Dialog.Completed" parent="Theme.SgTPuzzles">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowNoTitle">true</item>
         <item name="android:backgroundDimEnabled">false</item>
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
