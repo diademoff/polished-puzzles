@@ -95,6 +95,38 @@ class OracleClient(
             ),
         )
 
+    data class Layout(val width: Int, val height: Int)
+
+    /** `midend_size(..., user_size = true)` for a view of [width] x [height]. */
+    fun layout(state: String, width: Int, height: Int): Layout {
+        val response = request(
+            mapOf("op" to "layout", "state" to state, "w" to width, "h" to height),
+        )
+        return Layout(response.number("w").toInt(), response.number("h").toInt())
+    }
+
+    /** Resizes to the view first, then sends one game-local key. */
+    fun keySized(
+        state: String,
+        x: Int,
+        y: Int,
+        k: Int,
+        width: Int,
+        height: Int,
+    ): GameState = GameState.of(
+        request(
+            mapOf(
+                "op" to "keySized",
+                "state" to state,
+                "w" to width,
+                "h" to height,
+                "x" to x,
+                "y" to y,
+                "k" to k,
+            ),
+        ),
+    )
+
     fun key(state: String, x: Int, y: Int, k: Int): GameState =
         GameState.of(
             request(

@@ -43,6 +43,31 @@ class Midend private constructor(
 
     val size: Size get() = game.computeSize(params, tileSize)
 
+    /**
+     * `midend_size(..., user_size = true)`: the largest tile size that
+     * fits in [width] x [height]. The doubling and the binary search are
+     * the same as C, so the result is identical for odd and even tiles.
+     */
+    fun largestTileFor(width: Int, height: Int): Int {
+        var maximum = 1
+        while (true) {
+            val candidate = game.computeSize(params, maximum)
+            if (candidate.width > width || candidate.height > height) break
+            maximum *= 2
+        }
+        var minimum = 1
+        while (maximum - minimum > 1) {
+            val middle = (maximum + minimum) / 2
+            val candidate = game.computeSize(params, middle)
+            if (candidate.width <= width && candidate.height <= height) {
+                minimum = middle
+            } else {
+                maximum = middle
+            }
+        }
+        return minimum
+    }
+
     /** `midend_get_game_id`: short parameters, a colon, and the description. */
     fun id(): String = game.encodeParams(currentParams, false) + ":" + desc
 

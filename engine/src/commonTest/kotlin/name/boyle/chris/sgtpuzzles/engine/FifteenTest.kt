@@ -142,6 +142,65 @@ class FifteenTest {
     }
 
     @Test
+    fun `input follows the drawn cell centers`() {
+        val desc = "1,2,3,4,5,0,7,8,9,10,11,12,13,14,6,15"
+        val id = "4x4:$desc"
+        val neighbours = listOf(0 to 1, 2 to 1, 1 to 0, 1 to 2)
+
+        for (tile in listOf(48, 63, 82, 100)) {
+            val sink = UpdateSink()
+            Fifteen.redraw(Midend.fromGameId(Fifteen, id).state, sink, tile)
+            val cells = sink.updates.associateBy { it.x to it.y }
+            assertEquals(16, cells.size, "tile $tile")
+
+            for ((column, row) in neighbours) {
+                val cell = cells[column * tile + tile / 2 to row * tile + tile / 2]
+                    ?: error("no update for ($column,$row) at tile $tile")
+                val fresh = Midend.fromGameId(Fifteen, id)
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    fresh.processKey(
+                        cell.x + tile / 2,
+                        cell.y + tile / 2,
+                        Buttons.LEFT_BUTTON,
+                        tile,
+                    ),
+                    "neighbour ($column,$row) at tile $tile",
+                )
+            }
+
+            val gap = cells[1 * tile + tile / 2 to 1 * tile + tile / 2]!!
+            val fresh = Midend.fromGameId(Fifteen, id)
+            assertEquals(
+                KeyOutcome.NoEffect,
+                fresh.processKey(
+                    gap.x + tile / 2,
+                    gap.y + tile / 2,
+                    Buttons.LEFT_BUTTON,
+                    tile,
+                ),
+                "gap click at tile $tile",
+            )
+        }
+    }
+
+    private class UpdateSink : DrawSink {
+        data class Update(val x: Int, val y: Int)
+        val updates = ArrayList<Update>()
+
+        override fun changedState(canUndo: Boolean, canRedo: Boolean) {}
+        override fun startDraw() {}
+        override fun endDraw() {}
+        override fun rect(x: Int, y: Int, width: Int, height: Int, colour: Int) {}
+        override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {}
+        override fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String) {}
+        override fun update(x: Int, y: Int, width: Int, height: Int) {
+            updates += Update(x, y)
+        }
+        override fun status(text: String) {}
+    }
+
+    @Test
     fun `invalid moves are rejected`() {
         val state = Fifteen.newState(Fifteen.Params(4, 4), "1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15")
         assertNull(Fifteen.executeMove(state, "M4,4"))

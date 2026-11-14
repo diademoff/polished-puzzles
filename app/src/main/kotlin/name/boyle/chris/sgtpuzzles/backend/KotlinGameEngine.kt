@@ -311,7 +311,7 @@ class KotlinGameEngine private constructor(
     override fun resizeEvent(x: Int, y: Int, bottomInset: Int) {
         val availableWidth = x
         val availableHeight = y - bottomInset
-        tileSize = largestTileThatFits(availableWidth, availableHeight)
+        tileSize = midend.largestTileFor(availableWidth, availableHeight)
         val size = game.computeSize(midend.params, tileSize)
         winWidth = size.width
         winHeight = size.height
@@ -409,31 +409,6 @@ class KotlinGameEngine private constructor(
         val size = game.computeSize(midend.params, game.preferredTileSize)
         winWidth = size.width
         winHeight = size.height
-    }
-
-    /**
-     * `midend_size(..., user_size = true)`: the largest tile size that
-     * fits. The doubling and the binary search are the same as C, so the
-     * result is identical for odd and even tile sizes.
-     */
-    private fun largestTileThatFits(width: Int, height: Int): Int {
-        var maximum = 1
-        while (true) {
-            val size = game.computeSize(midend.params, maximum)
-            if (size.width > width || size.height > height) break
-            maximum *= 2
-        }
-        var minimum = 1
-        while (maximum - minimum > 1) {
-            val middle = (maximum + minimum) / 2
-            val size = game.computeSize(midend.params, middle)
-            if (size.width <= width && size.height <= height) {
-                minimum = middle
-            } else {
-                maximum = middle
-            }
-        }
-        return minimum
     }
 
     private fun afterStateChange(previousStatus: Int) {

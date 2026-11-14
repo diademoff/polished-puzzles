@@ -17,6 +17,8 @@
  *   {"op":"new","game":"fifteen","params":"4x4","seed":"12345"}
  *   {"op":"id","state":"..."}
  *   {"op":"key","state":"...","x":0,"y":0,"k":76}
+ *   {"op":"keySized","state":"...","w":411,"h":702,"x":0,"y":0,"k":512}
+ *   {"op":"layout","state":"...","w":411,"h":702}
  *   {"op":"undo","state":"..."}
  *   {"op":"redo","state":"..."}
  *   {"op":"solve","state":"..."}
@@ -2070,6 +2072,76 @@ static void do_random(const jobject *req, bool upto)
     random_free(rs);
 }
 
+static const char *open_state_sized(const char *save, frontend *fe,
+                                    long view_width, long view_height)
+{
+    const char *error = open_state(fe, save);
+    int w, h;
+
+    if (error)
+        return error;
+    w = (int)view_width;
+    h = (int)view_height;
+    midend_size(fe->me, &w, &h, true, 1.0);
+    return NULL;
+}
+
+static void do_layout(const jobject *req)
+{
+    const char *save = field_string(req, "state");
+    long view_width = 0, view_height = 0;
+    frontend fe = {0};
+    const char *error;
+    int w, h;
+
+    if (!save || !field_int(req, "w", &view_width) ||
+        !field_int(req, "h", &view_height) ||
+        view_width < 1 || view_height < 1 ||
+        view_width > 100000 || view_height > 100000) {
+        put_error("layout needs a state and positive w and h");
+        return;
+    }
+
+    error = open_state(&fe, save);
+    if (error) {
+        put_error(error);
+        return;
+    }
+    w = (int)view_width;
+    h = (int)view_height;
+    midend_size(fe.me, &w, &h, true, 1.0);
+    printf("{\"ok\":true,\"w\":%d,\"h\":%d}\n", w, h);
+    free_frontend(&fe);
+}
+
+static void do_key_sized(const jobject *req)
+{
+    const char *save = field_string(req, "state");
+    long view_width = 0, view_height = 0;
+    long x = 0, y = 0, k = 0;
+    frontend fe = {0};
+    const char *error;
+
+    if (!save || !field_int(req, "w", &view_width) ||
+        !field_int(req, "h", &view_height) ||
+        !field_int(req, "x", &x) || !field_int(req, "y", &y) ||
+        !field_int(req, "k", &k) ||
+        view_width < 1 || view_height < 1 ||
+        view_width > 100000 || view_height > 100000) {
+        put_error("keySized needs a state, w, h, x, y, and k");
+        return;
+    }
+
+    error = open_state_sized(save, &fe, view_width, view_height);
+    if (error) {
+        put_error(error);
+        return;
+    }
+    midend_process_key(fe.me, (int)x, (int)y, (int)k);
+    put_state(&fe);
+    free_frontend(&fe);
+}
+
 static void do_state_op(const char *op, const jobject *req)
 {
     const char *save = field_string(req, "state");
@@ -2209,6 +2281,10 @@ int main(int argc, char **argv)
                    !strcmp(op, "redo") || !strcmp(op, "solve") ||
                    !strcmp(op, "text") || !strcmp(op, "requestkeys")) {
             do_state_op(op, &req);
+        } else if (!strcmp(op, "layout")) {
+            do_layout(&req);
+        } else if (!strcmp(op, "keySized")) {
+            do_key_sized(&req);
         } else if (!strcmp(op, "keys")) {
             do_key_seq(field_string(&req, "state"),
                        field_string(&req, "seq"));
