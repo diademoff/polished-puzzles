@@ -47,6 +47,7 @@ import name.boyle.chris.sgtpuzzles.backend.FLOOD
 import name.boyle.chris.sgtpuzzles.backend.GALAXIES
 import name.boyle.chris.sgtpuzzles.backend.GUESS
 import name.boyle.chris.sgtpuzzles.backend.INERTIA
+import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
 import name.boyle.chris.sgtpuzzles.backend.KEEN
 import name.boyle.chris.sgtpuzzles.backend.LIGHTUP
 import name.boyle.chris.sgtpuzzles.backend.LOOPY
@@ -105,6 +106,13 @@ class GamePlayParameterizedTest(
                 SystemClock.sleep(500) // Untangle seems to need this (multiple layout passes?)
             }
             onView(withText(R.string.starting)).check(doesNotExist())
+            if (backend === FIFTEEN) {
+                it.onActivity { activity ->
+                    assert(activity.gameEngine is KotlinGameEngine) {
+                        "fifteen is not using the Kotlin backend"
+                    }
+                }
+            }
             assertCompleted(false)
             onView(withId(R.id.game_view)).perform(*viewActions)
             assertCompleted(true)

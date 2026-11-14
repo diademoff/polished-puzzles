@@ -111,6 +111,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
+    implementation(project(":engine"))
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("org.jetbrains.kotlin:kotlin-reflect:2.2.0")
     implementation("androidx.appcompat:appcompat:1.7.1")

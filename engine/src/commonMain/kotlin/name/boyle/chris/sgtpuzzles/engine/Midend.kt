@@ -64,6 +64,22 @@ class Midend private constructor(
         return true
     }
 
+    /**
+     * Starts the same description again, as `midend_restart_game`. The
+     * new state is a `RESTART` entry, so undo returns to where the
+     * restart was pressed.
+     */
+    fun restart(): Boolean {
+        val restarted = game.newState(params, desc)
+        purgeRedo()
+        entries += Entry(restarted, desc, MoveType.RESTART)
+        statePos++
+        return true
+    }
+
+    /** Drops the redo branch, as `midend_purge_states`. */
+    fun purgeStates() = purgeRedo()
+
     /** The `SOLVE` history entry, or false when the game cannot solve. */
     fun solve(): Boolean {
         val move = game.solve(state) ?: return false
@@ -170,10 +186,10 @@ class Midend private constructor(
                 paramsText
             }
             val params = game.decodeParams(effective)
-            game.validateParams(params, true)?.let { error(it) }
+            game.validateParams(params, true)?.let { throw IllegalArgumentException(it) }
             val random = RandomState.fromSeed(seed)
             val desc = game.newDesc(params, random)
-            game.validateDesc(params, desc)?.let { error(it) }
+            game.validateDesc(params, desc)?.let { throw IllegalArgumentException(it) }
             val state = game.newState(params, desc)
             return Midend(
                 game = game,
@@ -182,6 +198,26 @@ class Midend private constructor(
                 seed = seed,
                 desc = desc,
                 entries = mutableListOf(Entry(state, null, MoveType.NEWGAME)),
+                statePos = 1,
+            )
+        }
+
+        /** Builds a game from `params:desc`, as a game ID does. */
+        fun fromGameId(game: Game, gameId: String): Midend {
+            val colon = gameId.indexOf(':')
+            require(colon >= 0) { "game ID has no colon: $gameId" }
+            val paramsText = gameId.substring(0, colon)
+            val desc = gameId.substring(colon + 1)
+            val params = game.decodeParams(paramsText)
+            game.validateParams(params, true)?.let { error(it) }
+            game.validateDesc(params, desc)?.let { error(it) }
+            return Midend(
+                game = game,
+                params = params,
+                currentParams = params.copy(),
+                seed = null,
+                desc = desc,
+                entries = mutableListOf(Entry(game.newState(params, desc), null, MoveType.NEWGAME)),
                 statePos = 1,
             )
         }

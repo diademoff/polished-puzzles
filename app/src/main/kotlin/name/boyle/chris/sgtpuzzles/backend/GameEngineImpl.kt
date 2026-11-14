@@ -93,6 +93,11 @@ class GameEngineImpl @UsedByJNI private constructor(
             viewCallbacks: ViewCallbacks,
             contextForPrefs: Context
         ): GameEngine {
+            if (KotlinGames.handles(launch.whichBackend)) {
+                return KotlinGameEngine.fromLaunch(
+                    launch, activityCallbacks, viewCallbacks, contextForPrefs,
+                )
+            }
             return if (launch.saved != null) {
                 val initialPrefs = getPrefs(contextForPrefs, identifyBackend(launch.saved))
                 fromSavedGame(launch.saved, activityCallbacks, viewCallbacks, initialPrefs)
@@ -146,10 +151,8 @@ class GameEngineImpl @UsedByJNI private constructor(
             var toLoad = PreferenceManager.getDefaultSharedPreferences(context)
                 .getString(backend.preferencesName, null)
             if (toLoad != null) {
-                // Work around Android bug https://issuetracker.google.com/issues/37032278
-                // (incorrectly marked as obsolete even though it still applies on Android 13)
-                // in which "foo\n" is read back as "foo\n    ". Remove just the spaces.
-                toLoad = toLoad.replaceFirst(" +$".toRegex(), "")
+                // Android reads "foo\n" back as "foo\n    "; see SavedGameText.
+                toLoad = SavedGameText.trimAndroidPadding(toLoad)
             }
             return toLoad
         }

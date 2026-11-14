@@ -102,6 +102,22 @@ class FifteenTest {
     }
 
     @Test
+    fun `a game id and a restart round-trip`() {
+        val id = "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15"
+        val midend = Midend.fromGameId(Fifteen, id)
+        assertEquals(id, midend.id())
+        assertEquals(1, midend.stateCount)
+
+        assertTrue(midend.restart())
+        assertEquals(2, midend.stateCount)
+        assertEquals(2, midend.statePos)
+        assertEquals(1, midend.serialise().values("RESTART").size)
+        assertTrue(midend.undo())
+        assertEquals(1, midend.statePos)
+        assertTrue(midend.canRedo)
+    }
+
+    @Test
     fun `the shell solve and history keys work`() {
         val midend = Midend.newGame(Fifteen, "4x4", "12345")
         assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.UI_SOLVE))

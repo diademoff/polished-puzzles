@@ -84,10 +84,12 @@ import name.boyle.chris.sgtpuzzles.backend.GameEngineImpl.Companion.getDefaultPa
 import name.boyle.chris.sgtpuzzles.backend.GameEngineImpl.Companion.getPrefs
 import name.boyle.chris.sgtpuzzles.backend.GameEngineImpl.Companion.identifyBackend
 import name.boyle.chris.sgtpuzzles.backend.INERTIA
+import name.boyle.chris.sgtpuzzles.backend.KotlinGames
 import name.boyle.chris.sgtpuzzles.backend.MINES
 import name.boyle.chris.sgtpuzzles.backend.NET
 import name.boyle.chris.sgtpuzzles.backend.PALISADE
 import name.boyle.chris.sgtpuzzles.backend.SAMEGAME
+import name.boyle.chris.sgtpuzzles.backend.SavedGameText
 import name.boyle.chris.sgtpuzzles.backend.SOLO
 import name.boyle.chris.sgtpuzzles.backend.UNDEAD
 import name.boyle.chris.sgtpuzzles.backend.UNEQUAL
@@ -265,6 +267,11 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             abort(null, true)
         })
     }
+
+    /** Reads a saved game with the Android trailing-space bug removed. */
+    private fun getSavedGame(backend: BackendName): String? =
+        state.getString(SAVED_GAME_PREFIX + backend, null)
+            ?.let(SavedGameText::trimAndroidPadding)
 
     private fun resetBackendState(backend: BackendName) {
         state.edit().apply {
@@ -494,8 +501,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             }
         }
         if (backendFromChooser != null) {
-            val savedGame =
-                state.getString(SAVED_GAME_PREFIX + backendFromChooser, null)
+            val savedGame = getSavedGame(backendFromChooser)
             // We have a saved game, and if it's completed the user probably wants a fresh one.
             // Theoretically we could silently load it and ask midend_status() but remembering is
             // still faster and some people play large games.
@@ -514,7 +520,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             val savedBackend = byLowerCase(state.getString(SAVED_BACKEND, null))
             if (savedBackend != null) {
                 val savedGame =
-                    state.getString(SAVED_GAME_PREFIX + savedBackend, null)
+                    getSavedGame(savedBackend)
                 if (savedGame == null) {
                     Log.e(TAG, "missing state for $savedBackend")
                     startGame(toGenerateFromChooser(savedBackend))
@@ -537,7 +543,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         var careAboutOldGame =
             !state.getBoolean(SAVED_COMPLETED_PREFIX + backend, true)
         if (careAboutOldGame) {
-            val savedGame = state.getString(SAVED_GAME_PREFIX + backend, null)
+            val savedGame = getSavedGame(backend)
             if (savedGame == null || savedGame.contains("NSTATES :1:1")) {
                 careAboutOldGame = false
             }
@@ -897,6 +903,17 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     }
 
     private fun startGameGeneration(launch: GameLaunch, previousGame: String?) {
+        if (KotlinGames.handles(launch.whichBackend)) {
+            val params = launch.params ?: decideParams(launch)
+            val seed = launch.seed?.substringAfter('#') ?: KotlinGames.newSeed()
+            try {
+                val generated = KotlinGames.generate(launch.whichBackend, params, seed)
+                gameGeneratorSuccess(launch.finishedGenerating(generated), previousGame)
+            } catch (e: IllegalArgumentException) {
+                gameGeneratorFailure(e, launch)
+            }
+            return
+        }
         val args = listOf(launch.whichBackend.toString()) +
                 (launch.seed?.let { listOf("--seed", it) } ?: listOf(decideParams(launch)))
         generationInProgress =
