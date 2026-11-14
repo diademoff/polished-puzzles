@@ -155,6 +155,20 @@ For each game, use the matrix from `PARITY.md`:
 - strict trace;
 - UI screenshots.
 
+Status: `fifteen` is `dual-run` (2026-11-14). The Kotlin `Game`
+seam, the semantic midend, `Fifteen`, and the drawing sink are in
+`engine/`; the seam is `docs/adr/0007-kotlin-game-seam.md`. Every JVM
+row of the matrix is green: `params + seed -> DESC`, new game, moves,
+undo and redo, `completed`, `requestKeys`, `presets`, `status`, `.sgtp`
+in both directions, the hint solver, and the strict trace. The evidence
+is `FifteenDescTest`, `FifteenGameTest`, `FifteenSaveTest`, and
+`FifteenTraceTest`.
+
+Still open for this game: select the Kotlin backend in the app behind
+a feature flag, record the UI screenshots (blocked by D-04), and keep
+the flag on by default for two releases. C still decides, so the game
+is not `kotlin` yet.
+
 Exit criteria per game:
 
 - the matrix is green;

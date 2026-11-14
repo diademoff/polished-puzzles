@@ -35,6 +35,7 @@ undo/redo(state)        -> state + flags
 serialise(state)        -> savefile
 load(savefile)          -> state
 solve(state)            -> state
+requestkeys(state)      -> arrow mode + key labels
 trace(state)            -> draw primitives
 randomBits(seed|state)  -> values + encoded generator state
 randomUpto(seed|state)  -> values + encoded generator state
@@ -202,6 +203,9 @@ Engine tests:
 - `engine/src/commonTest` checks the SHA-1 vectors, fixed RNG streams,
   state encoding, generator copies, and the save parser's canonical
   form and error cases.
+- `FifteenTest` checks parameter and description validation, a save
+  round trip, solve with undo and redo, the hint solver, invalid moves,
+  the text format, the palette, and an invalid save.
 - `RandomParityTest` is strict. It compares `random_bits` for every
   bit width 1..31 and `random_upto` for limits up to 2^27, across ten
   seeds, and transfers encoded generator state in both directions.
@@ -218,6 +222,21 @@ Engine tests:
   permutation.
 - `Tree234ParityTest` compares add/find/delete/index results and the
   final sorted order.
+- `FifteenDescTest` is semantic. It compares `params + seed -> DESC`
+  from the Kotlin generator with the frozen goldens and with fresh
+  oracle games.
+- `FifteenGameTest` is semantic. It compares the serialised state after
+  new games, cursor keys, clicks and slides, undo, redo, hint-key
+  moves, solve, and a winning move. It also compares presets, the
+  requested keys, the status text, and the text format.
+- `FifteenSaveTest` is strict for the save text. It reads every
+  `fifteen` file in the corpus into the Kotlin midend, rewrites it byte
+  for byte, and makes the oracle load both versions. It also makes the
+  oracle load a Kotlin-written new game.
+- `FifteenTraceTest` is strict. It draws the Kotlin board through
+  `KotlinTraceSink`, normalises it with the same `TraceNormalizer` as
+  the oracle, and compares the result with a fresh oracle trace and
+  with every frozen `fifteen` golden.
 - `SaveParityTest` is strict. It parses and rewrites every file in
   `testdata/saves/`, then makes the oracle load the original and the
   Kotlin text and compare the game id. It also recomputes the preset

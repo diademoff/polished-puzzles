@@ -102,9 +102,11 @@ upstream forever.
 - `random.c` is ported **bit-exact** in `engine/RandomState.kt`. The
   RNG must not change. `RandomParityTest` compares raw streams, every
   bit width, many limits, and encoded-state transfer with the oracle.
-- `params + seed -> DESC` is a golden test for every game. Until Phase
-  4 ports the generators, the value is produced by C and the Kotlin RNG
-  is checked separately.
+- `params + seed -> DESC` is a golden test for every game. For games
+  that are still `C`, the value is produced by C and the Kotlin RNG is
+  checked separately. `fifteen` now generates its description in
+  Kotlin, and `FifteenDescTest` compares it with the goldens and with
+  fresh oracle games.
 - `DESC` does not change for the same seed.
 - Any `DESC` change is a breaking deviation with a separate test.
 - `savefile_version` does not break.
@@ -160,7 +162,7 @@ C wins.
 
 | Component | Status | Authority |
 |---|---|---|
-| `midend` | C until fifteen (ADR 0006) | C |
+| `midend` | dual-run: semantic subset in `engine/Midend.kt`; shell in C | C |
 | `random` | parity: `engine/RandomState.kt`, strict differential | oracle streams |
 | `SAVEFILE` container | parity: `engine/SgtpSave.kt`, both directions | C save corpus |
 | `sort`, `combi` | parity: `engine/Sort.kt`, `engine/Combinations.kt` | C order |
@@ -186,7 +188,7 @@ submenu entries when a game groups its presets.
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `C` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `C` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
-| `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `C` |
+| `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `dual-run` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `C` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `C` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `C` |
@@ -237,7 +239,12 @@ Notes:
   `DESC`, the move history, or the save file.
 - `net` asks the frontend for a random seed when it jumbles tiles. The
   oracle returns a fixed seed, so the oracle path is deterministic.
-- The `fifteen` row is the first port target (`ROADMAP.md`, Phase 4).
+- `fifteen` is the first port target (`ROADMAP.md`, Phase 4). Its
+  Kotlin generator, moves, history, solver, text, status, keys, save
+  file, and drawing pass the matrix in `FifteenDescTest`,
+  `FifteenGameTest`, `FifteenSaveTest`, and `FifteenTraceTest`. C still
+  decides in the app, so the status is `dual-run`, not `kotlin`. The
+  seam is `docs/adr/0007-kotlin-game-seam.md`.
 
 
 ## 8. Goldens

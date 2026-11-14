@@ -74,7 +74,10 @@ engine/src/
 │  ├─ Tdq.kt                            # de-duplicating to-do queue
 │  ├─ FindLoop.kt                       # Tarjan bridge finding
 │  ├─ Matching.kt                       # Hopcroft-Karp matching
-│  └─ Tree234.kt                        # tree234 public behavior
+│  ├─ Tree234.kt                        # tree234 public behavior
+│  ├─ Game.kt                           # game seam and drawing sink
+│  ├─ Midend.kt                         # history and save semantics
+│  └─ Fifteen.kt                        # first ported game
 └─ commonTest/kotlin/.../engine/        # fixed vectors and format tests
 ```
 
@@ -95,9 +98,9 @@ docs/           # contracts and decisions
 Why this shape:
 
 - **`app/` vs `engine/`** separates the shipped UI from the portable
-  logic. `engine/` now exists, but only the RNG and the save container
-  are ported, so the app still reaches C through the `GameEngine`
-  seam.
+  logic. `engine/` now has the RNG, the save container, the solver
+  utilities, and the first game, but the app still reaches C through
+  the `GameEngine` seam until the Kotlin backend is selected.
 - **`parity/` as a separate JVM module** means the tests need no
   Android and no emulator. They run in seconds and are reused by the
   future `engine/`.
@@ -121,6 +124,20 @@ the UI sees. Behind it can be a C implementation, a Kotlin
 implementation, or a test stub. This is the dual-run point: a game is
 ported only when both implementations pass the parity matrix.
 
+### Kotlin game and midend
+
+`engine/Game.kt` is the Kotlin counterpart of the upstream `struct
+game`. A game owns its parameters, description generator, state, moves,
+solver, text, status, keys, and drawing. `engine/Midend.kt` owns the
+history and the `.sgtp` records. `engine/Fifteen.kt` is the first
+implementation.
+
+`DrawSink` is the Kotlin drawing seam. `Fifteen` records the same
+primitives as the C game, and `FifteenTraceTest` compares the result
+with the frozen traces through `TraceNormalizer`. The app still draws
+through `ViewCallbacks` and `BoardRecorder`; the two seams are adapted
+when the app selects a Kotlin game.
+
 ### ViewCallbacks
 
 C draws with primitives: lines, polygons, circles, text, blitter, and
@@ -141,8 +158,11 @@ order is observable, and `engine/Combinations.kt` ports `combi.c`.
 `DeterministicHelpersParityTest` compares both with the oracle.
 `Dsf`, `Tdq`, `FindLoop`, `Matching`, and `Tree234` are the solver
 utilities listed in `docs/adr/0006-port-libraries-with-consumer.md`.
-`grid`, `latin`, `loopgen`, and `midend` stay in C until their first
-game consumer, because their behavior is only observable through a
+`Game`, `Midend`, and `Fifteen` are the first Phase 4 slice; see
+`docs/adr/0007-kotlin-game-seam.md`. `grid`, `latin`, and `loopgen`
+stay in C until their first game consumer, because their behavior is
+only observable through a game. The semantic midend is in Kotlin; the
+shell parts of the C midend stay in C until the app uses a Kotlin
 game.
 
 `engine/SgtpSave.kt` is a lossless container for the same text. It
