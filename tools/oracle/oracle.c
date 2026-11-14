@@ -21,6 +21,7 @@
  *   {"op":"redo","state":"..."}
  *   {"op":"solve","state":"..."}
  *   {"op":"text","state":"..."}
+ *   {"op":"requestkeys","state":"..."}
  *   {"op":"status","state":"..."}
  *   {"op":"keys","state":"...","seq":"108 108 522"}
  *   {"op":"trace","state":"..."}
@@ -2119,6 +2120,19 @@ static void do_state_op(const char *op, const jobject *req)
         put_json_string(text);
         fputs("}\n", stdout);
         sfree(text);
+    } else if (!strcmp(op, "requestkeys")) {
+        int nkeys = 0, arrow_mode = 0, i;
+        key_label *keys = midend_request_keys(fe.me, &nkeys, &arrow_mode);
+
+        printf("{\"ok\":true,\"arrowMode\":%d,\"labels\":[", arrow_mode);
+        for (i = 0; i < nkeys; i++) {
+            printf("%s{\"label\":", i ? "," : "");
+            put_json_string(keys[i].label ? keys[i].label : "");
+            printf(",\"button\":%d,\"needsArrows\":%s}",
+                   keys[i].button, keys[i].needs_arrows ? "true" : "false");
+        }
+        fputs("]}\n", stdout);
+        free_keys(keys, nkeys);
     } else {
         free_frontend(&fe);
         put_error("unknown state operation");
@@ -2193,7 +2207,7 @@ int main(int argc, char **argv)
         } else if (!strcmp(op, "id") || !strcmp(op, "status") ||
                    !strcmp(op, "key") || !strcmp(op, "undo") ||
                    !strcmp(op, "redo") || !strcmp(op, "solve") ||
-                   !strcmp(op, "text")) {
+                   !strcmp(op, "text") || !strcmp(op, "requestkeys")) {
             do_state_op(op, &req);
         } else if (!strcmp(op, "keys")) {
             do_key_seq(field_string(&req, "state"),

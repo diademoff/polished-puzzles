@@ -275,6 +275,20 @@ class OracleClient(
 
     fun text(state: String): String = request(mapOf("op" to "text", "state" to state)).string("text")
 
+    data class RequestKeys(val arrowMode: Int, val labels: List<KeyLabel>)
+
+    data class KeyLabel(val label: String, val button: Int, val needsArrows: Boolean)
+
+    /** `midend_request_keys`: the extra keys and the arrow mode. */
+    fun requestKeys(state: String): RequestKeys {
+        val response = request(mapOf("op" to "requestkeys", "state" to state))
+        val labels = (response.field("labels") as JsonValue.Arr).items.map {
+            val item = it as JsonValue.Obj
+            KeyLabel(item.string("label"), item.number("button").toInt(), item.bool("needsArrows"))
+        }
+        return RequestKeys(response.number("arrowMode").toInt(), labels)
+    }
+
     /**
      * Replays a sequence of key codes inside one midend. Cursor games
      * keep the cursor in the game_ui, which is not part of the save
