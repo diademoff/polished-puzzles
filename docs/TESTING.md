@@ -226,7 +226,12 @@ Engine tests:
   resized tile size, invalid moves, the text format, the palette, and
   an invalid save. One test derives every cell rectangle from the
   drawing sink at tile sizes 48, 63, 82, and 100, then feeds the cell
-  centers back into `processKey`; drawing and input must agree.
+  centers back into `processKey`; drawing and input must agree. The
+  completion event is consumed once by a winning move, not by a solve
+  or a no-effect key, and undo and redo cross the completion boundary.
+- `GameSeamTest` checks the seam operations that more than one game
+  uses: the `canSolve` property, and that slant keeps its status text
+  empty while `wantsStatusBar` is false.
 - `BoardGeometryTest` checks that the one geometry value used for
   drawing, input, the cursor, and size negotiation fits and centers the
   board on phone, tablet, landscape, and tiny viewports.
@@ -252,7 +257,9 @@ Engine tests:
 - `FifteenGameTest` is semantic. It compares the serialised state after
   new games, cursor keys, clicks and slides, undo, redo, hint-key
   moves, solve, and a winning move. It also compares presets, the
-  requested keys, the status text, and the text format.
+  requested keys, the status text, and the text format, and it checks
+  that the completion event fires on the winning move and on the redo,
+  but not on the solve.
 - `FifteenSaveTest` is strict for the save text. It reads every
   `fifteen` file in the corpus into the Kotlin midend, rewrites it byte
   for byte, and makes the oracle load both versions. It also makes the

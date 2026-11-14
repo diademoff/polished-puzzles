@@ -25,6 +25,12 @@ interface Game {
     /** True when the shell should show the game's status text. */
     val wantsStatusBar: Boolean get() = true
 
+    /**
+     * True when the game has a solver. The shell hides the Solve menu
+     * item for a game that cannot solve, as upstream `can_solve` does.
+     */
+    val canSolve: Boolean get() = true
+
     fun defaultParams(): Params
 
     /** The presets in menu order. The title is the menu label. */
@@ -57,10 +63,22 @@ interface Game {
     /** `midend_status`: 1 win, -1 lose, 0 open. */
     fun status(state: State): Int
 
-    /** The status bar text for the state. */
-    fun statusText(state: State): String
+    /**
+     * The status bar text for the state. The [ui] carries frontend state
+     * that the text can show, such as a selection count. A game whose
+     * text only depends on the state ignores it.
+     */
+    fun statusText(state: State, ui: Ui): String
 
     fun textFormat(state: State): String
+
+    /**
+     * Mirrors `game_changed_state`: the midend calls it after it enters
+     * [newState] from [oldState], so the game can update frontend state.
+     * [oldState] is null only when there is no state to leave. The
+     * return value is true when this transition completed the game.
+     */
+    fun changedState(ui: Ui, oldState: State?, newState: State): Boolean = false
 
     fun requestKeys(params: Params): KeyRequest
 

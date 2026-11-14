@@ -86,7 +86,6 @@ class KotlinGameEngine private constructor(
     private enum class ConfigMode { SETTINGS, SEED, DESC, PREFS }
 
     private val state: Game.State get() = midend.state
-    private val fifteenState: Fifteen.State get() = state as Fifteen.State
 
     private var geometry = BoardGeometry.preferred(game, midend.params)
     private var viewWidth = 1
@@ -365,7 +364,6 @@ class KotlinGameEngine private constructor(
 
     override fun keyEvent(x: Int, y: Int, k: Int) {
         if (!sized || k < 0) return
-        val before = midend.status()
         val outcome = midend.processKey(
             geometry.toGameX(x),
             geometry.toGameY(y),
@@ -373,19 +371,17 @@ class KotlinGameEngine private constructor(
             geometry.tileSize,
         )
         if (outcome != KeyOutcome.SomeEffect) return
-        afterStateChange(before)
+        afterStateChange()
     }
 
     override fun restartEvent() {
-        val before = midend.status()
         midend.restart()
-        afterStateChange(before)
+        afterStateChange()
     }
 
     override fun solveEvent() {
-        val before = midend.status()
         if (!midend.solve()) throw IllegalArgumentException("This game does not support Solve")
-        afterStateChange(before)
+        afterStateChange()
     }
 
     override fun resizeEvent(x: Int, y: Int, bottomInset: Int) {
@@ -423,9 +419,11 @@ class KotlinGameEngine private constructor(
         get() {
             val undo = if (midend.canUndo) 1 else 0
             val redo = if (midend.canRedo) 2 else 0
-            // can configure, can solve, and optionally a status bar
+            val solve = if (game.canSolve) 8 else 0
+            // can configure, the solve bit from the game, and optionally
+            // a status bar
             val status = if (game.wantsStatusBar) 16 else 0
-            return undo or redo or 4 or 8 or status
+            return undo or redo or 4 or solve or status
         }
 
     override fun resetTimerBaseline() {}
@@ -498,11 +496,9 @@ class KotlinGameEngine private constructor(
 
     private fun shortParams(): String = game.encodeParams(midend.currentParams, false)
 
-    private fun afterStateChange(previousStatus: Int) {
+    private fun afterStateChange() {
         activityCallbacks.changedState(midend.canUndo, midend.canRedo)
-        if (previousStatus == 0 && midend.status() == 1 && !fifteenState.usedSolve) {
-            activityCallbacks.completed()
-        }
+        if (midend.takeCompletedEvent()) activityCallbacks.completed()
         redraw()
     }
 

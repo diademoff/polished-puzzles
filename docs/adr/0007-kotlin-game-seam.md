@@ -95,3 +95,56 @@ Negative:
 4. **Wire the app immediately.** Rejected: the feature flag and the
    chooser are a separate change, and the matrix must stay green
    without it.
+
+## Amendment: changed state, UI status text, and can-solve
+
+- **Date:** 2026-11-15
+
+The samegame port needs three seam operations that fifteen and slant
+did not have in the seam. They are added to the existing seam, not to a
+new one.
+
+1. **`Game.changedState(ui, oldState, newState): Boolean`** mirrors
+   `game_changed_state`. `Midend` calls it where `midend.c` does:
+   before `statePos--` in `undo` (old is the state being left, new is
+   the state being entered), before `statePos++` in `redo`, after the
+   append in `restart`, after the append in a real move in
+   `processKey`, and after the append in `solve`. A UI-only key and a
+   no-effect key do not call it. The default returns false, so a game
+   with no UI consequence declares nothing.
+
+2. **The completion signal is a consumable event, not a status
+   comparison.** `Midend.takeCompletedEvent()` returns true once when
+   `changedState` reported a completion, then clears the flag. The app
+   uses it in place of the previous `status()` transition plus the
+   fifteen-specific `usedSolve` field. A status comparison is wrong for
+   three reasons. It cannot tell a solve from a normal move. It fires
+   on any transition that lands in a completed state, so a redo into
+   the completed state looks like a new completion and the check must
+   remember whether it already fired. And it reads game state from the
+   app, which forces a cast to one game's `State`; samegame has no
+   `usedSolve`.
+   The C midend asks the game, with both states, and calls
+   `android_completed` once at a defined point. The event reproduces
+   that contract and keeps game types out of the app. `midend_solve`
+   calls `changed_state` for its UI effect but ignores the return
+   value, so a solve never raises the event, as in C.
+
+3. **`Game.statusText(state, ui)`** takes the frontend state. The
+   samegame status text contains `ui->nselected` and the selection
+   preview, so a state-only signature cannot produce the C string. The
+   midend still emits the text right after `game.redraw`, because that
+   is where the C games call `status_bar`; no game draws its own status
+   bar. Fifteen's text is unchanged and slant's stays empty while
+   `wantsStatusBar` is false.
+
+4. **`Game.canSolve`, default true.** The C `can_solve` flag is
+   static, and a solver that returns null is only known after the user
+   tries it, which is too late to hide the menu item. The shell sets
+   the solve bit in `uiVisibility` from this property instead of
+   hard-coding it. Fifteen and slant are true; samegame will be false.
+
+The restart call site cannot raise the event for fifteen or slant,
+because `newState` always starts with `completed == false`. It is
+reachable only for a game whose initial state can be complete. The
+tests therefore pin the move, solve, undo, and redo paths.

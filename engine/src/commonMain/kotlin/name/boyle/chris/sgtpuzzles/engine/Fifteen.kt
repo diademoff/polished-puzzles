@@ -272,7 +272,7 @@ object Fifteen : Game {
     override fun status(state: Game.State): Int =
         if ((state as State).completed != 0) 1 else 0
 
-    override fun statusText(state: Game.State): String {
+    override fun statusText(state: Game.State, ui: Game.Ui): String {
         val s = state as State
         if (s.usedSolve) {
             return "Moves since auto-solve: ${s.moveCount - s.completed}"
@@ -280,6 +280,19 @@ object Fifteen : Game {
         val prefix = if (s.completed != 0) "COMPLETED! " else ""
         val moves = if (s.completed != 0) s.completed else s.moveCount
         return "${prefix}Moves: $moves"
+    }
+
+    /** `game_changed_state`: a real move completed the puzzle. */
+    override fun changedState(
+        ui: Game.Ui,
+        oldState: Game.State?,
+        newState: Game.State,
+    ): Boolean {
+        val s = newState as State
+        return s.completed != 0 &&
+            !s.usedSolve &&
+            oldState != null &&
+            (oldState as State).completed == 0
     }
 
     override fun textFormat(state: Game.State): String {

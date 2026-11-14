@@ -242,7 +242,20 @@ object Slant : Game {
         if ((state as State).completed) 1 else 0
 
     /** Slant has no status bar text, as `wants_statusbar` is false. */
-    override fun statusText(state: Game.State): String = ""
+    override fun statusText(state: Game.State, ui: Game.Ui): String = ""
+
+    /** `game_changed_state`: a real move completed the puzzle. */
+    override fun changedState(
+        ui: Game.Ui,
+        oldState: Game.State?,
+        newState: Game.State,
+    ): Boolean {
+        val s = newState as State
+        return s.completed &&
+            !s.usedSolve &&
+            oldState != null &&
+            !(oldState as State).completed
+    }
 
     override fun textFormat(state: Game.State): String {
         val s = state as State

@@ -172,6 +172,7 @@ class FifteenGameTest {
         assertSame("solve", expected, actual)
         assertEquals(1, actual.status())
         assertEquals("Moves since auto-solve: 0", actual.statusText())
+        assertFalse("a solve is not a completion event", actual.takeCompletedEvent())
     }
 
     @Test
@@ -205,6 +206,19 @@ class FifteenGameTest {
         assertEquals(1, actual.status())
         assertEquals("COMPLETED! Moves: 1", actual.statusText())
         assertEquals(oracle.text(expected.state), actual.textFormat())
+        assertTrue("the winning move raises the completion event", actual.takeCompletedEvent())
+        assertFalse("the event is consumed once", actual.takeCompletedEvent())
+
+        val undone = oracle.undo(expected.state)
+        actual.undo()
+        assertSame("undo across completion", undone, actual)
+        assertFalse("undo does not complete the game", actual.takeCompletedEvent())
+
+        val redone = oracle.redo(undone.state)
+        actual.redo()
+        assertSame("redo across completion", redone, actual)
+        assertTrue("redo into a completed state raises the event", actual.takeCompletedEvent())
+        assertFalse("the event is consumed once", actual.takeCompletedEvent())
     }
 
     private fun assertSame(label: String, expected: GameState, actual: Midend) {

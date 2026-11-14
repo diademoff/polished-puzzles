@@ -185,9 +185,81 @@ class FifteenTest {
         }
     }
 
+    @Test
+    fun `a winning move raises the completion event once`() {
+        val desc = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15"
+        val midend = Midend.fromGameId(Fifteen, "4x4:$desc")
+        assertEquals(0, midend.status())
+        assertFalse(midend.takeCompletedEvent(), "a fresh game has no completion")
+
+        val x = 24 + 3 * 48 + 24
+        val y = 24 + 3 * 48 + 24
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(x, y, Buttons.LEFT_BUTTON, 48),
+        )
+        assertEquals(1, midend.status())
+        assertTrue(midend.takeCompletedEvent(), "the winning move completes the game")
+        assertFalse(midend.takeCompletedEvent(), "the event is consumed once")
+    }
+
+    @Test
+    fun `a no-effect key does not raise the completion event`() {
+        val desc = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15"
+        val midend = Midend.fromGameId(Fifteen, "4x4:$desc")
+
+        // Click the gap: the game ignores the move and adds no state.
+        val x = 24 + 2 * 48 + 24
+        val y = 24 + 3 * 48 + 24
+        assertEquals(
+            KeyOutcome.NoEffect,
+            midend.processKey(x, y, Buttons.LEFT_BUTTON, 48),
+        )
+        assertFalse(midend.takeCompletedEvent())
+    }
+
+    @Test
+    fun `a solve does not raise the completion event`() {
+        val midend = Midend.newGame(Fifteen, "4x4", "12345")
+        assertTrue(midend.solve())
+        assertEquals(1, midend.status())
+        assertFalse(midend.takeCompletedEvent(), "solving is not a completion")
+    }
+
+    @Test
+    fun `undo and redo cross the completion boundary`() {
+        val desc = "1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15"
+        val midend = Midend.fromGameId(Fifteen, "4x4:$desc")
+        val x = 24 + 3 * 48 + 24
+        val y = 24 + 3 * 48 + 24
+        midend.processKey(x, y, Buttons.LEFT_BUTTON, 48)
+        assertTrue(midend.takeCompletedEvent())
+        assertEquals(1, midend.status())
+
+        assertTrue(midend.undo())
+        assertEquals(0, midend.status())
+        assertFalse(midend.takeCompletedEvent(), "undo leaves the completed state")
+
+        assertTrue(midend.redo())
+        assertEquals(1, midend.status())
+        assertTrue(midend.takeCompletedEvent(), "redo enters the completed state")
+        assertFalse(midend.takeCompletedEvent(), "the event is consumed once")
+    }
+
+    @Test
+    fun `status text takes the ui and stays inside the midend redraw`() {
+        val midend = Midend.newGame(Fifteen, "4x4", "12345")
+        assertEquals(Fifteen.statusText(midend.state, midend.ui), midend.statusText())
+
+        val sink = UpdateSink()
+        midend.recordRedraw(sink)
+        assertEquals(listOf(midend.statusText()), sink.statuses)
+    }
+
     private class UpdateSink : DrawSink {
         data class Update(val x: Int, val y: Int)
         val updates = ArrayList<Update>()
+        val statuses = ArrayList<String>()
 
         override fun changedState(canUndo: Boolean, canRedo: Boolean) {}
         override fun startDraw() {}
@@ -200,7 +272,9 @@ class FifteenTest {
         override fun update(x: Int, y: Int, width: Int, height: Int) {
             updates += Update(x, y)
         }
-        override fun status(text: String) {}
+        override fun status(text: String) {
+            statuses += text
+        }
         override fun clip(x: Int, y: Int, width: Int, height: Int) {}
         override fun unclip() {}
     }

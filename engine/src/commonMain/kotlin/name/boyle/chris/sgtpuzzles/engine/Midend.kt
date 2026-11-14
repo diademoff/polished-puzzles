@@ -37,6 +37,9 @@ class Midend private constructor(
     var ui: Game.Ui = game.newUi(state)
         private set
 
+    /** Set when `changedState` reports a completion; cleared by a take. */
+    private var completedEvent = false
+
     val stateCount: Int get() = entries.size
 
     val canUndo: Boolean get() = statePos > 1
@@ -99,18 +102,36 @@ class Midend private constructor(
 
     fun status(): Int = game.status(state)
 
-    fun statusText(): String = game.statusText(state)
+    fun statusText(): String = game.statusText(state, ui)
 
     fun textFormat(): String = game.textFormat(state)
 
+    /**
+     * Consumes the "the last transition completed the game" event. The
+     * midend sets it where upstream calls `android_completed`, so each
+     * completion is observed exactly once. A caller that never asks
+     * cannot observe a stale event twice; the next take returns false.
+     */
+    fun takeCompletedEvent(): Boolean {
+        val raised = completedEvent
+        completedEvent = false
+        return raised
+    }
+
     fun undo(): Boolean {
         if (!canUndo) return false
+        if (game.changedState(ui, state, entries[statePos - 2].state)) {
+            completedEvent = true
+        }
         statePos--
         return true
     }
 
     fun redo(): Boolean {
         if (!canRedo) return false
+        if (game.changedState(ui, state, entries[statePos].state)) {
+            completedEvent = true
+        }
         statePos++
         return true
     }
@@ -121,10 +142,12 @@ class Midend private constructor(
      * restart was pressed.
      */
     fun restart(): Boolean {
+        val previous = state
         val restarted = game.newState(params, desc)
         purgeRedo()
         entries += Entry(restarted, desc, MoveType.RESTART)
         statePos++
+        if (game.changedState(ui, previous, restarted)) completedEvent = true
         return true
     }
 
@@ -133,11 +156,15 @@ class Midend private constructor(
 
     /** The `SOLVE` history entry, or false when the game cannot solve. */
     fun solve(): Boolean {
+        val previous = state
         val move = game.solve(state, auxInfo) ?: return false
         val solved = game.executeMove(state, move) ?: return false
         purgeRedo()
         entries += Entry(solved, move, MoveType.SOLVE)
         statePos++
+        // `midend_solve` calls changed_state for its UI effect but ignores
+        // the return value, so a solve never raises the completion event.
+        game.changedState(ui, previous, solved)
         return true
     }
 
@@ -156,10 +183,12 @@ class Midend private constructor(
 
         return when (val result = game.interpretMove(state, ui, x, y, stripped, tileSize)) {
             is MoveResult.Move -> {
+                val previous = state
                 val next = game.executeMove(state, result.text) ?: return KeyOutcome.NoEffect
                 purgeRedo()
                 entries += Entry(next, result.text, MoveType.MOVE)
                 statePos++
+                if (game.changedState(ui, previous, next)) completedEvent = true
                 KeyOutcome.SomeEffect
             }
 
