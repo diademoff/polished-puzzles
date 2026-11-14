@@ -438,8 +438,9 @@ object Slant : Game {
         return ret
     }
 
-    override fun redraw(state: Game.State, sink: DrawSink, tileSize: Int) {
+    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
         val s = state as State
+        val u = ui as Ui
         val w = s.params.width
         val h = s.params.height
         val bigW = w + 1
@@ -483,6 +484,10 @@ object Slant : Game {
                             toDraw[(y + 2) * stride + (x + 1)] or ERR_T_L or ERR_C_TL
                     }
                 }
+                if (u.curVisible && u.curX == x && u.curY == y) {
+                    toDraw[(y + 1) * stride + (x + 1)] =
+                        toDraw[(y + 1) * stride + (x + 1)] or CURSOR
+                }
             }
         }
 
@@ -494,6 +499,22 @@ object Slant : Game {
                     toDraw[(y + 1) * stride + x] = toDraw[(y + 1) * stride + x] or ERR_TR
                     toDraw[(y + 1) * stride + x + 1] =
                         toDraw[(y + 1) * stride + x + 1] or ERR_TL
+                }
+            }
+        }
+
+        /*
+         * Upstream marks the centre tile of a square whose BORDER_EDGE
+         * bit is set. Its comment says "dunno why but it works this
+         * way"; the index is copied as written.
+         */
+        if (u.fadeGrounded) {
+            for (y in 0 until h) {
+                for (x in 0 until w) {
+                    if (s.errors[y * w + x] and BORDER_EDGE != 0) {
+                        toDraw[(y + 1) * stride + (x + 1)] =
+                            toDraw[(y + 1) * stride + (x + 1)] or GROUNDED
+                    }
                 }
             }
         }

@@ -62,6 +62,7 @@ Requests:
 {"op":"id","state":"..."}
 {"op":"keys","state":"...","seq":"108 108 522"}
 {"op":"trace","state":"..."}
+{"op":"trace","state":"...","seq":"524","prefs":"fade-grounded=true"}
 {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
 {"op":"randomBits","seed":"12345","bits":8,"count":10}
 {"op":"randomUpto","state":"...","limit":6,"count":10}
@@ -81,6 +82,13 @@ save-file round trip. Some upstream presets cannot survive that round
 trip: `pegs 5x5random`, for example, serialises `5x5cross` as its
 long-term params, which `validate_params` rejects on load. A trace is
 about a game, params, and a seed, so it does not need the save format.
+
+`trace` also accepts optional `seq` and `prefs` fields. `seq` is a key
+sequence with the same syntax as `keys`, processed in the recording
+midend before the redraw, so the trace can show frontend state such as a
+visible cursor. `prefs` is preferences text in the upstream file
+format, one `kw=value` per line, for example `"fade-grounded=true\n"`.
+A `trace` request without these fields keeps the old behaviour.
 
 Responses:
 
@@ -117,10 +125,12 @@ Notes:
 - Ordinary operations use a no-op drawing API. `trace` uses a recording
   API and returns the primitive stream. There is no rasterizer, so
   pixels are not compared.
-- A trace is one first redraw of a fresh midend. The initial clear with
-  colour 0 is part of the contract. A game that draws differently on a
-  later repaint needs its own trace scenario.
-- The trace starts with a fresh `game_ui`: the cursor is hidden and at
-  its default position. Cursor position is frontend state and is not
-  part of the save file, so it is not part of the trace.
+- A trace is one first redraw of a fresh midend, or of a fresh
+  drawstate after `seq`. The initial clear with colour 0 is part of the
+  contract. A game that draws differently on a later repaint needs its
+  own trace scenario.
+- Without `seq` and `prefs`, the trace starts with a fresh `game_ui`:
+  the cursor is hidden and at its default position, and the preferences
+  are the defaults. Cursor position is frontend state and is not part of
+  the save file, so a cursor trace must send `seq` in the same request.
 - A crash is a test failure, not a skip.

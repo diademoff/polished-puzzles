@@ -370,9 +370,23 @@ class OracleClient(
     /**
      * Records one redraw of [state] as draw operations. The trace
      * contract is in `docs/adr/0003-strict-draw-traces.md`.
+     *
+     * An optional [sequence] replays keys inside the recording midend,
+     * so a trace can show frontend state such as a visible cursor. An
+     * optional [prefs] sets game preferences first, in the preferences
+     * file format (`kw=value` lines). Both fields are absent from a
+     * plain trace, which therefore keeps its old behaviour.
      */
-    fun trace(state: String): JsonValue.Obj =
-        request(mapOf("op" to "trace", "state" to state)).field("trace") as JsonValue.Obj
+    fun trace(
+        state: String,
+        sequence: List<Int> = emptyList(),
+        prefs: String? = null,
+    ): JsonValue.Obj {
+        val fields = linkedMapOf<String, Any>("op" to "trace", "state" to state)
+        if (sequence.isNotEmpty()) fields["seq"] = sequence.joinToString(" ")
+        if (prefs != null) fields["prefs"] = prefs
+        return request(fields).field("trace") as JsonValue.Obj
+    }
 
     /**
      * Creates a new game and records its first redraw in one request.

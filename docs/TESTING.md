@@ -39,7 +39,7 @@ serialise(state)        -> savefile
 load(savefile)          -> state
 solve(state)            -> state
 requestkeys(state)      -> arrow mode + key labels
-trace(state)            -> draw primitives
+trace(state[, seq, prefs]) -> draw primitives
 randomBits(seed|state)  -> values + encoded generator state
 randomUpto(seed|state)  -> values + encoded generator state
 sort(values, mode)      -> sorted values
@@ -72,7 +72,10 @@ release, and it checks that a swipe does not add more moves than C does.
 
 `trace` records one `midend_redraw` through the recording drawing API.
 `traceNew` creates the game first, so a trace does not depend on the
-save format. The contract is `docs/adr/0003-strict-draw-traces.md`.
+save format. The `trace` operation accepts an optional key sequence and
+preferences, so a trace can cover frontend state such as a visible
+cursor or a grounded fade. The contract is
+`docs/adr/0003-strict-draw-traces.md`.
 
 ## 3. Parity tests
 
@@ -277,7 +280,9 @@ Engine tests:
 - `SlantSaveTest` reads every `slant` save in the corpus, rewrites it
   byte for byte, and pins the obfuscated `AUXINFO` record.
 - `SlantTraceTest` is strict. It is the first trace of `line`, `circle`,
-  `clip`, and `unclip`, and it matches every frozen `slant` golden.
+  `clip`, and `unclip`, and it matches every frozen `slant` golden. It
+  also checks the cursor after a cursor key and the grounded fade on and
+  off, each against the oracle with the same key sequence or preference.
 - `SlantInputParityTest` compares layout and clicks at several
   viewports, including the letterbox margin, and a swipe that must
   change only its start cell.

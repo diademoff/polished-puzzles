@@ -128,7 +128,21 @@ class KotlinTraceSink : DrawSink {
         fun trace(midend: Midend): JsonValue.Obj {
             val sink = KotlinTraceSink()
             midend.recordNewGameTrace(sink)
+            return objectFor(midend, sink)
+        }
 
+        /**
+         * Builds the trace object for the current state of [midend],
+         * without the `changed_state` operation the oracle emits for a
+         * new game. Use this after keys or preferences changed the UI.
+         */
+        fun stateTrace(midend: Midend): JsonValue.Obj {
+            val sink = KotlinTraceSink()
+            midend.recordRedraw(sink)
+            return objectFor(midend, sink)
+        }
+
+        private fun objectFor(midend: Midend, sink: KotlinTraceSink): JsonValue.Obj {
             val colours = midend.game.colours()
             val palette = JsonValue.Arr(
                 (0 until colours.size / 3).map { index ->

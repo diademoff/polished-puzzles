@@ -177,7 +177,7 @@ class Midend private constructor(
     fun recordRedraw(sink: DrawSink) {
         sink.startDraw()
         sink.rect(0, 0, size.width, size.height, 0)
-        game.redraw(state, sink, tileSize)
+        game.redraw(state, ui, sink, tileSize)
         if (game.wantsStatusBar) sink.status(statusText())
         sink.update(0, 0, size.width, size.height)
         sink.endDraw()

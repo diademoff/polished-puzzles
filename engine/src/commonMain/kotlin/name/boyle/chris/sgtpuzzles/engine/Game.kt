@@ -73,8 +73,12 @@ interface Game {
     /** The palette with the shell's background colour, when it matters. */
     fun colours(background: FloatArray): FloatArray = colours()
 
-    /** Draws a complete board into [sink], not an incremental update. */
-    fun redraw(state: State, sink: DrawSink, tileSize: Int)
+    /**
+     * Draws a complete board into [sink], not an incremental update.
+     * The [ui] carries the frontend state that affects drawing, such
+     * as a visible cursor. A game without such state ignores it.
+     */
+    fun redraw(state: State, ui: Ui, sink: DrawSink, tileSize: Int)
 
     /**
      * Turns a frontend key into a move. It mirrors `interpret_move`, so

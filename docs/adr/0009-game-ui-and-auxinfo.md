@@ -20,9 +20,9 @@ only the state, and `newDesc` returned only the description.
 ## Decision
 
 1. **The midend owns one `Game.Ui` object.** `Game.newUi(state)` creates
-   it; `Midend` passes it to `interpretMove`, `setCursorVisible`, and
-   `cursorLocation`. A load creates a fresh UI, as upstream does. The
-   UI is never serialised.
+   it; `Midend` passes it to `interpretMove`, `setCursorVisible`,
+   `cursorLocation`, and `redraw`. A load creates a fresh UI, as
+   upstream does. The UI is never serialised.
 2. **A cursor rectangle is a game-coordinate value.** `Game.CursorRect`
    carries left, top, width, and height. The shell adds the board
    origin; the game does not know about the viewport.
@@ -36,8 +36,13 @@ only the state, and `newDesc` returned only the description.
 5. **App enablement is per game, not global.** `KotlinGames.gameFor`
    can know a complete Kotlin game while `KotlinGames.handles` keeps the
    app on C. `slant` is in this state: the engine passes the parity
-   matrix, but its configuration dialog and cursor drawing are not
-   wired into the shell, and the two-release wait is not over.
+   matrix, but its configuration dialog is not wired into the shell,
+   and the two-release wait is not over.
+6. **`Game.redraw` receives the UI.** `Midend` passes its `Game.Ui` to
+   `redraw`, so a game can draw frontend state that is not in
+   `Game.State`, such as slant's cursor cell and its optional grounded
+   fade. A game without such state ignores the parameter. The UI stays
+   out of the state, the history, and the save file.
 
 ## Consequences
 
@@ -46,15 +51,19 @@ Positive:
 - slant passes the full matrix without changing fifteen's save or
   input path;
 - the seam now fits cursor games and games with an auxiliary answer;
+- the Kotlin renderer can draw slant's cursor and grounded fade, and
+  `SlantTraceTest` pins both against the oracle;
 - the app can validate a Kotlin game in dual-run without a feature flag
   in the user-facing settings.
 
 Negative:
 
-- `Game.redraw` still has no UI parameter, so the Kotlin renderer does
-  not draw slant's cursor cell or the optional grounded fade. The app
-  uses C for slant, so no user sees the gap. Lifting this needs a
-  redraw signature change and a new trace axis.
+- `Game.redraw` has no flash or animation time, so the Kotlin renderer
+  does not draw the completion flash or the solve animation. Slant is
+  still on C in the app, and no strict trace enables either.
+- the app still uses C for slant, so the new cursor and fade drawing is
+  checked by parity traces but is not yet visible through the Android
+  shell;
 - the midend now has two pieces of state that are not in the save file
   (the UI and the auxiliary text); tests must keep them out of
   serialisation.

@@ -149,7 +149,8 @@ class FifteenTest {
 
         for (tile in listOf(48, 63, 82, 100)) {
             val sink = UpdateSink()
-            Fifteen.redraw(Midend.fromGameId(Fifteen, id).state, sink, tile)
+            val midend = Midend.fromGameId(Fifteen, id)
+            Fifteen.redraw(midend.state, midend.ui, sink, tile)
             val cells = sink.updates.associateBy { it.x to it.y }
             assertEquals(16, cells.size, "tile $tile")
 

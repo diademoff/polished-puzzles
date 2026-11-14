@@ -518,7 +518,7 @@ class KotlinGameEngine private constructor(
             )
             firstDraw = false
         }
-        game.redraw(state, sink, geometry.tileSize)
+        game.redraw(state, midend.ui, sink, geometry.tileSize)
         activityCallbacks.setStatus(midend.statusText())
         viewCallbacks.endDraw()
     }

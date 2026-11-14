@@ -28,6 +28,7 @@
  *   {"op":"status","state":"..."}
  *   {"op":"keys","state":"...","seq":"108 108 522"}
  *   {"op":"trace","state":"..."}
+ *   {"op":"trace","state":"...","seq":"524","prefs":"fade-grounded=true"}
  *   {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
  *   {"op":"randomBits","seed":"12345","bits":8,"count":10}
  *   {"op":"randomUpto","state":"...","limit":6,"count":10}
@@ -1236,6 +1237,51 @@ static void do_new(const char *gamename, const char *params,
     free_frontend(&fe);
 }
 
+/*
+ * Replays a space- or comma-separated list of button codes inside one
+ * midend, with the pointer at 0,0. Cursor games keep the cursor in
+ * game_ui, which is not part of the save file, so a sequence must run in
+ * one midend. Returns NULL on success.
+ */
+static const char *process_key_seq(frontend *fe, const char *seq)
+{
+    const char *p = seq;
+
+    while (*p) {
+        char *end;
+        long key;
+
+        while (*p == ' ' || *p == ',' || *p == '\t')
+            p++;
+        if (!*p)
+            break;
+        key = strtol(p, &end, 10);
+        if (end == p)
+            return "keys needs a space- or comma-separated list";
+        p = end;
+        midend_process_key(fe->me, 0, 0, (int)key);
+    }
+    return NULL;
+}
+
+/*
+ * Applies preferences in the upstream preferences file format: one
+ * `kw=value` per line, with space-stuffed continuations. Returns NULL on
+ * success. The parser is upstream's, so unknown keywords are ignored and
+ * an invalid value is an error, as in the app.
+ */
+static const char *apply_prefs(frontend *fe, const char *prefs)
+{
+    rbuf rd;
+
+    if (!prefs)
+        return NULL;
+    rd.buf = prefs;
+    rd.len = (int)strlen(prefs);
+    rd.pos = 0;
+    return midend_load_prefs(fe->me, rbuf_read_cb, &rd);
+}
+
 static void put_trace(frontend *fe, trace_ctx *trace)
 {
     float *colours;
@@ -1244,11 +1290,10 @@ static void put_trace(frontend *fe, trace_ctx *trace)
     int ncolours = 0, i;
 
     /*
-     * One redraw of a fresh midend is the trace. The first redraw of a
-     * new drawstate clears the window with colour 0, and that clear is
-     * part of the contract.
+     * The caller has already run one redraw into `trace`. A first
+     * redraw of a new drawstate clears the window with colour 0, and
+     * that clear is part of the contract.
      */
-    midend_redraw(fe->me);
     colours = midend_colours(fe->me, &ncolours);
     id = midend_get_game_id(fe->me);
     params = midend_get_current_params(fe->me, true);
@@ -1275,8 +1320,11 @@ static void put_trace(frontend *fe, trace_ctx *trace)
     sfree(params);
 }
 
-static void do_trace(const char *save)
+static void do_trace(const jobject *req)
 {
+    const char *save = field_string(req, "state");
+    const char *seq = field_string(req, "seq");
+    const char *prefs = field_string(req, "prefs");
     frontend fe = {0};
     trace_ctx trace = {0};
     const char *error;
@@ -1291,12 +1339,44 @@ static void do_trace(const char *save)
         return;
     }
 
+    error = apply_prefs(&fe, prefs);
+    if (error)
+        goto fail;
+
+    if (seq) {
+        error = process_key_seq(&fe, seq);
+        if (error)
+            goto fail;
+
+        /*
+         * A cursor key only changes game_ui, and processing it redraws
+         * into the trace. Drop those operations and start a fresh
+         * drawstate, so the response has the shape of a first redraw.
+         * This path has no blitters in the drawstate, so resetting the
+         * id counter is safe.
+         */
+        trace.ops.len = 0;
+        if (trace.ops.buf)
+            trace.ops.buf[0] = '\0';
+        trace.nops = 0;
+        trace.blitters = 0;
+        midend_force_redraw(fe.me);
+    } else {
+        midend_redraw(fe.me);
+    }
+
     put_trace(&fe, &trace);
 
     /* Freeing the midend frees its blitters, which appends to the trace
      * buffer. The frontend must go before the buffer. */
     free_frontend(&fe);
     sfree(trace.ops.buf);
+    return;
+
+  fail:
+    free_frontend(&fe);
+    sfree(trace.ops.buf);
+    put_error(error);
 }
 
 static void do_trace_new(const char *gamename, const char *params,
@@ -1312,6 +1392,7 @@ static void do_trace_new(const char *gamename, const char *params,
         return;
     }
 
+    midend_redraw(fe.me);
     put_trace(&fe, &trace);
 
     free_frontend(&fe);
@@ -1322,7 +1403,6 @@ static void do_key_seq(const char *save, const char *seq)
 {
     frontend fe = {0};
     const char *error;
-    const char *p;
 
     if (!save) {
         put_error("missing state");
@@ -1339,28 +1419,11 @@ static void do_key_seq(const char *save, const char *seq)
         return;
     }
 
-    /*
-     * Cursor games keep the cursor in the game_ui, which is not part of
-     * the save file. A sequence must be processed inside one midend, or
-     * the cursor would reset between requests.
-     */
-    p = seq;
-    while (*p) {
-        char *end;
-        long key;
-
-        while (*p == ' ' || *p == ',' || *p == '\t')
-            p++;
-        if (!*p)
-            break;
-        key = strtol(p, &end, 10);
-        if (end == p) {
-            free_frontend(&fe);
-            put_error("keys needs a space- or comma-separated list");
-            return;
-        }
-        p = end;
-        midend_process_key(fe.me, 0, 0, (int)key);
+    error = process_key_seq(&fe, seq);
+    if (error) {
+        free_frontend(&fe);
+        put_error(error);
+        return;
     }
 
     put_state(&fe);
@@ -2341,7 +2404,7 @@ int main(int argc, char **argv)
             do_key_seq(field_string(&req, "state"),
                        field_string(&req, "seq"));
         } else if (!strcmp(op, "trace")) {
-            do_trace(field_string(&req, "state"));
+            do_trace(&req);
         } else if (!strcmp(op, "tree")) {
             do_tree(&req);
         } else if (!strcmp(op, "matching")) {
