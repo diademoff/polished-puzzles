@@ -193,3 +193,6 @@ include/
 
 # Orchestrator working files
 /work/
+
+# Screenshot goldens are recorded locally on the reference AVD.
+/app/src/androidTest/assets/screens/
