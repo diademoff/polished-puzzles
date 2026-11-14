@@ -131,8 +131,9 @@ remains oracle-backed until Phase 4 ports each generator; the existing
 One game at a time, in dual-run mode, behind a feature flag.
 
 Phase 4 also ports the libraries deferred from Phase 3 with their first
-consumer: `midend` with fifteen, `grid` with slant or mines, `latin`
-with keen, towers, or unequal, and `loopgen` with net or loopy. See
+consumer: `midend` with fifteen, `grid` and `loopgen` with loopy or
+pearl, and `latin` with keen, towers, or unequal. Neither `slant` nor
+`mines` includes `grid.h` in this pinned upstream. See
 `docs/adr/0006-port-libraries-with-consumer.md`.
 
 Order:

@@ -45,17 +45,18 @@ not in the reference.
    plausibility.
 
 3. **The remaining libraries move to Phase 4 and are ported with their
-   first consumer:** `grid` (slant or mines), `latin` (keen, towers, or
-   unequal), `loopgen` (net or loopy), and `midend` (fifteen). The
-   first game that needs a library is the point where the library has
-   an end-to-end check: the game's dual-run matrix compares the Kotlin
-   library through the game with the C oracle.
+   first consumer:** `grid` and `loopgen` (loopy or pearl), `latin`
+   (keen, towers, or unequal), and `midend` (fifteen). In the pinned
+   upstream, `slant`, `mines`, and `net` do not include `grid.h` or
+   `loopgen.h`. The first game that needs a library is the point where
+   the library has an end-to-end check: the game's dual-run matrix
+   compares the Kotlin library through the game with the C oracle.
 
 4. **A library port does not change the game's status.** A game stays
    `C` until its Kotlin path passes the full matrix in `PARITY.md`,
    including `.sgtp`, move sequences, undo/redo, `completed`, and the
-   strict trace. Porting `grid` with slant does not make loopy a Kotlin
-   game.
+   strict trace. Porting `grid` with loopy does not make another game
+   that uses `grid` a Kotlin game.
 
 5. **Every deferred port keeps the same method.** An oracle operation
    drives the C code, a differential test compares the Kotlin result,
