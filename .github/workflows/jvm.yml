@@ -30,6 +30,9 @@ jobs:
       - name: Build the host oracle
         run: tools/oracle/build.sh
 
+      - name: Engine unit tests
+        run: ./gradlew :engine:jvmTest --console=plain
+
       - name: Unit and parity tests
         run: ./gradlew :parity:test -Poracle=build/oracle/puzzles-oracle --console=plain
 

@@ -108,6 +108,9 @@ class OracleClient(
             ),
         )
 
+    /** Re-reads a save file. Fails when upstream rejects the save. */
+    fun id(state: String): GameState = GameState.of(request(mapOf("op" to "id", "state" to state)))
+
     fun undo(state: String): GameState = GameState.of(request(mapOf("op" to "undo", "state" to state)))
 
     fun redo(state: String): GameState = GameState.of(request(mapOf("op" to "redo", "state" to state)))
@@ -115,6 +118,55 @@ class OracleClient(
     fun solve(state: String): GameState = GameState.of(request(mapOf("op" to "solve", "state" to state)))
 
     fun status(state: String): GameState = GameState.of(request(mapOf("op" to "status", "state" to state)))
+
+    /** Upstream `arraysort()` order for an integer list. */
+    fun sort(values: List<Long>, mode: String): List<Long> =
+        request(
+            mapOf(
+                "op" to "sort",
+                "values" to values.joinToString(" "),
+                "mode" to mode,
+            ),
+        ).numberList("values")
+
+    /** Upstream `combi.c` order for every `r`-subset of `0 until n`. */
+    fun combinations(r: Int, n: Int): List<List<Int>> =
+        request(mapOf("op" to "combi", "r" to r, "n" to n))
+            .stringList("combinations")
+            .map { text -> text.split(',').map { it.toInt() } }
+
+    /** `random_bits` from a seed or from an encoded generator state. */
+    fun randomBits(
+        bits: Int,
+        count: Int,
+        seed: String? = null,
+        state: String? = null,
+    ): RandomStream = randomStream("randomBits", seed, state, "bits" to bits, "count" to count)
+
+    /** `random_upto` from a seed or from an encoded generator state. */
+    fun randomUpto(
+        limit: Long,
+        count: Int,
+        seed: String? = null,
+        state: String? = null,
+    ): RandomStream = randomStream("randomUpto", seed, state, "limit" to limit, "count" to count)
+
+    private fun randomStream(
+        op: String,
+        seed: String?,
+        state: String?,
+        vararg extra: Pair<String, Any>,
+    ): RandomStream {
+        val fields = linkedMapOf<String, Any>("op" to op)
+        if (seed != null) fields["seed"] = seed
+        if (state != null) fields["state"] = state
+        for ((key, value) in extra) fields[key] = value
+        val response = request(fields)
+        val values = (response.field("values") as JsonValue.Arr).items.map {
+            (it as JsonValue.Num).value
+        }
+        return RandomStream(values, response.string("state"))
+    }
 
     fun text(state: String): String = request(mapOf("op" to "text", "state" to state)).string("text")
 
@@ -210,6 +262,9 @@ class OracleClient(
 class OracleException(message: String) : RuntimeException(message)
 
 data class Preset(val title: String, val params: String)
+
+/** Values from one random stream, plus the encoded generator state after them. */
+data class RandomStream(val values: List<Long>, val state: String)
 
 data class GameState(
     val state: String,

@@ -19,4 +19,5 @@ plugins {
 
 rootProject.name = "sgtpuzzles"
 include(":app")
+include(":engine")
 include(":parity")

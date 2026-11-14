@@ -191,6 +191,12 @@ fun JsonValue.Obj.number(key: String): Long =
     (field(key) as? JsonValue.Num)?.value
         ?: throw IllegalStateException("field '$key' is not a number: $fields")
 
+fun JsonValue.Obj.numberList(key: String): List<Long> =
+    (field(key) as JsonValue.Arr).items.map {
+        (it as? JsonValue.Num)?.value
+            ?: throw IllegalStateException("field '$key' is not a number array: $fields")
+    }
+
 fun JsonValue.Obj.stringList(key: String): List<String> =
     (field(key) as JsonValue.Arr).items.map {
         (it as? JsonValue.Str)?.value

@@ -26,6 +26,7 @@ val oraclePath: String = providers.gradleProperty("oracle")
 val testdataDir = rootProject.layout.projectDirectory.dir("testdata")
 
 dependencies {
+    implementation(project(":engine"))
     testImplementation("junit:junit:4.13.2")
 }
 

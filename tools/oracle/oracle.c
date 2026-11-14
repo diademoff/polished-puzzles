@@ -25,6 +25,10 @@
  *   {"op":"keys","state":"...","seq":"108 108 522"}
  *   {"op":"trace","state":"..."}
  *   {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
+ *   {"op":"randomBits","seed":"12345","bits":8,"count":10}
+ *   {"op":"randomUpto","state":"...","limit":6,"count":10}
+ *   {"op":"sort","values":"5 3 9 1","mode":"asc"}
+ *   {"op":"combi","r":2,"n":5}
  *
  * Responses (flat JSON objects):
  *
@@ -1352,6 +1356,175 @@ static void do_key_seq(const char *save, const char *seq)
     free_frontend(&fe);
 }
 
+/* ------------------------------------------------------------------ */
+/* Deterministic helpers: arraysort and combinations.                 */
+/* ------------------------------------------------------------------ */
+
+struct sort_mode {
+    const char *name;
+};
+
+static int compare_longs(const void *av, const void *bv, void *ctx)
+{
+    const struct sort_mode *mode = ctx;
+    long a = *(const long *)av, b = *(const long *)bv;
+
+    if (!strcmp(mode->name, "lowbits")) {
+        int ab = (int)(a & 7), bb = (int)(b & 7);
+        if (ab != bb)
+            return ab - bb;
+    }
+    if (!strcmp(mode->name, "desc"))
+        return (a < b) ? 1 : (a > b) ? -1 : 0;
+    return (a < b) ? -1 : (a > b) ? 1 : 0;
+}
+
+/*
+ * Sorts a space-separated integer list with upstream arraysort(). The
+ * Kotlin port must produce the same order, including for equal keys.
+ */
+static void do_sort(const jobject *req)
+{
+    const char *text = field_string(req, "values");
+    const char *name = field_string(req, "mode");
+    struct sort_mode mode = { name ? name : "asc" };
+    long *values = NULL;
+    int count = 0, capacity = 0, i;
+    const char *p;
+
+    if (!text) {
+        put_error("sort needs values");
+        return;
+    }
+    p = text;
+    while (*p) {
+        char *end;
+        long v;
+        while (*p == ' ' || *p == '\t' || *p == ',')
+            p++;
+        if (!*p)
+            break;
+        v = strtol(p, &end, 10);
+        if (end == p) {
+            sfree(values);
+            put_error("sort values must be integers");
+            return;
+        }
+        if (count == capacity) {
+            capacity = capacity ? capacity * 2 : 16;
+            values = sresize(values, capacity, long);
+        }
+        values[count++] = v;
+        p = end;
+    }
+
+    arraysort_fn(values, count, sizeof(long), compare_longs, &mode);
+
+    fputs("{\"ok\":true,\"values\":[", stdout);
+    for (i = 0; i < count; i++)
+        printf("%s%ld", i ? "," : "", values[i]);
+    fputs("]}\n", stdout);
+    sfree(values);
+}
+
+/*
+ * Enumerates combinations in upstream order. The response is a list of
+ * comma-separated index strings, which is enough to compare the exact
+ * iteration order with the Kotlin port.
+ */
+static void do_combi(const jobject *req)
+{
+    long r = 0, n = 0;
+    combi_ctx *combi;
+    int total, emitted = 0, i;
+
+    if (!field_int(req, "r", &r) || !field_int(req, "n", &n) ||
+        r < 1 || n < 1 || r > n || n > 12) {
+        put_error("combi needs 1 <= r <= n <= 12");
+        return;
+    }
+    combi = new_combi((int)r, (int)n);
+    if (combi->total > 100000) {
+        free_combi(combi);
+        put_error("combi result is too large");
+        return;
+    }
+    total = combi->total;
+
+    printf("{\"ok\":true,\"total\":%d,\"combinations\":[", total);
+    while (next_combi(combi) != NULL) {
+        printf("%s\"", emitted ? "," : "");
+        for (i = 0; i < combi->r; i++)
+            printf("%s%d", i ? "," : "", combi->a[i]);
+        printf("\"");
+        emitted++;
+    }
+    fputs("]}\n", stdout);
+    free_combi(combi);
+}
+
+/*
+ * Random streams. The parity tests compare the Kotlin port of random.c
+ * with the C implementation, so this operation exposes the exact
+ * values and the encoded state after the draw. A request carries either
+ * a seed or an encoded state; `bits` selects random_bits, `limit`
+ * selects random_upto. The response always carries the encoded state,
+ * so a test can continue a stream on either side.
+ */
+static void do_random(const jobject *req, bool upto)
+{
+    const char *seed = field_string(req, "seed");
+    const char *state = field_string(req, "state");
+    long bits = 8, limit = 0, count = 1;
+    random_state *rs;
+    char *encoded;
+    int i;
+
+    if (state)
+        rs = random_state_decode(state);
+    else if (seed)
+        rs = random_new(seed, (int)strlen(seed));
+    else {
+        put_error("random needs a seed or a state");
+        return;
+    }
+
+    if (upto) {
+        if (!field_int(req, "limit", &limit) || limit <= 0) {
+            random_free(rs);
+            put_error("randomUpto needs a positive limit");
+            return;
+        }
+    } else {
+        if (!field_int(req, "bits", &bits) || bits < 1 || bits > 31) {
+            random_free(rs);
+            put_error("randomBits needs bits in 1..31");
+            return;
+        }
+    }
+    if (!field_int(req, "count", &count))
+        count = 1;
+    if (count < 0 || count > 1000000) {
+        random_free(rs);
+        put_error("random count is out of range");
+        return;
+    }
+
+    fputs("{\"ok\":true,\"values\":[", stdout);
+    for (i = 0; i < count; i++) {
+        unsigned long value = upto ? random_upto(rs, (unsigned long)limit)
+                                   : random_bits(rs, (int)bits);
+        printf("%s%lu", i ? "," : "", value);
+    }
+    encoded = random_state_encode(rs);
+    fputs("],\"state\":", stdout);
+    put_json_string(encoded);
+    fputs("}\n", stdout);
+
+    sfree(encoded);
+    random_free(rs);
+}
+
 static void do_state_op(const char *op, const jobject *req)
 {
     const char *save = field_string(req, "state");
@@ -1483,6 +1656,13 @@ int main(int argc, char **argv)
                        field_string(&req, "seq"));
         } else if (!strcmp(op, "trace")) {
             do_trace(field_string(&req, "state"));
+        } else if (!strcmp(op, "sort")) {
+            do_sort(&req);
+        } else if (!strcmp(op, "combi")) {
+            do_combi(&req);
+        } else if (!strcmp(op, "randomBits") ||
+                   !strcmp(op, "randomUpto")) {
+            do_random(&req, !strcmp(op, "randomUpto"));
         } else if (!strcmp(op, "traceNew")) {
             const char *game = field_string(&req, "game");
             if (!game)
