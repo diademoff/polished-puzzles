@@ -86,6 +86,13 @@ meaninglessly green.
 - **Schema version** is `traceSchema: 1`. It changes only together with
   the normalizer and the goldens.
 
+The executable contract is `docs/adr/0003-strict-draw-traces.md`. In
+short: the trace is JSON, numbers are integers in milli-units
+(`round(value * 1000)`), colours are palette indices plus the palette
+table, and `TraceNormalizer` writes the canonical one-operation-per-line
+form used by the goldens. The oracle records it with
+`{"op":"trace","state":"..."}`.
+
 ## 4. Seed contract
 
 The seed is a public API of the project. It must stay shared with
@@ -140,7 +147,7 @@ C wins.
 |---|---|---|
 | `midend` | C | C |
 | `grid`, `loopgen`, `latin` | C | C |
-| `renderer` | new | C traces |
+| `renderer` | new: trace contract and oracle recorder | C traces |
 | games (see the table below) | not started | C |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
@@ -222,6 +229,9 @@ Notes:
 - `testdata/manifest.json` stores the `sha256` and the version. The
   test `GoldenManifestTest` fails when a hash or the file list drifts.
 - Regenerate only with `tools/gen-goldens.sh`, and review the diff.
+- Strict draw traces are canonical text in `testdata/trace/<game>/`.
+  They are generated with `tools/gen-traces.sh` and compared by
+  `StrictTraceTest`. The first traced game is `fifteen`, every preset.
 - Never update a golden to "fix" a red test. Find the cause first,
   then add a `DEVIATIONS.md` entry or fix the code.
 

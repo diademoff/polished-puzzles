@@ -30,12 +30,20 @@ Minimal scenario:
 ```
 new(game, params, seed) -> state
 key(state, x, y, k)     -> state + flags
+keys(state, seq)        -> state + flags
 undo/redo(state)        -> state + flags
 serialise(state)        -> savefile
 load(savefile)          -> state
 solve(state)            -> state
-draw(state)             -> primitives
+trace(state)            -> draw primitives
 ```
+
+`keys` replays a whole sequence in one midend. It is required for
+cursor games: the cursor lives in the frontend state (`game_ui`), which
+is not part of the save file, so separate `key` requests would reset it.
+
+`trace` records one `midend_redraw` through the recording drawing API.
+The contract is `docs/adr/0003-strict-draw-traces.md`.
 
 ## 3. Parity tests
 
@@ -68,8 +76,9 @@ testdata/
 ├─ saves/                    # .sgtp fixtures, including old versions
 ├─ regressions/<game>/       # issue-*.json: seed, params, moves, expected
 ├─ corpus/<game>/            # fuzz corpus, minimized
-├─ golden/<game>/            # traces, colors, keys, presets
-└─ manifest.json             # sha256, provenance, upstream commit
+├─ golden/<game>/            # params + seed -> DESC, presets
+├─ trace/<game>/             # strict draw traces, one per preset
+└─ manifest.json             # sha256, provenance, upstream commit for DESC
 ```
 
 Rules:
@@ -138,6 +147,10 @@ Required:
 ## 8. Goldens and screenshots
 
 - Geometry goldens are JSON/JSON.gz and are diffed in the PR.
+- Strict draw traces are canonical text in
+  `testdata/trace/<game>/<params>.trace`, one operation per line. They
+  are regenerated with `tools/gen-traces.sh` and compared in
+  `StrictTraceTest`. The contract is `docs/adr/0003-strict-draw-traces.md`.
 - Screenshots cover UI regressions. Compare with a tolerance, on a
   fixed configuration (size, density, theme, font).
 - Do not compare screenshots across devices and Android versions
@@ -169,13 +182,13 @@ Shell tests:
 
 Device run on the API 36 emulator, 2026-11-14:
 
-- 56 tests, 52 passed, 3 skipped (the fastlane screenshot tests skip
-  themselves without the fastlane argument), 1 failed.
-- The failure is `GamePlayParameterizedTest[Palisade 2x3n3:d33]`: the
-  key sequence does not complete the puzzle on this emulator. The same
-  failure exists at commit `1cd9f4cb`, before the Compose shell, so it
-  is not a shell regression. Keep the case visible; do not delete it to
-  make the suite green.
+- 56 tests, 53 passed, 3 skipped (the fastlane screenshot tests skip
+  themselves without the fastlane argument), 0 failed.
+- `GamePlayParameterizedTest[Palisade 2x3n3:d33]` was stale, not a
+  shell regression. It sent `L`, which only toggles an edge in the
+  legacy half-grid cursor mode; Palisade defaults to the full-grid
+  cursor. The case now uses the arrow and select keys of the default
+  mode, and it passes.
 - The four screen tests, the four accessibility tests, and the three
   screenshot comparisons pass.
 
