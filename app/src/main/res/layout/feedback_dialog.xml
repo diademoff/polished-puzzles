@@ -42,6 +42,7 @@
                 android:minWidth="48dp"
                 android:minHeight="48dp"
                 app:srcCompat="@drawable/ic_content_copy"
+                app:tint="?attr/colorControlNormal"
                 tools:ignore="ImageContrastCheck" />
         </LinearLayout>
 

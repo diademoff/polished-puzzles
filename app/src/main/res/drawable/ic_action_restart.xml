@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols, Apache License 2.0. Converted from the icon font. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M 12.000 22.000 Q 10.125 22.000 8.488 21.288 Q 6.850 20.575 5.638 19.363 Q 4.425 18.150 3.713 16.512 Q 3.000 14.875 3.000 13.000 L 5.000 13.000 Q 5.000 15.925 7.038 17.963 Q 9.075 20.000 12.000 20.000 Q 14.925 20.000 16.963 17.963 Q 19.000 15.925 19.000 13.000 Q 19.000 10.075 16.963 8.037 Q 14.925 6.000 12.000 6.000 L 11.850 6.000 L 13.400 7.550 L 12.000 9.000 L 8.000 5.000 L 12.000 1.000 L 13.400 2.450 L 11.850 4.000 L 12.000 4.000 Q 13.875 4.000 15.513 4.713 Q 17.150 5.425 18.363 6.638 Q 19.575 7.850 20.288 9.488 Q 21.000 11.125 21.000 13.000 Q 21.000 14.875 20.288 16.512 Q 19.575 18.150 18.363 19.363 Q 17.150 20.575 15.513 21.288 Q 13.875 22.000 12.000 22.000 Z" />
+</vector>
