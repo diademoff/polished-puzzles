@@ -1,0 +1,26 @@
+{
+  "game": "solo",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "3x3:1_4c3_9b2a6_7j6a5_2b3_2e6b3a7b8e9_7b5_8a1j2_8a9b7_6c3_5"},
+    {"params": "2x2", "id": "2x2:3a2j1a3"},
+    {"params": "2x3db", "id": "2x3:d3_5d6_4_3c1b2c3_6_5d2_4d"},
+    {"params": "3x3", "id": "3x3:1_4c3_9b2a6_7j6a5_2b3_2e6b3a7b8e9_7b5_8a1j2_8a9b7_6c3_5"},
+    {"params": "3x3da", "id": "3x3:7c6a2d8e6a1_6_9e8c7_3c3_9a8_5_1a2_7c2_9c5e7_5_6a5e8d7a8c1"},
+    {"params": "3x3db", "id": "3x3:1_4c3c2b7g8b6a5_2b3_2e6b3a7b8e9_7b5_8a1b6g2b9c6c3_5"},
+    {"params": "3x3de", "id": "3x3:h9b9_2c1a6b3_5a8a2d2_3b7b3a1a6b1b9_4d3a8a6_4b5a5c2_9b4h"},
+    {"params": "3x3di", "id": "3x3:c4d9b9_2c1a6c5a8a2e3b7b3a1a6b1b9e3a8a6c5a5c2_9b4d7c"},
+    {"params": "3x3du", "id": "3x3:f5_7c4a7_8b6_6c5d1d3a5b5_7_4a1_8_3b4a7d9d3c1_8b9_4a3c3_6f"},
+    {"params": "3x3ka", "id": "3x3k:zzzc,a_____b_____a____________________aa______c____b___ba__ab_aa____aa__aaa_caabaaaaa_a_aa_a___aa____aa_a,17a8_19_10_10_7_7a9f10a5_9_15a13_4_13_9_9c8e10_9_8a16_13a20d6a13_13b18c3b6a7a6_12a15b25_14c9d"},
+    {"params": "3x3xda", "id": "3x3x:i2d5d3_8b6e7c1d1_4a8_5d4c6e3b7_9d2d3i"},
+    {"params": "3x3xdb", "id": "3x3x:1h2d5d3_8b6e7b9_1d1_4a8_5d4_1b6e3b7_9d2d3h4"},
+    {"params": "3x4db", "id": "3x4:b1a12_7a6a10h4_10_12b5_5h1a6b2_6_10a1e8d9b4_2_1f2_7_3_5b12_11b10_3_6_2f1_6_5b11d3e4a9_11_6b1a7h11_10b12_11_8h8a1a10_4a7b"},
+    {"params": "4x4db", "id": "4x4:a8a6_7a1c10b16a13b3a16c2a8b5d11c2_3_5_7a15c6_16_12b11d13a3_15a4g12_9_14a7_16b15b2a15_3b14b4a8a11_9_11_7b15b10_9b8_1e5c16_4e14_7b13_6e4_15c11e1_13b7_16b11b5_15_14_11a3a5b13b1_6a8b5b4_9a2_8_14g16a2_1a10d5b13_3_3c2a9_15_12_10c7d15b7a6c14a12b4a10b12c9a2_5a6a"},
+    {"params": "9jda", "id": "9j:i1c5b9c8_6f4d3a6b5c2b3a1d5f9_1c9b8c2i,cf_abcb_ab_bbacb__ccaa__ae_d_babbaa_aaab_a__ba_a____bcc_abbe"},
+    {"params": "9jdb", "id": "9j:i1c5b9a2a8_6f4a8b3d5c2d1b4a5f9_1a3a9b8c2i,cf_abcb_ab_bbacb__ccaa__ae_d_babbaa_aaab_a__ba_a____bcc_abbe"},
+    {"params": "9jxdb", "id": "9jx:i8_4a6a1a7a2_7_1h7h6c9h7h6_9_1a1a2a4a8_5i,edaba__a_bc_aa_a_bb_aabeab_gbdcb__a_a_b_cabb__bbd_aaca_caa"}
+  ]
+}

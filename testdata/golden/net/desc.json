@@ -1,0 +1,18 @@
+{
+  "game": "net",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "5x5:1863151ea86e7e3c7abc21a32"},
+    {"params": "11x11", "id": "11x11:45da5c9449142c26ce2bd3a15952b5b2a671a9e37c898dc35d677e4169adbb9a722eeae7a81e458b98772872a8e86e6ee9251817a8ce5cc75a644a629"},
+    {"params": "11x11w", "id": "11x11w:8455ba1c199a2c8e63aa41bae6a8bb796423d757d884d1cc85bde796ae5dbd661438e26da575d442c27b1b28ae5d5bbc6425ed9221ba621823d28e8d5"},
+    {"params": "5x5", "id": "5x5:1863151ea86e7e3c7abc21a32"},
+    {"params": "5x5w", "id": "5x5w:8642ec1e6b11ae6cac23c395b"},
+    {"params": "7x7", "id": "7x7:9911eb44ed738217273cd898db64496db582dd4ba915741ac"},
+    {"params": "7x7w", "id": "7x7w:c35438527dee3a61a796e86bdee18a1da551687a544276581"},
+    {"params": "9x9", "id": "9x9:115c883883e956e53c36bede7d81398d9ce8159add9c16933e55e245c2b72dc446777c846ba984654"},
+    {"params": "9x9w", "id": "9x9w:758ac9da9b3158d51922ed797d71284b6e5d837ee73449cd2eaabb6968bd8219361665e4413c64818"}
+  ]
+}

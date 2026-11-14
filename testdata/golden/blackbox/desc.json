@@ -1,0 +1,15 @@
+{
+  "game": "blackbox",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "w8h8m5M5:925fa66636a72ed6ae1c5015"},
+    {"params": "w10h10m4M10", "id": "w10h10m4M10:5d8138cc34822efd87ac16de"},
+    {"params": "w10h10m5M5", "id": "w10h10m5M5:b4111bd12ceebd7a720a0c43"},
+    {"params": "w5h5m3M3", "id": "w5h5m3M3:7f1b9a74d74b19f6"},
+    {"params": "w8h8m3M6", "id": "w8h8m3M6:f9086f6b7379c992"},
+    {"params": "w8h8m5M5", "id": "w8h8m5M5:925fa66636a72ed6ae1c5015"}
+  ]
+}

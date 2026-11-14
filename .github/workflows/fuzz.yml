@@ -1,0 +1,30 @@
+name: fuzz
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Build the fuzz frontend
+        run: tools/oracle/build.sh --with-fuzz
+
+      - name: Run the icon corpus through fuzzpuzz
+        run: |
+          failed=0
+          for f in app/src/main/jni/icons/*.sav; do
+            case "$f" in
+              */nullgame.sav) continue ;;
+            esac
+            if ! build/oracle/fuzzpuzz < "$f" > /dev/null; then
+              echo "crash or rejection: $f"
+              failed=1
+            fi
+          done
+          exit "$failed"

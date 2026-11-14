@@ -1,0 +1,19 @@
+{
+  "game": "bridges",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "7x7m2:3e2g6a3c2i1b3h4d4a"},
+    {"params": "10x10i30e10m2d0", "id": "10x10m2:3e2a1b2g33e3a1b3a4a2d4e7b3g1c4a4a3k2a3a2c2d3b4b5b4"},
+    {"params": "10x10i30e10m2d1", "id": "10x10m2:b2b2c2j2a4a1o5b6a6a3f2d14b2o1e1d4c5b3a2"},
+    {"params": "10x10i30e10m2d2", "id": "10x10m2:a2a3a2a2a22a4a5a2h1a2a3b2g5c8d5e3b1b3b3a4b6c3a3d2j3a4b5b4"},
+    {"params": "15x15i30e10m2d0", "id": "15x15m2:2m4o1h2d4o3f3d4a2p1j3b4m5zd3m5b1c4b2f2b3c2a5b2p3a3a4a3a1a2c3"},
+    {"params": "15x15i30e10m2d1", "id": "15x15m2:a4c6d4a3f2a2a4e2p4b5zd6b5zg6a4e5b4r2m1b2a1c1b1f2c5e6b1p1a1a3e6a3a2"},
+    {"params": "15x15i30e10m2d2", "id": "15x15m2:3a5f3a1b2f2c4b3c3d2a1e6e5c4b4q3a4b8g5b1a2b1b3b3b2z2a4a3p4a7c4b2a4b6a2j1i1a1a2d1f2a3a2a3b3d4a1a"},
+    {"params": "7x7i30e10m2d0", "id": "7x7m2:3e2g6a3c2i1b3h4d4a"},
+    {"params": "7x7i30e10m2d1", "id": "7x7m2:a3b1e2b32g3a4a4a4a1i2a2b4b3"},
+    {"params": "7x7i30e10m2d2", "id": "7x7m2:3a3c2a2n1a2a32h1a2c4d3"}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "game": "palisade",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "5x5n5:a313d3d3f32a1"},
+    {"params": "10x8n8", "id": "10x8n8:a1c122a3b3b2c31a3b223g02i1e3i1a0c1b1c1b13"},
+    {"params": "15x12n10", "id": "15x12n10:h12a33b32a1c012a33b20h33b1b33c3a1c2a1b3131a3a12a3d3a20c2211a2b3h11b21301f311b1a21e1b2a12211a310d33c111c1a1a1e2c2a2b2"},
+    {"params": "5x5n5", "id": "5x5n5:a313d3d3f32a1"},
+    {"params": "8x6n6", "id": "8x6n6:c22d21b1a11222c12b1d2d3c1c123"}
+  ]
+}

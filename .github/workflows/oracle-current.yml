@@ -1,0 +1,66 @@
+name: oracle-current
+
+# Builds the oracle from current upstream and runs parity against the
+# goldens. This job is advisory and does not block a merge.
+#
+# A difference here is expected while the vendored tree carries the
+# Android patch layer inside upstream files: the goldens describe the
+# patched engine, and upstream's engine differs from it. The report
+# shows what the patch layer changes. See docs/UPSTREAM-SYNC.md.
+#
+# The oracle frontend in tools/oracle is written against the vendored
+# drawing API. When upstream changes that API, this job fails at the
+# build step. That is a signal, not a regression: it means the patch
+# layer must be rebased before the next sync.
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  current:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install the SDK packages the build needs
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36" "build-tools;35.0.0" "ndk;29.0.14206865"
+
+      - name: Fetch current upstream
+        run: |
+          git fetch --depth=1 https://git.tartarus.org/simon/puzzles.git \
+            main:refs/remotes/simon/main
+          mkdir -p build/upstream
+          git archive simon/main | tar -x -C build/upstream
+          git rev-parse simon/main
+
+      - name: Build the upstream oracle
+        run: tools/oracle/build.sh --src build/upstream --build-dir build/upstream-oracle
+
+      - name: Run parity against current upstream (advisory)
+        continue-on-error: true
+        run: |
+          ./gradlew :parity:test -Poracle=build/upstream-oracle/puzzles-oracle \
+            --console=plain
+
+      - name: Upload the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-current-report
+          path: |
+            parity/build/reports/tests
+            parity/build/test-results
+          if-no-files-found: ignore

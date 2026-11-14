@@ -1,0 +1,25 @@
+name: upstream-diff
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  vendored-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch the pinned upstream
+        run: |
+          git remote add simon https://git.tartarus.org/simon/puzzles.git
+          git fetch --no-tags simon main
+
+      - name: Vendored files must match UPSTREAM-FILES.txt
+        run: tools/check-upstream-diff.sh --strict
+
+      - name: UPSTREAM.lock and the README line must agree
+        run: tools/check-upstream-lock.sh

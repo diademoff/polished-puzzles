@@ -1,0 +1,14 @@
+{
+  "game": "cube",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "c4x4:205E,4"},
+    {"params": "c4x4", "id": "c4x4:205E,4"},
+    {"params": "i3x3", "id": "i3x3:981F3821227120,23"},
+    {"params": "o2x2", "id": "o2x2:13018B,14"},
+    {"params": "t1x2", "id": "t1x2:9108,8"}
+  ]
+}

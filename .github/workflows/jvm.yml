@@ -1,0 +1,44 @@
+name: jvm
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Gradle configures the whole build, including :app, so the SDK
+      # packages that app/build.gradle.kts pins must be present.
+      - name: Install the SDK packages the build needs
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36" "build-tools;35.0.0" "ndk;29.0.14206865"
+
+      - name: Build the host oracle
+        run: tools/oracle/build.sh
+
+      - name: Unit and parity tests
+        run: ./gradlew :parity:test -Poracle=build/oracle/puzzles-oracle --console=plain
+
+      - name: Upload the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-report
+          path: |
+            parity/build/reports/tests
+            parity/build/test-results
+          if-no-files-found: ignore

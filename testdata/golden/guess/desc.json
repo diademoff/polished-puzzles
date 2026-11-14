@@ -1,0 +1,12 @@
+{
+  "game": "guess",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "c6p4g10Bm:ac769e34"},
+    {"params": "c6p4g10Bm", "id": "c6p4g10Bm:ac769e34"},
+    {"params": "c8p5g12Bm", "id": "c8p5g12Bm:2177d9fe4e"}
+  ]
+}

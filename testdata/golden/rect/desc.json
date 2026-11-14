@@ -1,0 +1,15 @@
+{
+  "game": "rect",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "7x7:3_2a2_3g2f5_2a6a3_3b2_2d4b3_2c5f"},
+    {"params": "11x11", "id": "11x11:h4_2b2i3g16_2a7b8h4_2_2_5d2_4e2a2e6d4_6h15e6b4j2k8d3"},
+    {"params": "13x13", "id": "13x13:a2e5a12j2_2d3a8b2_3f2a2_12e2_3b2j2b2d3b3b2d6_2t5f21t25i18f3f3e10d2a"},
+    {"params": "15x15", "id": "15x15:d20a8b3a2z10f6f2e8f2a2f2a8h9a7a2b2b4i12a2i2g3r30d4d21g2h3c12b6b3e6e2a3g3m3_4c2a5"},
+    {"params": "7x7", "id": "7x7:3_2a2_3g2f5_2a6a3_3b2_2d4b3_2c5f"},
+    {"params": "9x9", "id": "9x9:a2a2g9a6c4c2a3a2e4b2_2d3d2_2e5a2b10_2_2a3a4e2_2e2b2a"}
+  ]
+}

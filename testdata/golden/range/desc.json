@@ -1,0 +1,14 @@
+{
+  "game": "range",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "9x6:7_5e4d5g8l7g9d11e8_13"},
+    {"params": "12x8", "id": "12x8:3a8a3c7a9_4c9o9c6e6l11e8c10o6c12_16a14c13a13a13"},
+    {"params": "13x9", "id": "13x9:a15g6d14g7d9d13g16e10b7a4b4g9b7a6b12e9g10d13d9g9d6g12a"},
+    {"params": "16x11", "id": "16x11:b9f8f8c15i2j8k8d9_16a10a18i13c5e11b12b14b4e7c13i8a3a10_5d13k7j3i15c11f7f10b"},
+    {"params": "9x6", "id": "9x6:7_5e4d5g8l7g9d11e8_13"}
+  ]
+}

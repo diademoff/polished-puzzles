@@ -1,0 +1,20 @@
+{
+  "game": "keen",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "6:a_4a__a_b_aa_3aa_baa__a3b__b_3a_4,a8m12d2d2s1m108m20a7s3a5s3a11s1s2m6"},
+    {"params": "4de", "id": "4:__aa_4cc__aa_,d2m18d2m4s2a13"},
+    {"params": "5de", "id": "5:a_a__a_a__a_a5b_7b_,a6s1a5m20d2a10d2m6m6s1s1"},
+    {"params": "5dem", "id": "5:a3__aa_3a__a6b__aa_,m5m12m20m72m20m10m20m2m12m3"},
+    {"params": "6de", "id": "6:_b__a__a__a5_aaba_7a_3a__a__b_a_,a8m8a5m24a10s4m120d3s1d2a8m6s1m20s1s2"},
+    {"params": "6dh", "id": "6:aa_3a_13a__aa_abaa__a_3a_ba4,a5s3m60a9d2a5s1s1a6d2m20d3s3m12d2s1m6"},
+    {"params": "6dn", "id": "6:a_4a__a_b_aa_3aa_baa__a3b__b_3a_4,a8m12d2d2s1m108m20a7s3a5s3a11s1s2m6"},
+    {"params": "6dnm", "id": "6:__aa_3a_a_4a_aa_a4baabb_3aa_a3,m12m15m5m96m144m5m4m60m18m12m120m4m5m18"},
+    {"params": "6du", "id": "6:a_a_a_7a_3a_3a_a_a_4a_a7baa,d2m90m12a6s1d2m8s4s3a5m6a9d2a12s2d3"},
+    {"params": "6dx", "id": "6:_a_3a_4aa_4a_3aa_aa_3a_4aa_aa_c_b,s1a10a8d3m2a6d2d3s1a9d2m12m40m120s2s2d3"},
+    {"params": "9dn", "id": "9:__b__a_a_6a_a_4aa_4a_9a_6a__a__a_a__a_ababa3_3aa_6a3__ab__a3_a_4aa__a5,a13a12m108s3m10a9d4a5d3s3m36d2d2m40s7d3m42s2a5m48s4m21a10s2a6s5s1s3d3s2d2m15a18a13a11m40d4m72"}
+  ]
+}

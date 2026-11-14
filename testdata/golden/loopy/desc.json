@@ -1,0 +1,30 @@
+{
+  "game": "loopy",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "7x7t0:a2b2c02c22a32b20a21a032c3c22a21b2a3a1a"},
+    {"params": "3x2t13dh", "id": "3x2t13:2c152a3a21a21c31c54c0b"},
+    {"params": "3x3t10dh", "id": "3x3t10:a2Aa2e33aAa332cA21a311aBc"},
+    {"params": "3x3t15dh", "id": "3x3t15:a2a22aAeA91c18c11a2a9"},
+    {"params": "3x3t8dh", "id": "3x3t8:332g233c2g1242c3334b2b3a"},
+    {"params": "3x3t9dh", "id": "3x3t9:A6aAb017d82a2"},
+    {"params": "5x4t14dh", "id": "5x4t14:c3a231a3a2b4222a3f2a45b2a1b13b5f21c2b24"},
+    {"params": "5x4t5dh", "id": "5x4t5:b12d22a2a32b32b2a23a31c131a2b1c1313b4c1a3e22a30a2e1d25a5a1a4a2"},
+    {"params": "5x5t3dh", "id": "5x5t3:b121b22a2a211c2a11222b1c1a12201a21a2d0c2e2a2b2a2"},
+    {"params": "5x5t6dh", "id": "5x5t6:a76b7b6a3a62543a3b6d536c7b7c7a"},
+    {"params": "5x5t7dh", "id": "5x5t7:d3a2a332f2d02d113i23a2122212c332e2b1d3b13g1c1a22b2a22011a2f32c03f22d323212b2d22c3a3a222"},
+    {"params": "6x6t11dh", "id": "6x6t11:81BABAVVBB_2b11d1a213a22b"},
+    {"params": "6x6t12dh", "id": "6x6t12:81XXYCXYCCCC_a3a2a22c"},
+    {"params": "6x6t16dh", "id": "6x6t16:5,1,1,4,1,H_b4a07a0a55c2a"},
+    {"params": "6x6t17dh", "id": "6x6t17:31200F_40a2C0d0c"},
+    {"params": "7x7t0de", "id": "7x7t0:a2b2c02c22a32b20a21a032c3c22a21b2a3a1a"},
+    {"params": "7x7t0dh", "id": "7x7t0:a2b22b02b222a32c0d032g2b21b2a321a"},
+    {"params": "7x7t0dn", "id": "7x7t0:a2b2c02c22a32b20b1a032c3b222a21d3a1a"},
+    {"params": "7x7t1dh", "id": "7x7t1:0_d220a2d21a2i2a10a1l12a1c0a10d0a0b211c1c02a21b010b0a112d2b21c"},
+    {"params": "7x7t2dh", "id": "7x7t2:a45a31b44a0b4a3c34b2d55c3c3a4b5c54"},
+    {"params": "7x7t4dh", "id": "7x7t4:b4b3333a2d12g1c1a2a40d4b3a4e2a334233a32f22a2a0a22434f"}
+  ]
+}

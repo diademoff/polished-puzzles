@@ -1,0 +1,16 @@
+{
+  "game": "galaxies",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "7x7:cjrbhizuisfvf"},
+    {"params": "10x10dn", "id": "10x10:fhwjnkzrzcgqdgqqqwwhnvdfo"},
+    {"params": "10x10du", "id": "10x10:dhhyiczojzipkfzzmdegpzflkmhek"},
+    {"params": "15x15dn", "id": "15x15:cfzocdjzzkodnngzjizimzajkdzalzzpoizueqzzazfjzmdzmzhgkmmgqrfk"},
+    {"params": "15x15du", "id": "15x15:rndwthzainzqjxklhzpdepjzzgezagfgzholzinhizymjzongzihrgzpgegza"},
+    {"params": "7x7dn", "id": "7x7:cjrbhizuisfvf"},
+    {"params": "7x7du", "id": "7x7:kddrpihwvkfeuj"}
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "game": "netslide",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "3x3:21c4d5963"},
+    {"params": "3x3", "id": "3x3:21c4d5963"},
+    {"params": "3x3b1", "id": "3x3:2h1hc4d5h9v63"},
+    {"params": "3x3w", "id": "3x3w:24b8b8c72"},
+    {"params": "4x4", "id": "4x4:e391756681d8c34a"},
+    {"params": "4x4b1", "id": "4x4:eh3h9v17v5h6h68v1d8hc3v4a"},
+    {"params": "4x4w", "id": "4x4w:a8b8a2a78679ac16"},
+    {"params": "5x5", "id": "5x5:6a17215d938d74c8c56a9271e"},
+    {"params": "5x5b1", "id": "5x5:6vah1v72h1v5hdv9v38hd7h4hch8ch5h6a9v271ve"},
+    {"params": "5x5w", "id": "5x5w:3c74a1c192b1dec1ca6c34717"}
+  ]
+}

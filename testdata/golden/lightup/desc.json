@@ -1,0 +1,19 @@
+{
+  "game": "lightup",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "7x7:Be1j4e3aBeBj1e1"},
+    {"params": "10x10b20s2d0", "id": "10x10:b3eBa0cBgBe0cBaBeBd3hBd2e4aBc2eBg1cBaBe2b"},
+    {"params": "10x10b20s2d1", "id": "10x10:a1Bi1a1b3a1h3a0eBf1l0f0eBa1h1a2b0aBi01a"},
+    {"params": "10x10b20s2d2", "id": "10x10:dBB0d02bBc0bBBcBmBc2h0c2m0c2BbBcBb11d2BBd"},
+    {"params": "14x14b20s2d0", "id": "14x14:b2Bb0k3d1d0bBeB1aBd0cBd1bBbBhBa0dBa2eBb1cBBb2dBb03cBbBe1aBd3a1hBb0b1d0c2dBa00eBbBdBd3kBbB0b"},
+    {"params": "14x14b20s2d1", "id": "14x14:f0aBd1a0cBc1bBe2c2e0e0f0d0lBbBb10a0b1cBBbBBaBbBaB0bB1cBbBaBBb0bBl0d2f3e1eBc2e0bBcBc2aBd1aBf"},
+    {"params": "14x14b20s2d2", "id": "14x14:f0aBd1a0cBc1bBe2c2e0eBf0d0lBb1b10a0b1cB0bBBaBbBaB0bB1c1bBaBBb0bBl0d2f3e1eBc2e0bBcBc2aBd1aBf"},
+    {"params": "7x7b20s3d0", "id": "7x7:Be1j4e3aBeBj1e1"},
+    {"params": "7x7b20s3d1", "id": "7x7:bBB0bBeB2eBgBeBBeBb1B1b"},
+    {"params": "7x7b20s3d2", "id": "7x7:a1c0b1c1c2a1k2aBc1c1b0c0a"}
+  ]
+}

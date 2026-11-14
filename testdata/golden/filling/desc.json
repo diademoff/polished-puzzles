@@ -1,0 +1,13 @@
+{
+  "game": "filling",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "13x9:a4a7f3c4a7a4a49b3c7a6b5a9a5b8a5a6c9b566c3b2b6a66c2a4c4b869992a424e999a33a4a9c99b3e"},
+    {"params": "13x9", "id": "13x9:a4a7f3c4a7a4a49b3c7a6b5a9a5b8a5a6c9b566c3b2b6a66c2a4c4b869992a424e999a33a4a9c99b3e"},
+    {"params": "17x13", "id": "17x13:b3a2b83b2c3b4d2a8b6c55a5363a8e6b5c2d8c47a4a557a7c2a3526a9a3b3d4e9a33b74l9b3b77b5a99a5b43a5b764a39b93b85a7a7993a995g2f9b2a2d3b4c5a5b4a84b39446b2a34a"},
+    {"params": "9x7", "id": "9x7:a8a8a466a2b8b66a2a7777665d7b9e79c299b9c6c5b55"}
+  ]
+}

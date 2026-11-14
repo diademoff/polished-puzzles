@@ -1,0 +1,16 @@
+{
+  "game": "slant",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "8x8:b11f2c4a3a1b13a2b0a2a1a3a1a3a2a3b2b2c32a12a2a1a2a03a113b0d101b"},
+    {"params": "12x10de", "id": "12x10:b21a2011e1a2b3b2b2a2b21a31a1a11a21c1411d1a32a11a3a1a12a11a311a1d113e4a0a2b21b22c223c4d2b11f13b12a0a0b1a0a"},
+    {"params": "12x10dh", "id": "12x10:c1c11e11b13b221a12b21a31a1211a21c1a1e1a32a11a3a1a12a11a311a1a1b113a1a2e2b21b2a1a1223a1b1a22b211a23b3a3d1c11d"},
+    {"params": "5x5de", "id": "5x5:a2d1b2a2b3d3b2b21a1c1110"},
+    {"params": "5x5dh", "id": "5x5:b1a1a11a2c13a3b3d121a1c11b"},
+    {"params": "8x8de", "id": "8x8:b11f2c4a3a1b13a2b0a2a1a3a1a3a2a3b2b2c32a12a2a1a2a03a113b0d101b"},
+    {"params": "8x8dh", "id": "8x8:b11f212a4a3a1b1b2c22b23a1b12a3a1b122b3d22a1a2b3a1a33h11a"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "game": "unruly",
+  "seed": "12345",
+  "level": "semantic",
+  "oracle_protocol": 1,
+  "upstream_commit": "790f5851507be5845164d3ae7b32b2f86717fe50",
+  "entries": [
+    {"params": "", "id": "8x8:bEACHcBdBDEalcbAbbBa"},
+    {"params": "10x10de", "id": "10x10:CcGDBgbCcbfbhdbBCdEcbkbABdd"},
+    {"params": "10x10dn", "id": "10x10:CcGDBgbfbfbhdbBgEabbkbABdd"},
+    {"params": "14x14de", "id": "14x14:BEdbFBgAAMeehaBhaHAeHAhCFFBCCAdnkDbdAcKDcec"},
+    {"params": "14x14dn", "id": "14x14:BEdbFBgAAMeBccbcCddabFfHiCEAFBFejbbkfdAcgDDcec"},
+    {"params": "8x8de", "id": "8x8:bEACHcBdBDEaleAbbc"},
+    {"params": "8x8dn", "id": "8x8:bEACHcBdFEaleAbbc"},
+    {"params": "8x8dt", "id": "8x8:bEACHcBdBDEalcbAbbBa"}
+  ]
+}
