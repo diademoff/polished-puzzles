@@ -54,6 +54,20 @@ tasks.register<JavaExec>("genGoldens") {
     )
 }
 
+// Regenerates the cross-compatibility save corpus.
+// tools/gen-saves.sh wraps this task.
+tasks.register<JavaExec>("genSaves") {
+    group = "parity"
+    description = "Freezes a save file for every preset"
+    mainClass.set("name.boyle.chris.sgtpuzzles.parity.GenSaves")
+    classpath = sourceSets["main"].runtimeClasspath
+    jvmArgs("-Doracle=$oraclePath")
+    args(
+        testdataDir.asFile.absolutePath,
+        rootProject.layout.projectDirectory.file("UPSTREAM.lock").asFile.absolutePath,
+    )
+}
+
 // Regenerates testdata/trace for the games with a renderer.
 // tools/gen-traces.sh wraps this task.
 tasks.register<JavaExec>("genTraces") {

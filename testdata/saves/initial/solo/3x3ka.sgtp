@@ -1,0 +1,10 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :4:Solo
+PARAMS  :4:3x3k
+CPARAMS :5:3x3ka
+SEED    :5:12345
+DESC    :199:zzzc,a_____b_____a____________________aa______c____b___ba__ab_aa____aa__aaa_caabaaaaa_a_aa_a___aa____aa_a,17a8_19_10_10_7_7a9f10a5_9_15a13_4_13_9_9c8e10_9_8a16_13a20d6a13_13b18c3b6a7a6_12a15b25_14c9d
+AUXINFO :324:439c0193fea923d347fd392b494cf07a201f0a42a68ce50047012bde42bda530ca5b85ed0b29594ea61b1a209d21c4960726475960b59553c9cc2b20afb0b2d90879f6f772eabb4cb95e71e5b19812422ee42ecc66f02fbbb4a38c15bf244a57b7e08cf1cdc86de0364a41f1cef5fa764ceb8fde17e4dcb677d53e2493e4b93bf7d1474f0af6a66edc22ca46013af29c4f5f21e093a4f34653840388bcda1f0d37b9
+NSTATES :1:1
+STATEPOS:1:1

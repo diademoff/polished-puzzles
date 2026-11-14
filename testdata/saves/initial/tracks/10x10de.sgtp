@@ -1,0 +1,9 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :12:Train Tracks
+PARAMS  :7:10x10dt
+CPARAMS :7:10x10de
+SEED    :5:12345
+DESC    :55:zd6b3mCs5zc9b,2,3,2,3,3,2,3,S4,3,3,2,4,4,S4,3,2,4,1,2,2
+NSTATES :1:1
+STATEPOS:1:1

@@ -1,0 +1,10 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :9:Black Box
+PARAMS  :10:w10h10m5M5
+CPARAMS :10:w10h10m5M5
+SEED    :5:12345
+DESC    :24:b4111bd12ceebd7a720a0c43
+UI      :2:E0
+NSTATES :1:1
+STATEPOS:1:1

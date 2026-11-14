@@ -1,0 +1,9 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :5:Loopy
+PARAMS  :8:6x6t16de
+CPARAMS :8:6x6t16dh
+SEED    :5:12345
+DESC    :25:5,1,1,4,1,H_b4a07a0a55c2a
+NSTATES :1:1
+STATEPOS:1:1

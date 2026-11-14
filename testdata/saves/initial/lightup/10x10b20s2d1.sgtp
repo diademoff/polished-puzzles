@@ -1,0 +1,9 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :8:Light Up
+PARAMS  :12:10x10b20s3d0
+CPARAMS :12:10x10b20s2d1
+SEED    :5:12345
+DESC    :39:a1Bi1a1b3a1h3a0eBf1l0f0eBa1h1a2b0aBi01a
+NSTATES :1:1
+STATEPOS:1:1

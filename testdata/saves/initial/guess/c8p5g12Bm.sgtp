@@ -1,0 +1,10 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :5:Guess
+PARAMS  :9:c8p5g12Bm
+CPARAMS :9:c8p5g12Bm
+SEED    :5:12345
+DESC    :10:2177d9fe4e
+UI      :9:0,0,0,0,0
+NSTATES :1:1
+STATEPOS:1:1

@@ -1,0 +1,10 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :5:Slant
+PARAMS  :5:5x5de
+CPARAMS :5:5x5de
+SEED    :5:12345
+DESC    :24:a2d1b2a2b3d3b2b21a1c1110
+AUXINFO :50:15bf9ea6437bee36638e97df12b53c315e23aac678f6aaa7f0
+NSTATES :1:1
+STATEPOS:1:1

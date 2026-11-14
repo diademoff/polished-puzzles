@@ -1,0 +1,9 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :4:Cube
+PARAMS  :4:c4x4
+CPARAMS :4:c4x4
+SEED    :5:12345
+DESC    :6:205E,4
+NSTATES :1:1
+STATEPOS:1:1

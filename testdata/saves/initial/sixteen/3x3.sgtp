@@ -1,0 +1,9 @@
+SAVEFILE:41:Simon Tatham's Portable Puzzle Collection
+VERSION :1:1
+GAME    :7:Sixteen
+PARAMS  :3:3x3
+CPARAMS :3:3x3
+SEED    :5:12345
+DESC    :17:6,8,7,3,2,5,4,1,9
+NSTATES :1:1
+STATEPOS:1:1
