@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App themes. Every screen uses Material 3 semantic roles, never a raw
+  hex value. The palette lives in colors_shell.xml (light) and
+  values-night/colors_shell.xml (dark).
+
+  The game screen adds the board background on top of the shell theme.
+  That color is part of parity and is not themed by this file.
+-->
+<resources>
+
+    <style name="Theme.SgTPuzzles" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/shell_primary</item>
+        <item name="colorOnPrimary">@color/shell_on_primary</item>
+        <item name="colorPrimaryContainer">@color/shell_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/shell_on_primary_container</item>
+
+        <item name="colorSecondary">@color/shell_secondary</item>
+        <item name="colorOnSecondary">@color/shell_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/shell_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/shell_on_secondary_container</item>
+
+        <item name="colorTertiary">@color/shell_tertiary</item>
+        <item name="colorOnTertiary">@color/shell_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/shell_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/shell_on_tertiary_container</item>
+
+        <item name="colorSurface">@color/shell_surface</item>
+        <item name="colorOnSurface">@color/shell_on_surface</item>
+        <item name="colorSurfaceVariant">@color/shell_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/shell_on_surface_variant</item>
+        <item name="colorSurfaceContainerLowest">@color/shell_surface_container_lowest</item>
+        <item name="colorSurfaceContainerLow">@color/shell_surface_container_low</item>
+        <item name="colorSurfaceContainer">@color/shell_surface_container</item>
+        <item name="colorSurfaceContainerHigh">@color/shell_surface_container_high</item>
+        <item name="colorSurfaceContainerHighest">@color/shell_surface_container_highest</item>
+        <item name="colorSurfaceDim">@color/shell_surface_dim</item>
+        <item name="colorSurfaceBright">@color/shell_surface_bright</item>
+        <item name="colorSurfaceInverse">@color/shell_inverse_surface</item>
+        <item name="colorOnSurfaceInverse">@color/shell_inverse_on_surface</item>
+        <item name="colorPrimaryInverse">@color/shell_inverse_primary</item>
+
+        <item name="colorOutline">@color/shell_outline</item>
+        <item name="colorOutlineVariant">@color/shell_outline_variant</item>
+
+        <item name="colorError">@color/shell_error</item>
+        <item name="colorOnError">@color/shell_on_error</item>
+        <item name="colorErrorContainer">@color/shell_error_container</item>
+        <item name="colorOnErrorContainer">@color/shell_on_error_container</item>
+
+        <item name="android:colorBackground">@color/shell_background</item>
+        <item name="colorOnBackground">@color/shell_on_background</item>
+
+        <item name="preferenceTheme">@style/PrefsTheme</item>
+    </style>
+
+    <!-- The game screen: the C engine paints the board on this color.
+         The overlay is the thin shadow under the toolbar. -->
+    <style name="Theme.SgTPuzzles.Game" parent="Theme.SgTPuzzles">
+        <item name="android:windowBackground">@color/game_background</item>
+        <item name="android:windowContentOverlay">@drawable/ab_shadow</item>
+    </style>
+
+    <style name="Theme.SgTPuzzles.Prefs" parent="Theme.SgTPuzzles" />
+
+</resources>

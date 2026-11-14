@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shell palette for the dark theme. This is its own palette, not an
+  inversion of the light one. The game board palette is not here; it is
+  defined in game_props.xml and colors.xml.
+-->
+<resources>
+    <color name="shell_primary">#FF4CDAD9</color>
+    <color name="shell_on_primary">#FF003737</color>
+    <color name="shell_primary_container">#FF005050</color>
+    <color name="shell_on_primary_container">#FF6FF7F6</color>
+
+    <color name="shell_secondary">#FFB0CCCB</color>
+    <color name="shell_on_secondary">#FF1B3534</color>
+    <color name="shell_secondary_container">#FF324B4B</color>
+    <color name="shell_on_secondary_container">#FFCCE8E7</color>
+
+    <color name="shell_tertiary">#FFB3C8E8</color>
+    <color name="shell_on_tertiary">#FF1C314B</color>
+    <color name="shell_tertiary_container">#FF334863</color>
+    <color name="shell_on_tertiary_container">#FFD3E4FF</color>
+
+    <color name="shell_surface">#FF0E1514</color>
+    <color name="shell_on_surface">#FFDDE4E3</color>
+    <color name="shell_surface_variant">#FF3F4948</color>
+    <color name="shell_on_surface_variant">#FFBEC9C8</color>
+    <color name="shell_background">#FF0E1514</color>
+    <color name="shell_on_background">#FFDDE4E3</color>
+
+    <color name="shell_surface_container_lowest">#FF090F0F</color>
+    <color name="shell_surface_container_low">#FF161D1D</color>
+    <color name="shell_surface_container">#FF1A2121</color>
+    <color name="shell_surface_container_high">#FF242B2B</color>
+    <color name="shell_surface_container_highest">#FF2F3635</color>
+    <color name="shell_surface_dim">#FF0E1514</color>
+    <color name="shell_surface_bright">#FF343B3A</color>
+
+    <color name="shell_inverse_surface">#FFDDE4E3</color>
+    <color name="shell_inverse_on_surface">#FF2B3231</color>
+    <color name="shell_inverse_primary">#FF006A6A</color>
+
+    <color name="shell_outline">#FF889392</color>
+    <color name="shell_outline_variant">#FF3F4948</color>
+
+    <color name="shell_error">#FFFFB4AB</color>
+    <color name="shell_on_error">#FF690005</color>
+    <color name="shell_error_container">#FF93000A</color>
+    <color name="shell_on_error_container">#FFFFDAD6</color>
+</resources>

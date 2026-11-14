@@ -1,30 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="NoActionBar" parent="@style/Theme.AppCompat.NoActionBar">
-    </style>
-    <style name="NoActionBar.Gameplay" parent="NoActionBar">
-        <item name="android:windowBackground">@color/game_background</item>
-        <item name="android:windowContentOverlay">@drawable/ab_shadow</item>
-    </style>
+<resources>
     <style name="PrefsTheme" parent="PreferenceThemeOverlay">
         <item name="android:layout">@layout/prefs</item>
     </style>
-    <style name="NoActionBar.Prefs" parent="NoActionBar">
-        <item name="preferenceTheme">@style/PrefsTheme</item>
-    </style>
-    <style name="GameChooserItem">
-        <item name="android:background">?android:attr/selectableItemBackground</item>
-    </style>
-    <style name="ChooserItemName" parent="@android:style/TextAppearance.Medium">
-        <item name="android:fontFamily">sans-serif-light</item>
-    </style>
-    <style name="Dialog.Completed" parent="@android:style/Theme.Holo.Dialog.NoActionBar">
+
+    <!-- The completed-game prompt is a bottom panel, not a modal dialog.
+         It does not dim the board, so the finished game stays visible. -->
+    <style name="Dialog.Completed" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:backgroundDimEnabled">false</item>
-    </style>
-    <style name="Button.Completed" parent="@android:style/Widget.Holo.Light.Button.Small">
-        <item name="android:background">@drawable/button_completed</item>
-    </style>
-    <style name="TextAppearance.Completed.Title" parent="@android:style/TextAppearance.Large">
-        <item name="android:fontFamily" tools:ignore="NewApi">sans-serif-condensed</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 </resources>

@@ -16,6 +16,7 @@ import androidx.preference.SwitchPreferenceCompat
 import androidx.preference.isEmpty
 import androidx.preference.minusAssign
 import androidx.preference.plusAssign
+import name.boyle.chris.sgtpuzzles.NightModeHelper.ActivityWithNightMode
 import name.boyle.chris.sgtpuzzles.Utils.copyVersionToClipboard
 import name.boyle.chris.sgtpuzzles.Utils.sendFeedbackDialog
 import name.boyle.chris.sgtpuzzles.backend.BRIDGES
@@ -36,7 +37,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.MOUSE_BACK_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.PLACEHOLDER_SEND_FEEDBACK
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.UNEQUAL_SHOW_H_KEY
 
-class PrefsActivity : AppCompatActivity(),
+class PrefsActivity : ActivityWithNightMode(),
     PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {

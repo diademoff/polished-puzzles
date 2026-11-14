@@ -14,10 +14,12 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Binder
+import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
@@ -33,6 +35,20 @@ class NightModeHelper : Service(), SensorEventListener, OnSharedPreferenceChange
         private val serviceConnection: ServiceConnection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, service: IBinder) {}
             override fun onServiceDisconnected(name: ComponentName) {}
+        }
+
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            // Edge-to-edge on every shell screen. Each screen applies the
+            // insets it needs; the game board is laid out between them.
+            enableEdgeToEdge()
+        }
+
+        override fun onConfigurationChanged(newConfig: Configuration) {
+            super.onConfigurationChanged(newConfig)
+            // The activities opt out of recreation for uiMode, so the
+            // system bar icon colors must be refreshed here.
+            enableEdgeToEdge()
         }
 
         override fun onStart() {

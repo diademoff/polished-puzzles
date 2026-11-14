@@ -10,6 +10,7 @@ import android.widget.CheckBox
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.widget.AppCompatTextView
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch.Companion.fromSeed
@@ -44,7 +45,7 @@ class CustomDialogBuilder private constructor(
         activity: ConfigBuilder.ActivityCallbacks,
         dialogEvent: Int,
         backend: BackendName
-    ) : this(AlertDialog.Builder(nonThemedContext), engine, activity,
+     ) : this(MaterialAlertDialogBuilder(nonThemedContext), engine, activity,
         ConfigBuilder.Event.fromJNI(dialogEvent), backend)
 
     init {

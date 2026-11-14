@@ -16,7 +16,6 @@ import android.content.res.Configuration.NAVIGATION_DPAD
 import android.content.res.Configuration.NAVIGATION_TRACKBALL
 import android.content.res.Configuration.ORIENTATION_LANDSCAPE
 import android.content.res.Resources
-import android.graphics.Color
 import android.graphics.PointF
 import android.net.Uri
 import android.os.Build
@@ -38,7 +37,6 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.view.WindowManager.BadTokenException
-import android.widget.Button
 import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -46,23 +44,24 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.NavUtils
 import androidx.core.app.ShareCompat.IntentBuilder
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.util.TypedValueCompat.pxToDp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.Type.displayCutout
 import androidx.core.view.WindowInsetsCompat.Type.ime
 import androidx.core.view.WindowInsetsCompat.Type.systemBars
+import androidx.core.view.MenuItemCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_AUTO
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_OFF
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_ON
@@ -127,7 +126,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.UNEQUAL_SHOW_H_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.VICTORY_FLASH_KEY
 import name.boyle.chris.sgtpuzzles.databinding.CompletedDialogBinding
 import name.boyle.chris.sgtpuzzles.databinding.MainBinding
-import name.boyle.chris.sgtpuzzles.launch.DeprecatedProgressDialog
+import name.boyle.chris.sgtpuzzles.launch.GameProgressDialog
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator.Companion.cleanUpOldExecutables
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator.Companion.executableIsMissing
@@ -163,7 +162,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private lateinit var prefs: SharedPreferences
     private lateinit var state: SharedPreferences
     private lateinit var gameGenerator: GameGenerator
-    private var progress: DeprecatedProgressDialog? = null
+    private var progress: GameProgressDialog? = null
     private val gameTypesById: MutableMap<Int, String> = linkedMapOf()
     private var gameTypesMenu = arrayOf<MenuEntry>()
     private var currentType = 0
@@ -253,7 +252,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     }
 
     private fun showProgress(launch: GameLaunch) {
-        progress = DeprecatedProgressDialog(this, launch, {
+        progress = GameProgressDialog(this, launch, {
             abort(null, launch.origin.shouldReturnToChooserOnFail)
         }, {
             resetBackendState(launch.whichBackend)
@@ -528,7 +527,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             }
         }
         if (careAboutOldGame) {
-            AlertDialog.Builder(this@GamePlay)
+            MaterialAlertDialogBuilder(this@GamePlay)
                 .setMessage(
                     MessageFormat.format(getString(R.string.replaceGame), backend.displayName)
                 )
@@ -548,8 +547,24 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         super.onCreateOptionsMenu(menu)
         this.menu = menu
         menuInflater.inflate(R.menu.main, menu)
+        tintMenuIcons(menu)
         applyUndoRedoKbd()
         return true
+    }
+
+    /**
+     * The action icons are white PNGs, which only worked on the old dark
+     * toolbar. Tint them to the current on-surface color so they stay
+     * readable in the light theme too. Alpha differences still show the
+     * disabled state.
+     */
+    private fun tintMenuIcons(menu: Menu) {
+        val tint = ContextCompat.getColorStateList(this, R.color.shell_on_surface) ?: return
+        for (i in 0 until menu.size()) {
+            val item = menu.getItem(i) ?: continue
+            MenuItemCompat.setIconTintList(item, tint)
+            item.subMenu?.let { tintMenuIcons(it) }
+        }
     }
 
     private var hackForSubmenus: Menu? = null
@@ -621,6 +636,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private fun doGameMenu() {
         val gameMenu = popupMenuWithIcons()
         gameMenu.menuInflater.inflate(R.menu.game_menu, gameMenu.menu)
+        tintMenuIcons(gameMenu.menu)
         val solveItem = gameMenu.menu.findItem(R.id.solve)
         solveItem.isEnabled = solveEnabled
         solveItem.isVisible = solveEnabled
@@ -724,6 +740,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         PopupMenu(this@GamePlay, findViewById(R.id.help_menu)).apply {
             setForceShowIcon(true)
             menuInflater.inflate(R.menu.help_menu, menu)
+            tintMenuIcons(menu)
             menu.findItem(R.id.solve).apply {
                 isEnabled = solveEnabled
                 isVisible = solveEnabled
@@ -1223,7 +1240,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     }
 
     private fun messageBox(title: String, msg: String?, returnToChooser: Boolean) {
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(title)
             .setMessage(msg)
             .setIcon(android.R.drawable.ic_dialog_alert)
@@ -1257,12 +1274,10 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         d.setContentView(dialogBinding.root)
         dialogBinding.completedTitle.text = titleText
         d.setCanceledOnTouchOutside(true)
-        darkenTopDrawable(dialogBinding.newGame)
         dialogBinding.newGame.setOnClickListener {
             d.dismiss()
             startNewGame()
         }
-        darkenTopDrawable(dialogBinding.typeMenu)
         dialogBinding.typeMenu.setOnClickListener {
             d.dismiss()
             if (hackForSubmenus == null) openOptionsMenu()
@@ -1270,24 +1285,14 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         }
         val style = prefs.getString(CHOOSER_STYLE_KEY, "list")
         val useGrid = style == "grid"
-        dialogBinding.otherGame.setCompoundDrawablesWithIntrinsicBounds(
-            0,
-            if (useGrid) R.drawable.ic_action_view_as_grid else R.drawable.ic_action_view_as_list,
-            0,
-            0
+        dialogBinding.otherGame.setIconResource(
+            if (useGrid) R.drawable.ic_action_view_as_grid else R.drawable.ic_action_view_as_list
         )
-        darkenTopDrawable(dialogBinding.otherGame)
         dialogBinding.otherGame.setOnClickListener {
             d.dismiss()
             startChooserAndFinish()
         }
         d.show()
-    }
-
-    private fun darkenTopDrawable(b: Button) {
-        val drawable = DrawableCompat.wrap(b.compoundDrawables[1].mutate())
-        DrawableCompat.setTint(drawable, Color.BLACK)
-        b.setCompoundDrawables(null, drawable, null, null)
     }
 
     @UsedByJNI

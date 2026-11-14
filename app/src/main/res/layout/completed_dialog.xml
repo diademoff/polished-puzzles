@@ -1,57 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  The prompt shown when a game is completed. It is anchored to the bottom
+  and does not block the board completely, so the user can still see the
+  finished state.
+-->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical">
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="8dp"
-        android:gravity="center_horizontal"
-        android:textAppearance="@style/TextAppearance.Completed.Title"
-        android:id="@+id/completedTitle"
-        android:text="@string/COMPLETED" />
+    android:layout_margin="@dimen/space_s"
+    app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+    app:cardCornerRadius="28dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="120dip"
-        android:layout_margin="4dp"
-        android:orientation="horizontal"
-        android:paddingTop="0dp" >
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/space_m">
 
-        <Button
-            android:id="@+id/new_game"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="2dp"
-            android:layout_weight="1"
-            android:paddingTop="16dp"
-            android:drawableTop="@drawable/ic_action_new"
-            android:text="@string/New_game"
-            style="@style/Button.Completed" />
+        <TextView
+            android:id="@+id/completedTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:paddingBottom="@dimen/space_s"
+            android:text="@string/COMPLETED"
+            android:textAppearance="?attr/textAppearanceTitleLarge" />
 
-        <Button
-            android:id="@+id/type_menu"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="2dp"
-            android:layout_weight="1"
-            android:paddingTop="16dp"
-            android:drawableTop="@drawable/ic_action_type"
-            android:text="@string/Change_type"
-            style="@style/Button.Completed" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/other_game"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_margin="2dp"
-            android:layout_weight="1"
-            android:paddingTop="16dp"
-            android:drawableTop="@drawable/ic_action_view_as_list"
-            android:text="@string/Other_game"
-            style="@style/Button.Completed" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/new_game"
+                style="@style/Widget.Material3.Button.TextButton.Icon"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:text="@string/New_game"
+                app:icon="@drawable/ic_action_new"
+                app:iconGravity="textTop" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/type_menu"
+                style="@style/Widget.Material3.Button.TextButton.Icon"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:text="@string/Change_type"
+                app:icon="@drawable/ic_action_type"
+                app:iconGravity="textTop" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/other_game"
+                style="@style/Widget.Material3.Button.TextButton.Icon"
+                android:layout_width="0dp"
+                android:layout_height="96dp"
+                android:layout_weight="1"
+                android:text="@string/Other_game"
+                app:icon="@drawable/ic_action_view_as_list"
+                app:iconGravity="textTop" />
+        </LinearLayout>
     </LinearLayout>
-
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -11,10 +11,10 @@ import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.text.HtmlCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import name.boyle.chris.sgtpuzzles.databinding.FeedbackDialogBinding
 import java.io.IOException
 import java.io.InputStream
@@ -70,12 +70,12 @@ object Utils {
             BuildConfig.VERSION_NAME
         )
         binding.versionRow.setOnClickListener { copyVersionToClipboard(context) }
-        AlertDialog.Builder(context).setView(binding.root).show()
+        MaterialAlertDialogBuilder(context).setView(binding.root).show()
     }
 
     @JvmStatic
     fun unlikelyBug(context: Context, reasonId: Int) {
-        AlertDialog.Builder(context)
+        MaterialAlertDialogBuilder(context)
             .setMessage(
                 MessageFormat.format(
                     context.getString(R.string.bug_dialog),
@@ -98,7 +98,7 @@ object Utils {
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
         } catch (_: ActivityNotFoundException) {
-            AlertDialog.Builder(context)
+            MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.no_browser_title)
                 .setMessage(
                     """
