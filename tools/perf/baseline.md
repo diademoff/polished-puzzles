@@ -4,8 +4,9 @@ Budgets and rules are in `docs/PERFORMANCE.md`. This file is the
 procedure for the Phase 0 baseline and the place where the numbers are
 recorded.
 
-Status: **blocked**. No reference device is available in this
-environment. The procedure below is ready; the numbers are not.
+Status: **partially recorded**. An emulator baseline exists and is
+recorded below as a relative reference. The absolute baseline needs a
+physical device; that part of the Phase 0 exit criterion is still open.
 
 ## 1. Devices
 
@@ -91,5 +92,55 @@ the standard scene.
 
 ## 6. Current results
 
-None. The Phase 0 exit criterion "the baseline is recorded" stays open
-until a physical device is connected.
+### Emulator baseline (relative only)
+
+| Item | Value |
+|---|---|
+| AVD | `puzzles_api36`, Android 16 (API 36), x86_64 |
+| Screen | 1080x2400, 420 dpi, 60 Hz |
+| RAM / cores | 2048 MB / 4 |
+| GPU | `swiftshader_indirect` (software), `-no-window` |
+| Build | release, signed with the debug key, R8 on |
+| Date | 2026-11-14 |
+
+The SDK and emulator live outside the repository:
+
+```sh
+SDK=$HOME/android-sdk
+$SDK/emulator/emulator -avd puzzles_api36 -no-window -no-audio \
+    -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -port 5554
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+| Metric | P50 | P90 | P99 | Worst | Budget | Verdict |
+|---|---|---|---|---|---|---|
+| Cold start, chooser | 733 | 758 | 776 | 776 | 1000 (A) | reference only |
+| Warm start, chooser | 33 | 59 | 82 | 82 | 400 | reference only |
+| Cold process + saved game, fifteen 4x4 | 1028 | 1072 | 1072 | 1072 | - | reference only |
+| Frame time, chooser scroll | 19 ms | 29 ms | 31 ms | 31 ms | 16.7 ms | reference only |
+| Janky frames, chooser scroll | 2.70% | - | - | - | < 1% | reference only |
+| PSS, chooser | 33.4 MB | - | - | - | ref + 10% | reference |
+| PSS, fifteen 4x4 | 67.5 MB | - | - | - | ref + 10% | reference |
+| APK, release, all ABIs | 10.68 MB | - | - | - | - | reference |
+| APK, debug, all ABIs | 25.8 MB | - | - | - | - | reference |
+| Clean release build | 59 s | - | - | - | - | reference |
+
+Notes:
+
+- The emulator renders with SwiftShader on a shared host. Frame time and
+  jank are therefore pessimistic and must not be compared with a device.
+  They are a relative reference for the same AVD only.
+- The cold start covers the Compose chooser and the whole app process.
+  It is below the tier A budget on this emulator, but that does not
+  prove anything for a real device.
+- The saved-game number includes a cold process start, so it is not the
+  "first frame of a saved game" budget (300 ms), which assumes a warm
+  process.
+- Debug PSS was 97.9 MB (chooser) and 134.7 MB (fifteen 4x4); the release
+  numbers above are the ones to keep.
+
+### Physical device baseline
+
+Not recorded. The numbers must come from the tier A, tier B, and tablet
+devices in section 1. Until then, the Phase 0 exit criterion "the
+baseline is recorded" stays open.

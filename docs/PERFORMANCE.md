@@ -191,8 +191,9 @@ For a change that affects UI, rendering, startup, or generation:
 
 - **Phase 0** — baseline: cold/warm start, jank, APK, build time.
   Record numbers and devices. The procedure is in
-  `tools/perf/baseline.md`. The baseline is not recorded yet: no
-  reference device is available, so this exit criterion is open.
+  `tools/perf/baseline.md`. An emulator baseline is recorded there as a
+  relative reference. The absolute baseline needs a physical device, so
+  this exit criterion is still open.
 - **Phase 1** — do not make startup worse after the Compose shell. The
   shell work started before the Phase 0 baseline was recorded, as an
   explicit decision: no device was available and the shell does not

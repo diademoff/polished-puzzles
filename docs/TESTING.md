@@ -160,6 +160,17 @@ Shell tests:
   deterministic device or a host renderer, so the phase exit criterion
   "screenshot tests are green" is still debt.
 
+Device run on the API 36 emulator, 2026-11-14:
+
+- 49 tests, 45 passed, 3 skipped (the fastlane screenshot tests skip
+  themselves without the fastlane argument), 1 failed.
+- The failure is `GamePlayParameterizedTest[Palisade 2x3n3:d33]`: the
+  key sequence does not complete the puzzle on this emulator. The same
+  failure exists at commit `1cd9f4cb`, before the Compose shell, so it
+  is not a shell regression. Keep the case visible; do not delete it to
+  make the suite green.
+- The four chooser screen tests pass.
+
 ## 9. CI
 
 Jobs:
