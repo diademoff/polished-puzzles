@@ -190,7 +190,9 @@ For a change that affects UI, rendering, startup, or generation:
 ## 9. Phase mapping
 
 - **Phase 0** — baseline: cold/warm start, jank, APK, build time.
-  Record numbers and devices.
+  Record numbers and devices. The procedure is in
+  `tools/perf/baseline.md`. The baseline is not recorded yet: no
+  reference device is available, so this exit criterion is open.
 - **Phase 1** — do not make startup worse after the Compose shell.
 - **Phase 2** — the renderer is not worse than the baseline on frames.
 - **Phase 3** — the KMP core is not slower than C on the parity corpus.

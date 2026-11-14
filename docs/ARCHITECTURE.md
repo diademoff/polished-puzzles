@@ -161,10 +161,20 @@ the tests run on the JVM without an emulator and isolates crashes.
 | `jni/android.c`, `android.h` | project | yes |
 | `jni/executable/android-gen.c` | project | yes |
 | `jni/cmake/platforms/android.cmake` | project | yes |
+| `jni/icons/android_icons.sh` | project | yes |
+| `jni/icons/{loopy_8x14,solo_4x4,tracks_15x10}.sav` | project | yes |
+| `jni/UPSTREAM-FILES.txt`, `jni/UPSTREAM-PATCHES.txt` | generator | no; change the source only |
 | `app/src/main/kotlin` | project | yes |
 | `app/src/main/res` | project | yes |
 | `BackendNames.kt` | generator | no; change the source only |
 | `app/src/main/assets` | upstream docs | generated from `assets-sources` |
+
+The authoritative machine-readable form of the first two rows is
+`tools/vendored-project-files.txt`, used by
+`tools/gen-vendored-manifest.sh`. The vendored files themselves are
+pinned by sha256 in `app/src/main/jni/UPSTREAM-FILES.txt`; the files
+that differ from upstream are listed in `UPSTREAM-PATCHES.txt`
+(deviation D-001).
 
 ## 9. Constraints
 

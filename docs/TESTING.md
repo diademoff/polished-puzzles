@@ -104,10 +104,10 @@ implementations until C is removed.
 
 ## 6. Fuzzing
 
-`fuzzpuzz.c` already loads a save file, processes moves, draws through
-the null drawing API, and reserializes. In Phase 0 it must be wired in
-(the file currently lives in `not-in-use/`, while CMake expects it next
-to `jni/CMakeLists.txt`).
+`fuzzpuzz.c` loads a save file, processes moves, draws through the
+null drawing API, and reserializes. It lives in `app/src/main/jni/`,
+next to `CMakeLists.txt`, and `tools/oracle/build.sh --with-fuzz`
+builds the stand-alone frontend as `build/oracle/fuzzpuzz`.
 
 Process:
 

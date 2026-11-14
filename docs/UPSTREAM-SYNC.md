@@ -17,9 +17,13 @@ with ours.
 If the `simon` remote is not configured:
 
 ```bash
-git remote add simon https://github.com/sgtatham/puzzles.git
+git remote add simon https://git.tartarus.org/simon/puzzles.git
 git fetch simon
 ```
+
+The GitHub mirror `github.com/sgtatham/puzzles` no longer exists. The
+canonical repository is `git.tartarus.org`; the project home page links
+to it.
 
 The exact URL and commit are recorded in `UPSTREAM.lock`.
 
@@ -32,7 +36,7 @@ Fields:
 
 ```yaml
 upstream:
-  repo: "https://github.com/sgtatham/puzzles"
+  repo: "https://git.tartarus.org/simon/puzzles.git"
   remote: "simon"
   branch: "main"
   commit: "<sha>"
@@ -54,7 +58,11 @@ CI checks:
 1. `commit` exists in upstream;
 2. `merge_base` matches the real merge base;
 3. the README line matches the lock;
-4. the oracle builds from `commit`.
+4. the vendored tree still builds the oracle.
+
+Check 4 is about this tree, not about a clean upstream checkout: the
+oracle frontend is written against the vendored `drawing_api`, which
+already differs from the pinned upstream revision.
 
 ## 3. Procedure
 
@@ -66,20 +74,16 @@ CI checks:
    git status   # must be clean
    ```
 
-2. **Update the integration branch**
-   ```bash
-   git switch upstream
-   git merge --ff-only simon/main
-   git push origin upstream
-   ```
-
-3. **Merge into main**
+2. **Merge upstream into main**
    ```bash
    git switch main
-   git merge upstream
+   git merge simon/main
    ```
+   This repository has no long-lived `upstream` branch. If one is
+   added later, update it with `--ff-only` first and merge it instead,
+   so the lock keeps naming a single sync commit.
 
-4. **Resolve conflicts**
+3. **Resolve conflicts**
    - Conflicts in vendored files: do not "fix" them by hand. Take the
      upstream version, then add a patch in a separate commit only if it
      is truly needed.
@@ -103,11 +107,15 @@ CI checks:
 
 7. **Build the oracle from two revisions**
    ```bash
-   tools/oracle/build.sh --commit "$(git rev-parse HEAD)"
-   tools/oracle/build.sh --commit "$(git rev-parse simon/main)"
+   tools/oracle/build.sh
+   mkdir -p build/upstream
+   git archive simon/main | tar -x -C build/upstream
+   tools/oracle/build.sh --src build/upstream --build-dir build/upstream-oracle
    ```
    The second binary shows what changed in upstream behavior during the
-   sync.
+   sync. The oracle frontend tracks the vendored drawing API, so a
+   frontend change is sometimes needed before the upstream build works;
+   that is part of the sync, not a workaround.
 
 8. **Run parity**
    ```bash
@@ -133,7 +141,7 @@ CI checks:
 
 | File | Decision |
 |---|---|
-| `jni/*.c` (vendored) | always upstream, no local edits |
+| `jni/*.c` (vendored) | upstream plus the Android patch layer recorded as D-001 in `DEVIATIONS.md`; take upstream changes, re-apply the layer, and do not add a new edit |
 | `jni/android.c`, `android.h` | ours; adapt to the new API |
 | `jni/executable/android-gen.c` | ours |
 | `jni/cmake/platforms/android.cmake` | ours |

@@ -141,22 +141,86 @@ C wins.
 | `midend` | C | C |
 | `grid`, `loopgen`, `latin` | C | C |
 | `renderer` | new | C traces |
-| `fifteen` | not started | C |
-| `slant` | not started | C |
-| `net` | not started | C |
-| `loopy` | not started | C |
-| other games | not started | C |
+| games (see the table below) | not started | C |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — C
 was removed after two releases without P1 bugs (see `ROADMAP.md`).
 
+### Game inventory
+
+Measured from the code at the vendored revision. Presets are counted
+for the Android build, which compiles with `SMALL_SCREEN` (see
+`app/src/main/jni/cmake/platforms/android.cmake`). The count includes
+submenu entries when a game groups its presets.
+
+| Game | Display name | Default params | Presets | Solver | Text format | Timed | Platform randomness | Status |
+|---|---|---|---:|---|---|---|---|---|
+| `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `C` |
+| `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `C` |
+| `cube` | Cube | 4x4 | 4 | no | no | no | no | `C` |
+| `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
+| `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `C` |
+| `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `C` |
+| `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `C` |
+| `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `C` |
+| `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `C` |
+| `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `C` |
+| `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `C` |
+| `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `C` |
+| `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `C` |
+| `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
+| `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `C` |
+| `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `C` |
+| `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `C` |
+| `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `C` |
+| `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `C` |
+| `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `C` |
+| `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `C` |
+| `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `C` |
+| `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `C` |
+| `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `C` |
+| `range` | Range | 9x6 | 4 | yes | yes | no | no | `C` |
+| `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
+| `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `C` |
+| `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `C` |
+| `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `C` |
+| `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `C` |
+| `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `C` |
+| `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
+| `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `C` |
+| `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `C` |
+| `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `C` |
+| `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `C` |
+| `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `C` |
+| `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `C` |
+| `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `C` |
+| `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `C` |
+
+Notes:
+
+- `nullgame` is built by upstream but has no display name and is not in
+  the playable game list. The oracle and the app exclude it.
+- `SMALL_SCREEN` removes the largest preset in `loopy`, `mines`, `net`,
+  and `rect`. The Android presets therefore differ from a desktop
+  upstream build. This is recorded as deviation D-002 in
+  `docs/DEVIATIONS.md` and pinned by `PresetDeviationTest`. The oracle
+  is compiled with the same definitions, so the parity comparison is
+  between the app and the same engine.
+- `mines` is the only timed game. The timer affects the clock, not
+  `DESC`, the move history, or the save file.
+- `net` asks the frontend for a random seed when it jumbles tiles. The
+  oracle returns a fixed seed, so the oracle path is deterministic.
+- The `fifteen` row is the first port target (`ROADMAP.md`, Phase 4).
+
+
 ## 8. Goldens
 
 - Goldens are text (JSON/JSON.gz), not PNG.
 - Every golden has provenance: game, parameters, seed, upstream
-  commit, trace schema.
-- `testdata/manifest.json` stores `sha256` and the version.
+  commit, oracle protocol.
+- `testdata/manifest.json` stores the `sha256` and the version. The
+  test `GoldenManifestTest` fails when a hash or the file list drifts.
 - Regenerate only with `tools/gen-goldens.sh`, and review the diff.
 - Never update a golden to "fix" a red test. Find the cause first,
   then add a `DEVIATIONS.md` entry or fix the code.

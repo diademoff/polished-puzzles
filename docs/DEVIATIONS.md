@@ -43,8 +43,45 @@ Anything not listed here is a bug.
 
 ## Register
 
-Empty for now. The first entries will appear in Phase 1 (accessibility
-and theme) and Phase 2 (renderer).
+### D-001: Android patch layer inside vendored C
+
+- **Area:** behavior and build
+- **Status:** active
+- **What differs:** 53 files in `app/src/main/jni` differ from
+  upstream commit `790f5851`. The differences are the Android port
+  layer: translation macros, extra presets, Android input and cursor
+  paths, and small build changes. The exact file set and line counts
+  are in `app/src/main/jni/UPSTREAM-PATCHES.txt`; the content hashes
+  are in `app/src/main/jni/UPSTREAM-FILES.txt`.
+- **Why:** this is the existing baseline of the port, not a new
+  change. It predates the rule "do not edit vendored C". Phase 0
+  records it so that a new edit is visible. Separating the layer into
+  `patches/` is a separate mechanical change.
+- **Test:** `tools/check-upstream-diff.sh --strict` fails when a
+  vendored file changes or when the patch layer gains or loses a file.
+  The parity goldens (`GoldenDescTest`) pin the behavior of the patched
+  engine.
+- **Scope:** all games
+- **Upstream:** none
+- **Date:** 2026-11-14
+
+### D-002: Android presets omit the largest boards
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** the app compiles with `SMALL_SCREEN`
+  (`app/src/main/jni/cmake/platforms/android.cmake`), so four games
+  expose fewer presets than a desktop upstream build:
+  `loopy` 20 instead of 23, `mines` 4 instead of 6, `net` 8 instead of
+  10, and `rect` 5 instead of 7. The removed entries are the largest
+  boards, for example the 30x16 mines presets.
+- **Why:** the largest boards are not useful on a phone screen. This is
+  the shipped behavior of the Android port.
+- **Test:**
+  `parity/src/test/kotlin/.../PresetDeviationTest.kt::android presets omit the desktop large presets`
+- **Scope:** `loopy`, `mines`, `net`, `rect`
+- **Upstream:** none
+- **Date:** 2026-11-14
 
 ## Examples
 
