@@ -22,6 +22,8 @@
  *   {"op":"solve","state":"..."}
  *   {"op":"text","state":"..."}
  *   {"op":"status","state":"..."}
+ *   {"op":"keys","state":"...","seq":"108 108 522"}
+ *   {"op":"trace","state":"..."}
  *
  * Responses (flat JSON objects):
  *
@@ -31,6 +33,9 @@
  * State responses carry: state, id, game, w, h, canundo, canredo,
  * and status. The status value follows midend_status(): 1 win, -1 lose,
  * 0 open.
+ *
+ * A trace response carries the recorded drawing operations for one
+ * redraw of the state. See docs/adr/0003-strict-draw-traces.md.
  */
 
 #include <stdarg.h>
@@ -38,6 +43,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "puzzles.h"
 
@@ -87,6 +93,10 @@ void deactivate_timer(frontend *fe) { (void)fe; }
 
 struct blitter {
     int unused;
+    /* The recording API uses the same structure to correlate
+     * blitter_save and blitter_load with blitter_new. */
+    int id;
+    int w, h;
 };
 
 static void op_draw_text(drawing *dr, int x, int y, int fonttype,
@@ -300,6 +310,387 @@ static bool rbuf_read_cb(void *ctx, void *out, int len)
     r->pos += len;
     return true;
 }
+
+/* ------------------------------------------------------------------ */
+/* Recording drawing API.                                             */
+/*                                                                    */
+/* Every callback appends one JSON operation to `ops`, in call order. */
+/* Numbers are integers in milli-units: round(value * 1000). See      */
+/* docs/adr/0003-strict-draw-traces.md.                               */
+/* ------------------------------------------------------------------ */
+
+typedef struct {
+    sbuf ops;
+    int nops;
+    int blitters;
+} trace_ctx;
+
+static void tc_printf(trace_ctx *t, const char *fmt, ...)
+{
+    va_list ap;
+    char stack[256];
+    char *buf = stack;
+    int n;
+
+    va_start(ap, fmt);
+    n = vsnprintf(stack, sizeof(stack), fmt, ap);
+    va_end(ap);
+    if (n < 0)
+        fatal("cannot format a trace operation");
+    if ((size_t)n >= sizeof(stack)) {
+        buf = snewn(n + 1, char);
+        va_start(ap, fmt);
+        vsnprintf(buf, n + 1, fmt, ap);
+        va_end(ap);
+    }
+    sbuf_add(&t->ops, buf, n);
+    if (buf != stack)
+        sfree(buf);
+}
+
+static void tc_string(trace_ctx *t, const char *s)
+{
+    tc_printf(t, "\"");
+    if (s) {
+        for (; *s; s++) {
+            unsigned char c = (unsigned char)*s;
+            switch (c) {
+              case '"': tc_printf(t, "\\\""); break;
+              case '\\': tc_printf(t, "\\\\"); break;
+              case '\b': tc_printf(t, "\\b"); break;
+              case '\f': tc_printf(t, "\\f"); break;
+              case '\n': tc_printf(t, "\\n"); break;
+              case '\r': tc_printf(t, "\\r"); break;
+              case '\t': tc_printf(t, "\\t"); break;
+              default:
+                if (c < 0x20)
+                    tc_printf(t, "\\u%04x", c);
+                else
+                    sbuf_add(&t->ops, s, 1);
+            }
+        }
+    }
+    tc_printf(t, "\"");
+}
+
+static void tc_op_start(trace_ctx *t)
+{
+    if (t->nops++)
+        sbuf_add(&t->ops, ",", 1);
+    tc_printf(t, "{");
+}
+
+static void tc_op_end(trace_ctx *t)
+{
+    tc_printf(t, "}");
+}
+
+static long tc_milli(float value)
+{
+    return (long)lroundf(value * 1000.0F);
+}
+
+static trace_ctx *tc_of(drawing *dr)
+{
+    return (trace_ctx *)dr->handle;
+}
+
+static void tr_draw_text(drawing *dr, int x, int y, int fonttype,
+                         int fontsize, int align, int colour,
+                         const char *text)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"text\",\"x\":%d,\"y\":%d,\"font\":%d,"
+                 "\"size\":%d,\"align\":%d,\"c\":%d,\"text\":",
+              x, y, fonttype, fontsize, align, colour);
+    tc_string(t, text);
+    tc_op_end(t);
+}
+
+static void tr_draw_rect(drawing *dr, int x, int y, int w, int h, int colour)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"rect\",\"x\":%d,\"y\":%d,\"w\":%d,\"h\":%d,"
+                 "\"c\":%d", x, y, w, h, colour);
+    tc_op_end(t);
+}
+
+static void tr_draw_line(drawing *dr, int x1, int y1, int x2, int y2,
+                         int colour)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"line\",\"x1\":%d,\"y1\":%d,\"x2\":%d,\"y2\":%d,"
+                 "\"c\":%d", x1, y1, x2, y2, colour);
+    tc_op_end(t);
+}
+
+static void tr_draw_polygon(drawing *dr, const int *coords, int npoints,
+                            int fillcolour, int outlinecolour)
+{
+    trace_ctx *t = tc_of(dr);
+    int i;
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"poly\",\"pts\":[");
+    for (i = 0; i < npoints * 2; i++)
+        tc_printf(t, i ? ",%d" : "%d", coords[i]);
+    tc_printf(t, "],\"fill\":%d,\"outline\":%d", fillcolour, outlinecolour);
+    tc_op_end(t);
+}
+
+static void tr_draw_thick_polygon(drawing *dr, float thickness,
+                                  const int *coords, int npoints,
+                                  int fillcolour, int outlinecolour)
+{
+    trace_ctx *t = tc_of(dr);
+    int i;
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"thick_poly\",\"t\":%ld,\"pts\":[",
+              tc_milli(thickness));
+    for (i = 0; i < npoints * 2; i++)
+        tc_printf(t, i ? ",%d" : "%d", coords[i]);
+    tc_printf(t, "],\"fill\":%d,\"outline\":%d", fillcolour, outlinecolour);
+    tc_op_end(t);
+}
+
+static void tr_draw_circle(drawing *dr, int cx, int cy, int radius,
+                           int fillcolour, int outlinecolour)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"circle\",\"cx\":%d,\"cy\":%d,\"r\":%d,"
+                 "\"fill\":%d,\"outline\":%d",
+              cx, cy, radius, fillcolour, outlinecolour);
+    tc_op_end(t);
+}
+
+static void tr_draw_thick_circle(drawing *dr, float thickness,
+                                 float cx, float cy, float radius,
+                                 int fillcolour, int outlinecolour)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"thick_circle\",\"t\":%ld,\"cx\":%ld,\"cy\":%ld,"
+                 "\"r\":%ld,\"fill\":%d,\"outline\":%d",
+              tc_milli(thickness), tc_milli(cx), tc_milli(cy),
+              tc_milli(radius), fillcolour, outlinecolour);
+    tc_op_end(t);
+}
+
+static void tr_draw_update(drawing *dr, int x, int y, int w, int h)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"update\",\"x\":%d,\"y\":%d,\"w\":%d,\"h\":%d",
+              x, y, w, h);
+    tc_op_end(t);
+}
+
+static void tr_clip(drawing *dr, int x, int y, int w, int h)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"clip\",\"x\":%d,\"y\":%d,\"w\":%d,\"h\":%d",
+              x, y, w, h);
+    tc_op_end(t);
+}
+
+static void tr_unclip(drawing *dr)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"unclip\"");
+    tc_op_end(t);
+}
+
+static void tr_start_draw(drawing *dr)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"start_draw\"");
+    tc_op_end(t);
+}
+
+static void tr_end_draw(drawing *dr)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"end_draw\"");
+    tc_op_end(t);
+}
+
+static void tr_status_bar(drawing *dr, const char *text)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"status\",\"text\":");
+    tc_string(t, text);
+    tc_op_end(t);
+}
+
+static blitter *tr_blitter_new(drawing *dr, int w, int h)
+{
+    trace_ctx *t = tc_of(dr);
+    blitter *bl = snew(blitter);
+
+    bl->id = ++t->blitters;
+    bl->w = w;
+    bl->h = h;
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"blitter_new\",\"id\":%d,\"w\":%d,\"h\":%d",
+              bl->id, w, h);
+    tc_op_end(t);
+    return bl;
+}
+
+static void tr_blitter_free(drawing *dr, blitter *bl)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"blitter_free\",\"id\":%d", bl->id);
+    tc_op_end(t);
+    sfree(bl);
+}
+
+static void tr_blitter_save(drawing *dr, blitter *bl, int x, int y)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"blitter_save\",\"id\":%d,\"x\":%d,\"y\":%d",
+              bl->id, x, y);
+    tc_op_end(t);
+}
+
+static void tr_blitter_load(drawing *dr, blitter *bl, int x, int y)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"blitter_load\",\"id\":%d,\"x\":%d,\"y\":%d",
+              bl->id, x, y);
+    tc_op_end(t);
+}
+
+static void tr_line_width(drawing *dr, float width)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"line_width\",\"t\":%ld", tc_milli(width));
+    tc_op_end(t);
+}
+
+static void tr_line_dotted(drawing *dr, bool dotted)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"line_dotted\",\"dotted\":%s",
+              dotted ? "true" : "false");
+    tc_op_end(t);
+}
+
+static char *tr_text_fallback(drawing *dr, const char *const *strings,
+                              int nstrings)
+{
+    (void)dr;
+    if (nstrings < 1)
+        return dupstr("");
+    return dupstr(strings[0]);
+}
+
+static void tr_changed_state(drawing *dr, int can_undo, int can_redo)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"changed_state\",\"canundo\":%s,\"canredo\":%s",
+              can_undo ? "true" : "false", can_redo ? "true" : "false");
+    tc_op_end(t);
+}
+
+static void tr_purging_states(drawing *dr)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"purging_states\"");
+    tc_op_end(t);
+}
+
+static void tr_draw_thick_line(drawing *dr, float thickness, float x1,
+                               float y1, float x2, float y2, int colour)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"thick_line\",\"t\":%ld,\"x1\":%ld,\"y1\":%ld,"
+                 "\"x2\":%ld,\"y2\":%ld,\"c\":%d",
+              tc_milli(thickness), tc_milli(x1), tc_milli(y1),
+              tc_milli(x2), tc_milli(y2), colour);
+    tc_op_end(t);
+}
+
+static void tr_inertia_follow(drawing *dr, bool is_solved)
+{
+    trace_ctx *t = tc_of(dr);
+
+    tc_op_start(t);
+    tc_printf(t, "\"op\":\"inertia_follow\",\"solved\":%s",
+              is_solved ? "true" : "false");
+    tc_op_end(t);
+}
+
+static const drawing_api recording_drawing = {
+    1,
+    tr_draw_text,
+    tr_draw_rect,
+    tr_draw_line,
+    tr_draw_polygon,
+    tr_draw_thick_polygon,
+    tr_draw_circle,
+    tr_draw_thick_circle,
+    tr_draw_update,
+    tr_clip,
+    tr_unclip,
+    tr_start_draw,
+    tr_end_draw,
+    tr_status_bar,
+    tr_blitter_new,
+    tr_blitter_free,
+    tr_blitter_save,
+    tr_blitter_load,
+    NULL, /* begin_doc */
+    NULL, /* begin_page */
+    NULL, /* begin_puzzle */
+    NULL, /* end_puzzle */
+    NULL, /* end_page */
+    NULL, /* end_doc */
+    tr_line_width,
+    tr_line_dotted,
+    tr_text_fallback,
+    tr_changed_state,
+    tr_purging_states,
+    tr_draw_thick_line,
+    tr_inertia_follow,
+};
 
 /* ------------------------------------------------------------------ */
 /* A small flat JSON reader. It accepts objects with string or        */
@@ -649,8 +1040,11 @@ static void put_state(frontend *fe)
 }
 
 /* Opens a midend from a serialised save file. Returns NULL on success
- * and an error message on failure. */
-static const char *open_state(frontend *fe, const char *save)
+ * and an error message on failure. The drawing API and its handle are
+ * chosen by the caller: the state operations use the no-op API, and a
+ * trace uses the recording API. */
+static const char *open_state_with(frontend *fe, const char *save,
+                                   const drawing_api *api, void *handle)
 {
     rbuf rd;
     char *name = NULL;
@@ -670,7 +1064,7 @@ static const char *open_state(frontend *fe, const char *save)
     if (!g)
         return "save file names an unknown game";
 
-    fe->me = midend_new(fe, g, &oracle_drawing, NULL);
+    fe->me = midend_new(fe, g, api, handle);
     rd.pos = 0;
     error = midend_deserialise(fe->me, rbuf_read_cb, &rd);
     if (error) {
@@ -679,6 +1073,11 @@ static const char *open_state(frontend *fe, const char *save)
     }
     size_frontend(fe);
     return NULL;
+}
+
+static const char *open_state(frontend *fe, const char *save)
+{
+    return open_state_with(fe, save, &oracle_drawing, NULL);
 }
 
 /* ------------------------------------------------------------------ */
@@ -810,6 +1209,110 @@ static void do_new(const char *gamename, const char *params,
     free_frontend(&fe);
 }
 
+static void do_trace(const char *save)
+{
+    frontend fe = {0};
+    trace_ctx trace = {0};
+    const char *error;
+    float *colours;
+    char *id;
+    char *params;
+    int ncolours = 0, i;
+
+    if (!save) {
+        put_error("missing state");
+        return;
+    }
+
+    error = open_state_with(&fe, save, &recording_drawing, &trace);
+    if (error) {
+        put_error(error);
+        return;
+    }
+
+    /*
+     * One redraw of a fresh midend is the trace. The first redraw of a
+     * new drawstate clears the window with colour 0, and that clear is
+     * part of the contract.
+     */
+    midend_redraw(fe.me);
+    colours = midend_colours(fe.me, &ncolours);
+    id = midend_get_game_id(fe.me);
+    params = midend_get_current_params(fe.me, true);
+
+    fputs("{\"ok\":true,\"trace\":{\"traceSchema\":1,\"game\":", stdout);
+    put_json_string(midend_which_game(fe.me)->name);
+    fputs(",\"id\":", stdout);
+    put_json_string(id);
+    fputs(",\"params\":", stdout);
+    put_json_string(params);
+    printf(",\"w\":%d,\"h\":%d,\"palette\":[", fe.width, fe.height);
+    for (i = 0; i < ncolours; i++)
+        printf("%s[%ld,%ld,%ld]", i ? "," : "",
+               lroundf(colours[i * 3 + 0] * 1000.0F),
+               lroundf(colours[i * 3 + 1] * 1000.0F),
+               lroundf(colours[i * 3 + 2] * 1000.0F));
+    fputs("],\"ops\":[", stdout);
+    if (trace.ops.buf)
+        fputs(trace.ops.buf, stdout);
+    fputs("]}}\n", stdout);
+
+    sfree(colours);
+    sfree(id);
+    sfree(params);
+    sfree(trace.ops.buf);
+    free_frontend(&fe);
+}
+
+static void do_key_seq(const char *save, const char *seq)
+{
+    frontend fe = {0};
+    const char *error;
+    const char *p;
+
+    if (!save) {
+        put_error("missing state");
+        return;
+    }
+    if (!seq) {
+        put_error("keys needs a sequence");
+        return;
+    }
+
+    error = open_state(&fe, save);
+    if (error) {
+        put_error(error);
+        return;
+    }
+
+    /*
+     * Cursor games keep the cursor in the game_ui, which is not part of
+     * the save file. A sequence must be processed inside one midend, or
+     * the cursor would reset between requests.
+     */
+    p = seq;
+    while (*p) {
+        char *end;
+        long key;
+
+        while (*p == ' ' || *p == ',' || *p == '\t')
+            p++;
+        if (!*p)
+            break;
+        key = strtol(p, &end, 10);
+        if (end == p) {
+            free_frontend(&fe);
+            put_error("keys needs a space- or comma-separated list");
+            return;
+        }
+        p = end;
+        midend_process_key(fe.me, 0, 0, (int)key);
+    }
+
+    put_state(&fe);
+    free_frontend(&fe);
+}
+
 static void do_state_op(const char *op, const jobject *req)
 {
     const char *save = field_string(req, "state");
@@ -936,6 +1439,11 @@ int main(int argc, char **argv)
                    !strcmp(op, "redo") || !strcmp(op, "solve") ||
                    !strcmp(op, "text")) {
             do_state_op(op, &req);
+        } else if (!strcmp(op, "keys")) {
+            do_key_seq(field_string(&req, "state"),
+                       field_string(&req, "seq"));
+        } else if (!strcmp(op, "trace")) {
+            do_trace(field_string(&req, "state"));
         } else {
             put_error("unknown op");
         }

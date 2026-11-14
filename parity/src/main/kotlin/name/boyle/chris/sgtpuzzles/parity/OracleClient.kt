@@ -43,10 +43,27 @@ class OracleClient(
     private val process: Process = ProcessBuilder(command)
         .redirectErrorStream(false)
         .apply {
-            // The engine reads <GAME>_PRESETS and <GAME>_DEFAULT from the
-            // environment. Goldens must not depend on the machine.
+            // The engine reads tuning variables from the environment.
+            // Goldens must not depend on the machine, so remove every
+            // variable that changes presets, defaults, colours, or
+            // drawing. The list comes from getenv/getenv_bool in the
+            // vendored tree.
             environment().keys.removeIf {
-                it.endsWith("_PRESETS") || it.endsWith("_DEFAULT")
+                it.endsWith("_PRESETS") ||
+                    it.endsWith("_DEFAULT") ||
+                    it.contains("_COLOUR_") ||
+                    it == "DEBUG_PUZZLES" ||
+                    it.startsWith("PUZZLES_") ||
+                    it.startsWith("FIFTEEN_") ||
+                    it.startsWith("FLOOD_") ||
+                    it.startsWith("LIGHTUP_") ||
+                    it.startsWith("LOOPY_") ||
+                    it.startsWith("MAP_ALTERNATIVE_") ||
+                    it.startsWith("PEARL_") ||
+                    it.startsWith("RANGE_") ||
+                    it.startsWith("SIGNPOST_") ||
+                    it.startsWith("SLANT_") ||
+                    it.startsWith("TOWERS_")
             }
         }
         .start()
@@ -100,6 +117,29 @@ class OracleClient(
     fun status(state: String): GameState = GameState.of(request(mapOf("op" to "status", "state" to state)))
 
     fun text(state: String): String = request(mapOf("op" to "text", "state" to state)).string("text")
+
+    /**
+     * Replays a sequence of key codes inside one midend. Cursor games
+     * keep the cursor in the game_ui, which is not part of the save
+     * file: separate `key` requests would reset it between keys.
+     */
+    fun keys(state: String, sequence: List<Int>): GameState =
+        GameState.of(
+            request(
+                mapOf(
+                    "op" to "keys",
+                    "state" to state,
+                    "seq" to sequence.joinToString(" "),
+                ),
+            ),
+        )
+
+    /**
+     * Records one redraw of [state] as draw operations. The trace
+     * contract is in `docs/adr/0003-strict-draw-traces.md`.
+     */
+    fun trace(state: String): JsonValue.Obj =
+        request(mapOf("op" to "trace", "state" to state)).field("trace") as JsonValue.Obj
 
     /**
      * Sends one request and returns the response. Throws on an error

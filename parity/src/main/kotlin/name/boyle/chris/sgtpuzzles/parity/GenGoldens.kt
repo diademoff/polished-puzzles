@@ -29,7 +29,7 @@ object GenGoldens {
         require(args.size == 2) { "usage: genGoldens <testdata dir> <UPSTREAM.lock>" }
         val testdata = File(args[0])
         val lock = File(args[1])
-        val upstreamCommit = readUpstreamCommit(lock)
+        val upstreamCommit = UpstreamLock.commit(lock)
 
         // The output must be a clean function of the current oracle.
         File(testdata, "golden").deleteRecursively()
@@ -67,26 +67,6 @@ object GenGoldens {
     }
 
     data class Entry(val params: String, val id: String)
-
-    private fun readUpstreamCommit(lock: File): String {
-        // Read the commit from the upstream section only: integration.commit
-        // is a different value and must not leak in.
-        val commitRegex = Regex("""^\s*commit:\s*"([0-9a-f]{40})"""")
-        var inUpstream = false
-        for (line in lock.readLines()) {
-            if (line == "upstream:") {
-                inUpstream = true
-                continue
-            }
-            if (line.isNotEmpty() && !line.startsWith(" ") && line.endsWith(":")) {
-                inUpstream = false
-            }
-            if (inUpstream) {
-                commitRegex.find(line)?.let { return it.groupValues[1] }
-            }
-        }
-        error("no upstream commit in $lock")
-    }
 
     private fun renderGame(game: String, upstreamCommit: String, entries: List<Entry>): String {
         val sb = StringBuilder()

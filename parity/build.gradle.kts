@@ -52,3 +52,17 @@ tasks.register<JavaExec>("genGoldens") {
         rootProject.layout.projectDirectory.file("UPSTREAM.lock").asFile.absolutePath,
     )
 }
+
+// Regenerates testdata/trace for the games with a renderer.
+// tools/gen-traces.sh wraps this task.
+tasks.register<JavaExec>("genTraces") {
+    group = "parity"
+    description = "Freezes strict draw traces for fifteen and later games"
+    mainClass.set("name.boyle.chris.sgtpuzzles.parity.GenTraces")
+    classpath = sourceSets["main"].runtimeClasspath
+    jvmArgs("-Doracle=$oraclePath")
+    args(
+        testdataDir.asFile.absolutePath,
+        rootProject.layout.projectDirectory.file("UPSTREAM.lock").asFile.absolutePath,
+    )
+}
