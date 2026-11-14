@@ -170,6 +170,45 @@ class OracleClient(
             ),
         )
 
+    /**
+     * One pointer click in view coordinates. The oracle subtracts the
+     * letterbox origin, as the Android shell does.
+     */
+    data class Point(val x: Int, val y: Int, val button: Int)
+
+    data class PointResult(val state: GameState, val trace: JsonValue.Obj?)
+
+    /**
+     * Replays several pointer clicks inside one midend, so a select and
+     * a remove see the same `game_ui`. When [width] and [height] are
+     * given, the midend is sized to that viewport first. With
+     * [recordTrace], the response also holds one final redraw whose
+     * status line is captured exactly once.
+     */
+    fun pointsSized(
+        state: String,
+        points: List<Point>,
+        width: Int? = null,
+        height: Int? = null,
+        recordTrace: Boolean = false,
+    ): PointResult {
+        val fields = linkedMapOf<String, Any>(
+            "op" to "pointsSized",
+            "state" to state,
+            "points" to points.joinToString(";") { "${it.x},${it.y},${it.button}" },
+        )
+        if (width != null && height != null) {
+            fields["w"] = width
+            fields["h"] = height
+        }
+        if (recordTrace) fields["trace"] = 1
+        val response = request(fields)
+        return PointResult(
+            state = GameState.of(response),
+            trace = response.fields["trace"] as? JsonValue.Obj,
+        )
+    }
+
     /** Re-reads a save file. Fails when upstream rejects the save. */
     fun id(state: String): GameState = GameState.of(request(mapOf("op" to "id", "state" to state)))
 

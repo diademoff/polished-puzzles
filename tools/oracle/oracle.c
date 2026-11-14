@@ -20,6 +20,7 @@
  *   {"op":"keySized","state":"...","w":411,"h":702,"x":0,"y":0,"k":512}
  *   {"op":"layout","state":"...","w":411,"h":702}
  *   {"op":"gestureSized","state":"...","w":411,"h":702,"x0":0,"y0":0,"x1":0,"y1":0,"steps":4}
+ *   {"op":"pointsSized","state":"...","w":411,"h":702,"points":"48,48,512;48,48,512","trace":1}
  *   {"op":"undo","state":"..."}
  *   {"op":"redo","state":"..."}
  *   {"op":"solve","state":"..."}
@@ -341,6 +342,14 @@ typedef struct {
     int nops;
     int blitters;
     bool suppress_blitter_free;
+    /*
+     * The drawing object seen by the callbacks. A sized pointer
+     * sequence needs it to reset the status cache before the final
+     * redraw.
+     */
+    drawing *dr;
+    /* The last status text the drawing layer emitted. */
+    char *last_status;
 } trace_ctx;
 
 static void tc_printf(trace_ctx *t, const char *fmt, ...)
@@ -537,6 +546,7 @@ static void tr_start_draw(drawing *dr)
 {
     trace_ctx *t = tc_of(dr);
 
+    t->dr = dr;
     tc_op_start(t);
     tc_printf(t, "\"op\":\"start_draw\"");
     tc_op_end(t);
@@ -556,6 +566,9 @@ static void tr_status_bar(drawing *dr, const char *text)
 {
     trace_ctx *t = tc_of(dr);
 
+    t->dr = dr;
+    sfree(t->last_status);
+    t->last_status = dupstr(text ? text : "");
     tc_op_start(t);
     tc_printf(t, "\"op\":\"status\",\"text\":");
     tc_string(t, text);
@@ -1039,7 +1052,7 @@ static void size_frontend(frontend *fe)
     midend_size(fe->me, &fe->width, &fe->height, false, 1.0);
 }
 
-static void put_state(frontend *fe)
+static void put_state_fields(frontend *fe)
 {
     sbuf save = {0};
     char *id;
@@ -1049,13 +1062,13 @@ static void put_state(frontend *fe)
         sbuf_add(&save, "", 0);
     id = midend_get_game_id(fe->me);
 
-    fputs("{\"ok\":true,\"state\":", stdout);
+    fputs("\"state\":", stdout);
     put_json_string(save.buf);
     fputs(",\"id\":", stdout);
     put_json_string(id);
     fputs(",\"game\":", stdout);
     put_json_string(midend_which_game(fe->me)->name);
-    printf(",\"w\":%d,\"h\":%d,\"canundo\":%s,\"canredo\":%s,\"status\":%d}\n",
+    printf(",\"w\":%d,\"h\":%d,\"canundo\":%s,\"canredo\":%s,\"status\":%d",
            fe->width, fe->height,
            midend_can_undo(fe->me) ? "true" : "false",
            midend_can_redo(fe->me) ? "true" : "false",
@@ -1063,6 +1076,13 @@ static void put_state(frontend *fe)
 
     sfree(id);
     sfree(save.buf);
+}
+
+static void put_state(frontend *fe)
+{
+    fputs("{\"ok\":true,", stdout);
+    put_state_fields(fe);
+    fputs("}\n", stdout);
 }
 
 /* Opens a midend from a serialised save file. Returns NULL on success
@@ -1291,7 +1311,7 @@ static const char *apply_prefs(frontend *fe, const char *prefs)
     return midend_load_prefs(fe->me, rbuf_read_cb, &rd);
 }
 
-static void put_trace(frontend *fe, trace_ctx *trace)
+static void put_trace_body(frontend *fe, trace_ctx *trace)
 {
     float *colours;
     char *id;
@@ -1307,7 +1327,7 @@ static void put_trace(frontend *fe, trace_ctx *trace)
     id = midend_get_game_id(fe->me);
     params = midend_get_current_params(fe->me, true);
 
-    fputs("{\"ok\":true,\"trace\":{\"traceSchema\":1,\"game\":", stdout);
+    fputs("{\"traceSchema\":1,\"game\":", stdout);
     put_json_string(midend_which_game(fe->me)->name);
     fputs(",\"id\":", stdout);
     put_json_string(id);
@@ -1322,11 +1342,18 @@ static void put_trace(frontend *fe, trace_ctx *trace)
     fputs("],\"ops\":[", stdout);
     if (trace->ops.buf)
         fputs(trace->ops.buf, stdout);
-    fputs("]}}\n", stdout);
+    fputs("]}", stdout);
 
     sfree(colours);
     sfree(id);
     sfree(params);
+}
+
+static void put_trace(frontend *fe, trace_ctx *trace)
+{
+    fputs("{\"ok\":true,\"trace\":", stdout);
+    put_trace_body(fe, trace);
+    fputs("}\n", stdout);
 }
 
 static void do_trace(const jobject *req)
@@ -1383,11 +1410,13 @@ static void do_trace(const jobject *req)
      * buffer. The frontend must go before the buffer. */
     free_frontend(&fe);
     sfree(trace.ops.buf);
+    sfree(trace.last_status);
     return;
 
   fail:
     free_frontend(&fe);
     sfree(trace.ops.buf);
+    sfree(trace.last_status);
     put_error(error);
 }
 
@@ -1409,6 +1438,7 @@ static void do_trace_new(const char *gamename, const char *params,
 
     free_frontend(&fe);
     sfree(trace.ops.buf);
+    sfree(trace.last_status);
 }
 
 static void do_key_seq(const char *save, const char *seq)
@@ -2267,6 +2297,145 @@ static void do_gesture_sized(const jobject *req)
     free_frontend(&fe);
 }
 
+/*
+ * Replays a list of pointer clicks inside one midend. One click is
+ * `x,y,button`; clicks are separated by `;`. The coordinates are view
+ * coordinates, so the letterbox origin is subtracted here as android.c
+ * does in GameEngineImpl_keyEvent. A cursor game keeps its game_ui
+ * between clicks, which is what makes a select-then-remove pair work.
+ * Returns NULL on success.
+ */
+static const char *process_points(frontend *fe, const char *points,
+                                  int ox, int oy)
+{
+    const char *p = points;
+
+    while (*p) {
+        long x, y, button;
+        char *end;
+
+        while (*p == ' ' || *p == '\t' || *p == ';')
+            p++;
+        if (!*p)
+            break;
+        x = strtol(p, &end, 10);
+        if (end == p)
+            return "points needs x,y,button triples";
+        p = end;
+        while (*p == ' ' || *p == '\t')
+            p++;
+        if (*p++ != ',')
+            return "points needs x,y,button triples";
+        y = strtol(p, &end, 10);
+        if (end == p)
+            return "points needs x,y,button triples";
+        p = end;
+        while (*p == ' ' || *p == '\t')
+            p++;
+        if (*p++ != ',')
+            return "points needs x,y,button triples";
+        button = strtol(p, &end, 10);
+        if (end == p)
+            return "points needs x,y,button triples";
+        p = end;
+        while (*p == ' ' || *p == '\t')
+            p++;
+        if (*p && *p != ';')
+            return "points needs x,y,button triples";
+        midend_process_key(fe->me, (int)x - ox, (int)y - oy, (int)button);
+    }
+    return NULL;
+}
+
+/*
+ * Replays sized pointer clicks and, when asked, records one final
+ * redraw. The redraw is the same shape as a plain trace: a fresh
+ * drawstate, the full board, exactly one status line, the full-window
+ * update, and end_draw.
+ *
+ * drawing.c caches the last status text and suppresses an unchanged
+ * line. The sequence has already drawn that text, so the final redraw
+ * would lose it. Reset the cache with a string that differs from the
+ * last one, then discard that operation: the final redraw then emits
+ * the status exactly once.
+ */
+static void do_points_sized(const jobject *req)
+{
+    const char *save = field_string(req, "state");
+    const char *points = field_string(req, "points");
+    long view_width = 0, view_height = 0, want_trace = 0;
+    bool sized;
+    frontend fe = {0};
+    trace_ctx trace = {0};
+    const char *error;
+    int w, h, ox = 0, oy = 0;
+
+    if (!save || !points) {
+        put_error("pointsSized needs a state and points");
+        return;
+    }
+    sized = field_int(req, "w", &view_width) &&
+        field_int(req, "h", &view_height);
+    if (sized && (view_width < 1 || view_height < 1 ||
+                  view_width > 100000 || view_height > 100000)) {
+        put_error("pointsSized needs positive w and h");
+        return;
+    }
+    (void)field_int(req, "trace", &want_trace);
+
+    error = open_state_with(&fe, save, &recording_drawing, &trace);
+    if (error) {
+        put_error(error);
+        return;
+    }
+    if (sized) {
+        w = (int)view_width;
+        h = (int)view_height;
+        midend_size(fe.me, &w, &h, true, 1.0);
+        ox = ((int)view_width - w) / 2;
+        oy = ((int)view_height - h) / 2;
+    }
+
+    error = process_points(&fe, points, ox, oy);
+    if (error)
+        goto fail;
+
+    if (want_trace) {
+        if (trace.dr && trace.last_status) {
+            char *poison = snewn(strlen(trace.last_status) + 2, char);
+            sprintf(poison, "%s ", trace.last_status);
+            status_bar(trace.dr, poison);
+            sfree(poison);
+        }
+        trace.ops.len = 0;
+        if (trace.ops.buf)
+            trace.ops.buf[0] = '\0';
+        trace.nops = 0;
+        trace.blitters = 0;
+        trace.suppress_blitter_free = true;
+        midend_force_redraw(fe.me);
+    }
+
+    fputs("{\"ok\":true,", stdout);
+    put_state_fields(&fe);
+    if (want_trace) {
+        fputs(",\"trace\":", stdout);
+        put_trace_body(&fe, &trace);
+    }
+    fputs("}\n", stdout);
+
+    free_frontend(&fe);
+    sfree(trace.ops.buf);
+    sfree(trace.last_status);
+    return;
+
+  fail:
+    free_frontend(&fe);
+    sfree(trace.ops.buf);
+    sfree(trace.last_status);
+    put_error(error);
+}
+
 static void do_state_op(const char *op, const jobject *req)
 {
     const char *save = field_string(req, "state");
@@ -2412,6 +2581,8 @@ int main(int argc, char **argv)
             do_key_sized(&req);
         } else if (!strcmp(op, "gestureSized")) {
             do_gesture_sized(&req);
+        } else if (!strcmp(op, "pointsSized")) {
+            do_points_sized(&req);
         } else if (!strcmp(op, "keys")) {
             do_key_seq(field_string(&req, "state"),
                        field_string(&req, "seq"));

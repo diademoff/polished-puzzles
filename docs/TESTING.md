@@ -32,6 +32,7 @@ new(game, params, seed) -> state
 key(state, x, y, k)     -> state + flags
 keySized(state, w, h, x, y, k) -> state after resizing
 gestureSized(state, w, h, x0, y0, x1, y1, steps) -> state after a swipe
+pointsSized(state[, w, h], points[, trace]) -> state after several clicks
 layout(state, w, h)     -> game size after midend_size
 keys(state, seq)        -> state + flags
 undo/redo(state)        -> state + flags
@@ -69,6 +70,16 @@ and cannot see a mismatch between the drawn and the input geometry.
 then sends the shell's swipe sequence: `DOWN` at the start, interpolated
 `DRAG` events, then `UP` at the end. It catches a game that handles a click but not a drag or a
 release, and it checks that a swipe does not add more moves than C does.
+
+`pointsSized` takes a semicolon-separated list of `x,y,button` triples
+and applies every click inside one midend, so a game whose two-step
+removal keeps the first step in `game_ui` can be compared with C. The
+optional `w` and `h` size the midend to a viewport and remove the
+letterbox origin, like `keySized`. With `trace: 1` the response also
+holds one final redraw. The drawing layer caches the last status text,
+so the tool resets that cache before the final redraw: the trace carries
+the status line exactly once, including the selection text that is not
+visible through a plain `trace` after a key sequence.
 
 `trace` records one `midend_redraw` through the recording drawing API.
 `traceNew` creates the game first, so a trace does not depend on the
@@ -293,6 +304,31 @@ Engine tests:
 - `SlantInputParityTest` compares layout and clicks at several
   viewports, including the letterbox margin, and a swipe that must
   change only its start cell.
+- `SameGameDescTest` is semantic. It compares parameters, validation,
+  presets, and `params + seed -> DESC`, including non-soluble generation
+  and a numeric seed sweep.
+- `SameGameGameTest` is semantic. It compares new games, text, status
+  text, score, gravity, completion, impossibility, undo/redo, and
+  crafted saves with the oracle. It also drives a keyboard removal
+  through the same cells as the pointer path.
+- `SameGameSaveTest` is strict for the save text. It reads every
+  `samegame` save in the corpus, rewrites it byte for byte, and makes
+  the oracle load both versions. It also makes the oracle load a
+  Kotlin-written save and pins the `PARAMS`/`CPARAMS` asymmetry of a
+  non-soluble parameter string: the short form stays in `PARAMS`, the
+  full form with `r` is only in `CPARAMS`, and the game ID uses the
+  short form.
+- `SameGameInputParityTest` is semantic. It compares `computeSize` and
+  the layout for phone, tablet, landscape, and tiny viewports and for
+  tile sizes 48, 63, 82, and 100, then sends the same view coordinates
+  through `BoardGeometry` to Kotlin and through `pointsSized` to C. The
+  first tap must only select and leave the save unchanged; the second
+  must remove the group. The state, ID, status, and a final redraw with
+  its status line are compared at every viewport, including letterboxed
+  origins.
+- `SameGameTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus completed, impossible, and
+  blank states and a selected group.
 - `OracleTraceSequenceTest` checks the `seq` field of a `trace`
   request. It replays one key on an `inertia` game that uses blitters
   and asserts that the trace starts with `blitter_new`, has no stale

@@ -17,6 +17,7 @@ import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.KeyRequest
 import name.boyle.chris.sgtpuzzles.engine.Midend
+import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Text
@@ -39,15 +40,16 @@ object KotlinGames {
 
     /**
      * Games whose Kotlin implementation is complete enough for the app.
-     * `slant` is in dual-run: its engine passes the parity matrix, but
-     * the app still uses C until the configuration dialog and the
-     * two-release wait are done.
+     * `slant` and `samegame` are in dual-run: their engines pass the
+     * parity matrix, but the app still uses C until the configuration
+     * dialog and the two-release wait are done.
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
     fun gameFor(backend: BackendName): Game? = when (backend) {
         FIFTEEN -> Fifteen
         SLANT -> Slant
+        SAMEGAME -> SameGame
         else -> null
     }
 

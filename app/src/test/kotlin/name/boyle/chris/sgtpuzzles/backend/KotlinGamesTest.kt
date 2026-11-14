@@ -1,6 +1,7 @@
 package name.boyle.chris.sgtpuzzles.backend
 
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,6 +26,12 @@ class KotlinGamesTest {
     fun `slant is dual-run but the app still uses C`() {
         assertEquals(Slant, KotlinGames.gameFor(SLANT))
         assertFalse(KotlinGames.handles(SLANT))
+    }
+
+    @Test
+    fun `samegame is registered but the app still uses C`() {
+        assertEquals(SameGame, KotlinGames.gameFor(SAMEGAME))
+        assertFalse(KotlinGames.handles(SAMEGAME))
     }
 
     @Test

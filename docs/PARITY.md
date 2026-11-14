@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant` is `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant` and `samegame` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -216,7 +216,7 @@ submenu entries when a game groups its presets.
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `C` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `C` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
-| `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `C` |
+| `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `C` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `C` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `C` |
@@ -263,6 +263,17 @@ Notes:
   dialog, cursor drawing, and the two-release wait are done. The seams
   are `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
+- `samegame` is `dual-run`. Its generator, state, moves, score,
+  selection, status text, save file, drawing, layout, and pointer input
+  pass the matrix in `SameGameDescTest`, `SameGameGameTest`,
+  `SameGameSaveTest`, `SameGameTraceTest`, and
+  `SameGameInputParityTest`. The pointer test uses the oracle's
+  `pointsSized` operation, so a select and a remove run in one C midend
+  and are compared with the Kotlin `processKey` path.
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
+  C: the configuration dialog, the `Fifteen` casts in
+  `KotlinGameEngine`, and the two-release wait are open. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`.
 
 
 ## 8. Goldens

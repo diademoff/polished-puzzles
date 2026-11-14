@@ -2,6 +2,7 @@ package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.DrawSink
 import name.boyle.chris.sgtpuzzles.engine.Midend
+import name.boyle.chris.sgtpuzzles.engine.Size
 import kotlin.math.roundToInt
 
 /**
@@ -142,7 +143,32 @@ class KotlinTraceSink : DrawSink {
             return objectFor(midend, sink)
         }
 
-        private fun objectFor(midend: Midend, sink: KotlinTraceSink): JsonValue.Obj {
+        /**
+         * The same redraw as [stateTrace], at an explicit [tileSize].
+         * A sized oracle trace draws at the tile size its viewport
+         * chose, which is not always the preferred size. The draw
+         * sequence follows [Midend.recordRedraw].
+         */
+        fun stateTrace(midend: Midend, tileSize: Int): JsonValue.Obj {
+            val size = midend.game.computeSize(midend.params, tileSize)
+            val sink = KotlinTraceSink()
+            sink.startDraw()
+            sink.rect(0, 0, size.width, size.height, 0)
+            midend.game.redraw(midend.state, midend.ui, sink, tileSize)
+            if (midend.game.wantsStatusBar) sink.status(midend.statusText())
+            sink.update(0, 0, size.width, size.height)
+            sink.endDraw()
+            return objectFor(midend, sink, size)
+        }
+
+        private fun objectFor(midend: Midend, sink: KotlinTraceSink): JsonValue.Obj =
+            objectFor(midend, sink, midend.size)
+
+        private fun objectFor(
+            midend: Midend,
+            sink: KotlinTraceSink,
+            size: Size,
+        ): JsonValue.Obj {
             val colours = midend.game.colours()
             val palette = JsonValue.Arr(
                 (0 until colours.size / 3).map { index ->
