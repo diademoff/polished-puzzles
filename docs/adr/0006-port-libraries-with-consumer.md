@@ -14,7 +14,7 @@ the sort order, the combination order, a disjoint-set forest, a to-do
 queue, bridge finding, bipartite matching, and the 2-3-4 tree API can
 all be driven directly from a test and compared with the oracle.
 
-Others do not. `grid` builds a family of twenty board geometries,
+Others do not. `grid` builds a family of eighteen board geometries,
 `latin` is a solver framework driven by per-game callbacks, `loopgen`
 generates a loop through a grid, and `midend` is the glue around a
 game's vtable. Their outputs are only meaningful through a game: a
@@ -46,11 +46,12 @@ not in the reference.
 
 3. **The remaining libraries move to Phase 4 and are ported with their
    first consumer:** `grid` and `loopgen` (loopy or pearl), `latin`
-   (keen, towers, or unequal), and `midend` (fifteen). In the pinned
-   upstream, `slant`, `mines`, and `net` do not include `grid.h` or
-   `loopgen.h`. The first game that needs a library is the point where
-   the library has an end-to-end check: the game's dual-run matrix
-   compares the Kotlin library through the game with the C oracle.
+   (keen, towers, unequal, or singles), and `midend` (fifteen). In the
+   pinned upstream, `slant`, `mines`, and `net` do not include `grid.h`
+   or `loopgen.h`. The first game that needs a library is the point
+   where the library has an end-to-end check: the game's dual-run
+   matrix compares the Kotlin library through the game with the C
+   oracle.
 
 4. **A library port does not change the game's status.** A game stays
    `C` until its Kotlin path passes the full matrix in `PARITY.md`,

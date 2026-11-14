@@ -132,16 +132,20 @@ One game at a time, in dual-run mode, behind a feature flag.
 
 Phase 4 also ports the libraries deferred from Phase 3 with their first
 consumer: `midend` with fifteen, `grid` and `loopgen` with loopy or
-pearl, and `latin` with keen, towers, or unequal. Neither `slant` nor
-`mines` includes `grid.h` in this pinned upstream. See
+pearl, and `latin` with keen, towers, unequal, or singles. Neither
+`slant` nor `mines` includes `grid.h` in this pinned upstream. See
 `docs/adr/0006-port-libraries-with-consumer.md`.
 
 Order:
 
 1. `fifteen` — the whole pipeline, has a solver, no dependencies.
-2. `slant` or `mines` — grid, generation, undo.
-3. `net` — `loopgen`, complex drawing, no solver.
+2. `slant` or `mines` — generation, undo.
+3. `net` — complex drawing, a platform random seed, a solver.
 4. `loopy` — the boss: 18 grids, aperiodic tilings, solver.
+
+This game order is a plan. The library order is driven by the first
+consumer, and the live port queue is in `work/port-queue.md`
+(untracked).
 
 For each game, use the matrix from `PARITY.md`:
 
