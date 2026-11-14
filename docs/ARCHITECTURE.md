@@ -69,7 +69,12 @@ engine/src/
 │  ├─ RandomState.kt                    # bit-exact random.c
 │  ├─ SgtpSave.kt                       # SAVEFILE container
 │  ├─ Sort.kt                           # bit-exact arraysort
-│  └─ Combinations.kt                   # bit-exact combi order
+│  ├─ Combinations.kt                   # bit-exact combi order
+│  ├─ Dsf.kt                            # disjoint-set forest
+│  ├─ Tdq.kt                            # de-duplicating to-do queue
+│  ├─ FindLoop.kt                       # Tarjan bridge finding
+│  ├─ Matching.kt                       # Hopcroft-Karp matching
+│  └─ Tree234.kt                        # tree234 public behavior
 └─ commonTest/kotlin/.../engine/        # fixed vectors and format tests
 ```
 
@@ -134,6 +139,11 @@ format with other platforms and the main parity oracle.
 `engine/Sort.kt` ports upstream `arraysort()`, a heapsort whose tie
 order is observable, and `engine/Combinations.kt` ports `combi.c`.
 `DeterministicHelpersParityTest` compares both with the oracle.
+`Dsf`, `Tdq`, `FindLoop`, `Matching`, and `Tree234` are the solver
+utilities listed in `docs/adr/0006-port-libraries-with-consumer.md`.
+`grid`, `latin`, `loopgen`, and `midend` stay in C until their first
+game consumer, because their behavior is only observable through a
+game.
 
 `engine/SgtpSave.kt` is a lossless container for the same text. It
 keeps repeated moves and unknown records in order and writes canonical

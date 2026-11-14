@@ -104,19 +104,36 @@ Exit criteria:
 - seed -> DESC matches for every game;
 - iteration order and RNG are deterministic.
 
-Status: started on 2026-11-14 by owner decision while D-09 is still
-open; Phase 3 does not touch the renderer and does not change the D-09
-evidence. The `:engine` Kotlin Multiplatform module exists. Ported and
-pinned: `random.c` (`RandomParityTest`), the `SAVEFILE` container with a
-committed corpus (`SaveParityTest`), `arraysort`, and `combi`
-(`DeterministicHelpersParityTest`). Still C: `midend`, `dsf`, `tdq`,
-`grid`, `latin`, `findloop`, `loopgen`, and game logic. `seed -> DESC` remains oracle-backed until
-Phase 4 ports each generator; the existing `GoldenDescTest` is green.
-The porting order is in `docs/adr/0005-engine-infrastructure-port.md`.
+Status: closed on 2026-11-14. The phase started while D-09 was still
+open, by owner decision; it does not touch the renderer and does not
+change the D-09 evidence.
+
+The `:engine` Kotlin Multiplatform module exists. Ported and pinned:
+`random.c` (`RandomParityTest`), the `SAVEFILE` container with a
+committed corpus (`SaveParityTest`), `arraysort` and `combi`
+(`DeterministicHelpersParityTest`), and `dsf`, `tdq`, `findloop`,
+`matching`, and `tree234` (one differential test each). The exit
+criteria are met: the parity corpus is green, `.sgtp` is read and
+written in both directions, `seed -> DESC` is green for every game,
+and the RNG and every ported order are deterministic.
+
+`grid`, `latin`, `loopgen`, and `midend` move to Phase 4 and are
+ported with their first consumer. They have no meaningful standalone
+oracle: a grid is validated by a board, a Latin solver by a puzzle, a
+loop by a generator, and the midend by a game's vtable. The decision
+and the porting method are in
+`docs/adr/0006-port-libraries-with-consumer.md`. `seed -> DESC`
+remains oracle-backed until Phase 4 ports each generator; the existing
+`GoldenDescTest` is green.
 
 ## Phase 4 — Games
 
 One game at a time, in dual-run mode, behind a feature flag.
+
+Phase 4 also ports the libraries deferred from Phase 3 with their first
+consumer: `midend` with fifteen, `grid` with slant or mines, `latin`
+with keen, towers, or unequal, and `loopgen` with net or loopy. See
+`docs/adr/0006-port-libraries-with-consumer.md`.
 
 Order:
 

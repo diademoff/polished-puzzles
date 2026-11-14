@@ -160,11 +160,12 @@ C wins.
 
 | Component | Status | Authority |
 |---|---|---|
-| `midend` | C | C |
+| `midend` | C until fifteen (ADR 0006) | C |
 | `random` | parity: `engine/RandomState.kt`, strict differential | oracle streams |
 | `SAVEFILE` container | parity: `engine/SgtpSave.kt`, both directions | C save corpus |
 | `sort`, `combi` | parity: `engine/Sort.kt`, `engine/Combinations.kt` | C order |
-| `grid`, `loopgen`, `latin` | C | C |
+| `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
+| `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
 | games (see the table below) | not started | C |
 

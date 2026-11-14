@@ -74,11 +74,11 @@ exception does not change the D-09 evidence.
    `arraysort()` is a heapsort, so it is not stable and its tie order
    is observable. `Combinations` enumerates subsets in the upstream
    lexicographic order. `DeterministicHelpersParityTest` compares both
-   with the oracle. The remaining order is `dsf` and `tdq`; then `grid`
-   and `latin`; then `findloop` and `loopgen`; then the `midend`
-   timeline, configuration, and key mapping. Each piece gets an oracle
-   operation and a differential test before the next one starts. A
-   library with no differential harness is not ported.
+   with the oracle. `dsf`, `tdq`, `findloop`, `matching`, and
+   `tree234` followed with the same method. `grid`, `latin`, `loopgen`,
+   and `midend` moved to Phase 4 with their first consumer; see
+   `docs/adr/0006-port-libraries-with-consumer.md`. A library with no
+   differential harness is not ported.
 
 ## Consequences
 

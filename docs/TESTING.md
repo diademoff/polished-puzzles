@@ -40,6 +40,11 @@ randomBits(seed|state)  -> values + encoded generator state
 randomUpto(seed|state)  -> values + encoded generator state
 sort(values, mode)      -> sorted values
 combi(r, n)             -> combinations in upstream order
+dsf(kind, n, ops)       -> roots, sizes, minima, flip senses
+tdq(n, ops)             -> every removal
+findloop(n, edges)      -> loop edges and bridges
+matching(nl, nr, adj)   -> matching and permuted adjacency
+tree(ops)               -> operation results and index order
 ```
 
 `id` re-reads a save file. It is used by the save corpus test to prove
@@ -204,6 +209,15 @@ Engine tests:
   `arraysort` with the oracle for ascending, descending, and a
   low-bits tie-break, including duplicate keys; it also compares the
   full `combi` order for every `1 <= r <= n <= 9`.
+- `DsfParityTest` compares the plain, minimum-tracking, and
+  flip-tracking forests over merge scripts.
+- `TdqParityTest` compares every removal, including duplicates.
+- `FindLoopParityTest` compares the loop edges, bridges, and component
+  sizes on trees, cycles, complete graphs, and random graphs.
+- `MatchingParityTest` compares the pairing and the seeded adjacency
+  permutation.
+- `Tree234ParityTest` compares add/find/delete/index results and the
+  final sorted order.
 - `SaveParityTest` is strict. It parses and rewrites every file in
   `testdata/saves/`, then makes the oracle load the original and the
   Kotlin text and compare the game id. It also recomputes the preset
