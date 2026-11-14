@@ -18,6 +18,7 @@ import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.KeyRequest
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Text
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.MenuEntry
@@ -36,12 +37,22 @@ object KotlinGames {
     /** Kotlin backends are enabled after the parity slice for each game. */
     const val ENABLED = true
 
+    /**
+     * Games whose Kotlin implementation is complete enough for the app.
+     * `slant` is in dual-run: its engine passes the parity matrix, but
+     * the app still uses C until the configuration dialog and the
+     * two-release wait are done.
+     */
+    private val APP_GAMES = setOf(FIFTEEN)
+
     fun gameFor(backend: BackendName): Game? = when (backend) {
         FIFTEEN -> Fifteen
+        SLANT -> Slant
         else -> null
     }
 
-    fun handles(backend: BackendName): Boolean = ENABLED && gameFor(backend) != null
+    fun handles(backend: BackendName): Boolean =
+        ENABLED && backend in APP_GAMES && gameFor(backend) != null
 
     /** The save file that the C generator would have produced. */
     fun generate(backend: BackendName, params: String, seed: String): String {
@@ -78,6 +89,8 @@ class KotlinGameEngine private constructor(
     private val fifteenState: Fifteen.State get() = state as Fifteen.State
 
     private var geometry = BoardGeometry.preferred(game, midend.params)
+    private var viewWidth = 1
+    private var viewHeight = 1
     private var sized = false
     private var firstDraw = true
     private var invertCursor = false
@@ -102,6 +115,34 @@ class KotlinGameEngine private constructor(
                 width,
                 height,
                 colour,
+            )
+        }
+
+        override fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int) {
+            viewCallbacks.drawLine(
+                1.0f,
+                x1 + geometry.originX.toFloat(),
+                y1 + geometry.originY.toFloat(),
+                x2 + geometry.originX.toFloat(),
+                y2 + geometry.originY.toFloat(),
+                colour,
+            )
+        }
+
+        override fun circle(
+            cx: Int,
+            cy: Int,
+            radius: Int,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {
+            viewCallbacks.drawCircle(
+                1.0f,
+                cx + geometry.originX.toFloat(),
+                cy + geometry.originY.toFloat(),
+                radius.toFloat(),
+                outlineColour,
+                fillColour,
             )
         }
 
@@ -133,6 +174,24 @@ class KotlinGameEngine private constructor(
                 size,
                 colour,
                 text,
+            )
+        }
+
+        override fun clip(x: Int, y: Int, width: Int, height: Int) {
+            viewCallbacks.clipRect(
+                x + geometry.originX,
+                y + geometry.originY,
+                width,
+                height,
+            )
+        }
+
+        override fun unclip() {
+            viewCallbacks.unClip(
+                geometry.originX,
+                geometry.originY,
+                viewWidth,
+                viewHeight,
             )
         }
 
@@ -332,6 +391,8 @@ class KotlinGameEngine private constructor(
     override fun resizeEvent(x: Int, y: Int, bottomInset: Int) {
         val availableWidth = x
         val availableHeight = y - bottomInset
+        viewWidth = x
+        viewHeight = availableHeight
         geometry = midend.geometryFor(availableWidth, availableHeight)
         sized = true
         firstDraw = true
@@ -351,7 +412,7 @@ class KotlinGameEngine private constructor(
     override val currentParams: String
         get() = game.encodeParams(midend.currentParams, true)
 
-    override fun setCursorVisibility(visible: Boolean) {}
+    override fun setCursorVisibility(visible: Boolean) = midend.setCursorVisible(visible)
 
     override val presets: Array<MenuEntry>
         get() = game.presets().mapIndexed { index, preset ->
@@ -362,8 +423,9 @@ class KotlinGameEngine private constructor(
         get() {
             val undo = if (midend.canUndo) 1 else 0
             val redo = if (midend.canRedo) 2 else 0
-            // can configure, can solve, and wants a status bar
-            return undo or redo or 4 or 8 or 16
+            // can configure, can solve, and optionally a status bar
+            val status = if (game.wantsStatusBar) 16 else 0
+            return undo or redo or 4 or 8 or status
         }
 
     override fun resetTimerBaseline() {}
@@ -376,8 +438,12 @@ class KotlinGameEngine private constructor(
     override val colours: FloatArray
         get() {
             val argb = viewCallbacks.defaultBackgroundColour
-            return Fifteen.colours(
-                max(0.0f, min(1.0f, Color.red(argb) / 255.0f)),
+            return game.colours(
+                floatArrayOf(
+                    Color.red(argb) / 255.0f,
+                    Color.green(argb) / 255.0f,
+                    Color.blue(argb) / 255.0f,
+                ),
             )
         }
 
@@ -390,16 +456,12 @@ class KotlinGameEngine private constructor(
 
     override val cursorLocation: RectF
         get() {
-            val border = geometry.tileSize / 2
-            val x = fifteenState.gapPos % fifteenState.width
-            val y = fifteenState.gapPos / fifteenState.width
-            val left = geometry.originX + x * geometry.tileSize + border
-            val top = geometry.originY + y * geometry.tileSize + border
+            val cursor = midend.cursorLocation(geometry.tileSize) ?: return RectF()
             return RectF(
-                left.toFloat(),
-                top.toFloat(),
-                (left + geometry.tileSize).toFloat(),
-                (top + geometry.tileSize).toFloat(),
+                (geometry.originX + cursor.left).toFloat(),
+                (geometry.originY + cursor.top).toFloat(),
+                (geometry.originX + cursor.left + cursor.width).toFloat(),
+                (geometry.originY + cursor.top + cursor.height).toFloat(),
             )
         }
 

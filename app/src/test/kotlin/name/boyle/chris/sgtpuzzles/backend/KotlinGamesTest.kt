@@ -1,6 +1,7 @@
 package name.boyle.chris.sgtpuzzles.backend
 
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.Slant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -18,6 +19,19 @@ class KotlinGamesTest {
     fun `fifteen uses the Kotlin backend`() {
         assertTrue(KotlinGames.handles(FIFTEEN))
         assertFalse(KotlinGames.handles(MINES))
+    }
+
+    @Test
+    fun `slant is dual-run but the app still uses C`() {
+        assertEquals(Slant, KotlinGames.gameFor(SLANT))
+        assertFalse(KotlinGames.handles(SLANT))
+    }
+
+    @Test
+    fun `the slant generator matches the frozen save`() {
+        val expected = File(testdata, "saves/initial/slant/5x5de.sgtp").readText()
+        val actual = KotlinGames.generate(SLANT, "5x5de", "12345")
+        assertEquals(expected, actual)
     }
 
     @Test

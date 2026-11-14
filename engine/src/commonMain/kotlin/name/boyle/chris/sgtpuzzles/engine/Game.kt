@@ -22,6 +22,9 @@ interface Game {
     /** The preferred tile size in device-independent pixels. */
     val preferredTileSize: Int
 
+    /** True when the shell should show the game's status text. */
+    val wantsStatusBar: Boolean get() = true
+
     fun defaultParams(): Params
 
     /** The presets in menu order. The title is the menu label. */
@@ -34,8 +37,11 @@ interface Game {
     /** Returns an error message, or null when the parameters are valid. */
     fun validateParams(params: Params, full: Boolean): String?
 
-    /** Generates a description from a seed. The RNG is the only source of randomness. */
-    fun newDesc(params: Params, random: RandomState): String
+    /**
+     * Generates a description and, when the game has one, the auxiliary
+     * solution text that upstream stores in `AUXINFO`.
+     */
+    fun newDesc(params: Params, random: RandomState): Description
 
     /** Returns an error message, or null when the description is valid. */
     fun validateDesc(params: Params, desc: String): String?
@@ -43,7 +49,7 @@ interface Game {
     fun newState(params: Params, desc: String): State
 
     /** The move that solves the state, or null when the game cannot solve. */
-    fun solve(state: State): String?
+    fun solve(state: State, auxInfo: String? = null): String?
 
     /** Applies one move, or returns null when the move is invalid. */
     fun executeMove(state: State, move: String): State?
@@ -61,8 +67,11 @@ interface Game {
     /** The physical size of the board for a tile size. */
     fun computeSize(params: Params, tileSize: Int): Size
 
-    /** The palette as RGB triples in 0..1. */
+    /** The palette as RGB triples in 0..1, using the default background. */
     fun colours(): FloatArray
+
+    /** The palette with the shell's background colour, when it matters. */
+    fun colours(background: FloatArray): FloatArray = colours()
 
     /** Draws a complete board into [sink], not an incremental update. */
     fun redraw(state: State, sink: DrawSink, tileSize: Int)
@@ -72,7 +81,14 @@ interface Game {
      * the result distinguishes a move, a UI-only change, a key the game
      * ignores, and a key that is valid but does nothing.
      */
-    fun interpretMove(state: State, x: Int, y: Int, button: Int, tileSize: Int): MoveResult
+    fun interpretMove(
+        state: State,
+        ui: Ui,
+        x: Int,
+        y: Int,
+        button: Int,
+        tileSize: Int,
+    ): MoveResult
 
     /** Kotlin has no C structs; each game defines its own nested types. */
     interface Params {
@@ -82,9 +98,31 @@ interface Game {
     interface State {
         fun copy(): State
     }
+
+    /**
+     * Frontend state, the counterpart of upstream `game_ui`. It is not
+     * part of the save file: a load and an undo keep the game's own
+     * state but reset the shell-owned cursor.
+     */
+    interface Ui
+
+    /** A game with no frontend state of its own. */
+    data object NoUi : Ui
+
+    /** A cursor rectangle in game coordinates. */
+    data class CursorRect(val left: Int, val top: Int, val width: Int, val height: Int)
+
+    fun newUi(state: State): Ui = NoUi
+
+    fun setCursorVisible(ui: Ui, visible: Boolean) {}
+
+    /** The cursor rectangle for the shell, or null when there is no cursor. */
+    fun cursorLocation(ui: Ui, state: State, tileSize: Int): CursorRect? = null
 }
 
 data class Preset(val title: String, val params: String)
+
+data class Description(val text: String, val auxInfo: String? = null)
 
 data class Size(val width: Int, val height: Int)
 
@@ -153,8 +191,12 @@ interface DrawSink {
     fun startDraw()
     fun endDraw()
     fun rect(x: Int, y: Int, width: Int, height: Int, colour: Int)
+    fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int)
+    fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int)
     fun poly(points: IntArray, fillColour: Int, outlineColour: Int)
     fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String)
+    fun clip(x: Int, y: Int, width: Int, height: Int)
+    fun unclip()
     fun update(x: Int, y: Int, width: Int, height: Int)
     fun status(text: String)
 }

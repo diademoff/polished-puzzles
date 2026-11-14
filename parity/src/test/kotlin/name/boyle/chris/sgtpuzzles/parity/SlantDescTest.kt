@@ -34,7 +34,7 @@ class SlantDescTest {
             for (seed in seeds) {
                 val text = SlantGeneration.encode(params, true)
                 val expected = oracle.newGame("slant", text, seed).id
-                val desc = SlantGeneration.newDesc(params, RandomState.fromSeed(seed))
+                val desc = SlantGeneration.newDesc(params, RandomState.fromSeed(seed)).text
                 val actual = SlantGeneration.encode(params, false) + ":" + desc
                 assertEquals("slant '$text' seed=$seed", expected, actual)
             }

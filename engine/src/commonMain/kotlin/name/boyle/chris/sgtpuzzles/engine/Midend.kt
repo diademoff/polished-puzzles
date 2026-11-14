@@ -22,6 +22,7 @@ class Midend private constructor(
     val currentParams: Game.Params,
     val seed: String?,
     val desc: String,
+    val auxInfo: String?,
     private val entries: MutableList<Entry>,
     var statePos: Int,
 ) {
@@ -31,6 +32,10 @@ class Midend private constructor(
     data class Entry(val state: Game.State, val move: String?, val type: MoveType)
 
     val state: Game.State get() = entries[statePos - 1].state
+
+    /** The frontend state, mirroring upstream `game_ui`. */
+    var ui: Game.Ui = game.newUi(state)
+        private set
 
     val stateCount: Int get() = entries.size
 
@@ -87,6 +92,11 @@ class Midend private constructor(
     /** `midend_get_game_id`: short parameters, a colon, and the description. */
     fun id(): String = game.encodeParams(currentParams, false) + ":" + desc
 
+    fun setCursorVisible(visible: Boolean) = game.setCursorVisible(ui, visible)
+
+    fun cursorLocation(tileSize: Int): Game.CursorRect? =
+        game.cursorLocation(ui, state, tileSize)
+
     fun status(): Int = game.status(state)
 
     fun statusText(): String = game.statusText(state)
@@ -123,7 +133,7 @@ class Midend private constructor(
 
     /** The `SOLVE` history entry, or false when the game cannot solve. */
     fun solve(): Boolean {
-        val move = game.solve(state) ?: return false
+        val move = game.solve(state, auxInfo) ?: return false
         val solved = game.executeMove(state, move) ?: return false
         purgeRedo()
         entries += Entry(solved, move, MoveType.SOLVE)
@@ -144,7 +154,7 @@ class Midend private constructor(
             Buttons.UI_SOLVE -> return if (solve()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
         }
 
-        return when (val result = game.interpretMove(state, x, y, stripped, tileSize)) {
+        return when (val result = game.interpretMove(state, ui, x, y, stripped, tileSize)) {
             is MoveResult.Move -> {
                 val next = game.executeMove(state, result.text) ?: return KeyOutcome.NoEffect
                 purgeRedo()
@@ -168,7 +178,7 @@ class Midend private constructor(
         sink.startDraw()
         sink.rect(0, 0, size.width, size.height, 0)
         game.redraw(state, sink, tileSize)
-        sink.status(statusText())
+        if (game.wantsStatusBar) sink.status(statusText())
         sink.update(0, 0, size.width, size.height)
         sink.endDraw()
     }
@@ -189,6 +199,7 @@ class Midend private constructor(
         records += SaveRecord("CPARAMS", game.encodeParams(currentParams, true))
         seed?.let { records += seedRecord(it) }
         records += SaveRecord("DESC", desc)
+        auxInfo?.let { records += SaveRecord("AUXINFO", AuxInfo.encode(it)) }
         records += SaveRecord("NSTATES", entries.size.toString())
         records += SaveRecord("STATEPOS", statePos.toString())
         for (index in 1 until entries.size) {
@@ -226,18 +237,22 @@ class Midend private constructor(
             } else {
                 paramsText
             }
-            val params = game.decodeParams(effective)
-            game.validateParams(params, true)?.let { throw IllegalArgumentException(it) }
+            val currentParams = game.decodeParams(effective)
+            game.validateParams(currentParams, true)?.let { throw IllegalArgumentException(it) }
+            val params = game.decodeParams(game.encodeParams(currentParams, false))
             val random = RandomState.fromSeed(seed)
-            val desc = game.newDesc(params, random)
-            game.validateDesc(params, desc)?.let { throw IllegalArgumentException(it) }
-            val state = game.newState(params, desc)
+            val generated = game.newDesc(currentParams, random)
+            game.validateDesc(currentParams, generated.text)?.let {
+                throw IllegalArgumentException(it)
+            }
+            val state = game.newState(currentParams, generated.text)
             return Midend(
                 game = game,
                 params = params,
-                currentParams = params.copy(),
+                currentParams = currentParams,
                 seed = seed,
-                desc = desc,
+                desc = generated.text,
+                auxInfo = generated.auxInfo,
                 entries = mutableListOf(Entry(state, null, MoveType.NEWGAME)),
                 statePos = 1,
             )
@@ -249,16 +264,20 @@ class Midend private constructor(
             require(colon >= 0) { "game ID has no colon: $gameId" }
             val paramsText = gameId.substring(0, colon)
             val desc = gameId.substring(colon + 1)
-            val params = game.decodeParams(paramsText)
-            game.validateParams(params, true)?.let { error(it) }
-            game.validateDesc(params, desc)?.let { error(it) }
+            val currentParams = game.decodeParams(paramsText)
+            game.validateParams(currentParams, true)?.let { error(it) }
+            game.validateDesc(currentParams, desc)?.let { error(it) }
+            val params = game.decodeParams(game.encodeParams(currentParams, false))
             return Midend(
                 game = game,
                 params = params,
-                currentParams = params.copy(),
+                currentParams = currentParams,
                 seed = null,
                 desc = desc,
-                entries = mutableListOf(Entry(game.newState(params, desc), null, MoveType.NEWGAME)),
+                auxInfo = null,
+                entries = mutableListOf(
+                    Entry(game.newState(currentParams, desc), null, MoveType.NEWGAME),
+                ),
                 statePos = 1,
             )
         }
@@ -321,7 +340,16 @@ class Midend private constructor(
                 entries += Entry(next, record.value, type)
             }
 
-            return Midend(game, params, currentParams, seed, desc, entries, statePos)
+            return Midend(
+                game,
+                params,
+                currentParams,
+                seed,
+                desc,
+                save.value("AUXINFO")?.let { AuxInfo.decode(it) },
+                entries,
+                statePos,
+            )
         }
 
         private fun decodeHexSeed(text: String): String {

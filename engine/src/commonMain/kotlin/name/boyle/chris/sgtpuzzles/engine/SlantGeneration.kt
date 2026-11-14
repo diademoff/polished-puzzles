@@ -17,9 +17,15 @@ object SlantGeneration {
     const val EASY = 0
     const val HARD = 1
 
-    data class Params(val width: Int, val height: Int, val difficulty: Int) {
+    data class Params(
+        val width: Int,
+        val height: Int,
+        val difficulty: Int,
+    ) : Game.Params {
         val fullText: String get() = encode(this, true)
         val shortText: String get() = encode(this, false)
+
+        override fun copy(): Game.Params = Params(width, height, difficulty)
     }
 
     fun defaultParams(): Params = Params(8, 8, EASY)
@@ -92,8 +98,8 @@ object SlantGeneration {
         return null
     }
 
-    /** `new_game_desc`, without the auxiliary solution text. */
-    fun newDesc(params: Params, random: RandomState): String {
+    /** `new_game_desc`: the description and the auxiliary solution text. */
+    fun newDesc(params: Params, random: RandomState): GeneratedDesc {
         val w = params.width
         val h = params.height
         val bigW = w + 1
@@ -153,8 +159,13 @@ object SlantGeneration {
             }
         }
 
-        return encodeDesc(clues, bigW * bigH)
+        val desc = encodeDesc(clues, bigW * bigH)
+        val aux = StringBuilder(w * h)
+        for (i in 0 until w * h) aux.append(if (soln[i] < 0) '\\' else '/')
+        return GeneratedDesc(desc, aux.toString())
     }
+
+    data class GeneratedDesc(val text: String, val auxInfo: String)
 
     private fun encodeDesc(clues: IntArray, area: Int): String {
         val out = StringBuilder(area + 1)

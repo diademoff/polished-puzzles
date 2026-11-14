@@ -40,6 +40,28 @@ class KotlinTraceSink : DrawSink {
         )
     }
 
+    override fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int) {
+        ops += obj(
+            "op" to JsonValue.Str("line"),
+            "x1" to num(x1),
+            "y1" to num(y1),
+            "x2" to num(x2),
+            "y2" to num(y2),
+            "c" to num(colour),
+        )
+    }
+
+    override fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int) {
+        ops += obj(
+            "op" to JsonValue.Str("circle"),
+            "cx" to num(cx),
+            "cy" to num(cy),
+            "r" to num(radius),
+            "fill" to num(fillColour),
+            "outline" to num(outlineColour),
+        )
+    }
+
     override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {
         ops += obj(
             "op" to JsonValue.Str("poly"),
@@ -68,6 +90,20 @@ class KotlinTraceSink : DrawSink {
             "c" to num(colour),
             "text" to JsonValue.Str(text),
         )
+    }
+
+    override fun clip(x: Int, y: Int, width: Int, height: Int) {
+        ops += obj(
+            "op" to JsonValue.Str("clip"),
+            "x" to num(x),
+            "y" to num(y),
+            "w" to num(width),
+            "h" to num(height),
+        )
+    }
+
+    override fun unclip() {
+        ops += obj("op" to JsonValue.Str("unclip"))
     }
 
     override fun update(x: Int, y: Int, width: Int, height: Int) {

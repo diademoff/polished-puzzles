@@ -1,7 +1,6 @@
 package name.boyle.chris.sgtpuzzles.engine
 
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 /**
  * A port of upstream `fifteen.c`: the standard 15-puzzle.
@@ -100,7 +99,7 @@ object Fifteen : Game {
         return null
     }
 
-    override fun newDesc(params: Game.Params, random: RandomState): String {
+    override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         val n = p.width * p.height
         val tiles = IntArray(n)
@@ -157,7 +156,7 @@ object Fifteen : Game {
             }
         } while (isCompleted(tiles, n))
 
-        return tiles.joinToString(",")
+        return Description(tiles.joinToString(","))
     }
 
     override fun validateDesc(params: Game.Params, desc: String): String? {
@@ -205,7 +204,7 @@ object Fifteen : Game {
         return State(p.width, p.height, tiles, gap, 0, 0, false)
     }
 
-    override fun solve(state: Game.State): String = "S"
+    override fun solve(state: Game.State, auxInfo: String?): String = "S"
 
     override fun executeMove(state: Game.State, move: String): Game.State? {
         val from = state as State
@@ -306,14 +305,15 @@ object Fifteen : Game {
         return Size(tileSize * p.width + 2 * (tileSize / 2), tileSize * p.height + 2 * (tileSize / 2))
     }
 
-    override fun colours(): FloatArray = colours(0.8f)
+    override fun colours(): FloatArray =
+        colours(floatArrayOf(0.8f, 0.8f, 0.8f))
 
-    /** `game_colours`: a grey board with the generated highlight and shadow. */
-    fun colours(background: Float): FloatArray {
+    /** `game_colours`: the shell background with the generated highlight and shadow. */
+    override fun colours(background: FloatArray): FloatArray {
         val ret = FloatArray(4 * 3)
-        for (i in 0 until 3) ret[COL_BACKGROUND * 3 + i] = background
+        for (i in 0 until 3) ret[COL_BACKGROUND * 3 + i] = background[i]
         for (i in 0 until 3) ret[COL_TEXT * 3 + i] = 0.0f
-        mkHighlight(ret, COL_BACKGROUND, COL_HIGHLIGHT, COL_LOWLIGHT)
+        Colour.mkHighlight(ret, COL_BACKGROUND, COL_HIGHLIGHT, COL_LOWLIGHT)
         return ret
     }
 
@@ -384,8 +384,22 @@ object Fifteen : Game {
         sink.update(x, y, tileSize, tileSize)
     }
 
+    override fun cursorLocation(ui: Game.Ui, state: Game.State, tileSize: Int): Game.CursorRect {
+        val s = state as State
+        val border = tileSize / 2
+        val x = s.gapPos % s.width
+        val y = s.gapPos / s.width
+        return Game.CursorRect(
+            x * tileSize + border,
+            y * tileSize + border,
+            tileSize,
+            tileSize,
+        )
+    }
+
     override fun interpretMove(
         state: Game.State,
+        ui: Game.Ui,
         x: Int,
         y: Int,
         button: Int,
@@ -692,72 +706,6 @@ object Fifteen : Game {
             i++
         }
         return sign * value.toInt()
-    }
-
-    private fun mkHighlight(ret: FloatArray, background: Int, highlight: Int, lowlight: Int) {
-        val black = floatArrayOf(0.0f, 0.0f, 0.0f)
-        val white = floatArrayOf(1.0f, 1.0f, 1.0f)
-        val k = (sqrt(3.0) / 6.0).toFloat()
-
-        val db = distance(ret, background, black)
-        if (db < k) {
-            for (i in 0 until 3) ret[lowlight * 3 + i] = black[i]
-            if (db == 0.0f) {
-                mix(black, white, k / sqrt(3.0).toFloat(), ret, background)
-            } else {
-                mix(black, ret.copyOfRange(background * 3, background * 3 + 3), k / db, ret, background)
-            }
-        } else {
-            mix(
-                ret.copyOfRange(background * 3, background * 3 + 3),
-                black,
-                k / db,
-                ret,
-                lowlight,
-            )
-        }
-
-        val dw = distance(ret, background, white)
-        if (dw < k) {
-            for (i in 0 until 3) ret[highlight * 3 + i] = white[i]
-            if (dw == 0.0f) {
-                mix(white, black, k / sqrt(3.0).toFloat(), ret, background)
-            } else {
-                mix(white, ret.copyOfRange(background * 3, background * 3 + 3), k / dw, ret, background)
-            }
-            if (lowlight >= 0) {
-                mix(
-                    ret.copyOfRange(background * 3, background * 3 + 3),
-                    black,
-                    k / db,
-                    ret,
-                    lowlight,
-                )
-            }
-        } else {
-            mix(
-                ret.copyOfRange(background * 3, background * 3 + 3),
-                white,
-                k / dw,
-                ret,
-                highlight,
-            )
-        }
-    }
-
-    private fun distance(colours: FloatArray, index: Int, other: FloatArray): Float {
-        var sum = 0.0f
-        for (i in 0 until 3) {
-            val delta = colours[index * 3 + i] - other[i]
-            sum += delta * delta
-        }
-        return sqrt(sum.toDouble()).toFloat()
-    }
-
-    private fun mix(a: FloatArray, b: FloatArray, p: Float, out: FloatArray, index: Int) {
-        for (i in 0 until 3) {
-            out[index * 3 + i] = a[i] * (1.0f - p) + b[i] * p
-        }
     }
 
     private val MOVE_PATTERN = Regex("^M(-?\\d+),(-?\\d+)")
