@@ -1,0 +1,37 @@
+# UPSTREAM.lock
+#
+# The single machine-readable source of truth for the upstream
+# revision the project is synced with. The README contains only a
+# link generated from this file.
+#
+# Filled in Phase 0 by tools/sync-upstream.sh.
+# Do not edit by hand during normal work.
+#
+# CI checks:
+#   1. the commit exists in the upstream repository;
+#   2. merge_base matches the real merge base;
+#   3. the README line matches this file;
+#   4. the oracle builds from this commit.
+
+upstream:
+  repo: "https://github.com/sgtatham/puzzles"
+  remote: "simon"
+  branch: "main"
+  commit: "UNSET"
+
+integration:
+  repo: "https://github.com/chrisboyle/sgtpuzzles"
+  branch: "upstream"
+  commit: "UNSET"
+  merge_base: "UNSET"
+  synced_at: "UNSET"
+
+contract:
+  oracle_protocol: 1
+  trace_schema: 1
+  savefile_version: 1
+  rng: "random.c-bit-exact"
+
+notes: |
+  Fill this in Phase 0. Until then, parity tests are invalid and the
+  CI upstream-diff job must fail.
