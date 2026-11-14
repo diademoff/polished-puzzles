@@ -102,19 +102,53 @@ class FifteenTest {
     }
 
     @Test
-    fun `a game id and a restart round-trip`() {
+    fun `a game id and a restart after a move round-trip`() {
         val id = "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15"
         val midend = Midend.fromGameId(Fifteen, id)
         assertEquals(id, midend.id())
         assertEquals(1, midend.stateCount)
 
-        assertTrue(midend.restart())
-        assertEquals(2, midend.stateCount)
+        // Move tile 14 into the gap. This does not solve the game.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(96, 192, Buttons.LEFT_BUTTON, 48),
+        )
         assertEquals(2, midend.statePos)
+        assertEquals(0, midend.status())
+
+        assertTrue(midend.restart())
+        assertEquals(3, midend.stateCount)
+        assertEquals(3, midend.statePos)
         assertEquals(1, midend.serialise().values("RESTART").size)
         assertTrue(midend.undo())
-        assertEquals(1, midend.statePos)
+        assertEquals(2, midend.statePos)
         assertTrue(midend.canRedo)
+    }
+
+    @Test
+    fun `restart at the first state changes nothing`() {
+        val midend = Midend.fromGameId(
+            Fifteen,
+            "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15",
+        )
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(96, 192, Buttons.LEFT_BUTTON, 48),
+        )
+        assertTrue(midend.undo())
+        assertEquals(1, midend.statePos)
+        assertTrue(midend.canRedo, "the redo branch exists")
+        assertFalse(midend.takeCompletedEvent())
+
+        // `midend_restart_game` returns immediately at the first state.
+        val save = midend.serialise().serialise()
+        assertFalse(midend.restart(), "a restart at the first state does nothing")
+        assertEquals(save, midend.serialise().serialise(), "the save is byte-identical")
+        assertEquals(1, midend.statePos)
+        assertEquals(2, midend.stateCount)
+        assertFalse(midend.canUndo)
+        assertTrue(midend.canRedo, "the restart must not purge the redo branch")
+        assertFalse(midend.takeCompletedEvent(), "no completion event is raised")
     }
 
     @Test

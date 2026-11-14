@@ -109,8 +109,9 @@ class Midend private constructor(
     /**
      * Consumes the "the last transition completed the game" event. The
      * midend sets it where upstream calls `android_completed`, so each
-     * completion is observed exactly once. A caller that never asks
-     * cannot observe a stale event twice; the next take returns false.
+     * completion is observed exactly once: a pending event is returned
+     * by one call and cleared by that call, and a later call returns
+     * false until a new completion is raised.
      */
     fun takeCompletedEvent(): Boolean {
         val raised = completedEvent
@@ -140,8 +141,13 @@ class Midend private constructor(
      * Starts the same description again, as `midend_restart_game`. The
      * new state is a `RESTART` entry, so undo returns to where the
      * restart was pressed.
+     *
+     * At the first state upstream returns immediately: there is nothing
+     * to restart, so no entry is appended, the redo branch is kept, and
+     * the history flags do not change. This call then returns false.
      */
     fun restart(): Boolean {
+        if (statePos == 1) return false
         val previous = state
         val restarted = game.newState(params, desc)
         purgeRedo()

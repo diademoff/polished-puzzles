@@ -335,6 +335,50 @@ class SameGameTest {
     }
 
     @Test
+    fun `undo and redo clear a selection without a completion`() {
+        val records = arrayListOf(
+            SaveRecord("SAVEFILE", SgtpSave.MAGIC),
+            SaveRecord("VERSION", SgtpSave.VERSION),
+            SaveRecord("GAME", "Same Game"),
+            SaveRecord("PARAMS", "2x2c3s2"),
+            SaveRecord("CPARAMS", "2x2c3s2"),
+            SaveRecord("DESC", "1,1,2,2"),
+            SaveRecord("NSTATES", "2"),
+            SaveRecord("STATEPOS", "2"),
+            SaveRecord("MOVE", "M0,1"),
+        )
+        val midend = Midend.fromSave(SameGame, SgtpSave.of(records))
+        val ui = midend.ui as SameGame.Ui
+        val tile = SameGame.preferredTileSize
+
+        // The current state has a group of two 2s in its bottom row.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(tile, 2 * tile, Buttons.LEFT_BUTTON, tile),
+        )
+        assertEquals(2, ui.nselected)
+
+        // The undo does not complete the game, so only `changedState`
+        // can clear the selection.
+        assertTrue(midend.undo())
+        assertEquals(0, ui.nselected, "undo clears the selection")
+        assertEquals(0, midend.status())
+        assertFalse(midend.takeCompletedEvent())
+
+        // The undone state has a group of two 1s in its top row.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(tile, tile, Buttons.LEFT_BUTTON, tile),
+        )
+        assertEquals(2, ui.nselected)
+
+        assertTrue(midend.redo())
+        assertEquals(0, ui.nselected, "redo clears the selection")
+        assertEquals(0, midend.status())
+        assertFalse(midend.takeCompletedEvent())
+    }
+
+    @Test
     fun `the cursor is reported even when it is not drawn`() {
         val state = SameGame.newState(SameGame.Params(2, 2, 3, 2, true), "1,1,1,1")
         val win = move(state, "M0,1,2,3")!!

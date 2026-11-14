@@ -377,7 +377,7 @@ class KotlinGameEngine private constructor(
     }
 
     override fun restartEvent() {
-        midend.restart()
+        if (!midend.restart()) return
         afterStateChange()
     }
 
