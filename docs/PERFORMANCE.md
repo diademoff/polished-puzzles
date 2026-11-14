@@ -193,7 +193,12 @@ For a change that affects UI, rendering, startup, or generation:
   Record numbers and devices. The procedure is in
   `tools/perf/baseline.md`. The baseline is not recorded yet: no
   reference device is available, so this exit criterion is open.
-- **Phase 1** — do not make startup worse after the Compose shell.
+- **Phase 1** — do not make startup worse after the Compose shell. The
+  shell work started before the Phase 0 baseline was recorded, as an
+  explicit decision: no device was available and the shell does not
+  touch the engine. The baseline must be captured on the first
+  available device, and the Phase 1 comparison is made against it. Until
+  then, Phase 1 cannot close.
 - **Phase 2** — the renderer is not worse than the baseline on frames.
 - **Phase 3** — the KMP core is not slower than C on the parity corpus.
 - **Phase 4** — every game passes the frame and time budgets.

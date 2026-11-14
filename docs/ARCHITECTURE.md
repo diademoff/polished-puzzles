@@ -36,7 +36,9 @@ the border is described by a contract: `GameEngine`, `ViewCallbacks`,
 ```
 app/src/main/
 ├─ kotlin/name/boyle/chris/sgtpuzzles/  # UI and Android logic
-│  ├─ GameChooser.kt                    # game chooser
+│  ├─ GameChooser.kt                    # chooser activity and preferences
+│  ├─ chooser/ChooserScreen.kt          # Compose chooser screen
+│  ├─ ui/Theme.kt                       # Compose theme over the shell palette
 │  ├─ GamePlay.kt                       # game screen
 │  ├─ GameView.kt                       # Canvas + gestures + renderer
 │  ├─ buttons/Buttons.kt                # Compose button bar

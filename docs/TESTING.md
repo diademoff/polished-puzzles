@@ -144,6 +144,22 @@ Required:
   without normalization.
 - Update goldens in a separate commit with an explanation.
 
+Shell tests:
+
+- The chooser rows are a pure function (`chooserSections`) and are
+  tested on the JVM in `ChooserSectionsTest`.
+- `ChooserScreenTest` runs the chooser screen on a device or emulator
+  without the activity: click, long press, the starred section order,
+  and compact mode.
+- `ChooserScreenshotsTest` runs the chooser through a Compose rule, but
+  only under fastlane: it skips itself when the `device_type`
+  instrumentation argument is absent. It is a screenshot producer, not a
+  behavior gate.
+- Pixel screenshot comparison is open. The fastlane screenshots are
+  store artifacts, not a regression gate. A comparison needs a
+  deterministic device or a host renderer, so the phase exit criterion
+  "screenshot tests are green" is still debt.
+
 ## 9. CI
 
 Jobs:
@@ -151,7 +167,8 @@ Jobs:
 1. **jvm** — unit + parity against the pinned upstream.
 2. **oracle-current** — parity against current upstream. A difference
    means behavior changed during sync.
-3. **android** — build, lint, instrumentation, screenshots.
+3. **android** — build, unit tests, lint. Instrumentation and
+   screenshots need a device and are not in the job yet.
 4. **fuzz** — scheduled, not on every PR.
 5. **upstream-diff** — vendored files were not changed.
 
