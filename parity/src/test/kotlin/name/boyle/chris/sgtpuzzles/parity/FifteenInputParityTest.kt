@@ -2,8 +2,11 @@ package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
+import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -65,9 +68,22 @@ class FifteenInputParityTest {
                         start.state, x, y, Buttons.LEFT_BUTTON, viewWidth, viewHeight,
                     )
                     val actual = Midend.newGame(Fifteen, params, SEED)
-                    actual.processKey(x, y, Buttons.LEFT_BUTTON, tile)
-
+                    val outcome = actual.processKey(
+                        geometry.toGameX(x),
+                        geometry.toGameY(y),
+                        Buttons.LEFT_BUTTON,
+                        tile,
+                    )
                     val click = "click ($column,$row) $where"
+                    assertEquals(
+                        "outcome $click",
+                        if ((column == gapX) xor (row == gapY)) {
+                            KeyOutcome.SomeEffect
+                        } else {
+                            KeyOutcome.NoEffect
+                        },
+                        outcome,
+                    )
                     assertEquals("save $click", expected.state, actual.serialise().serialise())
                     assertEquals("id $click", expected.id, actual.id())
                     assertEquals("status $click", expected.status, actual.status())
@@ -117,20 +133,35 @@ class FifteenInputParityTest {
                     start.state, fromX, fromY, toX, toY, 4, viewWidth, viewHeight,
                 )
                 val actual = Midend.newGame(Fifteen, params, SEED)
-                actual.gesture(fromX, fromY, toX, toY, 4, tile)
+                actual.gesture(
+                    geometry.toGameX(fromX),
+                    geometry.toGameY(fromY),
+                    geometry.toGameX(toX),
+                    geometry.toGameY(toY),
+                    4,
+                    tile,
+                )
 
                 assertEquals("save swipe $where", expected.state, actual.serialise().serialise())
                 assertEquals("id swipe $where", expected.id, actual.id())
                 assertEquals("status swipe $where", expected.status, actual.status())
                 assertEquals("undo swipe $where", expected.canUndo, actual.canUndo)
                 assertEquals("redo swipe $where", expected.canRedo, actual.canRedo)
+                assertTrue("the neighbour swipe did not move $where", actual.canUndo)
 
                 // A swipe that starts on the gap must not move anything.
                 val fromGap = oracle.gestureSized(
                     start.state, toX, toY, fromX, fromY, 4, viewWidth, viewHeight,
                 )
                 val untouched = Midend.newGame(Fifteen, params, SEED)
-                untouched.gesture(toX, toY, fromX, fromY, 4, tile)
+                untouched.gesture(
+                    geometry.toGameX(toX),
+                    geometry.toGameY(toY),
+                    geometry.toGameX(fromX),
+                    geometry.toGameY(fromY),
+                    4,
+                    tile,
+                )
 
                 assertEquals(
                     "save gap swipe $where",
@@ -139,6 +170,7 @@ class FifteenInputParityTest {
                 )
                 assertEquals("id gap swipe $where", fromGap.id, untouched.id())
                 assertEquals("undo gap swipe $where", fromGap.canUndo, untouched.canUndo)
+                assertFalse("the gap swipe moved $where", untouched.canUndo)
             }
         }
     }

@@ -2074,7 +2074,8 @@ static void do_random(const jobject *req, bool upto)
 }
 
 static const char *open_state_sized(const char *save, frontend *fe,
-                                    long view_width, long view_height)
+                                    long view_width, long view_height,
+                                    int *out_w, int *out_h)
 {
     const char *error = open_state(fe, save);
     int w, h;
@@ -2084,6 +2085,8 @@ static const char *open_state_sized(const char *save, frontend *fe,
     w = (int)view_width;
     h = (int)view_height;
     midend_size(fe->me, &w, &h, true, 1.0);
+    *out_w = w;
+    *out_h = h;
     return NULL;
 }
 
@@ -2122,6 +2125,7 @@ static void do_key_sized(const jobject *req)
     long x = 0, y = 0, k = 0;
     frontend fe = {0};
     const char *error;
+    int w, h, ox, oy;
 
     if (!save || !field_int(req, "w", &view_width) ||
         !field_int(req, "h", &view_height) ||
@@ -2133,12 +2137,16 @@ static void do_key_sized(const jobject *req)
         return;
     }
 
-    error = open_state_sized(save, &fe, view_width, view_height);
+    error = open_state_sized(save, &fe, view_width, view_height, &w, &h);
     if (error) {
         put_error(error);
         return;
     }
-    midend_process_key(fe.me, (int)x, (int)y, (int)k);
+    /* The shell subtracts the letterbox origin before the midend, as
+     * android.c does in GameEngineImpl_keyEvent. */
+    ox = ((int)view_width - w) / 2;
+    oy = ((int)view_height - h) / 2;
+    midend_process_key(fe.me, (int)x - ox, (int)y - oy, (int)k);
     put_state(&fe);
     free_frontend(&fe);
 }
@@ -2151,6 +2159,7 @@ static void do_gesture_sized(const jobject *req)
     frontend fe = {0};
     const char *error;
     long i;
+    int w, h, ox, oy;
 
     if (!save || !field_int(req, "w", &view_width) ||
         !field_int(req, "h", &view_height) ||
@@ -2164,19 +2173,21 @@ static void do_gesture_sized(const jobject *req)
         return;
     }
 
-    error = open_state_sized(save, &fe, view_width, view_height);
+    error = open_state_sized(save, &fe, view_width, view_height, &w, &h);
     if (error) {
         put_error(error);
         return;
     }
+    ox = ((int)view_width - w) / 2;
+    oy = ((int)view_height - h) / 2;
 
-    midend_process_key(fe.me, (int)x0, (int)y0, LEFT_BUTTON);
+    midend_process_key(fe.me, (int)x0 - ox, (int)y0 - oy, LEFT_BUTTON);
     for (i = 1; i <= steps; i++) {
         long x = x0 + (x1 - x0) * i / steps;
         long y = y0 + (y1 - y0) * i / steps;
-        midend_process_key(fe.me, (int)x, (int)y, LEFT_DRAG);
+        midend_process_key(fe.me, (int)x - ox, (int)y - oy, LEFT_DRAG);
     }
-    midend_process_key(fe.me, (int)x1, (int)y1, LEFT_RELEASE);
+    midend_process_key(fe.me, (int)x1 - ox, (int)y1 - oy, LEFT_RELEASE);
     put_state(&fe);
     free_frontend(&fe);
 }
