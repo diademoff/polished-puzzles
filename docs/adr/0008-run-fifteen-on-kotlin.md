@@ -109,4 +109,7 @@ Negative:
   origin, and the board size. Redraw, input, the cursor rectangle, and
   size negotiation read it, so they cannot use different geometry.
 - `FifteenInputParityTest` compares `DOWN`, `DRAG`, and `UP` against C
-  at the size the oracle chooses for each viewport.
+  at the size and letterbox origin the oracle chooses for each viewport.
+- `GamePlayLandscapeInputTest` taps a letterboxed landscape board through
+  the real shell. In portrait the horizontal origin is zero or one dp, so
+  only a landscape run can catch an origin that is applied twice.

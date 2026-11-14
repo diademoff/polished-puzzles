@@ -407,6 +407,11 @@ class KotlinGameEngine private constructor(
     override val gameSizeInGameCoords: Point
         get() = Point(geometry.width, geometry.height)
 
+    /** The geometry currently used for drawing and input; for tests. */
+    @get:VisibleForTesting
+    val boardGeometry: BoardGeometry
+        get() = geometry
+
     @VisibleForTesting
     override fun freezePartialRedo() {
         midend.redo()

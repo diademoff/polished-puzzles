@@ -59,15 +59,15 @@ cursor games: the cursor lives in the frontend state (`game_ui`), which
 is not part of the save file, so separate `key` requests would reset it.
 
 `layout` runs `midend_size(..., user_size = true)` for a viewport and
-reports the resulting board size. `keySized` does the same, then sends a
-game-local key, so a differential test can exercise input at a tile size
-other than the preferred size. The ordinary `key` operation uses the
-preferred size and cannot see a mismatch between the drawn and the input
-geometry.
+reports the resulting board size. `keySized` does the same, then subtracts
+the letterbox origin and sends a game-local key, as `android.c` does, so a
+differential test can exercise input at a tile size and origin other than
+the preferred ones. The ordinary `key` operation uses the preferred size
+and cannot see a mismatch between the drawn and the input geometry.
 
-`gestureSized` resizes the same way, then sends the shell's swipe
-sequence: `DOWN` at the start, interpolated `DRAG` events, then `UP` at
-the end. It catches a game that handles a click but not a drag or a
+`gestureSized` resizes and removes the letterbox origin the same way,
+then sends the shell's swipe sequence: `DOWN` at the start, interpolated
+`DRAG` events, then `UP` at the end. It catches a game that handles a click but not a drag or a
 release, and it checks that a swipe does not add more moves than C does.
 
 `trace` records one `midend_redraw` through the recording drawing API.
@@ -272,6 +272,17 @@ Engine tests:
   and a swipe, so tap and drag coordinate mapping is covered, not only
   key input. Parameter names include the index, so two cases with the
   same game ID cannot silently replace each other.
+- `GamePlaySaveResumeTest` plays a move in fifteen through the real
+  shell, closes the activity so `onPause` saves the game, adds the
+  trailing spaces that Android gives to a value ending in a newline,
+  then launches without an intent. It checks that the Kotlin backend
+  resumes with the same move count and accepts another move. This is
+  the full Activity to SharedPreferences to parser path, not only the
+  `SavedGameText` helper.
+- `GamePlayLandscapeInputTest` rotates fifteen to landscape, waits for
+  the letterboxed board to be laid out, then taps the middle cell of the
+  bottom row. The origin is larger than a tile in landscape, so a missing
+  or doubled origin subtraction moves the tap outside the board.
 - `SaveParityTest` is strict. It parses and rewrites every file in
   `testdata/saves/`, then makes the oracle load the original and the
   Kotlin text and compare the game id. It also recomputes the preset
@@ -289,7 +300,7 @@ Engine tests:
 
 Device run on the API 36 emulator, 2026-11-14:
 
-- 61 tests, 58 passed, 3 skipped (the fastlane screenshot tests skip
+- 63 tests, 60 passed, 3 skipped (the fastlane screenshot tests skip
   themselves without the fastlane argument), 0 failed. The Compose
   renderer is active in all game tests.
 - `GamePlayParameterizedTest[Palisade 2x3n3:d33]` was stale, not a
