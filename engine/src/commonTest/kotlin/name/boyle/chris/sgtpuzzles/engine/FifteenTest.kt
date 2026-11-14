@@ -90,7 +90,7 @@ class FifteenTest {
         var steps = 0
         val limit = 5 * 16 * 16 * 16
         while (midend.status() == 0 && steps < limit) {
-            midend.processKey(0, 0, 'h'.code)
+            midend.processKey(0, 0, 'h'.code, Fifteen.preferredTileSize)
             steps++
         }
         assertEquals(1, midend.status())
@@ -120,11 +120,11 @@ class FifteenTest {
     @Test
     fun `the shell solve and history keys work`() {
         val midend = Midend.newGame(Fifteen, "4x4", "12345")
-        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.UI_SOLVE))
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.UI_SOLVE, Fifteen.preferredTileSize))
         assertEquals(1, midend.status())
-        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.UI_UNDO))
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.UI_UNDO, Fifteen.preferredTileSize))
         assertEquals(0, midend.status())
-        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.UI_REDO))
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.UI_REDO, Fifteen.preferredTileSize))
         assertEquals(1, midend.status())
     }
 

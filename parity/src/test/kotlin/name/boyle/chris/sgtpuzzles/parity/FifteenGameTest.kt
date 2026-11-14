@@ -67,7 +67,7 @@ class FifteenGameTest {
         )
         for ((index, key) in keys.withIndex()) {
             expected = oracle.key(expected.state, 0, 0, key)
-            actual.processKey(0, 0, key)
+            actual.processKey(0, 0, key, Fifteen.preferredTileSize)
             assertSame("cursor key $index", expected, actual)
         }
         assertTrue("moves must create history", actual.canUndo)
@@ -86,7 +86,7 @@ class FifteenGameTest {
         val expected = oracle.keys(start.state, sequence)
 
         val actual = Midend.newGame(Fifteen, "4x4", SEED)
-        for (key in sequence) actual.processKey(0, 0, key)
+        for (key in sequence) actual.processKey(0, 0, key, Fifteen.preferredTileSize)
         assertSame("key sequence", expected, actual)
     }
 
@@ -107,7 +107,7 @@ class FifteenGameTest {
                 val y = border + row * tile + tile / 2
                 val before = expected.state
                 expected = oracle.key(expected.state, x, y, Buttons.LEFT_BUTTON)
-                actual.processKey(x, y, Buttons.LEFT_BUTTON)
+                actual.processKey(x, y, Buttons.LEFT_BUTTON, Fifteen.preferredTileSize)
                 assertSame("click ($column,$row)", expected, actual)
                 if (expected.state != before) checked++
             }
@@ -122,7 +122,7 @@ class FifteenGameTest {
         var actual = Midend.newGame(Fifteen, "4x4", SEED)
         repeat(6) {
             expected = oracle.key(expected.state, 0, 0, Buttons.CURSOR_LEFT)
-            actual.processKey(0, 0, Buttons.CURSOR_LEFT)
+            actual.processKey(0, 0, Buttons.CURSOR_LEFT, Fifteen.preferredTileSize)
         }
         repeat(3) {
             expected = oracle.undo(expected.state)
@@ -140,7 +140,7 @@ class FifteenGameTest {
         // the hint key: it always returns a real move for an unsolved
         // state, unlike an arrow at the board edge.
         expected = oracle.key(expected.state, 0, 0, 'h'.code)
-        actual.processKey(0, 0, 'h'.code)
+        actual.processKey(0, 0, 'h'.code, Fifteen.preferredTileSize)
         assertSame("move after undo", expected, actual)
         assertFalse(actual.canRedo)
     }
@@ -155,7 +155,7 @@ class FifteenGameTest {
         var steps = 0
         while (expected.status == 0) {
             expected = oracle.key(expected.state, 0, 0, 'h'.code)
-            actual.processKey(0, 0, 'h'.code)
+            actual.processKey(0, 0, 'h'.code, Fifteen.preferredTileSize)
             assertSame("hint $steps", expected, actual)
             steps++
             check(steps <= limit) { "the hint solver did not finish in $limit moves" }
@@ -200,7 +200,7 @@ class FifteenGameTest {
         val x = 24 + 3 * 48 + 24
         val y = 24 + 3 * 48 + 24
         val expected = oracle.key(loaded.state, x, y, Buttons.LEFT_BUTTON)
-        actual.processKey(x, y, Buttons.LEFT_BUTTON)
+        actual.processKey(x, y, Buttons.LEFT_BUTTON, Fifteen.preferredTileSize)
         assertSame("winning move", expected, actual)
         assertEquals(1, actual.status())
         assertEquals("COMPLETED! Moves: 1", actual.statusText())
