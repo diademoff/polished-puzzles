@@ -1,7 +1,8 @@
 package name.boyle.chris.sgtpuzzles.backend
 
-import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.SameGame
+import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,6 +33,12 @@ class KotlinGamesTest {
     fun `samegame is registered but the app still uses C`() {
         assertEquals(SameGame, KotlinGames.gameFor(SAMEGAME))
         assertFalse(KotlinGames.handles(SAMEGAME))
+    }
+
+    @Test
+    fun `flood is registered but the app still uses C`() {
+        assertEquals(Flood, KotlinGames.gameFor(FLOOD))
+        assertFalse(KotlinGames.handles(FLOOD))
     }
 
     @Test

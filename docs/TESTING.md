@@ -331,6 +331,39 @@ Engine tests:
 - `SameGameTraceTest` is strict. It compares every preset with a fresh
   oracle trace and the frozen trace, plus completed, impossible, and
   blank states and a selected group.
+- `FloodDescTest` is semantic. It compares parameters and their
+  validation messages, the seven presets, and `params + seed -> DESC`
+  for the presets, for boards outside the preset list, and for a numeric
+  seed sweep.
+- `FloodGameTest` is semantic. It compares new games, text, status
+  text, the move limit, completion, the solver string, undo/redo,
+  pointer and keyboard paths, and the layout at four viewports and at
+  tile sizes 48, 63, 82, and 100.
+- `FloodSaveTest` is strict for the save text. It reads every `flood`
+  save in the corpus, rewrites it byte for byte, and makes the oracle
+  load both versions. It also makes the oracle load a Kotlin-written
+  save for every preset and pins the `PARAMS`/`CPARAMS` asymmetry of
+  the short form: the id is `12x12`, `PARAMS` is `12x12c6m5`, and only
+  `CPARAMS` keeps the chosen colours. A played move, an undone position
+  with a live redo branch, a solve, and a restart are built in memory,
+  so the history records are covered while the corpus stays frozen.
+- `FloodInputParityTest` is semantic. It compares `computeSize` and the
+  layout for phone, tablet, landscape, and tiny viewports and for tile
+  sizes 48, 63, 82, and 100, then sends the same view coordinates
+  through `BoardGeometry` to Kotlin and through `pointsSized` to C. The
+  state, id, status, status text, and the final redraw are compared
+  after every tap, including a letterboxed origin. A tap on the current
+  colour and a tap in the letterbox must change nothing, and a tap that
+  reaches the move limit must report the loss. The keyboard path
+  compares the arrow mode and the fill.
+- `FloodTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus moved, solved, and cheated
+  states and a tile-15 trace where the separator is not drawn.
+- `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
+  flood with an empty seed and asserts that Kotlin writes a
+  zero-length `SEED` record instead of `HEXSEED`, that the text equals
+  the C text, that the parser and writer round-trip it, and that C
+  loads the Kotlin save.
 - `OracleTraceSequenceTest` checks the `seq` field of a `trace`
   request. It replays one key on an `inertia` game that uses blitters
   and asserts that the trace starts with `blitter_new`, has no stale
