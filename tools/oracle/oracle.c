@@ -27,6 +27,11 @@
  *   {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
  *   {"op":"randomBits","seed":"12345","bits":8,"count":10}
  *   {"op":"randomUpto","state":"...","limit":6,"count":10}
+ *   {"op":"tree","ops":"a 5 1 f 5 t 7 i 0"}
+ *   {"op":"matching","nl":3,"nr":4,"adj":"0 1;1 2;0 3"}
+ *   {"op":"findloop","n":6,"edges":"0-1 1-2 2-0 3-4"}
+ *   {"op":"dsf","kind":"normal","n":10,"ops":"m 0 1 m 2 3"}
+ *   {"op":"tdq","n":10,"ops":"a 3 a 1 r f"}
  *   {"op":"sort","values":"5 3 9 1","mode":"asc"}
  *   {"op":"combi","r":2,"n":5}
  *
@@ -51,6 +56,8 @@
 #include <math.h>
 
 #include "puzzles.h"
+#include "matching.h"
+#include "tree234.h"
 
 struct frontend {
     midend *me;
@@ -1357,6 +1364,524 @@ static void do_key_seq(const char *save, const char *seq)
 }
 
 /* ------------------------------------------------------------------ */
+/* Disjoint-set forest and to-do queue.                               */
+/* ------------------------------------------------------------------ */
+
+static bool parse_next_long(const char **p, long *out)
+{
+    char *end;
+
+    while (**p == ' ' || **p == '\t' || **p == ',')
+        (*p)++;
+    if (!**p)
+        return false;
+    *out = strtol(*p, &end, 10);
+    if (end == *p)
+        return false;
+    *p = end;
+    return true;
+}
+
+static void do_dsf(const jobject *req)
+{
+    const char *kind = field_string(req, "kind");
+    const char *ops = field_string(req, "ops");
+    long n = 0;
+    DSF *dsf = NULL;
+    const char *p;
+    int i;
+
+    if (!kind || !field_int(req, "n", &n) || n < 1 || n > 100000) {
+        put_error("dsf needs a kind and 1 <= n <= 100000");
+        return;
+    }
+    if (!strcmp(kind, "normal"))
+        dsf = dsf_new((int)n);
+    else if (!strcmp(kind, "flip"))
+        dsf = dsf_new_flip((int)n);
+    else if (!strcmp(kind, "min"))
+        dsf = dsf_new_min((int)n);
+    else {
+        put_error("dsf kind must be normal, flip, or min");
+        return;
+    }
+
+    p = ops ? ops : "";
+    while (*p) {
+        char op;
+        long a, b, inverse = 0;
+
+        while (*p == ' ' || *p == '\t' || *p == ',')
+            p++;
+        if (!*p)
+            break;
+        op = *p++;
+        if (op == 'm') {
+            if (!parse_next_long(&p, &a) || !parse_next_long(&p, &b) ||
+                a < 0 || b < 0 || a >= n || b >= n) {
+                dsf_free(dsf);
+                put_error("dsf merge needs two valid indices");
+                return;
+            }
+            dsf_merge(dsf, (int)a, (int)b);
+        } else if (op == 'f') {
+            if (!parse_next_long(&p, &a) || !parse_next_long(&p, &b) ||
+                !parse_next_long(&p, &inverse) ||
+                a < 0 || b < 0 || a >= n || b >= n) {
+                dsf_free(dsf);
+                put_error("dsf flip merge needs two indices and a flag");
+                return;
+            }
+            dsf_merge_flip(dsf, (int)a, (int)b, inverse != 0);
+        } else {
+            dsf_free(dsf);
+            put_error("dsf ops support m and f");
+            return;
+        }
+    }
+
+    fputs("{\"ok\":true,\"roots\":[", stdout);
+    for (i = 0; i < n; i++) {
+        int root;
+        if (!strcmp(kind, "flip")) {
+            bool inverse;
+            root = dsf_canonify_flip(dsf, i, &inverse);
+        } else {
+            root = dsf_canonify(dsf, i);
+        }
+        printf("%s%d", i ? "," : "", root);
+    }
+    fputs("],\"inverses\":[", stdout);
+    for (i = 0; i < n; i++) {
+        if (!strcmp(kind, "flip")) {
+            bool inverse;
+            dsf_canonify_flip(dsf, i, &inverse);
+            printf("%s%d", i ? "," : "", inverse ? 1 : 0);
+        } else {
+            printf("%s0", i ? "," : "");
+        }
+    }
+    /*
+     * dsf_size uses the non-flip path compression. On a flip dsf that
+     * makes later flip queries meaningless, so this comes after all
+     * canonify_flip calls.
+     */
+    fputs("],\"sizes\":[", stdout);
+    for (i = 0; i < n; i++)
+        printf("%s%d", i ? "," : "", dsf_size(dsf, i));
+    fputs("],\"mins\":[", stdout);
+    for (i = 0; i < n; i++) {
+        if (!strcmp(kind, "min"))
+            printf("%s%d", i ? "," : "", dsf_minimal(dsf, i));
+        else
+            printf("%s-1", i ? "," : "");
+    }
+    fputs("]}\n", stdout);
+    dsf_free(dsf);
+}
+
+static void do_tdq(const jobject *req)
+{
+    const char *ops = field_string(req, "ops");
+    long n = 0;
+    tdq *queue;
+    const char *p;
+    int emitted = 0;
+
+    if (!field_int(req, "n", &n) || n < 1 || n > 1000000) {
+        put_error("tdq needs 1 <= n <= 1000000");
+        return;
+    }
+    queue = tdq_new((int)n);
+
+    p = ops ? ops : "";
+    while (*p) {
+        char op;
+        long k;
+
+        while (*p == ' ' || *p == '\t' || *p == ',')
+            p++;
+        if (!*p)
+            break;
+        op = *p++;
+        if (op == 'a') {
+            if (!parse_next_long(&p, &k) || k < 0 || k >= n) {
+                tdq_free(queue);
+                put_error("tdq add needs a valid index");
+                return;
+            }
+            tdq_add(queue, (int)k);
+        } else if (op == 'r') {
+            int value = tdq_remove(queue);
+            if (emitted == 0)
+                fputs("{\"ok\":true,\"removed\":[", stdout);
+            printf("%s%d", emitted ? "," : "", value);
+            emitted++;
+        } else if (op == 'f') {
+            tdq_fill(queue);
+        } else {
+            tdq_free(queue);
+            put_error("tdq ops support a, r, and f");
+            return;
+        }
+    }
+
+    for (;;) {
+        int value = tdq_remove(queue);
+        if (value < 0)
+            break;
+        if (emitted == 0)
+            fputs("{\"ok\":true,\"removed\":[", stdout);
+        printf("%s%d", emitted ? "," : "", value);
+        emitted++;
+    }
+    if (emitted == 0)
+        fputs("{\"ok\":true,\"removed\":[", stdout);
+    fputs("]}\n", stdout);
+    tdq_free(queue);
+}
+
+/* ------------------------------------------------------------------ */
+/* tree234.c harness.                                                 */
+/* ------------------------------------------------------------------ */
+
+struct tree_elem {
+    int key;
+    int id;
+};
+
+static int tree_compare(void *av, void *bv)
+{
+    const struct tree_elem *a = av, *b = bv;
+    return (a->key < b->key) ? -1 : (a->key > b->key) ? 1 : 0;
+}
+
+static void do_tree(const jobject *req)
+{
+    const char *ops = field_string(req, "ops");
+    tree234 *tree = newtree234(tree_compare);
+    struct tree_elem **allocated = NULL;
+    int alloc_count = 0, alloc_capacity = 0;
+    const char *p = ops ? ops : "";
+    int emitted = 0, i;
+
+    fputs("{\"ok\":true,\"results\":[", stdout);
+    while (*p) {
+        char op;
+        long a = 0, b = 0, result = -1;
+        struct tree_elem *elem, *found;
+
+        while (*p == ' ' || *p == '\t' || *p == ',')
+            p++;
+        if (!*p)
+            break;
+        op = *p++;
+        if (op == 'i') {
+            if (!parse_next_long(&p, &a)) {
+                put_error("tree index needs an index");
+                goto fail;
+            }
+            found = index234(tree, (int)a);
+            result = found ? found->id : -1;
+        } else {
+            if (!parse_next_long(&p, &a)) {
+                put_error("tree op needs a key");
+                goto fail;
+            }
+            if (op == 'a') {
+                if (!parse_next_long(&p, &b)) {
+                    put_error("tree add needs an id");
+                    goto fail;
+                }
+                elem = snew(struct tree_elem);
+                elem->key = (int)a;
+                elem->id = (int)b;
+                if (alloc_count == alloc_capacity) {
+                    alloc_capacity = alloc_capacity ? alloc_capacity * 2 : 64;
+                    allocated = sresize(allocated, alloc_capacity, struct tree_elem *);
+                }
+                allocated[alloc_count++] = elem;
+                found = add234(tree, elem);
+                result = found->id;
+            } else {
+                elem = snew(struct tree_elem);
+                elem->key = (int)a;
+                elem->id = -1;
+                if (op == 'd') {
+                    found = del234(tree, elem);
+                    result = found ? found->id : -1;
+                } else if (op == 'f') {
+                    found = find234(tree, elem, NULL);
+                    result = found ? found->id : -1;
+                } else if (op == 't') {
+                    found = findrel234(tree, elem, NULL, REL234_LT);
+                    result = found ? found->id : -1;
+                } else if (op == 'e') {
+                    found = findrel234(tree, elem, NULL, REL234_LE);
+                    result = found ? found->id : -1;
+                } else if (op == 'g') {
+                    found = findrel234(tree, elem, NULL, REL234_GT);
+                    result = found ? found->id : -1;
+                } else if (op == 'h') {
+                    found = findrel234(tree, elem, NULL, REL234_GE);
+                    result = found ? found->id : -1;
+                } else {
+                    sfree(elem);
+                    put_error("tree ops support a, d, f, t, e, g, h, i");
+                    goto fail;
+                }
+                sfree(elem);
+            }
+        }
+        printf("%s%ld", emitted ? "," : "", result);
+        emitted++;
+    }
+    fputs("],\"items\":[", stdout);
+    for (i = 0;; i++) {
+        struct tree_elem *elem = index234(tree, i);
+        if (!elem)
+            break;
+        printf("%s\"%d:%d\"", i ? "," : "", elem->key, elem->id);
+    }
+    fputs("]}\n", stdout);
+
+    for (i = 0; i < alloc_count; i++)
+        sfree(allocated[i]);
+    sfree(allocated);
+    freetree234(tree);
+    return;
+
+  fail:
+    for (i = 0; i < alloc_count; i++)
+        sfree(allocated[i]);
+    sfree(allocated);
+    freetree234(tree);
+}
+
+/* ------------------------------------------------------------------ */
+/* matching.c harness.                                                */
+/* ------------------------------------------------------------------ */
+
+static void do_matching(const jobject *req)
+{
+    const char *adjtext = field_string(req, "adj");
+    const char *seed = field_string(req, "seed");
+    long nl = 0, nr = 0;
+    int **adj;
+    int *sizes;
+    int *outl, *outr;
+    const char *p;
+    random_state *rs = NULL;
+    int count, i, emitted;
+
+    if (!field_int(req, "nl", &nl) || !field_int(req, "nr", &nr) ||
+        nl < 0 || nr < 0 || nl > 5000 || nr > 5000) {
+        put_error("matching needs 0 <= nl, nr <= 5000");
+        return;
+    }
+
+    adj = snewn((int)(nl ? nl : 1), int *);
+    sizes = snewn((int)(nl ? nl : 1), int);
+    for (i = 0; i < nl; i++) {
+        adj[i] = NULL;
+        sizes[i] = 0;
+    }
+
+    p = adjtext ? adjtext : "";
+    for (i = 0; i < nl; i++) {
+        int capacity = 0;
+        while (*p && *p != ';') {
+            char *end;
+            long value;
+            while (*p == ' ' || *p == '\t' || *p == ',')
+                p++;
+            if (!*p || *p == ';')
+                break;
+            value = strtol(p, &end, 10);
+            if (end == p || value < 0 || value >= nr) {
+                put_error("matching adjacency is invalid");
+                return;
+            }
+            if (sizes[i] == capacity) {
+                capacity = capacity ? capacity * 2 : 8;
+                adj[i] = sresize(adj[i], capacity, int);
+            }
+            adj[i][sizes[i]++] = (int)value;
+            p = end;
+        }
+        if (*p == ';')
+            p++;
+    }
+    if (*p) {
+        put_error("matching has too many adjacency lists");
+        return;
+    }
+
+    if (seed)
+        rs = random_new(seed, (int)strlen(seed));
+    outl = snewn((int)(nl ? nl : 1), int);
+    outr = snewn((int)(nr ? nr : 1), int);
+    count = matching((int)nl, (int)nr, adj, sizes, rs, outl, outr);
+
+    printf("{\"ok\":true,\"count\":%d,\"outL\":[", count);
+    for (i = 0; i < nl; i++)
+        printf("%s%d", i ? "," : "", outl[i]);
+    fputs("],\"outR\":[", stdout);
+    for (i = 0; i < nr; i++)
+        printf("%s%d", i ? "," : "", outr[i]);
+    fputs("],\"adj\":\"", stdout);
+    for (i = 0; i < nl; i++) {
+        int j;
+        if (i)
+            putchar(';');
+        for (j = 0; j < sizes[i]; j++)
+            printf("%s%d", j ? " " : "", adj[i][j]);
+    }
+    fputs("\"}\n", stdout);
+
+    if (rs)
+        random_free(rs);
+    for (i = 0; i < nl; i++)
+        sfree(adj[i]);
+    sfree(adj);
+    sfree(sizes);
+    sfree(outl);
+    sfree(outr);
+}
+
+/* ------------------------------------------------------------------ */
+/* findloop.c harness.                                                */
+/* ------------------------------------------------------------------ */
+
+struct findloop_ctx {
+    int n;
+    int **adj;
+    int *deg;
+    int current;
+    int position;
+};
+
+static int findloop_neighbour(int vertex, void *vctx)
+{
+    struct findloop_ctx *ctx = vctx;
+
+    if (vertex >= 0) {
+        ctx->current = vertex;
+        ctx->position = 0;
+    }
+    if (ctx->current < 0)
+        return -1;
+    if (ctx->position < ctx->deg[ctx->current])
+        return ctx->adj[ctx->current][ctx->position++];
+    return -1;
+}
+
+static bool parse_edge(const char **p, long *u, long *v)
+{
+    char *end;
+
+    while (**p == ' ' || **p == '\t' || **p == ',')
+        (*p)++;
+    if (!**p)
+        return false;
+    *u = strtol(*p, &end, 10);
+    if (end == *p)
+        return false;
+    *p = end;
+    while (**p == ' ' || **p == '\t')
+        (*p)++;
+    if (**p != '-')
+        return false;
+    (*p)++;
+    *v = strtol(*p, &end, 10);
+    if (end == *p)
+        return false;
+    *p = end;
+    return true;
+}
+
+static void do_findloop(const jobject *req)
+{
+    const char *edges = field_string(req, "edges");
+    long n = 0;
+    struct findloop_ctx ctx = {0};
+    struct findloopstate *state;
+    const char *p;
+    bool any_loop;
+    int i, u, v, emitted;
+
+    if (!field_int(req, "n", &n) || n < 1 || n > 2000) {
+        put_error("findloop needs 1 <= n <= 2000");
+        return;
+    }
+    ctx.n = (int)n;
+    ctx.deg = snewn((int)n, int);
+    for (i = 0; i < n; i++)
+        ctx.deg[i] = 0;
+
+    p = edges ? edges : "";
+    while (*p) {
+        long a, b;
+        if (!parse_edge(&p, &a, &b) || a < 0 || b < 0 || a >= n || b >= n ||
+            a == b) {
+            sfree(ctx.deg);
+            put_error("findloop edges must be distinct valid u-v pairs");
+            return;
+        }
+        ctx.deg[a]++;
+        ctx.deg[b]++;
+    }
+
+    ctx.adj = snewn((int)n, int *);
+    for (i = 0; i < n; i++) {
+        ctx.adj[i] = snewn(ctx.deg[i] ? ctx.deg[i] : 1, int);
+        ctx.deg[i] = 0;
+    }
+
+    p = edges ? edges : "";
+    while (*p) {
+        long a, b;
+        if (!parse_edge(&p, &a, &b))
+            break;
+        ctx.adj[a][ctx.deg[a]++] = (int)b;
+        ctx.adj[b][ctx.deg[b]++] = (int)a;
+    }
+
+    state = findloop_new_state((int)n);
+    any_loop = findloop_run(state, (int)n, findloop_neighbour, &ctx);
+
+    printf("{\"ok\":true,\"anyLoop\":%s,\"loopEdges\":[",
+           any_loop ? "true" : "false");
+    emitted = 0;
+    for (u = 0; u < n; u++) {
+        for (v = u + 1; v < n; v++) {
+            if (findloop_is_loop_edge(state, u, v)) {
+                printf("%s\"%d,%d\"", emitted ? "," : "", u, v);
+                emitted++;
+            }
+        }
+    }
+    fputs("],\"bridges\":[", stdout);
+    emitted = 0;
+    for (u = 0; u < n; u++) {
+        for (v = u + 1; v < n; v++) {
+            int uv = 0, vv = 0;
+            if (findloop_is_bridge(state, u, v, &uv, &vv)) {
+                printf("%s\"%d,%d,%d,%d\"", emitted ? "," : "", u, v, uv, vv);
+                emitted++;
+            }
+        }
+    }
+    fputs("]}\n", stdout);
+
+    findloop_free_state(state);
+    for (i = 0; i < n; i++)
+        sfree(ctx.adj[i]);
+    sfree(ctx.adj);
+    sfree(ctx.deg);
+}
+
+/* ------------------------------------------------------------------ */
 /* Deterministic helpers: arraysort and combinations.                 */
 /* ------------------------------------------------------------------ */
 
@@ -1656,6 +2181,16 @@ int main(int argc, char **argv)
                        field_string(&req, "seq"));
         } else if (!strcmp(op, "trace")) {
             do_trace(field_string(&req, "state"));
+        } else if (!strcmp(op, "tree")) {
+            do_tree(&req);
+        } else if (!strcmp(op, "matching")) {
+            do_matching(&req);
+        } else if (!strcmp(op, "findloop")) {
+            do_findloop(&req);
+        } else if (!strcmp(op, "dsf")) {
+            do_dsf(&req);
+        } else if (!strcmp(op, "tdq")) {
+            do_tdq(&req);
         } else if (!strcmp(op, "sort")) {
             do_sort(&req);
         } else if (!strcmp(op, "combi")) {

@@ -119,6 +119,111 @@ class OracleClient(
 
     fun status(state: String): GameState = GameState.of(request(mapOf("op" to "status", "state" to state)))
 
+    data class TreeResult(val results: List<Int>, val items: List<String>)
+
+    /** Runs a sorted `tree234.c` script and returns every operation result. */
+    fun tree(ops: String): TreeResult {
+        val response = request(mapOf("op" to "tree", "ops" to ops))
+        return TreeResult(
+            results = response.numberList("results").map { it.toInt() },
+            items = response.stringList("items"),
+        )
+    }
+
+    data class MatchingResult(
+        val count: Int,
+        val outL: IntArray,
+        val outR: IntArray,
+        val adjacency: Array<IntArray>,
+    ) {
+        override fun equals(other: Any?): Boolean =
+            other is MatchingResult &&
+                count == other.count &&
+                outL.contentEquals(other.outL) &&
+                outR.contentEquals(other.outR) &&
+                adjacency.size == other.adjacency.size &&
+                adjacency.indices.all { adjacency[it].contentEquals(other.adjacency[it]) }
+
+        override fun hashCode(): Int = count
+    }
+
+    /** Runs `matching.c`; [adjacency] is one list of right vertices per left vertex. */
+    fun matching(
+        leftCount: Int,
+        rightCount: Int,
+        adjacency: List<List<Int>>,
+        seed: String? = null,
+    ): MatchingResult {
+        val fields = linkedMapOf<String, Any>(
+            "op" to "matching",
+            "nl" to leftCount,
+            "nr" to rightCount,
+            "adj" to adjacency.joinToString(";") { it.joinToString(" ") },
+        )
+        if (seed != null) fields["seed"] = seed
+        val response = request(fields)
+        val adjText = response.string("adj")
+        val lists = if (leftCount == 0) {
+            emptyArray()
+        } else {
+            adjText.split(';').map { part ->
+                part.split(' ').filter { it.isNotEmpty() }.map { it.toInt() }.toIntArray()
+            }.toTypedArray()
+        }
+        return MatchingResult(
+            count = response.number("count").toInt(),
+            outL = response.numberList("outL").map { it.toInt() }.toIntArray(),
+            outR = response.numberList("outR").map { it.toInt() }.toIntArray(),
+            adjacency = lists,
+        )
+    }
+
+    data class LoopResult(
+        val anyLoop: Boolean,
+        val loopEdges: List<Pair<Int, Int>>,
+        val bridges: List<Bridge>,
+    )
+
+    data class Bridge(val u: Int, val v: Int, val uVertices: Int, val vVertices: Int)
+
+    /** Runs `findloop.c` on an undirected edge list such as "0-1 1-2". */
+    fun findLoop(n: Int, edges: String): LoopResult {
+        val response = request(mapOf("op" to "findloop", "n" to n, "edges" to edges))
+        val loopEdges = response.stringList("loopEdges").map { text ->
+            val (u, v) = text.split(',').map { it.toInt() }
+            u to v
+        }
+        val bridges = response.stringList("bridges").map { text ->
+            val (u, v, uv, vv) = text.split(',').map { it.toInt() }
+            Bridge(u, v, uv, vv)
+        }
+        return LoopResult(response.bool("anyLoop"), loopEdges, bridges)
+    }
+
+    data class DsfState(
+        val roots: List<Int>,
+        val sizes: List<Int>,
+        val mins: List<Int>,
+        val inverses: List<Int>,
+    )
+
+    /** Runs a `dsf.c` merge script and returns the state of every element. */
+    fun dsf(kind: String, n: Int, ops: String): DsfState {
+        val response = request(mapOf("op" to "dsf", "kind" to kind, "n" to n, "ops" to ops))
+        return DsfState(
+            roots = response.numberList("roots").map { it.toInt() },
+            sizes = response.numberList("sizes").map { it.toInt() },
+            mins = response.numberList("mins").map { it.toInt() },
+            inverses = response.numberList("inverses").map { it.toInt() },
+        )
+    }
+
+    /** Runs a `tdq.c` script and returns every removal, including -1. */
+    fun tdq(n: Int, ops: String): List<Int> =
+        request(mapOf("op" to "tdq", "n" to n, "ops" to ops))
+            .numberList("removed")
+            .map { it.toInt() }
+
     /** Upstream `arraysort()` order for an integer list. */
     fun sort(values: List<Long>, mode: String): List<Long> =
         request(
