@@ -95,7 +95,12 @@ class Midend private constructor(
      * real move truncates the redo branch and appends one entry; a
      * no-effect key changes nothing.
      */
-    fun processKey(x: Int, y: Int, button: Int): KeyOutcome {
+    fun processKey(
+        x: Int,
+        y: Int,
+        button: Int,
+        tileSize: Int = this.tileSize,
+    ): KeyOutcome {
         val stripped = Buttons.stripModifiers(button)
         when (stripped) {
             Buttons.UI_UNDO -> return if (undo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect

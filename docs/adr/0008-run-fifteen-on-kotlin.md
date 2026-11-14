@@ -101,3 +101,7 @@ Negative:
   were pixel-identical below the status bar (ImageMagick `compare`
   reported 0 different pixels). The status bar time was the only
   difference in the uncropped screenshots.
+- Tap and swipe input are covered by the engine test at a resized tile
+  size and by the swipe case in `GamePlayParameterizedTest`. The input
+  tile size is the displayed size, not the preferred size used by the
+  stateless oracle.

@@ -172,6 +172,15 @@ class GamePlayParameterizedTest(
                 KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_CENTER, KEYCODE_DPAD_UP,
                 KEYCODE_DPAD_UP, KEYCODE_DPAD_CENTER),
             Example(FIFTEEN, "2x2:1,2,0,3", KEYCODE_DPAD_LEFT),
+            Example(
+                FIFTEEN, "2x2:1,0,3,2",
+                GeneralSwipeAction(
+                    Swipe.SLOW,
+                    squareProportions(0.25, 0.25),
+                    squareProportions(0.25, -0.25),
+                    Press.FINGER,
+                ),
+            ),
             Example(FILLING, "2x1:02", KEYCODE_DPAD_UP, KEYCODE_2),
             Example(FLIP, "2x2:edb7,d", KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_CENTER),
             Example(FLOOD, "2x2:1212,6", KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_CENTER),

@@ -291,7 +291,7 @@ class KotlinGameEngine private constructor(
     override fun keyEvent(x: Int, y: Int, k: Int) {
         if (!sized || k < 0) return
         val before = midend.status()
-        val outcome = midend.processKey(x - originX, y - originY, k)
+        val outcome = midend.processKey(x - originX, y - originY, k, tileSize)
         if (outcome != KeyOutcome.SomeEffect) return
         afterStateChange(before)
     }

@@ -129,6 +129,19 @@ class FifteenTest {
     }
 
     @Test
+    fun `input uses the displayed tile size`() {
+        val midend = Midend.newGame(Fifteen, "4x4", "12345")
+        val tile = 82
+        val x = tile + tile / 2
+        val y = 3 * tile + tile / 2
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(x, y, Buttons.LEFT_BUTTON, tile),
+        )
+        assertTrue(midend.canUndo)
+    }
+
+    @Test
     fun `invalid moves are rejected`() {
         val state = Fifteen.newState(Fifteen.Params(4, 4), "1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15")
         assertNull(Fifteen.executeMove(state, "M4,4"))

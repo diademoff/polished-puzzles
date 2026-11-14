@@ -204,8 +204,9 @@ Engine tests:
   state encoding, generator copies, and the save parser's canonical
   form and error cases.
 - `FifteenTest` checks parameter and description validation, a save
-  round trip, solve with undo and redo, the hint solver, invalid moves,
-  the text format, the palette, and an invalid save.
+  round trip, solve with undo and redo, the hint solver, input at a
+  resized tile size, invalid moves, the text format, the palette, and
+  an invalid save.
 - `RandomParityTest` is strict. It compares `random_bits` for every
   bit width 1..31 and `random_upto` for limits up to 2^27, across ten
   seeds, and transfers encoded generator state in both directions.
@@ -241,7 +242,8 @@ Engine tests:
   generated save is the frozen oracle save.
 - `GamePlayParameterizedTest` asserts that the running `fifteen` engine
   is `KotlinGameEngine`, then completes the 2x2 game through the real
-  shell on the emulator.
+  shell on the emulator. One fifteen case uses a swipe, so tap and drag
+  coordinate mapping is covered, not only key input.
 - `SaveParityTest` is strict. It parses and rewrites every file in
   `testdata/saves/`, then makes the oracle load the original and the
   Kotlin text and compare the game id. It also recomputes the preset
