@@ -52,6 +52,11 @@
         <item name="colorOnBackground">@color/shell_on_background</item>
 
         <item name="preferenceTheme">@style/PrefsTheme</item>
+        <!-- AppCompat dialogs (preference list and edit dialogs) follow
+             the same Material 3 look as the ones built with
+             MaterialAlertDialogBuilder. -->
+        <item name="alertDialogTheme">@style/ThemeOverlay.Material3.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Material3.MaterialAlertDialog</item>
     </style>
 
     <!-- The game screen: the C engine paints the board on this color.
