@@ -155,26 +155,35 @@ For each game, use the matrix from `PARITY.md`:
 - strict trace;
 - UI screenshots.
 
-Status: `fifteen` is `dual-run` (2026-11-14). The Kotlin `Game`
-seam, the semantic midend, `Fifteen`, and the drawing sink are in
-`engine/`; the seam is `docs/adr/0007-kotlin-game-seam.md`. Every JVM
-row of the matrix is green: `params + seed -> DESC`, new game, moves,
-undo and redo, `completed`, `requestKeys`, `presets`, `status`, `.sgtp`
-in both directions, the hint solver, and the strict trace. The evidence
-is `FifteenDescTest`, `FifteenGameTest`, `FifteenSaveTest`, and
-`FifteenTraceTest`.
+Status: `fifteen` is `kotlin` (2026-11-14). The Kotlin `Game` seam,
+the semantic midend, `Fifteen`, and the drawing sink are in `engine/`;
+the seams are `docs/adr/0007-kotlin-game-seam.md` and
+`docs/adr/0008-run-fifteen-on-kotlin.md`.
 
-Still open for this game: select the Kotlin backend in the app behind
-a feature flag, record the UI screenshots (blocked by D-04), and keep
-the flag on by default for two releases. C still decides, so the game
-is not `kotlin` yet.
+Every row of the matrix is green on the JVM: `params + seed -> DESC`,
+new game, moves, undo and redo, `completed`, `requestKeys`, `presets`,
+`status`, `.sgtp` in both directions, the hint solver, and the strict
+trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
+`FifteenSaveTest`, and `FifteenTraceTest`.
+
+The app selects `KotlinGameEngine` for `fifteen` and bypasses the C
+generator. `KotlinGamesTest` pins the selection and the generated save;
+`GamePlayParameterizedTest` asserts that the running engine is
+`KotlinGameEngine` and completes a game on the emulator. The C game
+stays in the vendored tree as the oracle and for chooser metadata, but
+it is not reachable as a gameplay backend.
+
+The owner waived the two-release wait on 2026-11-14 for this game. The
+two-release rule stays in force for the next games. UI screenshots are
+still local only (D-04).
 
 Exit criteria per game:
 
 - the matrix is green;
-- two releases without P1 bugs;
-- the feature flag is on by default;
-- only then remove the C implementation.
+- the app has no runtime C path for the game;
+- two releases without P1 bugs, or an explicit owner waiver;
+- the C source may remain for the oracle and chooser metadata; removing
+  it is a separate change when nothing needs it.
 
 ## Phase 5 — Polish
 

@@ -237,6 +237,11 @@ Engine tests:
   `KotlinTraceSink`, normalises it with the same `TraceNormalizer` as
   the oracle, and compares the result with a fresh oracle trace and
   with every frozen `fifteen` golden.
+- `KotlinGamesTest` pins the app-side selection and checks that the
+  generated save is the frozen oracle save.
+- `GamePlayParameterizedTest` asserts that the running `fifteen` engine
+  is `KotlinGameEngine`, then completes the 2x2 game through the real
+  shell on the emulator.
 - `SaveParityTest` is strict. It parses and rewrites every file in
   `testdata/saves/`, then makes the oracle load the original and the
   Kotlin text and compare the game id. It also recomputes the preset

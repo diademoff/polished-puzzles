@@ -172,8 +172,10 @@ C wins.
 | games (see the table below) | not started | C |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
-`parity` — the Kotlin implementation passes the matrix; `kotlin` — C
-was removed after two releases without P1 bugs (see `ROADMAP.md`).
+`parity` — the Kotlin implementation passes the matrix; `kotlin` — the
+app has no runtime C path for the game. The vendored C may remain as
+the oracle, chooser metadata, and saved-game identification. Removing
+the C source is not required for `kotlin`; see ADR 0008.
 
 ### Game inventory
 
@@ -188,7 +190,7 @@ submenu entries when a game groups its presets.
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `C` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `C` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
-| `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `dual-run` |
+| `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `C` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `C` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `C` |
@@ -242,9 +244,12 @@ Notes:
 - `fifteen` is the first port target (`ROADMAP.md`, Phase 4). Its
   Kotlin generator, moves, history, solver, text, status, keys, save
   file, and drawing pass the matrix in `FifteenDescTest`,
-  `FifteenGameTest`, `FifteenSaveTest`, and `FifteenTraceTest`. C still
-  decides in the app, so the status is `dual-run`, not `kotlin`. The
-  seam is `docs/adr/0007-kotlin-game-seam.md`.
+  `FifteenGameTest`, `FifteenSaveTest`, and `FifteenTraceTest`. The app
+  selects `KotlinGameEngine` for every `fifteen` game, so the status is
+  `kotlin`. The C game remains in the vendored tree for the oracle and
+  chooser metadata; it is not a runtime backend. The seams are
+  `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0008-run-fifteen-on-kotlin.md`.
 
 
 ## 8. Goldens

@@ -43,6 +43,7 @@ runtime. The first ported pieces are `RandomState` and `SgtpSave`; see
 app/src/main/
 ├─ kotlin/name/boyle/chris/sgtpuzzles/  # UI and Android logic
 │  ├─ GameChooser.kt                    # chooser activity and preferences
+│  ├─ backend/KotlinGameEngine.kt       # Kotlin backend selection and adapter
 │  ├─ chooser/ChooserScreen.kt          # Compose chooser screen
 │  ├─ ui/Theme.kt                       # Compose theme over the shell palette
 │  ├─ GamePlay.kt                       # game screen
@@ -98,9 +99,9 @@ docs/           # contracts and decisions
 Why this shape:
 
 - **`app/` vs `engine/`** separates the shipped UI from the portable
-  logic. `engine/` now has the RNG, the save container, the solver
-  utilities, and the first game, but the app still reaches C through
-  the `GameEngine` seam until the Kotlin backend is selected.
+  logic. `app/` depends on `:engine`; `KotlinGames` selects the Kotlin
+  backend for `fifteen`, and the rest of the games still reach C
+  through the same `GameEngine` seam.
 - **`parity/` as a separate JVM module** means the tests need no
   Android and no emulator. They run in seconds and are reused by the
   future `engine/`.
@@ -123,6 +124,17 @@ separate mechanical commit after Phase 0. It touches
 the UI sees. Behind it can be a C implementation, a Kotlin
 implementation, or a test stub. This is the dual-run point: a game is
 ported only when both implementations pass the parity matrix.
+
+### Kotlin backend
+
+`KotlinGames` maps a `BackendName` to a Kotlin `Game` and is the single
+selection point. `GameEngineImpl.fromLaunch` returns
+`KotlinGameEngine` for a selected game; `GamePlay.startGameGeneration`
+uses `KotlinGames.generate` instead of the generator process.
+`KotlinGameEngine` implements `GameEngine`, owns a `Midend`, and
+forwards drawing to the same `ViewCallbacks` seam as C. The design and
+the `kotlin` status definition are in
+`docs/adr/0008-run-fifteen-on-kotlin.md`.
 
 ### Kotlin game and midend
 
