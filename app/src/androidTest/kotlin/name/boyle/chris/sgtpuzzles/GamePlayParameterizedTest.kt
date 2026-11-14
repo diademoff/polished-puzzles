@@ -14,7 +14,6 @@ import android.view.KeyEvent.KEYCODE_DPAD_LEFT
 import android.view.KeyEvent.KEYCODE_DPAD_RIGHT
 import android.view.KeyEvent.KEYCODE_DPAD_UP
 import android.view.KeyEvent.KEYCODE_G
-import android.view.KeyEvent.KEYCODE_L
 import android.view.KeyEvent.KEYCODE_SPACE
 import android.view.KeyEvent.KEYCODE_V
 import android.view.KeyEvent.KEYCODE_Z
@@ -207,9 +206,9 @@ class GamePlayParameterizedTest(
                 KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_CENTER, KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_CENTER),
             Example(NET, "1x2:12", KEYCODE_DPAD_UP, KEYCODE_D),
             Example(NETSLIDE, "2x2:ch116", KEYCODE_DPAD_DOWN, KEYCODE_DPAD_CENTER),
-            Example(PALISADE, "2x3n3:d33", KEYCODE_L, KEYCODE_L,
-                KEYCODE_DPAD_DOWN, KEYCODE_L, KEYCODE_L,
-                KEYCODE_DPAD_DOWN, KEYCODE_L, KEYCODE_L),
+            Example(PALISADE, "2x3n3:d33", KEYCODE_DPAD_RIGHT, KEYCODE_DPAD_CENTER,
+                KEYCODE_DPAD_DOWN, KEYCODE_DPAD_DOWN, KEYCODE_DPAD_CENTER,
+                KEYCODE_DPAD_DOWN, KEYCODE_DPAD_DOWN, KEYCODE_DPAD_CENTER),
             Example(PATTERN, "1x2:2/1/1", KEYCODE_DPAD_UP,
                 KEYCODE_DPAD_CENTER, KEYCODE_DPAD_DOWN, KEYCODE_DPAD_CENTER),
             Example(PEARL, "5x5:dBaWaBgWaBeB", KEYCODE_DPAD_CENTER,
