@@ -95,6 +95,7 @@ import name.boyle.chris.sgtpuzzles.buttons.ArrowMode
 import name.boyle.chris.sgtpuzzles.buttons.ButtonsView
 import name.boyle.chris.sgtpuzzles.buttons.SEEN_SWAP_L_R_TOAST
 import name.boyle.chris.sgtpuzzles.buttons.SWAP_L_R_KEY
+import name.boyle.chris.sgtpuzzles.ui.applyToolbarSideInsets
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder.Event.CFG_SETTINGS
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.ARROW_KEYS_KEY_SUFFIX
@@ -340,6 +341,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private fun inflateContent() {
         _binding = MainBinding.inflate(layoutInflater)
         setContentView(_binding.root)
+        _binding.toolbar.applyToolbarSideInsets()
         setSupportActionBar(_binding.toolbar)
         supportActionBar?.apply {
             setDisplayHomeAsUpEnabled(true)

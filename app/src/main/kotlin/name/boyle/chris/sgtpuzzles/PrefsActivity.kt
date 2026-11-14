@@ -36,6 +36,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.LONG_PRESS_TIMEOUT
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.MOUSE_BACK_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.PLACEHOLDER_SEND_FEEDBACK
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.UNEQUAL_SHOW_H_KEY
+import name.boyle.chris.sgtpuzzles.ui.applyToolbarSideInsets
 
 class PrefsActivity : ActivityWithNightMode(),
     PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
@@ -93,7 +94,9 @@ class PrefsActivity : ActivityWithNightMode(),
         ): View {
             val root = super.onCreateView(inflater, container, savedInstanceState)
             val appCompatActivity = activity as AppCompatActivity
-            appCompatActivity.setSupportActionBar(root.findViewById(R.id.toolbar))
+            val toolbar = root.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
+            toolbar.applyToolbarSideInsets()
+            appCompatActivity.setSupportActionBar(toolbar)
             appCompatActivity.supportActionBar?.setDisplayHomeAsUpEnabled(true)
             return root
         }

@@ -25,6 +25,7 @@ import androidx.webkit.WebViewAssetLoader.AssetsPathHandler
 import androidx.webkit.WebViewClientCompat
 import name.boyle.chris.sgtpuzzles.NightModeHelper.ActivityWithNightMode
 import name.boyle.chris.sgtpuzzles.databinding.ActivityHelpBinding
+import name.boyle.chris.sgtpuzzles.ui.applyToolbarSideInsets
 import java.io.IOException
 import java.text.MessageFormat
 import java.util.regex.Pattern
@@ -42,6 +43,7 @@ class HelpActivity : ActivityWithNightMode() {
         }
         val binding = ActivityHelpBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.toolbar.applyToolbarSideInsets()
         setSupportActionBar(binding.toolbar)
         webView = binding.webView
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
