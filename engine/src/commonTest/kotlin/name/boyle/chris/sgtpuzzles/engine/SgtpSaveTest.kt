@@ -69,6 +69,23 @@ class SgtpSaveTest {
     }
 
     @Test
+    fun `a zero-length SEED value is legal`() {
+        val text = "SAVEFILE:41:Simon Tatham's Portable Puzzle Collection\n" +
+            "VERSION :1:1\n" +
+            "GAME    :7:Fifteen\n" +
+            "PARAMS  :3:4x4\n" +
+            "CPARAMS :3:4x4\n" +
+            "SEED    :0:\n" +
+            "DESC    :37:14,13,3,10,12,5,6,7,1,8,2,11,0,9,4,15\n" +
+            "NSTATES :1:1\n" +
+            "STATEPOS:1:1\n"
+        val save = SgtpSave.parse(text)
+        assertEquals("", save.value("SEED"))
+        assertEquals(null, save.value("HEXSEED"))
+        assertEquals(text, save.serialise())
+    }
+
+    @Test
     fun `leading CRLF and a missing newline between records are accepted`() {
         val text = "\r\nSAVEFILE:41:Simon Tatham's Portable Puzzle Collection\r\n" +
             "VERSION :1:1\r\n" +

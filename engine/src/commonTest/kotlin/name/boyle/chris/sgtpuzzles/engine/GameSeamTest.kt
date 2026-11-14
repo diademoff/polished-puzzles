@@ -27,6 +27,38 @@ class GameSeamTest {
         assertTrue(sink.drew, "the midend must still draw the board")
     }
 
+    @Test
+    fun `an empty seed is a zero-length SEED record`() {
+        val midend = Midend.newGame(Fifteen, "4x4", "")
+        val text = midend.serialise().serialise()
+
+        assertTrue(
+            text.contains("SEED    :0:\n"),
+            "an empty seed must be a zero-length SEED record: $text",
+        )
+        assertFalse(
+            text.contains("HEXSEED"),
+            "an empty seed is printable ASCII, so it is not HEXSEED: $text",
+        )
+
+        val reloaded = Midend.fromSave(Fifteen, SgtpSave.parse(text))
+        assertEquals("", reloaded.seed)
+        assertEquals(text, reloaded.serialise().serialise())
+    }
+
+    @Test
+    fun `a non-printable seed is hex-encoded and round-trips`() {
+        val seed = "\u0001\u0002"
+        val save = Midend.newGame(Fifteen, "4x4", seed).serialise()
+
+        assertEquals(null, save.value("SEED"))
+        assertEquals("0102", save.value("HEXSEED"))
+
+        val reloaded = Midend.fromSave(Fifteen, save)
+        assertEquals(seed, reloaded.seed)
+        assertEquals(save, reloaded.serialise())
+    }
+
     private class StatusSink : DrawSink {
         val statuses = ArrayList<String>()
         var drew = false

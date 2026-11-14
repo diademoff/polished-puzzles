@@ -255,9 +255,15 @@ class Midend private constructor(
         while (entries.size > statePos) entries.removeAt(entries.size - 1)
     }
 
+    /**
+     * C scans the seed for a character outside printable ASCII and
+     * writes `HEXSEED` only when it finds one (`midend.c:2274-2294`).
+     * An empty seed has no such character, so it is a zero-length
+     * `SEED` record, not `HEXSEED`.
+     */
     private fun seedRecord(value: String): SaveRecord {
         val printable = value.all { it.code in 32..126 }
-        return if (printable && value.isNotEmpty()) {
+        return if (printable) {
             SaveRecord("SEED", value)
         } else {
             SaveRecord("HEXSEED", value.map { (it.code and 0xFF).toString(16).padStart(2, '0') }.joinToString(""))
