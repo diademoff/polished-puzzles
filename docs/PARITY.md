@@ -99,8 +99,12 @@ form used by the goldens. The oracle records it with
 The seed is a public API of the project. It must stay shared with
 upstream forever.
 
-- `random.c` is ported **bit-exact**. The RNG must not change.
-- `params + seed -> DESC` is a golden test for every game.
+- `random.c` is ported **bit-exact** in `engine/RandomState.kt`. The
+  RNG must not change. `RandomParityTest` compares raw streams, every
+  bit width, many limits, and encoded-state transfer with the oracle.
+- `params + seed -> DESC` is a golden test for every game. Until Phase
+  4 ports the generators, the value is produced by C and the Kotlin RNG
+  is checked separately.
 - `DESC` does not change for the same seed.
 - Any `DESC` change is a breaking deviation with a separate test.
 - `savefile_version` does not break.
@@ -119,6 +123,16 @@ Required properties:
 - preserve move history and the position in that history;
 - forward and backward compatibility within supported versions;
 - no crash on a corrupt file (the fuzzer checks this).
+
+`engine/SgtpSave.kt` implements the container: ordered records,
+repeated `MOVE`/`SOLVE`/`RESTART`, unknown keys, canonical output, and
+strict header/version/length checks. Game-specific parameter and
+description validation is still C and belongs to Phase 4.
+`testdata/saves/` is the corpus. `SaveParityTest` reads and rewrites
+every file, then makes the oracle load both versions and compare the
+game id. `pegs 5x5random` is excluded because upstream itself cannot
+reload the save it writes for that preset; the test pins the exclusion
+rather than hiding it.
 
 ## 6. Game matrix
 
@@ -147,6 +161,9 @@ C wins.
 | Component | Status | Authority |
 |---|---|---|
 | `midend` | C | C |
+| `random` | parity: `engine/RandomState.kt`, strict differential | oracle streams |
+| `SAVEFILE` container | parity: `engine/SgtpSave.kt`, both directions | C save corpus |
+| `sort`, `combi` | parity: `engine/Sort.kt`, `engine/Combinations.kt` | C order |
 | `grid`, `loopgen`, `latin` | C | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
 | games (see the table below) | not started | C |
@@ -234,6 +251,9 @@ Notes:
   They are generated with `tools/gen-traces.sh` and compared by
   `StrictTraceTest`. Every game and every preset is frozen with the
   shared seed.
+- The save corpus is `testdata/saves/`: the initial state of every
+  readable preset plus `fifteen` cases for `MOVE`, undo with redo
+  history, and `SOLVE`. It is generated with `tools/gen-saves.sh`.
 - Never update a golden to "fix" a red test. Find the cause first,
   then add a `DEVIATIONS.md` entry or fix the code.
 

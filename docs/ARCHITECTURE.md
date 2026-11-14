@@ -31,6 +31,12 @@ and Android does not know about game rules. Everything that crosses
 the border is described by a contract: `GameEngine`, `ViewCallbacks`,
 `SAVEFILE`, and the oracle protocol.
 
+`engine/` is the portable Kotlin core under construction. It is a
+Kotlin Multiplatform module with `commonMain` code and a JVM target for
+the parity tests. The app does not depend on it yet: C still owns the
+runtime. The first ported pieces are `RandomState` and `SgtpSave`; see
+`docs/adr/0005-engine-infrastructure-port.md`.
+
 ## 2. Current layout
 
 ```
@@ -57,14 +63,24 @@ app/src/main/
 └─ assets/{en,de}/                      # offline help
 ```
 
+```
+engine/src/
+├─ commonMain/kotlin/name/boyle/chris/sgtpuzzles/engine/
+│  ├─ RandomState.kt                    # bit-exact random.c
+│  ├─ SgtpSave.kt                       # SAVEFILE container
+│  ├─ Sort.kt                           # bit-exact arraysort
+│  └─ Combinations.kt                   # bit-exact combi order
+└─ commonTest/kotlin/.../engine/        # fixed vectors and format tests
+```
+
 `buildSrc/` generates `BackendNames.kt` from `CMakeLists.txt` and the
 resources. `fastlane/` holds the store metadata.
 
 ## 3. Target layout
 
 ```
-app/            # Android UI only; depends on :engine
-engine/         # future Kotlin Multiplatform core
+app/            # Android UI only; will depend on :engine
+engine/         # Kotlin Multiplatform core (RNG, save container)
 parity/         # JVM tests and the oracle client
 tools/oracle/   # host build of the C oracle
 testdata/       # saves, regressions, corpus, goldens
@@ -74,8 +90,9 @@ docs/           # contracts and decisions
 Why this shape:
 
 - **`app/` vs `engine/`** separates the shipped UI from the portable
-  logic. While `engine/` does not exist, the C engine stays behind the
-  `GameEngine` seam.
+  logic. `engine/` now exists, but only the RNG and the save container
+  are ported, so the app still reaches C through the `GameEngine`
+  seam.
 - **`parity/` as a separate JVM module** means the tests need no
   Android and no emulator. They run in seconds and are reused by the
   future `engine/`.
@@ -114,6 +131,21 @@ against the oracle; the theme does not change the board.
 `midend_serialise` is the canonical state: parameters, seed, move
 history, and the position in that history. It is both the exchange
 format with other platforms and the main parity oracle.
+`engine/Sort.kt` ports upstream `arraysort()`, a heapsort whose tie
+order is observable, and `engine/Combinations.kt` ports `combi.c`.
+`DeterministicHelpersParityTest` compares both with the oracle.
+
+`engine/SgtpSave.kt` is a lossless container for the same text. It
+keeps repeated moves and unknown records in order and writes canonical
+bytes. `SaveParityTest` makes both implementations read the other
+side's output across the corpus in `testdata/saves/`.
+
+### Random
+
+`engine/RandomState.kt` is a bit-exact port of upstream `random.c`.
+The oracle exposes `randomBits` and `randomUpto`, and
+`RandomParityTest` compares streams, every bit width, many limits, and
+encoded-state transfer in both directions.
 
 ### puzzlesgen
 

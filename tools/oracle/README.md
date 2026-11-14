@@ -63,6 +63,10 @@ Requests:
 {"op":"keys","state":"...","seq":"108 108 522"}
 {"op":"trace","state":"..."}
 {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
+{"op":"randomBits","seed":"12345","bits":8,"count":10}
+{"op":"randomUpto","state":"...","limit":6,"count":10}
+{"op":"sort","values":"5 3 9 1","mode":"asc"}
+{"op":"combi","r":2,"n":5}
 ```
 
 `keys` replays a whole key sequence inside one midend. The cursor of a

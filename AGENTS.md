@@ -97,6 +97,7 @@ Current:
 ```bash
 ./gradlew :app:assembleDebug          # build the APK
 ./gradlew :app:testDebugUnitTest      # JVM unit tests
+./gradlew :engine:jvmTest             # portable engine tests
 ./gradlew :app:lint                   # Android lint
 ./gradlew :app:connectedDebugAndroidTest  # instrumented tests; needs a device or emulator
 ```
@@ -109,6 +110,7 @@ build/oracle/puzzles-oracle            # oracle binary
 ./gradlew :parity:test -Poracle=build/oracle/puzzles-oracle
 ./gradlew :parity:test --tests '*FifteenParityTest*'
 tools/gen-goldens.sh                   # regenerate goldens
+tools/gen-saves.sh                     # regenerate the .sgtp corpus
 ```
 
 If a command does not work, do not work around it. Fix it or report it.

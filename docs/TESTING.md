@@ -7,7 +7,7 @@ The parity contract is in `PARITY.md`; commands are in `AGENTS.md`.
 
 | Level | Where | Time | What it checks |
 |---|---|---|---|
-| Unit (JVM) | `app/src/test`, `parity/src/test` | seconds | pure logic, parsers, normalizers |
+| Unit (JVM) | `app/src/test`, `engine/src/commonTest` | seconds | pure logic, RNG vectors, parsers, normalizers |
 | Parity (JVM + oracle process) | `parity/` | seconds to minutes | equivalence between C and our implementation |
 | Instrumentation | `app/src/androidTest` | minutes | JNI, lifecycle, real Android |
 | Screenshot | `app/src/androidTest` or JVM | minutes | layout, theme, UI regressions |
@@ -36,7 +36,14 @@ serialise(state)        -> savefile
 load(savefile)          -> state
 solve(state)            -> state
 trace(state)            -> draw primitives
+randomBits(seed|state)  -> values + encoded generator state
+randomUpto(seed|state)  -> values + encoded generator state
+sort(values, mode)      -> sorted values
+combi(r, n)             -> combinations in upstream order
 ```
+
+`id` re-reads a save file. It is used by the save corpus test to prove
+that a Kotlin-written file is accepted by C.
 
 `keys` replays a whole sequence in one midend. It is required for
 cursor games: the cursor lives in the frontend state (`game_ui`), which
@@ -74,7 +81,9 @@ instrumented test, not a parity test.
 
 ```
 testdata/
-├─ saves/                    # .sgtp fixtures, including old versions
+├─ saves/
+│  ├─ initial/<game>/        # every readable preset, one .sgtp each
+│  └─ cases/                 # MOVE, undo with redo, SOLVE
 ├─ regressions/<game>/       # issue-*.json: seed, params, moves, expected
 ├─ corpus/<game>/            # fuzz corpus, minimized
 ├─ golden/<game>/            # params + seed -> DESC, presets
@@ -141,7 +150,8 @@ Forbidden in parity paths:
 Required:
 
 - explicit seed and params;
-- only `random.c`-compatible RNG;
+- only `random.c`-compatible RNG: use `engine.RandomState`, never
+  `kotlin.random.Random`, in a parity path;
 - stable and explicit sorting;
 - fixed time in tests.
 
@@ -181,6 +191,27 @@ Shell tests:
 - `ChooserScreenshotsTest` runs the chooser under fastlane only: it
   skips itself when the `device_type` argument is absent. It is a
   screenshot producer for the store, not a behavior gate.
+
+Engine tests:
+
+- `engine/src/commonTest` checks the SHA-1 vectors, fixed RNG streams,
+  state encoding, generator copies, and the save parser's canonical
+  form and error cases.
+- `RandomParityTest` is strict. It compares `random_bits` for every
+  bit width 1..31 and `random_upto` for limits up to 2^27, across ten
+  seeds, and transfers encoded generator state in both directions.
+- `DeterministicHelpersParityTest` is strict. It compares
+  `arraysort` with the oracle for ascending, descending, and a
+  low-bits tie-break, including duplicate keys; it also compares the
+  full `combi` order for every `1 <= r <= n <= 9`.
+- `SaveParityTest` is strict. It parses and rewrites every file in
+  `testdata/saves/`, then makes the oracle load the original and the
+  Kotlin text and compare the game id. It also recomputes the preset
+  set, so a missing corpus file or a silently skipped preset fails.
+  The only exclusion is `pegs 5x5random`, which upstream cannot reload;
+  the test asserts that it is still unreadable.
+- `tools/gen-saves.sh` regenerates the corpus. Review the diff; do not
+  regenerate it to make a red test green.
 - `BoardRecorderTest` is a JVM test over all 288 oracle traces. It feeds
   each trace through `BoardRecorder`, the same `ViewCallbacks` seam that
   the C engine uses, and compares the resulting `DrawOp` list. It
@@ -205,7 +236,8 @@ Device run on the API 36 emulator, 2026-11-14:
 
 Jobs:
 
-1. **jvm** — unit + parity against the pinned upstream.
+1. **jvm** — `:engine:jvmTest` plus parity against the pinned
+   upstream.
 2. **oracle-current** — parity against current upstream. A difference
    means behavior changed during sync.
 3. **android** — build, unit tests, lint. Instrumentation and

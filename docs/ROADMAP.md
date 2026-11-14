@@ -104,6 +104,16 @@ Exit criteria:
 - seed -> DESC matches for every game;
 - iteration order and RNG are deterministic.
 
+Status: started on 2026-11-14 by owner decision while D-09 is still
+open; Phase 3 does not touch the renderer and does not change the D-09
+evidence. The `:engine` Kotlin Multiplatform module exists. Ported and
+pinned: `random.c` (`RandomParityTest`), the `SAVEFILE` container with a
+committed corpus (`SaveParityTest`), `arraysort`, and `combi`
+(`DeterministicHelpersParityTest`). Still C: `midend`, `dsf`, `tdq`,
+`grid`, `latin`, `findloop`, `loopgen`, and game logic. `seed -> DESC` remains oracle-backed until
+Phase 4 ports each generator; the existing `GoldenDescTest` is green.
+The porting order is in `docs/adr/0005-engine-infrastructure-port.md`.
+
 ## Phase 4 — Games
 
 One game at a time, in dual-run mode, behind a feature flag.
