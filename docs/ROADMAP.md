@@ -156,10 +156,14 @@ For each game, use the matrix from `PARITY.md`:
 - strict trace;
 - UI screenshots.
 
-Status: `fifteen` is `kotlin` (2026-11-14). The Kotlin `Game` seam,
-the semantic midend, `Fifteen`, and the drawing sink are in `engine/`;
-the seams are `docs/adr/0007-kotlin-game-seam.md` and
-`docs/adr/0008-run-fifteen-on-kotlin.md`.
+Status: `fifteen` is `kotlin` (2026-11-14). `slant` is `dual-run`
+(2026-11-14): `SlantGeneration` and `Slant` are in `engine/` and pass
+the matrix, but the app still uses C. The remaining slant work is its
+configuration dialog, cursor drawing, and the two-release wait. The
+Kotlin `Game` seam, the semantic midend, `Fifteen`, and the drawing sink
+are in `engine/`; the seams are `docs/adr/0007-kotlin-game-seam.md`,
+`docs/adr/0008-run-fifteen-on-kotlin.md`, and
+`docs/adr/0009-game-ui-and-auxinfo.md`.
 
 Every row of the matrix is green on the JVM: `params + seed -> DESC`,
 new game, moves, undo and redo, `completed`, `requestKeys`, `presets`,
@@ -168,7 +172,9 @@ trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
 `FifteenSaveTest`, and `FifteenTraceTest`.
 
 The app selects `KotlinGameEngine` for `fifteen` and bypasses the C
-generator. `KotlinGamesTest` pins the selection and the generated save;
+generator. It does not select it for `slant`; the per-game enable set in
+`KotlinGames` keeps slant in dual-run. `KotlinGamesTest` pins the
+selection and the generated saves for both games;
 `GamePlayParameterizedTest` asserts that the running engine is
 `KotlinGameEngine` and completes a game on the emulator. The C game
 stays in the vendored tree as the oracle and for chooser metadata, but

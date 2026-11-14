@@ -269,6 +269,18 @@ Engine tests:
   `KotlinTraceSink`, normalises it with the same `TraceNormalizer` as
   the oracle, and compares the result with a fresh oracle trace and
   with every frozen `fifteen` golden.
+- `SlantDescTest` compares the Kotlin generator with the oracle for 90
+  params and seed combinations, including both difficulties and the
+  12x10 preset.
+- `SlantGameTest` compares new games, text, clicks, cursor keys, direct
+  slash keys, undo/redo, solve, and saves in both directions.
+- `SlantSaveTest` reads every `slant` save in the corpus, rewrites it
+  byte for byte, and pins the obfuscated `AUXINFO` record.
+- `SlantTraceTest` is strict. It is the first trace of `line`, `circle`,
+  `clip`, and `unclip`, and it matches every frozen `slant` golden.
+- `SlantInputParityTest` compares layout and clicks at several
+  viewports, including the letterbox margin, and a swipe that must
+  change only its start cell.
 - `KotlinGamesTest` pins the app-side selection and checks that the
   generated save is the frozen oracle save.
 - `GamePlayParameterizedTest` asserts that the running `fifteen` engine

@@ -104,9 +104,9 @@ upstream forever.
   bit width, many limits, and encoded-state transfer with the oracle.
 - `params + seed -> DESC` is a golden test for every game. For games
   that are still `C`, the value is produced by C and the Kotlin RNG is
-  checked separately. `fifteen` now generates its description in
-  Kotlin, and `FifteenDescTest` compares it with the goldens and with
-  fresh oracle games.
+  checked separately. `fifteen` and `slant` generate their descriptions
+  in Kotlin; `FifteenDescTest` and `SlantDescTest` compare them with the
+  goldens and with fresh oracle games.
 - `DESC` does not change for the same seed.
 - Any `DESC` change is a breaking deviation with a separate test.
 - `savefile_version` does not break.
@@ -128,8 +128,10 @@ Required properties:
 
 `engine/SgtpSave.kt` implements the container: ordered records,
 repeated `MOVE`/`SOLVE`/`RESTART`, unknown keys, canonical output, and
-strict header/version/length checks. Game-specific parameter and
-description validation is still C and belongs to Phase 4.
+strict header/version/length checks. `AUXINFO` is obfuscated and
+hex-encoded as upstream does; `AuxInfo` ports that masking, and
+`SlantSaveTest` pins it. Game-specific parameter and description
+validation is still C and belongs to Phase 4.
 `testdata/saves/` is the corpus. `SaveParityTest` reads and rewrites
 every file, then makes the oracle load both versions and compare the
 game id. `pegs 5x5random` is excluded because upstream itself cannot
@@ -218,7 +220,7 @@ submenu entries when a game groups its presets.
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `C` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `C` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `C` |
-| `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `C` |
+| `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `C` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `C` |
@@ -252,6 +254,15 @@ Notes:
   chooser metadata; it is not a runtime backend. The seams are
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0008-run-fifteen-on-kotlin.md`.
+- `slant` is the second port target. Its generator, solver, state,
+  moves, undo/redo, solve, text, keys, save file, drawing, layout, and
+  input pass the matrix in `SlantDescTest`, `SlantGameTest`,
+  `SlantSaveTest`, `SlantTraceTest`, and `SlantInputParityTest`. It is
+  `dual-run`: `KotlinGames.gameFor` knows the Kotlin game, but
+  `KotlinGames.handles` keeps the app on C until the configuration
+  dialog, cursor drawing, and the two-release wait are done. The seams
+  are `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 
 ## 8. Goldens
