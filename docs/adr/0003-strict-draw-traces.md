@@ -57,8 +57,8 @@ at all.
    line. Goldens are stored in that form, so a change is reviewable in
    a diff. The future Compose renderer will produce operations and pass
    them through the same normalizer.
-9. **Goldens are committed JSON text, not screenshots.** Traces are
-   small, deterministic, and describe geometry; they are safe to
+9. **Goldens are committed canonical text, not screenshots.** Traces
+   are small, deterministic, and describe geometry; they are safe to
    commit. Screenshot goldens stay local.
 10. **The first traced game is `fifteen`.** Every preset is frozen with
     the shared seed. Other games follow one at a time as their

@@ -5,6 +5,7 @@ params "4x4"
 upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
 size 240 240
 palette 800,800,800 0,0,0 967,967,967 633,633,633
+changed_state false false
 start_draw
 rect 0 0 240 240 0
 poly 2 2 5 217 217 217 22 169 70 70 169 22 217

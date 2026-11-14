@@ -1,0 +1,775 @@
+traceSchema 1
+game "Galaxies"
+id "10x10:fhwjnkzrzcgqdgqqqwwhnvdfo"
+params "10x10dn"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 384 384
+palette 800,800,800 1000,1000,1000 240,240,240 1000,1000,1000 0,0,0 640,640,640 0,0,0 0,0,0 1000,640,640
+changed_state false false
+blitter_new 1 32 32
+blitter_new 2 32 32
+blitter_new 3 32 32
+start_draw
+rect 0 0 384 384 0
+rect 31 31 323 323 6
+update 0 0 384 384
+clip 32 32 32 32
+rect 32 32 32 32 0
+rect 32 32 1 32 5
+rect 32 32 32 1 5
+rect 32 32 2 32 6
+rect 32 32 32 2 6
+rect 63 32 1 2 6
+rect 32 63 2 1 6
+unclip
+update 32 32 32 32
+clip 64 32 32 32
+rect 64 32 32 32 0
+rect 64 32 1 32 5
+rect 64 32 32 1 5
+rect 64 32 32 2 6
+rect 64 32 2 2 6
+rect 95 32 1 2 6
+unclip
+update 64 32 32 32
+clip 96 32 32 32
+rect 96 32 32 32 0
+rect 96 32 1 32 5
+rect 96 32 32 1 5
+rect 96 32 32 2 6
+rect 96 32 2 2 6
+rect 127 32 1 2 6
+circle 128 48 8 3 4
+unclip
+update 96 32 32 32
+clip 128 32 32 32
+rect 128 32 32 32 0
+rect 128 32 1 32 5
+rect 128 32 32 1 5
+rect 128 32 32 2 6
+rect 128 32 2 2 6
+rect 159 32 1 2 6
+circle 128 48 8 3 4
+unclip
+update 128 32 32 32
+clip 160 32 32 32
+rect 160 32 32 32 0
+rect 160 32 1 32 5
+rect 160 32 32 1 5
+rect 160 32 32 2 6
+rect 160 32 2 2 6
+rect 191 32 1 2 6
+unclip
+update 160 32 32 32
+clip 192 32 32 32
+rect 192 32 32 32 0
+rect 192 32 1 32 5
+rect 192 32 32 1 5
+rect 192 32 32 2 6
+rect 192 32 2 2 6
+rect 223 32 1 2 6
+unclip
+update 192 32 32 32
+clip 224 32 32 32
+rect 224 32 32 32 0
+rect 224 32 1 32 5
+rect 224 32 32 1 5
+rect 224 32 32 2 6
+rect 224 32 2 2 6
+rect 255 32 1 2 6
+circle 256 48 8 3 4
+unclip
+update 224 32 32 32
+clip 256 32 32 32
+rect 256 32 32 32 0
+rect 256 32 1 32 5
+rect 256 32 32 1 5
+rect 256 32 32 2 6
+rect 256 32 2 2 6
+rect 287 32 1 2 6
+circle 256 48 8 3 4
+unclip
+update 256 32 32 32
+clip 288 32 32 32
+rect 288 32 32 32 0
+rect 288 32 1 32 5
+rect 288 32 32 1 5
+rect 288 32 32 2 6
+rect 288 32 2 2 6
+rect 319 32 1 2 6
+circle 320 64 8 3 4
+unclip
+update 288 32 32 32
+clip 320 32 32 32
+rect 320 32 32 32 0
+rect 320 32 1 32 5
+rect 320 32 32 1 5
+rect 351 32 1 32 6
+rect 320 32 32 2 6
+rect 320 32 2 2 6
+rect 351 63 1 1 6
+circle 320 64 8 3 4
+unclip
+update 320 32 32 32
+clip 32 64 32 32
+rect 32 64 32 32 0
+rect 32 64 1 32 5
+rect 32 64 32 1 5
+rect 32 64 2 32 6
+rect 32 64 2 2 6
+rect 32 95 2 1 6
+unclip
+update 32 64 32 32
+clip 64 64 32 32
+rect 64 64 32 32 0
+rect 64 64 1 32 5
+rect 64 64 32 1 5
+circle 96 96 8 3 4
+unclip
+update 64 64 32 32
+clip 96 64 32 32
+rect 96 64 32 32 0
+rect 96 64 1 32 5
+rect 96 64 32 1 5
+circle 96 96 8 3 4
+unclip
+update 96 64 32 32
+clip 128 64 32 32
+rect 128 64 32 32 0
+rect 128 64 1 32 5
+rect 128 64 32 1 5
+unclip
+update 128 64 32 32
+clip 160 64 32 32
+rect 160 64 32 32 0
+rect 160 64 1 32 5
+rect 160 64 32 1 5
+circle 176 80 8 3 4
+unclip
+update 160 64 32 32
+clip 192 64 32 32
+rect 192 64 32 32 0
+rect 192 64 1 32 5
+rect 192 64 32 1 5
+unclip
+update 192 64 32 32
+clip 224 64 32 32
+rect 224 64 32 32 0
+rect 224 64 1 32 5
+rect 224 64 32 1 5
+unclip
+update 224 64 32 32
+clip 256 64 32 32
+rect 256 64 32 32 0
+rect 256 64 1 32 5
+rect 256 64 32 1 5
+circle 272 96 8 3 4
+unclip
+update 256 64 32 32
+clip 288 64 32 32
+rect 288 64 32 32 0
+rect 288 64 1 32 5
+rect 288 64 32 1 5
+circle 320 64 8 3 4
+unclip
+update 288 64 32 32
+clip 320 64 32 32
+rect 320 64 32 32 0
+rect 320 64 1 32 5
+rect 320 64 32 1 5
+rect 351 64 1 32 6
+rect 351 64 1 2 6
+rect 351 95 1 1 6
+circle 320 64 8 3 4
+unclip
+update 320 64 32 32
+clip 32 96 32 32
+rect 32 96 32 32 0
+rect 32 96 1 32 5
+rect 32 96 32 1 5
+rect 32 96 2 32 6
+rect 32 96 2 2 6
+rect 32 127 2 1 6
+unclip
+update 32 96 32 32
+clip 64 96 32 32
+rect 64 96 32 32 0
+rect 64 96 1 32 5
+rect 64 96 32 1 5
+circle 96 96 8 3 4
+unclip
+update 64 96 32 32
+clip 96 96 32 32
+rect 96 96 32 32 0
+rect 96 96 1 32 5
+rect 96 96 32 1 5
+circle 96 96 8 3 4
+unclip
+update 96 96 32 32
+clip 128 96 32 32
+rect 128 96 32 32 0
+rect 128 96 1 32 5
+rect 128 96 32 1 5
+unclip
+update 128 96 32 32
+clip 160 96 32 32
+rect 160 96 32 32 0
+rect 160 96 1 32 5
+rect 160 96 32 1 5
+unclip
+update 160 96 32 32
+clip 192 96 32 32
+rect 192 96 32 32 0
+rect 192 96 1 32 5
+rect 192 96 32 1 5
+unclip
+update 192 96 32 32
+clip 224 96 32 32
+rect 224 96 32 32 0
+rect 224 96 1 32 5
+rect 224 96 32 1 5
+unclip
+update 224 96 32 32
+clip 256 96 32 32
+rect 256 96 32 32 0
+rect 256 96 1 32 5
+rect 256 96 32 1 5
+circle 272 96 8 3 4
+unclip
+update 256 96 32 32
+clip 288 96 32 32
+rect 288 96 32 32 0
+rect 288 96 1 32 5
+rect 288 96 32 1 5
+unclip
+update 288 96 32 32
+clip 320 96 32 32
+rect 320 96 32 32 0
+rect 320 96 1 32 5
+rect 320 96 32 1 5
+rect 351 96 1 32 6
+rect 351 96 1 2 6
+rect 351 127 1 1 6
+unclip
+update 320 96 32 32
+clip 32 128 32 32
+rect 32 128 32 32 0
+rect 32 128 1 32 5
+rect 32 128 32 1 5
+rect 32 128 2 32 6
+rect 32 128 2 2 6
+rect 32 159 2 1 6
+circle 48 144 8 3 4
+unclip
+update 32 128 32 32
+clip 64 128 32 32
+rect 64 128 32 32 0
+rect 64 128 1 32 5
+rect 64 128 32 1 5
+unclip
+update 64 128 32 32
+clip 96 128 32 32
+rect 96 128 32 32 0
+rect 96 128 1 32 5
+rect 96 128 32 1 5
+unclip
+update 96 128 32 32
+clip 128 128 32 32
+rect 128 128 32 32 0
+rect 128 128 1 32 5
+rect 128 128 32 1 5
+unclip
+update 128 128 32 32
+clip 160 128 32 32
+rect 160 128 32 32 0
+rect 160 128 1 32 5
+rect 160 128 32 1 5
+circle 192 160 8 3 4
+unclip
+update 160 128 32 32
+clip 192 128 32 32
+rect 192 128 32 32 0
+rect 192 128 1 32 5
+rect 192 128 32 1 5
+circle 192 160 8 3 4
+unclip
+update 192 128 32 32
+clip 224 128 32 32
+rect 224 128 32 32 0
+rect 224 128 1 32 5
+rect 224 128 32 1 5
+unclip
+update 224 128 32 32
+clip 256 128 32 32
+rect 256 128 32 32 0
+rect 256 128 1 32 5
+rect 256 128 32 1 5
+unclip
+update 256 128 32 32
+clip 288 128 32 32
+rect 288 128 32 32 0
+rect 288 128 1 32 5
+rect 288 128 32 1 5
+circle 304 160 8 3 4
+unclip
+update 288 128 32 32
+clip 320 128 32 32
+rect 320 128 32 32 0
+rect 320 128 1 32 5
+rect 320 128 32 1 5
+rect 351 128 1 32 6
+rect 351 128 1 2 6
+rect 351 159 1 1 6
+unclip
+update 320 128 32 32
+clip 32 160 32 32
+rect 32 160 32 32 0
+rect 32 160 1 32 5
+rect 32 160 32 1 5
+rect 32 160 2 32 6
+rect 32 160 2 2 6
+rect 32 191 2 1 6
+unclip
+update 32 160 32 32
+clip 64 160 32 32
+rect 64 160 32 32 0
+rect 64 160 1 32 5
+rect 64 160 32 1 5
+unclip
+update 64 160 32 32
+clip 96 160 32 32
+rect 96 160 32 32 0
+rect 96 160 1 32 5
+rect 96 160 32 1 5
+unclip
+update 96 160 32 32
+clip 128 160 32 32
+rect 128 160 32 32 0
+rect 128 160 1 32 5
+rect 128 160 32 1 5
+circle 144 192 8 3 4
+unclip
+update 128 160 32 32
+clip 160 160 32 32
+rect 160 160 32 32 0
+rect 160 160 1 32 5
+rect 160 160 32 1 5
+circle 192 160 8 3 4
+unclip
+update 160 160 32 32
+clip 192 160 32 32
+rect 192 160 32 32 0
+rect 192 160 1 32 5
+rect 192 160 32 1 5
+circle 192 160 8 3 4
+unclip
+update 192 160 32 32
+clip 224 160 32 32
+rect 224 160 32 32 0
+rect 224 160 1 32 5
+rect 224 160 32 1 5
+unclip
+update 224 160 32 32
+clip 256 160 32 32
+rect 256 160 32 32 0
+rect 256 160 1 32 5
+rect 256 160 32 1 5
+circle 272 176 8 3 4
+unclip
+update 256 160 32 32
+clip 288 160 32 32
+rect 288 160 32 32 0
+rect 288 160 1 32 5
+rect 288 160 32 1 5
+circle 304 160 8 3 4
+unclip
+update 288 160 32 32
+clip 320 160 32 32
+rect 320 160 32 32 0
+rect 320 160 1 32 5
+rect 320 160 32 1 5
+rect 351 160 1 32 6
+rect 351 160 1 2 6
+rect 351 191 1 1 6
+circle 336 176 8 3 4
+unclip
+update 320 160 32 32
+clip 32 192 32 32
+rect 32 192 32 32 0
+rect 32 192 1 32 5
+rect 32 192 32 1 5
+rect 32 192 2 32 6
+rect 32 192 2 2 6
+rect 32 223 2 1 6
+unclip
+update 32 192 32 32
+clip 64 192 32 32
+rect 64 192 32 32 0
+rect 64 192 1 32 5
+rect 64 192 32 1 5
+circle 80 224 8 3 4
+unclip
+update 64 192 32 32
+clip 96 192 32 32
+rect 96 192 32 32 0
+rect 96 192 1 32 5
+rect 96 192 32 1 5
+circle 112 208 8 3 4
+unclip
+update 96 192 32 32
+clip 128 192 32 32
+rect 128 192 32 32 0
+rect 128 192 1 32 5
+rect 128 192 32 1 5
+circle 144 192 8 3 4
+unclip
+update 128 192 32 32
+clip 160 192 32 32
+rect 160 192 32 32 0
+rect 160 192 1 32 5
+rect 160 192 32 1 5
+unclip
+update 160 192 32 32
+clip 192 192 32 32
+rect 192 192 32 32 0
+rect 192 192 1 32 5
+rect 192 192 32 1 5
+unclip
+update 192 192 32 32
+clip 224 192 32 32
+rect 224 192 32 32 0
+rect 224 192 1 32 5
+rect 224 192 32 1 5
+unclip
+update 224 192 32 32
+clip 256 192 32 32
+rect 256 192 32 32 0
+rect 256 192 1 32 5
+rect 256 192 32 1 5
+unclip
+update 256 192 32 32
+clip 288 192 32 32
+rect 288 192 32 32 0
+rect 288 192 1 32 5
+rect 288 192 32 1 5
+unclip
+update 288 192 32 32
+clip 320 192 32 32
+rect 320 192 32 32 0
+rect 320 192 1 32 5
+rect 320 192 32 1 5
+rect 351 192 1 32 6
+rect 351 192 1 2 6
+rect 351 223 1 1 6
+unclip
+update 320 192 32 32
+clip 32 224 32 32
+rect 32 224 32 32 0
+rect 32 224 1 32 5
+rect 32 224 32 1 5
+rect 32 224 2 32 6
+rect 32 224 2 2 6
+rect 32 255 2 1 6
+circle 48 240 8 3 4
+unclip
+update 32 224 32 32
+clip 64 224 32 32
+rect 64 224 32 32 0
+rect 64 224 1 32 5
+rect 64 224 32 1 5
+circle 80 224 8 3 4
+unclip
+update 64 224 32 32
+clip 96 224 32 32
+rect 96 224 32 32 0
+rect 96 224 1 32 5
+rect 96 224 32 1 5
+circle 112 256 8 3 4
+unclip
+update 96 224 32 32
+clip 128 224 32 32
+rect 128 224 32 32 0
+rect 128 224 1 32 5
+rect 128 224 32 1 5
+unclip
+update 128 224 32 32
+clip 160 224 32 32
+rect 160 224 32 32 0
+rect 160 224 1 32 5
+rect 160 224 32 1 5
+unclip
+update 160 224 32 32
+clip 192 224 32 32
+rect 192 224 32 32 0
+rect 192 224 1 32 5
+rect 192 224 32 1 5
+unclip
+update 192 224 32 32
+clip 224 224 32 32
+rect 224 224 32 32 0
+rect 224 224 1 32 5
+rect 224 224 32 1 5
+unclip
+update 224 224 32 32
+clip 256 224 32 32
+rect 256 224 32 32 0
+rect 256 224 1 32 5
+rect 256 224 32 1 5
+unclip
+update 256 224 32 32
+clip 288 224 32 32
+rect 288 224 32 32 0
+rect 288 224 1 32 5
+rect 288 224 32 1 5
+unclip
+update 288 224 32 32
+clip 320 224 32 32
+rect 320 224 32 32 0
+rect 320 224 1 32 5
+rect 320 224 32 1 5
+rect 351 224 1 32 6
+rect 351 224 1 2 6
+rect 351 255 1 1 6
+unclip
+update 320 224 32 32
+clip 32 256 32 32
+rect 32 256 32 32 0
+rect 32 256 1 32 5
+rect 32 256 32 1 5
+rect 32 256 2 32 6
+rect 32 256 2 2 6
+rect 32 287 2 1 6
+unclip
+update 32 256 32 32
+clip 64 256 32 32
+rect 64 256 32 32 0
+rect 64 256 1 32 5
+rect 64 256 32 1 5
+unclip
+update 64 256 32 32
+clip 96 256 32 32
+rect 96 256 32 32 0
+rect 96 256 1 32 5
+rect 96 256 32 1 5
+circle 112 256 8 3 4
+unclip
+update 96 256 32 32
+clip 128 256 32 32
+rect 128 256 32 32 0
+rect 128 256 1 32 5
+rect 128 256 32 1 5
+unclip
+update 128 256 32 32
+clip 160 256 32 32
+rect 160 256 32 32 0
+rect 160 256 1 32 5
+rect 160 256 32 1 5
+circle 176 272 8 3 4
+unclip
+update 160 256 32 32
+clip 192 256 32 32
+rect 192 256 32 32 0
+rect 192 256 1 32 5
+rect 192 256 32 1 5
+circle 224 288 8 3 4
+unclip
+update 192 256 32 32
+clip 224 256 32 32
+rect 224 256 32 32 0
+rect 224 256 1 32 5
+rect 224 256 32 1 5
+circle 224 288 8 3 4
+unclip
+update 224 256 32 32
+clip 256 256 32 32
+rect 256 256 32 32 0
+rect 256 256 1 32 5
+rect 256 256 32 1 5
+unclip
+update 256 256 32 32
+clip 288 256 32 32
+rect 288 256 32 32 0
+rect 288 256 1 32 5
+rect 288 256 32 1 5
+circle 304 272 8 3 4
+unclip
+update 288 256 32 32
+clip 320 256 32 32
+rect 320 256 32 32 0
+rect 320 256 1 32 5
+rect 320 256 32 1 5
+rect 351 256 1 32 6
+rect 351 256 1 2 6
+rect 351 287 1 1 6
+unclip
+update 320 256 32 32
+clip 32 288 32 32
+rect 32 288 32 32 0
+rect 32 288 1 32 5
+rect 32 288 32 1 5
+rect 32 288 2 32 6
+rect 32 288 2 2 6
+rect 32 319 2 1 6
+unclip
+update 32 288 32 32
+clip 64 288 32 32
+rect 64 288 32 32 0
+rect 64 288 1 32 5
+rect 64 288 32 1 5
+unclip
+update 64 288 32 32
+clip 96 288 32 32
+rect 96 288 32 32 0
+rect 96 288 1 32 5
+rect 96 288 32 1 5
+circle 128 320 8 3 4
+unclip
+update 96 288 32 32
+clip 128 288 32 32
+rect 128 288 32 32 0
+rect 128 288 1 32 5
+rect 128 288 32 1 5
+circle 128 320 8 3 4
+unclip
+update 128 288 32 32
+clip 160 288 32 32
+rect 160 288 32 32 0
+rect 160 288 1 32 5
+rect 160 288 32 1 5
+unclip
+update 160 288 32 32
+clip 192 288 32 32
+rect 192 288 32 32 0
+rect 192 288 1 32 5
+rect 192 288 32 1 5
+circle 224 288 8 3 4
+unclip
+update 192 288 32 32
+clip 224 288 32 32
+rect 224 288 32 32 0
+rect 224 288 1 32 5
+rect 224 288 32 1 5
+circle 224 288 8 3 4
+unclip
+update 224 288 32 32
+clip 256 288 32 32
+rect 256 288 32 32 0
+rect 256 288 1 32 5
+rect 256 288 32 1 5
+circle 272 304 8 3 4
+unclip
+update 256 288 32 32
+clip 288 288 32 32
+rect 288 288 32 32 0
+rect 288 288 1 32 5
+rect 288 288 32 1 5
+unclip
+update 288 288 32 32
+clip 320 288 32 32
+rect 320 288 32 32 0
+rect 320 288 1 32 5
+rect 320 288 32 1 5
+rect 351 288 1 32 6
+rect 351 288 1 2 6
+rect 351 319 1 1 6
+circle 336 304 8 3 4
+unclip
+update 320 288 32 32
+clip 32 320 32 32
+rect 32 320 32 32 0
+rect 32 320 1 32 5
+rect 32 320 32 1 5
+rect 32 320 2 32 6
+rect 32 351 32 1 6
+rect 32 320 2 2 6
+rect 63 351 1 1 6
+circle 64 336 8 3 4
+unclip
+update 32 320 32 32
+clip 64 320 32 32
+rect 64 320 32 32 0
+rect 64 320 1 32 5
+rect 64 320 32 1 5
+rect 64 351 32 1 6
+rect 64 351 2 1 6
+rect 95 351 1 1 6
+circle 64 336 8 3 4
+unclip
+update 64 320 32 32
+clip 96 320 32 32
+rect 96 320 32 32 0
+rect 96 320 1 32 5
+rect 96 320 32 1 5
+rect 96 351 32 1 6
+rect 96 351 2 1 6
+rect 127 351 1 1 6
+circle 128 320 8 3 4
+unclip
+update 96 320 32 32
+clip 128 320 32 32
+rect 128 320 32 32 0
+rect 128 320 1 32 5
+rect 128 320 32 1 5
+rect 128 351 32 1 6
+rect 128 351 2 1 6
+rect 159 351 1 1 6
+circle 128 320 8 3 4
+unclip
+update 128 320 32 32
+clip 160 320 32 32
+rect 160 320 32 32 0
+rect 160 320 1 32 5
+rect 160 320 32 1 5
+rect 160 351 32 1 6
+rect 160 351 2 1 6
+rect 191 351 1 1 6
+unclip
+update 160 320 32 32
+clip 192 320 32 32
+rect 192 320 32 32 0
+rect 192 320 1 32 5
+rect 192 320 32 1 5
+rect 192 351 32 1 6
+rect 192 351 2 1 6
+rect 223 351 1 1 6
+unclip
+update 192 320 32 32
+clip 224 320 32 32
+rect 224 320 32 32 0
+rect 224 320 1 32 5
+rect 224 320 32 1 5
+rect 224 351 32 1 6
+rect 224 351 2 1 6
+rect 255 351 1 1 6
+unclip
+update 224 320 32 32
+clip 256 320 32 32
+rect 256 320 32 32 0
+rect 256 320 1 32 5
+rect 256 320 32 1 5
+rect 256 351 32 1 6
+rect 256 351 2 1 6
+rect 287 351 1 1 6
+unclip
+update 256 320 32 32
+clip 288 320 32 32
+rect 288 320 32 32 0
+rect 288 320 1 32 5
+rect 288 320 32 1 5
+rect 288 351 32 1 6
+rect 288 351 2 1 6
+rect 319 351 1 1 6
+unclip
+update 288 320 32 32
+clip 320 320 32 32
+rect 320 320 32 32 0
+rect 320 320 1 32 5
+rect 320 320 32 1 5
+rect 351 320 1 32 6
+rect 320 351 32 1 6
+rect 351 320 1 2 6
+rect 320 351 2 1 6
+unclip
+update 320 320 32 32
+update 0 0 384 384
+end_draw

@@ -1,0 +1,97 @@
+traceSchema 1
+game "Mosaic"
+id "3x3:4b47d"
+params "3x3"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 128 128
+palette 800,800,800 580,769,745 0,400,388 78,78,78 925,925,925 392,392,392 1000,0,0 1000,784,784
+changed_state false false
+start_draw
+rect 0 0 128 128 0
+clip 14 14 32 32
+rect 14 14 32 1 2
+rect 14 14 1 32 2
+rect 15 15 31 31 1
+text 31 31 1 19 257 3 "4"
+unclip
+update 14 14 32 32
+clip 46 14 32 32
+rect 46 14 32 1 2
+rect 46 14 1 32 2
+rect 47 15 31 31 1
+unclip
+update 46 14 32 32
+clip 78 14 32 32
+rect 78 14 32 1 2
+rect 78 14 1 32 2
+rect 79 15 31 31 1
+unclip
+update 78 14 32 32
+clip 110 14 32 32
+rect 110 14 1 32 2
+unclip
+update 110 14 32 32
+clip 14 46 32 32
+rect 14 46 32 1 2
+rect 14 46 1 32 2
+rect 15 47 31 31 1
+text 31 63 1 19 257 3 "4"
+unclip
+update 14 46 32 32
+clip 46 46 32 32
+rect 46 46 32 1 2
+rect 46 46 1 32 2
+rect 47 47 31 31 1
+text 63 63 1 19 257 3 "7"
+unclip
+update 46 46 32 32
+clip 78 46 32 32
+rect 78 46 32 1 2
+rect 78 46 1 32 2
+rect 79 47 31 31 1
+unclip
+update 78 46 32 32
+clip 110 46 32 32
+rect 110 46 1 32 2
+unclip
+update 110 46 32 32
+clip 14 78 32 32
+rect 14 78 32 1 2
+rect 14 78 1 32 2
+rect 15 79 31 31 1
+unclip
+update 14 78 32 32
+clip 46 78 32 32
+rect 46 78 32 1 2
+rect 46 78 1 32 2
+rect 47 79 31 31 1
+unclip
+update 46 78 32 32
+clip 78 78 32 32
+rect 78 78 32 1 2
+rect 78 78 1 32 2
+rect 79 79 31 31 1
+unclip
+update 78 78 32 32
+clip 110 78 32 32
+rect 110 78 1 32 2
+unclip
+update 110 78 32 32
+clip 14 110 32 32
+rect 14 110 32 1 2
+unclip
+update 14 110 32 32
+clip 46 110 32 32
+rect 46 110 32 1 2
+unclip
+update 46 110 32 32
+clip 78 110 32 32
+rect 78 110 32 1 2
+unclip
+update 78 110 32 32
+clip 110 110 32 32
+unclip
+update 110 110 32 32
+status "Clues left: 3"
+update 0 0 128 128
+end_draw

@@ -22,17 +22,16 @@ class TraceRecorderTest {
 
         for (game in games) {
             val params = oracle.presets(game).firstOrNull()?.params ?: ""
-            val state = oracle.newGame(game, params, GenTraces.SEED)
-            val trace = oracle.trace(state.state)
+            val trace = oracle.traceNew(game, params, GenTraces.SEED)
             val text = TraceNormalizer.normalize(trace)
 
             assertTrue("$game '$params': no start_draw", text.contains("start_draw"))
             assertTrue("$game '$params': no end_draw", text.contains("end_draw"))
             assertTrue("$game '$params': no operations", text.lines().size > 6)
 
-            // The same state must record the same trace.
+            // The same game, params, and seed must record the same trace.
             assertEquals("$game '$params' is not deterministic", text,
-                TraceNormalizer.normalize(oracle.trace(state.state)))
+                TraceNormalizer.normalize(oracle.traceNew(game, params, GenTraces.SEED)))
         }
     }
 }

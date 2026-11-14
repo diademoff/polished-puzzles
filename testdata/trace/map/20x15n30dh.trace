@@ -1,0 +1,1576 @@
+traceSchema 1
+game "Map"
+id "20x15n30:dafdqccacdeabaacbaaaebbadcabecaaabdaddbahababcbcbadbababcbdadfbccaaaeacbbabbbafaaacafabadacaaabaaaaabagabbdaebcacdcaaaaacdcaiaaabdaddbdbcaeebegaaamabceacabahcaaaebafafabaacfcaaaadaaacbebaabaadadfbgagedcaacbcbcaeaabkdc,3b21e1b1c0a3b2a031a12"
+params "20x15n30dh"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 441 341
+palette 800,800,800 0,0,0 627,157,133 290,698,290 322,690,788 710,698,98 1000,0,0 1000,1000,1000 0,0,0
+changed_state false false
+blitter_new 1 23 23
+start_draw
+rect 0 0 441 341 0
+rect 20 20 401 301 1
+update 20 20 401 301
+clip 20 20 20 20
+rect 20 20 20 20 5
+rect 20 20 1 20 1
+rect 20 20 20 1 1
+rect 20 20 1 1 1
+unclip
+update 20 20 20 20
+clip 40 20 20 20
+rect 40 20 20 20 5
+rect 40 20 20 1 1
+rect 40 20 1 1 1
+unclip
+update 40 20 20 20
+clip 60 20 20 20
+rect 60 20 20 20 5
+rect 60 20 20 1 1
+rect 60 20 1 1 1
+unclip
+update 60 20 20 20
+clip 80 20 20 20
+rect 80 20 20 20 0
+rect 80 20 1 20 1
+rect 80 20 20 1 1
+rect 80 20 1 1 1
+unclip
+update 80 20 20 20
+clip 100 20 20 20
+rect 100 20 20 20 0
+rect 100 20 20 1 1
+rect 100 20 1 1 1
+unclip
+update 100 20 20 20
+clip 120 20 20 20
+rect 120 20 20 20 0
+rect 120 20 20 1 1
+rect 120 20 1 1 1
+unclip
+update 120 20 20 20
+clip 140 20 20 20
+rect 140 20 20 20 0
+rect 140 20 20 1 1
+rect 140 20 1 1 1
+unclip
+update 140 20 20 20
+clip 160 20 20 20
+rect 160 20 20 20 0
+rect 160 20 20 1 1
+rect 160 20 1 1 1
+unclip
+update 160 20 20 20
+clip 180 20 20 20
+rect 180 20 20 20 0
+rect 180 20 20 1 1
+rect 180 20 1 1 1
+unclip
+update 180 20 20 20
+clip 200 20 20 20
+rect 200 20 20 20 0
+rect 200 20 20 1 1
+rect 200 20 1 1 1
+unclip
+update 200 20 20 20
+clip 220 20 20 20
+rect 220 20 20 20 0
+rect 220 20 1 20 1
+rect 220 20 20 1 1
+rect 220 20 1 1 1
+unclip
+update 220 20 20 20
+clip 240 20 20 20
+rect 240 20 20 20 0
+rect 240 20 20 1 1
+rect 240 20 1 1 1
+unclip
+update 240 20 20 20
+clip 260 20 20 20
+rect 260 20 20 20 0
+rect 260 20 20 1 1
+rect 260 20 1 1 1
+unclip
+update 260 20 20 20
+clip 280 20 20 20
+rect 280 20 20 20 0
+rect 280 20 20 1 1
+rect 280 20 1 1 1
+unclip
+update 280 20 20 20
+clip 300 20 20 20
+rect 300 20 20 20 0
+rect 300 20 20 1 1
+rect 300 20 1 1 1
+unclip
+update 300 20 20 20
+clip 320 20 20 20
+rect 320 20 20 20 0
+rect 320 20 20 1 1
+rect 320 20 1 1 1
+unclip
+update 320 20 20 20
+clip 340 20 20 20
+rect 340 20 20 20 0
+rect 340 20 20 1 1
+rect 340 20 1 1 1
+unclip
+update 340 20 20 20
+clip 360 20 20 20
+rect 360 20 20 20 4
+rect 360 20 1 20 1
+rect 360 20 20 1 1
+rect 360 20 1 1 1
+unclip
+update 360 20 20 20
+clip 380 20 20 20
+rect 380 20 20 20 4
+rect 380 20 20 1 1
+rect 380 20 1 1 1
+unclip
+update 380 20 20 20
+clip 400 20 20 20
+rect 400 20 20 20 4
+rect 400 20 20 1 1
+rect 400 20 1 1 1
+unclip
+update 400 20 20 20
+clip 20 40 20 20
+rect 20 40 20 20 5
+rect 20 40 1 20 1
+rect 20 40 1 1 1
+unclip
+update 20 40 20 20
+clip 40 40 20 20
+rect 40 40 20 20 5
+unclip
+update 40 40 20 20
+clip 60 40 20 20
+rect 60 40 20 20 5
+unclip
+update 60 40 20 20
+clip 80 40 20 20
+rect 80 40 20 20 0
+poly 5 1 3 79 61 79 39 101 61
+rect 80 40 1 1 1
+unclip
+update 80 40 20 20
+clip 100 40 20 20
+rect 100 40 20 20 0
+unclip
+update 100 40 20 20
+clip 120 40 20 20
+rect 120 40 20 20 0
+unclip
+update 120 40 20 20
+clip 140 40 20 20
+rect 140 40 20 20 0
+unclip
+update 140 40 20 20
+clip 160 40 20 20
+rect 160 40 20 20 0
+unclip
+update 160 40 20 20
+clip 180 40 20 20
+rect 180 40 20 20 0
+unclip
+update 180 40 20 20
+clip 200 40 20 20
+rect 200 40 20 20 0
+unclip
+update 200 40 20 20
+clip 220 40 20 20
+rect 220 40 20 20 0
+rect 220 40 20 1 1
+unclip
+update 220 40 20 20
+clip 240 40 20 20
+rect 240 40 20 20 0
+rect 240 40 20 1 1
+rect 240 40 1 1 1
+unclip
+update 240 40 20 20
+clip 260 40 20 20
+rect 260 40 20 20 3
+rect 260 40 1 20 1
+rect 260 40 20 1 1
+rect 260 40 1 1 1
+unclip
+update 260 40 20 20
+clip 280 40 20 20
+rect 280 40 20 20 3
+rect 280 40 20 1 1
+rect 280 40 1 1 1
+unclip
+update 280 40 20 20
+clip 300 40 20 20
+rect 300 40 20 20 0
+rect 300 40 1 20 1
+unclip
+update 300 40 20 20
+clip 320 40 20 20
+rect 320 40 20 20 0
+unclip
+update 320 40 20 20
+clip 340 40 20 20
+rect 340 40 20 20 0
+unclip
+update 340 40 20 20
+clip 360 40 20 20
+rect 360 40 20 20 4
+poly 0 1 3 359 61 359 39 381 61
+rect 360 40 1 1 1
+unclip
+update 360 40 20 20
+clip 380 40 20 20
+rect 380 40 20 20 4
+unclip
+update 380 40 20 20
+clip 400 40 20 20
+rect 400 40 20 20 4
+unclip
+update 400 40 20 20
+clip 20 60 20 20
+rect 20 60 20 20 5
+rect 20 60 1 20 1
+rect 20 60 1 1 1
+unclip
+update 20 60 20 20
+clip 40 60 20 20
+rect 40 60 20 20 5
+unclip
+update 40 60 20 20
+clip 60 60 20 20
+rect 60 60 20 20 5
+unclip
+update 60 60 20 20
+clip 80 60 20 20
+rect 80 60 20 20 5
+unclip
+update 80 60 20 20
+clip 100 60 20 20
+rect 100 60 20 20 0
+rect 100 60 1 20 1
+rect 100 60 1 1 1
+unclip
+update 100 60 20 20
+clip 120 60 20 20
+rect 120 60 20 20 0
+unclip
+update 120 60 20 20
+clip 140 60 20 20
+rect 140 60 20 20 0
+unclip
+update 140 60 20 20
+clip 160 60 20 20
+rect 160 60 20 20 0
+unclip
+update 160 60 20 20
+clip 180 60 20 20
+rect 180 60 20 20 0
+unclip
+update 180 60 20 20
+clip 200 60 20 20
+rect 200 60 20 20 0
+unclip
+update 200 60 20 20
+clip 220 60 20 20
+rect 220 60 20 20 0
+poly 0 1 3 219 81 241 59 241 81
+unclip
+update 220 60 20 20
+clip 240 60 20 20
+rect 240 60 20 20 0
+rect 240 60 20 1 1
+rect 240 60 1 1 1
+unclip
+update 240 60 20 20
+clip 260 60 20 20
+rect 260 60 20 20 0
+rect 260 60 1 20 1
+rect 260 60 20 1 1
+rect 260 60 1 1 1
+unclip
+update 260 60 20 20
+clip 280 60 20 20
+rect 280 60 20 20 0
+rect 280 60 20 1 1
+rect 280 60 1 1 1
+unclip
+update 280 60 20 20
+clip 300 60 20 20
+rect 300 60 20 20 0
+rect 300 60 1 1 1
+unclip
+update 300 60 20 20
+clip 320 60 20 20
+rect 320 60 20 20 0
+unclip
+update 320 60 20 20
+clip 340 60 20 20
+rect 340 60 20 20 0
+unclip
+update 340 60 20 20
+clip 360 60 20 20
+rect 360 60 20 20 0
+poly 4 1 3 359 81 381 59 381 81
+unclip
+update 360 60 20 20
+clip 380 60 20 20
+rect 380 60 20 20 4
+rect 380 60 1 1 1
+unclip
+update 380 60 20 20
+clip 400 60 20 20
+rect 400 60 20 20 4
+unclip
+update 400 60 20 20
+clip 20 80 20 20
+rect 20 80 20 20 5
+rect 20 80 1 20 1
+rect 20 80 1 1 1
+unclip
+update 20 80 20 20
+clip 40 80 20 20
+rect 40 80 20 20 0
+rect 40 80 1 20 1
+rect 40 80 20 1 1
+rect 40 80 1 1 1
+unclip
+update 40 80 20 20
+clip 60 80 20 20
+rect 60 80 20 20 0
+rect 60 80 1 20 1
+rect 60 80 20 1 1
+rect 60 80 1 1 1
+unclip
+update 60 80 20 20
+clip 80 80 20 20
+rect 80 80 20 20 0
+rect 80 80 1 20 1
+rect 80 80 20 1 1
+rect 80 80 1 1 1
+unclip
+update 80 80 20 20
+clip 100 80 20 20
+rect 100 80 20 20 0
+poly 0 1 3 99 101 99 79 121 101
+rect 100 80 1 1 1
+unclip
+update 100 80 20 20
+clip 120 80 20 20
+rect 120 80 20 20 0
+unclip
+update 120 80 20 20
+clip 140 80 20 20
+rect 140 80 20 20 0
+unclip
+update 140 80 20 20
+clip 160 80 20 20
+rect 160 80 20 20 0
+unclip
+update 160 80 20 20
+clip 180 80 20 20
+rect 180 80 20 20 0
+unclip
+update 180 80 20 20
+clip 200 80 20 20
+rect 200 80 20 20 0
+poly 0 1 3 199 101 221 79 221 101
+unclip
+update 200 80 20 20
+clip 220 80 20 20
+rect 220 80 20 20 0
+rect 220 80 1 1 1
+unclip
+update 220 80 20 20
+clip 240 80 20 20
+rect 240 80 20 20 0
+unclip
+update 240 80 20 20
+clip 260 80 20 20
+rect 260 80 20 20 0
+rect 260 80 1 20 1
+rect 260 80 1 1 1
+unclip
+update 260 80 20 20
+clip 280 80 20 20
+rect 280 80 20 20 0
+rect 280 80 1 20 1
+rect 280 80 20 1 1
+rect 280 80 1 1 1
+unclip
+update 280 80 20 20
+clip 300 80 20 20
+rect 300 80 20 20 0
+rect 300 80 1 20 1
+unclip
+update 300 80 20 20
+clip 320 80 20 20
+rect 320 80 20 20 0
+poly 3 1 3 319 101 341 79 341 101
+unclip
+update 320 80 20 20
+clip 340 80 20 20
+rect 340 80 20 20 3
+rect 340 80 20 1 1
+rect 340 80 1 1 1
+unclip
+update 340 80 20 20
+clip 360 80 20 20
+rect 360 80 20 20 4
+poly 3 1 3 359 101 359 79 381 101
+rect 360 80 1 1 1
+unclip
+update 360 80 20 20
+clip 380 80 20 20
+rect 380 80 20 20 4
+unclip
+update 380 80 20 20
+clip 400 80 20 20
+rect 400 80 20 20 4
+unclip
+update 400 80 20 20
+clip 20 100 20 20
+rect 20 100 20 20 0
+rect 20 100 1 20 1
+rect 20 100 20 1 1
+rect 20 100 1 1 1
+unclip
+update 20 100 20 20
+clip 40 100 20 20
+rect 40 100 20 20 0
+rect 40 100 1 1 1
+unclip
+update 40 100 20 20
+clip 60 100 20 20
+rect 60 100 20 20 0
+rect 60 100 20 1 1
+unclip
+update 60 100 20 20
+clip 80 100 20 20
+rect 80 100 20 20 0
+rect 80 100 1 20 1
+rect 80 100 1 1 1
+unclip
+update 80 100 20 20
+clip 100 100 20 20
+rect 100 100 20 20 0
+unclip
+update 100 100 20 20
+clip 120 100 20 20
+rect 120 100 20 20 0
+rect 120 100 1 20 1
+rect 120 100 1 1 1
+unclip
+update 120 100 20 20
+clip 140 100 20 20
+rect 140 100 20 20 0
+unclip
+update 140 100 20 20
+clip 160 100 20 20
+rect 160 100 20 20 0
+unclip
+update 160 100 20 20
+clip 180 100 20 20
+rect 180 100 20 20 0
+rect 180 100 1 20 1
+rect 180 100 20 1 1
+rect 180 100 1 1 1
+unclip
+update 180 100 20 20
+clip 200 100 20 20
+rect 200 100 20 20 0
+rect 200 100 1 1 1
+unclip
+update 200 100 20 20
+clip 220 100 20 20
+rect 220 100 20 20 0
+unclip
+update 220 100 20 20
+clip 240 100 20 20
+rect 240 100 20 20 0
+unclip
+update 240 100 20 20
+clip 260 100 20 20
+rect 260 100 20 20 0
+rect 260 100 20 1 1
+unclip
+update 260 100 20 20
+clip 280 100 20 20
+rect 280 100 20 20 0
+rect 280 100 1 20 1
+rect 280 100 1 1 1
+unclip
+update 280 100 20 20
+clip 300 100 20 20
+rect 300 100 20 20 0
+rect 300 100 1 20 1
+rect 300 100 1 1 1
+unclip
+update 300 100 20 20
+clip 320 100 20 20
+rect 320 100 20 20 3
+rect 320 100 1 20 1
+rect 320 100 1 1 1
+unclip
+update 320 100 20 20
+clip 340 100 20 20
+rect 340 100 20 20 3
+unclip
+update 340 100 20 20
+clip 360 100 20 20
+rect 360 100 20 20 3
+unclip
+update 360 100 20 20
+clip 380 100 20 20
+rect 380 100 20 20 3
+rect 380 100 20 1 1
+rect 380 100 1 1 1
+unclip
+update 380 100 20 20
+clip 400 100 20 20
+rect 400 100 20 20 3
+rect 400 100 20 1 1
+rect 400 100 1 1 1
+unclip
+update 400 100 20 20
+clip 20 120 20 20
+rect 20 120 20 20 0
+rect 20 120 1 20 1
+rect 20 120 1 1 1
+unclip
+update 20 120 20 20
+clip 40 120 20 20
+rect 40 120 20 20 0
+poly 0 1 3 39 141 61 119 61 141
+unclip
+update 40 120 20 20
+clip 60 120 20 20
+rect 60 120 20 20 0
+rect 60 120 20 1 1
+rect 60 120 1 1 1
+unclip
+update 60 120 20 20
+clip 80 120 20 20
+rect 80 120 20 20 0
+rect 80 120 1 20 1
+rect 80 120 1 1 1
+unclip
+update 80 120 20 20
+clip 100 120 20 20
+rect 100 120 20 20 0
+unclip
+update 100 120 20 20
+clip 120 120 20 20
+rect 120 120 20 20 0
+rect 120 120 1 20 1
+rect 120 120 1 1 1
+unclip
+update 120 120 20 20
+clip 140 120 20 20
+rect 140 120 20 20 0
+unclip
+update 140 120 20 20
+clip 160 120 20 20
+rect 160 120 20 20 0
+unclip
+update 160 120 20 20
+clip 180 120 20 20
+rect 180 120 20 20 0
+rect 180 120 20 1 1
+unclip
+update 180 120 20 20
+clip 200 120 20 20
+rect 200 120 20 20 0
+rect 200 120 1 20 1
+rect 200 120 20 1 1
+rect 200 120 1 1 1
+unclip
+update 200 120 20 20
+clip 220 120 20 20
+rect 220 120 20 20 0
+rect 220 120 20 1 1
+rect 220 120 1 1 1
+unclip
+update 220 120 20 20
+clip 240 120 20 20
+rect 240 120 20 20 0
+poly 0 1 3 239 141 239 119 261 141
+rect 240 120 1 1 1
+unclip
+update 240 120 20 20
+clip 260 120 20 20
+rect 260 120 20 20 0
+poly 0 1 3 259 141 281 119 281 141
+unclip
+update 260 120 20 20
+clip 280 120 20 20
+rect 280 120 20 20 0
+rect 280 120 1 1 1
+unclip
+update 280 120 20 20
+clip 300 120 20 20
+rect 300 120 20 20 0
+rect 300 120 1 20 1
+rect 300 120 20 1 1
+rect 300 120 1 1 1
+unclip
+update 300 120 20 20
+clip 320 120 20 20
+rect 320 120 20 20 3
+poly 0 1 3 319 141 319 119 341 141
+rect 320 120 1 1 1
+unclip
+update 320 120 20 20
+clip 340 120 20 20
+rect 340 120 20 20 3
+unclip
+update 340 120 20 20
+clip 360 120 20 20
+rect 360 120 20 20 3
+unclip
+update 360 120 20 20
+clip 380 120 20 20
+rect 380 120 20 20 3
+unclip
+update 380 120 20 20
+clip 400 120 20 20
+rect 400 120 20 20 3
+unclip
+update 400 120 20 20
+clip 20 140 20 20
+rect 20 140 20 20 0
+rect 20 140 1 20 1
+rect 20 140 20 1 1
+rect 20 140 1 1 1
+unclip
+update 20 140 20 20
+clip 40 140 20 20
+rect 40 140 20 20 0
+rect 40 140 1 1 1
+unclip
+update 40 140 20 20
+clip 60 140 20 20
+rect 60 140 20 20 0
+unclip
+update 60 140 20 20
+clip 80 140 20 20
+rect 80 140 20 20 0
+poly 0 1 3 79 161 79 139 101 161
+rect 80 140 1 1 1
+unclip
+update 80 140 20 20
+clip 100 140 20 20
+rect 100 140 20 20 0
+unclip
+update 100 140 20 20
+clip 120 140 20 20
+rect 120 140 20 20 3
+rect 120 140 1 20 1
+rect 120 140 20 1 1
+rect 120 140 1 1 1
+unclip
+update 120 140 20 20
+clip 140 140 20 20
+rect 140 140 20 20 3
+rect 140 140 20 1 1
+rect 140 140 1 1 1
+unclip
+update 140 140 20 20
+clip 160 140 20 20
+rect 160 140 20 20 3
+rect 160 140 20 1 1
+rect 160 140 1 1 1
+unclip
+update 160 140 20 20
+clip 180 140 20 20
+rect 180 140 20 20 3
+rect 180 140 20 1 1
+rect 180 140 1 1 1
+unclip
+update 180 140 20 20
+clip 200 140 20 20
+rect 200 140 20 20 0
+rect 200 140 1 20 1
+rect 200 140 1 1 1
+unclip
+update 200 140 20 20
+clip 220 140 20 20
+rect 220 140 20 20 0
+unclip
+update 220 140 20 20
+clip 240 140 20 20
+rect 240 140 20 20 0
+unclip
+update 240 140 20 20
+clip 260 140 20 20
+rect 260 140 20 20 0
+rect 260 140 1 1 1
+unclip
+update 260 140 20 20
+clip 280 140 20 20
+rect 280 140 20 20 0
+poly 0 1 3 279 161 301 139 301 161
+unclip
+update 280 140 20 20
+clip 300 140 20 20
+rect 300 140 20 20 0
+rect 300 140 1 1 1
+unclip
+update 300 140 20 20
+clip 320 140 20 20
+rect 320 140 20 20 0
+unclip
+update 320 140 20 20
+clip 340 140 20 20
+rect 340 140 20 20 3
+rect 340 140 1 20 1
+rect 340 140 1 1 1
+unclip
+update 340 140 20 20
+clip 360 140 20 20
+rect 360 140 20 20 3
+unclip
+update 360 140 20 20
+clip 380 140 20 20
+rect 380 140 20 20 3
+unclip
+update 380 140 20 20
+clip 400 140 20 20
+rect 400 140 20 20 3
+unclip
+update 400 140 20 20
+clip 20 160 20 20
+rect 20 160 20 20 0
+rect 20 160 1 20 1
+rect 20 160 20 1 1
+rect 20 160 1 1 1
+unclip
+update 20 160 20 20
+clip 40 160 20 20
+rect 40 160 20 20 0
+poly 0 1 3 39 181 39 159 61 181
+rect 40 160 1 1 1
+unclip
+update 40 160 20 20
+clip 60 160 20 20
+rect 60 160 20 20 0
+unclip
+update 60 160 20 20
+clip 80 160 20 20
+rect 80 160 20 20 0
+unclip
+update 80 160 20 20
+clip 100 160 20 20
+rect 100 160 20 20 0
+rect 100 160 1 20 1
+rect 100 160 1 1 1
+unclip
+update 100 160 20 20
+clip 120 160 20 20
+rect 120 160 20 20 3
+rect 120 160 1 20 1
+rect 120 160 1 1 1
+unclip
+update 120 160 20 20
+clip 140 160 20 20
+rect 140 160 20 20 3
+poly 0 1 3 139 181 161 159 161 181
+unclip
+update 140 160 20 20
+clip 160 160 20 20
+rect 160 160 20 20 0
+rect 160 160 20 1 1
+rect 160 160 1 1 1
+unclip
+update 160 160 20 20
+clip 180 160 20 20
+rect 180 160 20 20 0
+rect 180 160 20 1 1
+rect 180 160 1 1 1
+unclip
+update 180 160 20 20
+clip 200 160 20 20
+rect 200 160 20 20 0
+rect 200 160 1 20 1
+rect 200 160 1 1 1
+unclip
+update 200 160 20 20
+clip 220 160 20 20
+rect 220 160 20 20 0
+unclip
+update 220 160 20 20
+clip 240 160 20 20
+rect 240 160 20 20 0
+rect 240 160 1 20 1
+rect 240 160 20 1 1
+rect 240 160 1 1 1
+unclip
+update 240 160 20 20
+clip 260 160 20 20
+rect 260 160 20 20 0
+rect 260 160 1 20 1
+rect 260 160 20 1 1
+rect 260 160 1 1 1
+unclip
+update 260 160 20 20
+clip 280 160 20 20
+rect 280 160 20 20 0
+rect 280 160 1 1 1
+unclip
+update 280 160 20 20
+clip 300 160 20 20
+rect 300 160 20 20 0
+unclip
+update 300 160 20 20
+clip 320 160 20 20
+rect 320 160 20 20 0
+unclip
+update 320 160 20 20
+clip 340 160 20 20
+rect 340 160 20 20 2
+rect 340 160 1 20 1
+rect 340 160 20 1 1
+rect 340 160 1 1 1
+unclip
+update 340 160 20 20
+clip 360 160 20 20
+rect 360 160 20 20 3
+rect 360 160 1 20 1
+unclip
+update 360 160 20 20
+clip 380 160 20 20
+rect 380 160 20 20 3
+unclip
+update 380 160 20 20
+clip 400 160 20 20
+rect 400 160 20 20 3
+unclip
+update 400 160 20 20
+clip 20 180 20 20
+rect 20 180 20 20 0
+rect 20 180 1 20 1
+rect 20 180 1 1 1
+unclip
+update 20 180 20 20
+clip 40 180 20 20
+rect 40 180 20 20 0
+unclip
+update 40 180 20 20
+clip 60 180 20 20
+rect 60 180 20 20 0
+poly 0 1 3 59 201 59 179 81 201
+unclip
+update 60 180 20 20
+clip 80 180 20 20
+rect 80 180 20 20 0
+unclip
+update 80 180 20 20
+clip 100 180 20 20
+rect 100 180 20 20 0
+rect 100 180 1 20 1
+rect 100 180 20 1 1
+rect 100 180 1 1 1
+unclip
+update 100 180 20 20
+clip 120 180 20 20
+rect 120 180 20 20 0
+rect 120 180 20 1 1
+rect 120 180 1 1 1
+unclip
+update 120 180 20 20
+clip 140 180 20 20
+rect 140 180 20 20 0
+rect 140 180 1 1 1
+unclip
+update 140 180 20 20
+clip 160 180 20 20
+rect 160 180 20 20 0
+rect 160 180 1 20 1
+rect 160 180 20 1 1
+rect 160 180 1 1 1
+unclip
+update 160 180 20 20
+clip 180 180 20 20
+rect 180 180 20 20 0
+rect 180 180 1 20 1
+rect 180 180 20 1 1
+rect 180 180 1 1 1
+unclip
+update 180 180 20 20
+clip 200 180 20 20
+rect 200 180 20 20 0
+rect 200 180 1 1 1
+unclip
+update 200 180 20 20
+clip 220 180 20 20
+rect 220 180 20 20 0
+unclip
+update 220 180 20 20
+clip 240 180 20 20
+rect 240 180 20 20 0
+rect 240 180 1 20 1
+rect 240 180 1 1 1
+unclip
+update 240 180 20 20
+clip 260 180 20 20
+rect 260 180 20 20 0
+rect 260 180 20 1 1
+unclip
+update 260 180 20 20
+clip 280 180 20 20
+rect 280 180 20 20 0
+rect 280 180 20 1 1
+rect 280 180 1 1 1
+unclip
+update 280 180 20 20
+clip 300 180 20 20
+rect 300 180 20 20 0
+rect 300 180 1 20 1
+unclip
+update 300 180 20 20
+clip 320 180 20 20
+rect 320 180 20 20 0
+unclip
+update 320 180 20 20
+clip 340 180 20 20
+rect 340 180 20 20 2
+rect 340 180 1 20 1
+rect 340 180 1 1 1
+unclip
+update 340 180 20 20
+clip 360 180 20 20
+rect 360 180 20 20 3
+rect 360 180 1 20 1
+rect 360 180 1 1 1
+unclip
+update 360 180 20 20
+clip 380 180 20 20
+rect 380 180 20 20 2
+rect 380 180 1 20 1
+rect 380 180 20 1 1
+rect 380 180 1 1 1
+unclip
+update 380 180 20 20
+clip 400 180 20 20
+rect 400 180 20 20 3
+rect 400 180 1 20 1
+unclip
+update 400 180 20 20
+clip 20 200 20 20
+rect 20 200 20 20 0
+rect 20 200 1 20 1
+rect 20 200 1 1 1
+unclip
+update 20 200 20 20
+clip 40 200 20 20
+rect 40 200 20 20 0
+unclip
+update 40 200 20 20
+clip 60 200 20 20
+rect 60 200 20 20 0
+unclip
+update 60 200 20 20
+clip 80 200 20 20
+rect 80 200 20 20 5
+rect 80 200 1 20 1
+rect 80 200 20 1 1
+rect 80 200 1 1 1
+unclip
+update 80 200 20 20
+clip 100 200 20 20
+rect 100 200 20 20 5
+rect 100 200 20 1 1
+rect 100 200 1 1 1
+unclip
+update 100 200 20 20
+clip 120 200 20 20
+rect 120 200 20 20 5
+rect 120 200 20 1 1
+rect 120 200 1 1 1
+unclip
+update 120 200 20 20
+clip 140 200 20 20
+rect 140 200 20 20 0
+rect 140 200 1 20 1
+rect 140 200 20 1 1
+rect 140 200 1 1 1
+unclip
+update 140 200 20 20
+clip 160 200 20 20
+rect 160 200 20 20 0
+rect 160 200 20 1 1
+rect 160 200 1 1 1
+unclip
+update 160 200 20 20
+clip 180 200 20 20
+rect 180 200 20 20 0
+poly 0 1 3 179 221 179 199 201 221
+rect 180 200 1 1 1
+unclip
+update 180 200 20 20
+clip 200 200 20 20
+rect 200 200 20 20 0
+unclip
+update 200 200 20 20
+clip 220 200 20 20
+rect 220 200 20 20 0
+poly 0 1 3 219 221 241 199 241 221
+unclip
+update 220 200 20 20
+clip 240 200 20 20
+rect 240 200 20 20 0
+rect 240 200 20 1 1
+rect 240 200 1 1 1
+unclip
+update 240 200 20 20
+clip 260 200 20 20
+rect 260 200 20 20 0
+rect 260 200 20 1 1
+rect 260 200 1 1 1
+unclip
+update 260 200 20 20
+clip 280 200 20 20
+rect 280 200 20 20 0
+rect 280 200 20 1 1
+rect 280 200 1 1 1
+unclip
+update 280 200 20 20
+clip 300 200 20 20
+rect 300 200 20 20 0
+rect 300 200 1 20 1
+rect 300 200 1 1 1
+unclip
+update 300 200 20 20
+clip 320 200 20 20
+rect 320 200 20 20 0
+unclip
+update 320 200 20 20
+clip 340 200 20 20
+rect 340 200 20 20 2
+poly 0 1 3 339 221 339 199 361 221
+rect 340 200 1 1 1
+unclip
+update 340 200 20 20
+clip 360 200 20 20
+rect 360 200 20 20 2
+rect 360 200 20 1 1
+unclip
+update 360 200 20 20
+clip 380 200 20 20
+rect 380 200 20 20 2
+rect 380 200 1 1 1
+unclip
+update 380 200 20 20
+clip 400 200 20 20
+rect 400 200 20 20 4
+rect 400 200 1 20 1
+rect 400 200 20 1 1
+rect 400 200 1 1 1
+unclip
+update 400 200 20 20
+clip 20 220 20 20
+rect 20 220 20 20 0
+rect 20 220 1 20 1
+rect 20 220 1 1 1
+unclip
+update 20 220 20 20
+clip 40 220 20 20
+rect 40 220 20 20 0
+unclip
+update 40 220 20 20
+clip 60 220 20 20
+rect 60 220 20 20 0
+unclip
+update 60 220 20 20
+clip 80 220 20 20
+rect 80 220 20 20 5
+rect 80 220 1 20 1
+rect 80 220 1 1 1
+unclip
+update 80 220 20 20
+clip 100 220 20 20
+rect 100 220 20 20 5
+unclip
+update 100 220 20 20
+clip 120 220 20 20
+rect 120 220 20 20 5
+poly 0 1 3 119 241 141 219 141 241
+unclip
+update 120 220 20 20
+clip 140 220 20 20
+rect 140 220 20 20 0
+rect 140 220 1 1 1
+unclip
+update 140 220 20 20
+clip 160 220 20 20
+rect 160 220 20 20 0
+unclip
+update 160 220 20 20
+clip 180 220 20 20
+rect 180 220 20 20 0
+unclip
+update 180 220 20 20
+clip 200 220 20 20
+rect 200 220 20 20 0
+rect 200 220 20 1 1
+rect 200 220 1 1 1
+unclip
+update 200 220 20 20
+clip 220 220 20 20
+rect 220 220 20 20 0
+rect 220 220 1 20 1
+rect 220 220 1 1 1
+unclip
+update 220 220 20 20
+clip 240 220 20 20
+rect 240 220 20 20 0
+unclip
+update 240 220 20 20
+clip 260 220 20 20
+rect 260 220 20 20 0
+unclip
+update 260 220 20 20
+clip 280 220 20 20
+rect 280 220 20 20 0
+rect 280 220 1 20 1
+rect 280 220 20 1 1
+rect 280 220 1 1 1
+unclip
+update 280 220 20 20
+clip 300 220 20 20
+rect 300 220 20 20 0
+rect 300 220 1 20 1
+rect 300 220 1 1 1
+unclip
+update 300 220 20 20
+clip 320 220 20 20
+rect 320 220 20 20 0
+unclip
+update 320 220 20 20
+clip 340 220 20 20
+rect 340 220 20 20 0
+unclip
+update 340 220 20 20
+clip 360 220 20 20
+rect 360 220 20 20 2
+poly 0 1 3 359 241 359 219 381 241
+unclip
+update 360 220 20 20
+clip 380 220 20 20
+rect 380 220 20 20 2
+unclip
+update 380 220 20 20
+clip 400 220 20 20
+rect 400 220 20 20 4
+rect 400 220 1 20 1
+rect 400 220 1 1 1
+unclip
+update 400 220 20 20
+clip 20 240 20 20
+rect 20 240 20 20 2
+rect 20 240 1 20 1
+rect 20 240 20 1 1
+rect 20 240 1 1 1
+unclip
+update 20 240 20 20
+clip 40 240 20 20
+rect 40 240 20 20 0
+rect 40 240 1 20 1
+unclip
+update 40 240 20 20
+clip 60 240 20 20
+rect 60 240 20 20 0
+unclip
+update 60 240 20 20
+clip 80 240 20 20
+rect 80 240 20 20 5
+rect 80 240 1 20 1
+rect 80 240 1 1 1
+unclip
+update 80 240 20 20
+clip 100 240 20 20
+rect 100 240 20 20 5
+unclip
+update 100 240 20 20
+clip 120 240 20 20
+rect 120 240 20 20 0
+rect 120 240 1 20 1
+rect 120 240 1 1 1
+unclip
+update 120 240 20 20
+clip 140 240 20 20
+rect 140 240 20 20 0
+unclip
+update 140 240 20 20
+clip 160 240 20 20
+rect 160 240 20 20 0
+poly 5 1 3 159 261 181 239 181 261
+unclip
+update 160 240 20 20
+clip 180 240 20 20
+rect 180 240 20 20 0
+poly 5 1 3 179 261 179 239 201 261
+rect 180 240 1 1 1
+unclip
+update 180 240 20 20
+clip 200 240 20 20
+rect 200 240 20 20 0
+poly 0 1 3 199 261 221 239 221 261
+unclip
+update 200 240 20 20
+clip 220 240 20 20
+rect 220 240 20 20 0
+rect 220 240 1 1 1
+unclip
+update 220 240 20 20
+clip 240 240 20 20
+rect 240 240 20 20 0
+unclip
+update 240 240 20 20
+clip 260 240 20 20
+rect 260 240 20 20 0
+poly 3 1 3 259 261 281 239 281 261
+unclip
+update 260 240 20 20
+clip 280 240 20 20
+rect 280 240 20 20 3
+rect 280 240 20 1 1
+rect 280 240 1 1 1
+unclip
+update 280 240 20 20
+clip 300 240 20 20
+rect 300 240 20 20 0
+poly 3 1 3 299 261 299 239 321 261
+rect 300 240 1 1 1
+unclip
+update 300 240 20 20
+clip 320 240 20 20
+rect 320 240 20 20 0
+unclip
+update 320 240 20 20
+clip 340 240 20 20
+rect 340 240 20 20 0
+unclip
+update 340 240 20 20
+clip 360 240 20 20
+rect 360 240 20 20 0
+poly 2 1 3 359 261 381 239 381 261
+unclip
+update 360 240 20 20
+clip 380 240 20 20
+rect 380 240 20 20 2
+rect 380 240 1 1 1
+unclip
+update 380 240 20 20
+clip 400 240 20 20
+rect 400 240 20 20 4
+rect 400 240 1 20 1
+rect 400 240 1 1 1
+unclip
+update 400 240 20 20
+clip 20 260 20 20
+rect 20 260 20 20 0
+rect 20 260 1 20 1
+rect 20 260 20 1 1
+rect 20 260 1 1 1
+unclip
+update 20 260 20 20
+clip 40 260 20 20
+rect 40 260 20 20 0
+rect 40 260 1 20 1
+rect 40 260 1 1 1
+unclip
+update 40 260 20 20
+clip 60 260 20 20
+rect 60 260 20 20 0
+unclip
+update 60 260 20 20
+clip 80 260 20 20
+rect 80 260 20 20 5
+poly 0 1 3 79 281 79 259 101 281
+rect 80 260 1 1 1
+unclip
+update 80 260 20 20
+clip 100 260 20 20
+rect 100 260 20 20 5
+unclip
+update 100 260 20 20
+clip 120 260 20 20
+rect 120 260 20 20 0
+rect 120 260 1 20 1
+rect 120 260 1 1 1
+unclip
+update 120 260 20 20
+clip 140 260 20 20
+rect 140 260 20 20 0
+unclip
+update 140 260 20 20
+clip 160 260 20 20
+rect 160 260 20 20 5
+rect 160 260 1 20 1
+rect 160 260 1 1 1
+unclip
+update 160 260 20 20
+clip 180 260 20 20
+rect 180 260 20 20 5
+unclip
+update 180 260 20 20
+clip 200 260 20 20
+rect 200 260 20 20 0
+rect 200 260 1 20 1
+rect 200 260 1 1 1
+unclip
+update 200 260 20 20
+clip 220 260 20 20
+rect 220 260 20 20 0
+unclip
+update 220 260 20 20
+clip 240 260 20 20
+rect 240 260 20 20 0
+unclip
+update 240 260 20 20
+clip 260 260 20 20
+rect 260 260 20 20 3
+poly 0 1 3 259 281 259 259 281 281
+rect 260 260 1 1 1
+unclip
+update 260 260 20 20
+clip 280 260 20 20
+rect 280 260 20 20 3
+unclip
+update 280 260 20 20
+clip 300 260 20 20
+rect 300 260 20 20 3
+unclip
+update 300 260 20 20
+clip 320 260 20 20
+rect 320 260 20 20 0
+poly 3 1 3 319 281 319 259 341 281
+unclip
+update 320 260 20 20
+clip 340 260 20 20
+rect 340 260 20 20 0
+unclip
+update 340 260 20 20
+clip 360 260 20 20
+rect 360 260 20 20 2
+rect 360 260 1 20 1
+rect 360 260 1 1 1
+unclip
+update 360 260 20 20
+clip 380 260 20 20
+rect 380 260 20 20 2
+unclip
+update 380 260 20 20
+clip 400 260 20 20
+rect 400 260 20 20 2
+rect 400 260 20 1 1
+unclip
+update 400 260 20 20
+clip 20 280 20 20
+rect 20 280 20 20 0
+rect 20 280 1 20 1
+rect 20 280 1 1 1
+unclip
+update 20 280 20 20
+clip 40 280 20 20
+rect 40 280 20 20 3
+rect 40 280 1 20 1
+rect 40 280 20 1 1
+rect 40 280 1 1 1
+unclip
+update 40 280 20 20
+clip 60 280 20 20
+rect 60 280 20 20 0
+rect 60 280 1 20 1
+unclip
+update 60 280 20 20
+clip 80 280 20 20
+rect 80 280 20 20 0
+unclip
+update 80 280 20 20
+clip 100 280 20 20
+rect 100 280 20 20 0
+rect 100 280 20 1 1
+rect 100 280 1 1 1
+unclip
+update 100 280 20 20
+clip 120 280 20 20
+rect 120 280 20 20 0
+rect 120 280 1 20 1
+rect 120 280 1 1 1
+unclip
+update 120 280 20 20
+clip 140 280 20 20
+rect 140 280 20 20 0
+unclip
+update 140 280 20 20
+clip 160 280 20 20
+rect 160 280 20 20 5
+poly 0 1 3 159 301 159 279 181 301
+rect 160 280 1 1 1
+unclip
+update 160 280 20 20
+clip 180 280 20 20
+rect 180 280 20 20 5
+unclip
+update 180 280 20 20
+clip 200 280 20 20
+rect 200 280 20 20 0
+rect 200 280 1 20 1
+rect 200 280 1 1 1
+unclip
+update 200 280 20 20
+clip 220 280 20 20
+rect 220 280 20 20 0
+unclip
+update 220 280 20 20
+clip 240 280 20 20
+rect 240 280 20 20 0
+unclip
+update 240 280 20 20
+clip 260 280 20 20
+rect 260 280 20 20 0
+poly 3 1 3 259 301 281 279 281 301
+unclip
+update 260 280 20 20
+clip 280 280 20 20
+rect 280 280 20 20 3
+rect 280 280 1 1 1
+unclip
+update 280 280 20 20
+clip 300 280 20 20
+rect 300 280 20 20 3
+unclip
+update 300 280 20 20
+clip 320 280 20 20
+rect 320 280 20 20 3
+unclip
+update 320 280 20 20
+clip 340 280 20 20
+rect 340 280 20 20 3
+rect 340 280 20 1 1
+rect 340 280 1 1 1
+unclip
+update 340 280 20 20
+clip 360 280 20 20
+rect 360 280 20 20 2
+rect 360 280 1 20 1
+rect 360 280 1 1 1
+unclip
+update 360 280 20 20
+clip 380 280 20 20
+rect 380 280 20 20 2
+unclip
+update 380 280 20 20
+clip 400 280 20 20
+rect 400 280 20 20 2
+unclip
+update 400 280 20 20
+clip 20 300 20 20
+rect 20 300 20 20 0
+rect 20 300 1 20 1
+rect 20 300 1 1 1
+unclip
+update 20 300 20 20
+clip 40 300 20 20
+rect 40 300 20 20 0
+rect 40 300 1 20 1
+rect 40 300 20 1 1
+rect 40 300 1 1 1
+unclip
+update 40 300 20 20
+clip 60 300 20 20
+rect 60 300 20 20 0
+rect 60 300 1 1 1
+unclip
+update 60 300 20 20
+clip 80 300 20 20
+rect 80 300 20 20 0
+unclip
+update 80 300 20 20
+clip 100 300 20 20
+rect 100 300 20 20 0
+unclip
+update 100 300 20 20
+clip 120 300 20 20
+rect 120 300 20 20 0
+rect 120 300 1 20 1
+rect 120 300 1 1 1
+unclip
+update 120 300 20 20
+clip 140 300 20 20
+rect 140 300 20 20 0
+unclip
+update 140 300 20 20
+clip 160 300 20 20
+rect 160 300 20 20 0
+unclip
+update 160 300 20 20
+clip 180 300 20 20
+rect 180 300 20 20 0
+rect 180 300 20 1 1
+rect 180 300 1 1 1
+unclip
+update 180 300 20 20
+clip 200 300 20 20
+rect 200 300 20 20 0
+rect 200 300 1 20 1
+rect 200 300 1 1 1
+unclip
+update 200 300 20 20
+clip 220 300 20 20
+rect 220 300 20 20 0
+unclip
+update 220 300 20 20
+clip 240 300 20 20
+rect 240 300 20 20 0
+unclip
+update 240 300 20 20
+clip 260 300 20 20
+rect 260 300 20 20 3
+rect 260 300 1 20 1
+rect 260 300 1 1 1
+unclip
+update 260 300 20 20
+clip 280 300 20 20
+rect 280 300 20 20 3
+unclip
+update 280 300 20 20
+clip 300 300 20 20
+rect 300 300 20 20 3
+unclip
+update 300 300 20 20
+clip 320 300 20 20
+rect 320 300 20 20 3
+unclip
+update 320 300 20 20
+clip 340 300 20 20
+rect 340 300 20 20 4
+rect 340 300 1 20 1
+rect 340 300 20 1 1
+rect 340 300 1 1 1
+unclip
+update 340 300 20 20
+clip 360 300 20 20
+rect 360 300 20 20 4
+rect 360 300 20 1 1
+rect 360 300 1 1 1
+unclip
+update 360 300 20 20
+clip 380 300 20 20
+rect 380 300 20 20 4
+rect 380 300 20 1 1
+rect 380 300 1 1 1
+unclip
+update 380 300 20 20
+clip 400 300 20 20
+rect 400 300 20 20 4
+rect 400 300 20 1 1
+rect 400 300 1 1 1
+unclip
+update 400 300 20 20
+update 0 0 441 341
+end_draw

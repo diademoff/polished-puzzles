@@ -1,0 +1,292 @@
+traceSchema 1
+game "Magnets"
+id "6x5:221211,12231,302112,11313,LRLRLRTTLRLRBBLRLRTLRLRTBLRLRB"
+params "6x5de"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 264 232
+palette 800,800,800 967,967,967 633,633,633 0,0,0 1000,0,0 900,900,900 533,533,533 100,600,100 0,0,0 800,0,0 200,200,1000
+changed_state false false
+start_draw
+rect 0 0 264 232 0
+rect 12 18 17 5 3
+rect 18 12 5 17 3
+rect 236 210 17 5 3
+update 0 0 264 232
+rect 36 36 32 32 0
+rect 36 36 32 32 0
+circle 42 42 4 2 2
+circle 42 61 4 2 2
+rect 42 38 27 28 2
+rect 38 42 31 20 2
+update 36 36 32 32
+rect 68 36 32 32 0
+rect 68 36 32 32 0
+circle 93 42 4 2 2
+circle 93 61 4 2 2
+rect 68 38 26 28 2
+rect 68 42 30 20 2
+update 68 36 32 32
+rect 100 36 32 32 0
+rect 100 36 32 32 0
+circle 106 42 4 2 2
+circle 106 61 4 2 2
+rect 106 38 27 28 2
+rect 102 42 31 20 2
+update 100 36 32 32
+rect 132 36 32 32 0
+rect 132 36 32 32 0
+circle 157 42 4 2 2
+circle 157 61 4 2 2
+rect 132 38 26 28 2
+rect 132 42 30 20 2
+update 132 36 32 32
+rect 164 36 32 32 0
+rect 164 36 32 32 0
+circle 170 42 4 2 2
+circle 170 61 4 2 2
+rect 170 38 27 28 2
+rect 166 42 31 20 2
+update 164 36 32 32
+rect 196 36 32 32 0
+rect 196 36 32 32 0
+circle 221 42 4 2 2
+circle 221 61 4 2 2
+rect 196 38 26 28 2
+rect 196 42 30 20 2
+update 196 36 32 32
+rect 36 68 32 32 0
+rect 36 68 32 32 0
+circle 42 74 4 2 2
+circle 61 74 4 2 2
+rect 42 70 20 31 2
+rect 38 74 28 27 2
+update 36 68 32 32
+rect 68 68 32 32 0
+rect 68 68 32 32 0
+circle 74 74 4 2 2
+circle 93 74 4 2 2
+rect 74 70 20 31 2
+rect 70 74 28 27 2
+update 68 68 32 32
+rect 100 68 32 32 0
+rect 100 68 32 32 0
+circle 106 74 4 2 2
+circle 106 93 4 2 2
+rect 106 70 27 28 2
+rect 102 74 31 20 2
+update 100 68 32 32
+rect 132 68 32 32 0
+rect 132 68 32 32 0
+circle 157 74 4 2 2
+circle 157 93 4 2 2
+rect 132 70 26 28 2
+rect 132 74 30 20 2
+update 132 68 32 32
+rect 164 68 32 32 0
+rect 164 68 32 32 0
+circle 170 74 4 2 2
+circle 170 93 4 2 2
+rect 170 70 27 28 2
+rect 166 74 31 20 2
+update 164 68 32 32
+rect 196 68 32 32 0
+rect 196 68 32 32 0
+circle 221 74 4 2 2
+circle 221 93 4 2 2
+rect 196 70 26 28 2
+rect 196 74 30 20 2
+update 196 68 32 32
+rect 36 100 32 32 0
+rect 36 100 32 32 0
+circle 42 125 4 2 2
+circle 61 125 4 2 2
+rect 42 100 20 30 2
+rect 38 100 28 26 2
+update 36 100 32 32
+rect 68 100 32 32 0
+rect 68 100 32 32 0
+circle 74 125 4 2 2
+circle 93 125 4 2 2
+rect 74 100 20 30 2
+rect 70 100 28 26 2
+update 68 100 32 32
+rect 100 100 32 32 0
+rect 100 100 32 32 0
+circle 106 106 4 2 2
+circle 106 125 4 2 2
+rect 106 102 27 28 2
+rect 102 106 31 20 2
+update 100 100 32 32
+rect 132 100 32 32 0
+rect 132 100 32 32 0
+circle 157 106 4 2 2
+circle 157 125 4 2 2
+rect 132 102 26 28 2
+rect 132 106 30 20 2
+update 132 100 32 32
+rect 164 100 32 32 0
+rect 164 100 32 32 0
+circle 170 106 4 2 2
+circle 170 125 4 2 2
+rect 170 102 27 28 2
+rect 166 106 31 20 2
+update 164 100 32 32
+rect 196 100 32 32 0
+rect 196 100 32 32 0
+circle 221 106 4 2 2
+circle 221 125 4 2 2
+rect 196 102 26 28 2
+rect 196 106 30 20 2
+update 196 100 32 32
+rect 36 132 32 32 0
+rect 36 132 32 32 0
+circle 42 138 4 2 2
+circle 61 138 4 2 2
+rect 42 134 20 31 2
+rect 38 138 28 27 2
+update 36 132 32 32
+rect 68 132 32 32 0
+rect 68 132 32 32 0
+circle 74 138 4 2 2
+circle 74 157 4 2 2
+rect 74 134 27 28 2
+rect 70 138 31 20 2
+update 68 132 32 32
+rect 100 132 32 32 0
+rect 100 132 32 32 0
+circle 125 138 4 2 2
+circle 125 157 4 2 2
+rect 100 134 26 28 2
+rect 100 138 30 20 2
+update 100 132 32 32
+rect 132 132 32 32 0
+rect 132 132 32 32 0
+circle 138 138 4 2 2
+circle 138 157 4 2 2
+rect 138 134 27 28 2
+rect 134 138 31 20 2
+update 132 132 32 32
+rect 164 132 32 32 0
+rect 164 132 32 32 0
+circle 189 138 4 2 2
+circle 189 157 4 2 2
+rect 164 134 26 28 2
+rect 164 138 30 20 2
+update 164 132 32 32
+rect 196 132 32 32 0
+rect 196 132 32 32 0
+circle 202 138 4 2 2
+circle 221 138 4 2 2
+rect 202 134 20 31 2
+rect 198 138 28 27 2
+update 196 132 32 32
+rect 36 164 32 32 0
+rect 36 164 32 32 0
+circle 42 189 4 2 2
+circle 61 189 4 2 2
+rect 42 164 20 30 2
+rect 38 164 28 26 2
+update 36 164 32 32
+rect 68 164 32 32 0
+rect 68 164 32 32 0
+circle 74 170 4 2 2
+circle 74 189 4 2 2
+rect 74 166 27 28 2
+rect 70 170 31 20 2
+update 68 164 32 32
+rect 100 164 32 32 0
+rect 100 164 32 32 0
+circle 125 170 4 2 2
+circle 125 189 4 2 2
+rect 100 166 26 28 2
+rect 100 170 30 20 2
+update 100 164 32 32
+rect 132 164 32 32 0
+rect 132 164 32 32 0
+circle 138 170 4 2 2
+circle 138 189 4 2 2
+rect 138 166 27 28 2
+rect 134 170 31 20 2
+update 132 164 32 32
+rect 164 164 32 32 0
+rect 164 164 32 32 0
+circle 189 170 4 2 2
+circle 189 189 4 2 2
+rect 164 166 26 28 2
+rect 164 170 30 20 2
+update 164 164 32 32
+rect 196 164 32 32 0
+rect 196 164 32 32 0
+circle 202 189 4 2 2
+circle 221 189 4 2 2
+rect 202 164 20 30 2
+rect 198 164 28 26 2
+update 196 164 32 32
+rect 36 4 32 32 0
+text 52 20 1 22 257 3 "2"
+update 36 4 32 32
+rect 68 4 32 32 0
+text 84 20 1 22 257 3 "2"
+update 68 4 32 32
+rect 100 4 32 32 0
+text 116 20 1 22 257 3 "1"
+update 100 4 32 32
+rect 132 4 32 32 0
+text 148 20 1 22 257 3 "2"
+update 132 4 32 32
+rect 164 4 32 32 0
+text 180 20 1 22 257 3 "1"
+update 164 4 32 32
+rect 196 4 32 32 0
+text 212 20 1 22 257 3 "1"
+update 196 4 32 32
+rect 4 36 32 32 0
+text 20 52 1 22 257 3 "1"
+update 4 36 32 32
+rect 4 68 32 32 0
+text 20 84 1 22 257 3 "2"
+update 4 68 32 32
+rect 4 100 32 32 0
+text 20 116 1 22 257 3 "2"
+update 4 100 32 32
+rect 4 132 32 32 0
+text 20 148 1 22 257 3 "3"
+update 4 132 32 32
+rect 4 164 32 32 0
+text 20 180 1 22 257 3 "1"
+update 4 164 32 32
+rect 36 196 32 32 0
+text 52 212 1 22 257 3 "3"
+update 36 196 32 32
+rect 68 196 32 32 0
+text 84 212 1 22 257 3 "0"
+update 68 196 32 32
+rect 100 196 32 32 0
+text 116 212 1 22 257 3 "2"
+update 100 196 32 32
+rect 132 196 32 32 0
+text 148 212 1 22 257 3 "1"
+update 132 196 32 32
+rect 164 196 32 32 0
+text 180 212 1 22 257 3 "1"
+update 164 196 32 32
+rect 196 196 32 32 0
+text 212 212 1 22 257 3 "2"
+update 196 196 32 32
+rect 228 36 32 32 0
+text 244 52 1 22 257 3 "1"
+update 228 36 32 32
+rect 228 68 32 32 0
+text 244 84 1 22 257 3 "1"
+update 228 68 32 32
+rect 228 100 32 32 0
+text 244 116 1 22 257 3 "3"
+update 228 100 32 32
+rect 228 132 32 32 0
+text 244 148 1 22 257 3 "1"
+update 228 132 32 32
+rect 228 164 32 32 0
+text 244 180 1 22 257 3 "3"
+update 228 164 32 32
+update 0 0 264 232
+end_draw

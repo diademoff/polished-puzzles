@@ -1,0 +1,189 @@
+traceSchema 1
+game "Keen"
+id "5:a3__aa_3a__a6b__aa_,m5m12m20m72m20m10m20m2m12m3"
+params "5dem"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 288 288
+palette 800,800,800 0,0,0 0,0,0 0,480,0 624,624,624 1000,0,0 400,400,800
+changed_state false false
+start_draw
+rect 0 0 288 288 0
+rect 23 23 243 243 1
+update 0 0 288 288
+clip 26 26 46 45
+rect 26 26 46 45 0
+rect 71 71 1 1 2
+text 28 40 1 12 0 2 "5×"
+unclip
+update 26 26 46 45
+clip 73 26 46 45
+rect 73 26 46 45 0
+rect 73 71 1 1 2
+rect 119 71 1 1 2
+unclip
+update 73 26 46 45
+clip 122 26 46 45
+rect 122 26 46 45 0
+rect 121 71 1 1 2
+text 124 40 1 12 0 2 "12×"
+unclip
+update 122 26 46 45
+clip 169 26 46 46
+rect 169 26 46 46 0
+rect 169 71 1 1 2
+rect 215 71 1 1 2
+unclip
+update 169 26 46 46
+clip 218 26 45 46
+rect 218 26 45 46 0
+rect 217 71 1 1 2
+text 220 40 1 12 0 2 "20×"
+unclip
+update 218 26 45 46
+clip 26 74 46 46
+rect 26 74 46 46 0
+rect 71 73 1 1 2
+text 28 88 1 12 0 2 "72×"
+unclip
+update 26 74 46 46
+clip 73 74 46 46
+rect 73 74 46 46 0
+rect 73 73 1 1 2
+rect 119 73 1 1 2
+rect 119 119 1 1 2
+unclip
+update 73 74 46 46
+clip 122 74 45 46
+rect 122 74 45 46 0
+rect 121 73 1 1 2
+rect 167 73 1 1 2
+rect 121 119 1 1 2
+text 124 88 1 12 0 2 "20×"
+unclip
+update 122 74 45 46
+clip 170 73 45 46
+rect 170 73 45 46 0
+rect 215 73 1 1 2
+rect 169 119 1 1 2
+rect 215 119 1 1 2
+unclip
+update 170 73 45 46
+clip 218 73 45 46
+rect 218 73 45 46 0
+rect 217 73 1 1 2
+rect 217 119 1 1 2
+unclip
+update 218 73 45 46
+clip 26 121 46 46
+rect 26 121 46 46 0
+rect 71 167 1 1 2
+unclip
+update 26 121 46 46
+clip 73 121 46 46
+rect 73 121 46 46 0
+rect 119 121 1 1 2
+rect 73 167 1 1 2
+rect 119 167 1 1 2
+unclip
+update 73 121 46 46
+clip 122 121 46 46
+rect 122 121 46 46 0
+rect 121 121 1 1 2
+rect 167 121 1 1 2
+rect 121 167 1 1 2
+rect 167 167 1 1 2
+unclip
+update 122 121 46 46
+clip 169 122 46 45
+rect 169 122 46 45 0
+rect 215 121 1 1 2
+rect 169 167 1 1 2
+rect 215 167 1 1 2
+unclip
+update 169 122 46 45
+clip 218 122 45 46
+rect 218 122 45 46 0
+rect 217 121 1 1 2
+text 220 136 1 12 0 2 "10×"
+unclip
+update 218 122 45 46
+clip 26 170 45 46
+rect 26 170 45 46 0
+rect 71 169 1 1 2
+rect 71 215 1 1 2
+text 28 184 1 12 0 2 "20×"
+unclip
+update 26 170 45 46
+clip 74 170 45 46
+rect 74 170 45 46 0
+rect 73 169 1 1 2
+rect 119 169 1 1 2
+rect 73 215 1 1 2
+rect 119 215 1 1 2
+text 76 184 1 12 0 2 "2×"
+unclip
+update 74 170 45 46
+clip 122 170 45 46
+rect 122 170 45 46 0
+rect 121 169 1 1 2
+rect 167 169 1 1 2
+rect 121 215 1 1 2
+rect 167 215 1 1 2
+text 124 184 1 12 0 2 "12×"
+unclip
+update 122 170 45 46
+clip 170 170 46 45
+rect 170 170 46 45 0
+rect 169 169 1 1 2
+rect 169 215 1 1 2
+rect 215 215 1 1 2
+unclip
+update 170 170 46 45
+clip 217 169 46 46
+rect 217 169 46 46 0
+rect 217 169 1 1 2
+rect 217 215 1 1 2
+unclip
+update 217 169 46 46
+clip 26 217 45 46
+rect 26 217 45 46 0
+rect 71 217 1 1 2
+unclip
+update 26 217 45 46
+clip 74 217 45 46
+rect 74 217 45 46 0
+rect 73 217 1 1 2
+rect 119 217 1 1 2
+unclip
+update 74 217 45 46
+clip 122 217 45 46
+rect 122 217 45 46 0
+rect 121 217 1 1 2
+rect 167 217 1 1 2
+unclip
+update 122 217 45 46
+clip 170 218 46 45
+rect 170 218 46 45 0
+rect 169 217 1 1 2
+rect 215 217 1 1 2
+text 172 232 1 12 0 2 "3×"
+unclip
+update 170 218 46 45
+clip 217 218 46 45
+rect 217 218 46 45 0
+rect 217 217 1 1 2
+unclip
+update 217 218 46 45
+thick_poly 3000 -1 2 6 24 24 72 24 120 24 120 72 72 72 24 72
+thick_poly 3000 -1 2 8 120 24 168 24 216 24 216 72 216 120 168 120 168 72 120 72
+thick_poly 3000 -1 2 6 216 24 264 24 264 72 264 120 216 120 216 72
+thick_poly 3000 -1 2 8 24 72 72 72 120 72 120 120 120 168 72 168 24 168 24 120
+thick_poly 3000 -1 2 8 120 72 168 72 168 120 216 120 216 168 168 168 120 168 120 120
+thick_poly 3000 -1 2 8 216 120 264 120 264 168 264 216 216 216 168 216 168 168 216 168
+thick_poly 3000 -1 2 6 24 168 72 168 72 216 72 264 24 264 24 216
+thick_poly 3000 -1 2 6 72 168 120 168 120 216 120 264 72 264 72 216
+thick_poly 3000 -1 2 6 120 168 168 168 168 216 168 264 120 264 120 216
+thick_poly 3000 -1 2 6 168 216 216 216 264 216 264 264 216 264 168 264
+update 0 0 288 288
+update 0 0 288 288
+end_draw

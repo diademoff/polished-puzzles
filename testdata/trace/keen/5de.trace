@@ -1,0 +1,197 @@
+traceSchema 1
+game "Keen"
+id "5:a_a__a_a__a_a5b_7b_,a6s1a5m20d2a10d2m6m6s1s1"
+params "5de"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 288 288
+palette 800,800,800 0,0,0 0,0,0 0,480,0 624,624,624 1000,0,0 400,400,800
+changed_state false false
+start_draw
+rect 0 0 288 288 0
+rect 23 23 243 243 1
+update 0 0 288 288
+clip 26 26 46 45
+rect 26 26 46 45 0
+rect 71 71 1 1 2
+text 28 40 1 12 0 2 "6+"
+unclip
+update 26 26 46 45
+clip 73 26 46 45
+rect 73 26 46 45 0
+rect 73 71 1 1 2
+rect 119 71 1 1 2
+unclip
+update 73 26 46 45
+clip 122 26 45 46
+rect 122 26 45 46 0
+rect 121 71 1 1 2
+rect 167 71 1 1 2
+text 124 40 1 12 0 2 "1−"
+unclip
+update 122 26 45 46
+clip 170 26 46 45
+rect 170 26 46 45 0
+rect 169 71 1 1 2
+rect 215 71 1 1 2
+text 172 40 1 12 0 2 "5+"
+unclip
+update 170 26 46 45
+clip 217 26 46 45
+rect 217 26 46 45 0
+rect 217 71 1 1 2
+unclip
+update 217 26 46 45
+clip 26 74 45 46
+rect 26 74 45 46 0
+rect 71 73 1 1 2
+rect 71 119 1 1 2
+text 28 88 1 12 0 2 "20×"
+unclip
+update 26 74 45 46
+clip 74 74 45 46
+rect 74 74 45 46 0
+rect 73 73 1 1 2
+rect 119 73 1 1 2
+rect 73 119 1 1 2
+rect 119 119 1 1 2
+text 76 88 1 12 0 2 "2÷"
+unclip
+update 74 74 45 46
+clip 122 73 45 46
+rect 122 73 45 46 0
+rect 121 73 1 1 2
+rect 167 73 1 1 2
+rect 121 119 1 1 2
+rect 167 119 1 1 2
+unclip
+update 122 73 45 46
+clip 170 74 46 45
+rect 170 74 46 45 0
+rect 169 73 1 1 2
+rect 215 73 1 1 2
+rect 169 119 1 1 2
+text 172 88 1 12 0 2 "10+"
+unclip
+update 170 74 46 45
+clip 217 74 46 46
+rect 217 74 46 46 0
+rect 217 73 1 1 2
+rect 217 119 1 1 2
+unclip
+update 217 74 46 46
+clip 26 121 45 46
+rect 26 121 45 46 0
+rect 71 121 1 1 2
+rect 71 167 1 1 2
+unclip
+update 26 121 45 46
+clip 74 121 45 46
+rect 74 121 45 46 0
+rect 73 121 1 1 2
+rect 119 121 1 1 2
+rect 73 167 1 1 2
+rect 119 167 1 1 2
+unclip
+update 74 121 45 46
+clip 122 122 46 45
+rect 122 122 46 45 0
+rect 121 121 1 1 2
+rect 167 121 1 1 2
+rect 121 167 1 1 2
+rect 167 167 1 1 2
+text 124 136 1 12 0 2 "2÷"
+unclip
+update 122 122 46 45
+clip 169 122 46 45
+rect 169 122 46 45 0
+rect 169 121 1 1 2
+rect 215 121 1 1 2
+rect 169 167 1 1 2
+rect 215 167 1 1 2
+unclip
+update 169 122 46 45
+clip 218 121 45 47
+rect 218 121 45 47 0
+rect 217 167 1 1 2
+unclip
+update 218 121 45 47
+clip 26 170 45 46
+rect 26 170 45 46 0
+rect 71 169 1 1 2
+rect 71 215 1 1 2
+text 28 184 1 12 0 2 "6×"
+unclip
+update 26 170 45 46
+clip 74 170 45 46
+rect 74 170 45 46 0
+rect 73 169 1 1 2
+rect 119 169 1 1 2
+rect 73 215 1 1 2
+text 76 184 1 12 0 2 "6×"
+unclip
+update 74 170 45 46
+clip 122 170 46 45
+rect 122 170 46 45 0
+rect 121 169 1 1 2
+rect 167 169 1 1 2
+rect 121 215 1 1 2
+rect 167 215 1 1 2
+text 124 184 1 12 0 2 "1−"
+unclip
+update 122 170 46 45
+clip 169 170 46 45
+rect 169 170 46 45 0
+rect 169 169 1 1 2
+rect 215 169 1 1 2
+rect 169 215 1 1 2
+rect 215 215 1 1 2
+unclip
+update 169 170 46 45
+clip 218 169 45 46
+rect 218 169 45 46 0
+rect 217 169 1 1 2
+rect 217 215 1 1 2
+unclip
+update 218 169 45 46
+clip 26 217 45 46
+rect 26 217 45 46 0
+rect 71 217 1 1 2
+unclip
+update 26 217 45 46
+clip 74 217 46 46
+rect 74 217 46 46 0
+rect 73 217 1 1 2
+rect 119 217 1 1 2
+unclip
+update 74 217 46 46
+clip 121 218 46 45
+rect 121 218 46 45 0
+rect 167 217 1 1 2
+unclip
+update 121 218 46 45
+clip 170 218 46 45
+rect 170 218 46 45 0
+rect 169 217 1 1 2
+rect 215 217 1 1 2
+text 172 232 1 12 0 2 "1−"
+unclip
+update 170 218 46 45
+clip 217 218 46 45
+rect 217 218 46 45 0
+rect 217 217 1 1 2
+unclip
+update 217 218 46 45
+thick_poly 3000 -1 2 6 24 24 72 24 120 24 120 72 72 72 24 72
+thick_poly 3000 -1 2 6 120 24 168 24 168 72 168 120 120 120 120 72
+thick_poly 3000 -1 2 6 168 24 216 24 264 24 264 72 216 72 168 72
+thick_poly 3000 -1 2 6 24 72 72 72 72 120 72 168 24 168 24 120
+thick_poly 3000 -1 2 6 72 72 120 72 120 120 120 168 72 168 72 120
+thick_poly 3000 -1 2 10 168 72 216 72 264 72 264 120 264 168 264 216 216 216 216 168 216 120 168 120
+thick_poly 3000 -1 2 6 120 120 168 120 216 120 216 168 168 168 120 168
+thick_poly 3000 -1 2 6 24 168 72 168 72 216 72 264 24 264 24 216
+thick_poly 3000 -1 2 8 72 168 120 168 120 216 168 216 168 264 120 264 72 264 72 216
+thick_poly 3000 -1 2 6 120 168 168 168 216 168 216 216 168 216 120 216
+thick_poly 3000 -1 2 6 168 216 216 216 264 216 264 264 216 264 168 264
+update 0 0 288 288
+update 0 0 288 288
+end_draw

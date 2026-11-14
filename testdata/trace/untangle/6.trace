@@ -1,0 +1,31 @@
+traceSchema 1
+game "Untangle"
+id "6:0-1,0-2,0-3,0-5,1-3,1-4,1-5,2-3,2-4,2-5,3-4"
+params "6"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 256 256
+palette 633,633,633 800,800,800 0,0,0 1000,0,0 0,0,0 0,0,1000 1000,1000,1000 500,500,500 1000,0,0 500,500,500 1000,1000,1000
+changed_state false false
+start_draw
+rect 0 0 256 256 0
+rect 0 0 256 256 1
+line 128 19 222 73 2
+line 128 19 222 182 2
+line 128 19 128 237 2
+line 128 19 34 73 2
+line 222 73 128 237 2
+line 222 73 34 183 2
+line 222 73 34 73 2
+line 222 182 128 237 2
+line 222 182 34 183 2
+line 222 182 34 73 2
+line 128 237 34 183 2
+circle 128 19 6 5 4
+circle 222 73 6 5 4
+circle 222 182 6 5 4
+circle 128 237 6 5 4
+circle 34 183 6 5 4
+circle 34 73 6 5 4
+update 0 0 256 256
+update 0 0 256 256
+end_draw

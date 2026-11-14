@@ -1,0 +1,1529 @@
+traceSchema 1
+game "Tents"
+id "15x15:d_baead_bcncgkcfkeab__aaccbiga_acfcqbcna_beahb,5,2,2,5,2,4,2,3,3,4,2,3,2,3,3,5,2,3,3,2,5,1,6,1,4,1,3,3,1,5"
+params "15x15de"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 544 544
+palette 800,800,800 0,0,0 700,1000,500 600,400,0 0,700,0 800,700,0 1000,0,0 1000,1000,1000 600,0,0
+changed_state false false
+start_draw
+rect 0 0 544 544 0
+line 16 16 496 16 1
+line 16 48 496 48 1
+line 16 80 496 80 1
+line 16 112 496 112 1
+line 16 144 496 144 1
+line 16 176 496 176 1
+line 16 208 496 208 1
+line 16 240 496 240 1
+line 16 272 496 272 1
+line 16 304 496 304 1
+line 16 336 496 336 1
+line 16 368 496 368 1
+line 16 400 496 400 1
+line 16 432 496 432 1
+line 16 464 496 464 1
+line 16 496 496 496 1
+line 16 16 16 496 1
+line 48 16 48 496 1
+line 80 16 80 496 1
+line 112 16 112 496 1
+line 144 16 144 496 1
+line 176 16 176 496 1
+line 208 16 208 496 1
+line 240 16 240 496 1
+line 272 16 272 496 1
+line 304 16 304 496 1
+line 336 16 336 496 1
+line 368 16 368 496 1
+line 400 16 400 496 1
+line 432 16 432 496 1
+line 464 16 464 496 1
+line 496 16 496 496 1
+clip 16 16 32 32
+rect 16 16 32 32 1
+rect 17 17 31 31 0
+unclip
+update 17 17 31 31
+clip 48 16 32 32
+rect 48 16 32 32 1
+rect 49 17 31 31 0
+unclip
+update 49 17 31 31
+clip 80 16 32 32
+rect 80 16 32 32 1
+rect 81 17 31 31 0
+unclip
+update 81 17 31 31
+clip 112 16 32 32
+rect 112 16 32 32 1
+rect 113 17 31 31 0
+unclip
+update 113 17 31 31
+clip 144 16 32 32
+rect 144 16 32 32 1
+rect 145 17 31 31 2
+rect 158 25 5 19 3
+circle 160 28 8 4 4
+circle 166 24 4 4 4
+circle 154 24 4 4 4
+circle 168 30 4 4 4
+circle 152 30 4 4 4
+unclip
+update 145 17 31 31
+clip 176 16 32 32
+rect 176 16 32 32 1
+rect 177 17 31 31 2
+rect 190 25 5 19 3
+circle 192 28 8 4 4
+circle 198 24 4 4 4
+circle 186 24 4 4 4
+circle 200 30 4 4 4
+circle 184 30 4 4 4
+unclip
+update 177 17 31 31
+clip 208 16 32 32
+rect 208 16 32 32 1
+rect 209 17 31 31 0
+unclip
+update 209 17 31 31
+clip 240 16 32 32
+rect 240 16 32 32 1
+rect 241 17 31 31 0
+unclip
+update 241 17 31 31
+clip 272 16 32 32
+rect 272 16 32 32 1
+rect 273 17 31 31 2
+rect 286 25 5 19 3
+circle 288 28 8 4 4
+circle 294 24 4 4 4
+circle 282 24 4 4 4
+circle 296 30 4 4 4
+circle 280 30 4 4 4
+unclip
+update 273 17 31 31
+clip 304 16 32 32
+rect 304 16 32 32 1
+rect 305 17 31 31 0
+unclip
+update 305 17 31 31
+clip 336 16 32 32
+rect 336 16 32 32 1
+rect 337 17 31 31 2
+rect 350 25 5 19 3
+circle 352 28 8 4 4
+circle 358 24 4 4 4
+circle 346 24 4 4 4
+circle 360 30 4 4 4
+circle 344 30 4 4 4
+unclip
+update 337 17 31 31
+clip 368 16 32 32
+rect 368 16 32 32 1
+rect 369 17 31 31 0
+unclip
+update 369 17 31 31
+clip 400 16 32 32
+rect 400 16 32 32 1
+rect 401 17 31 31 0
+unclip
+update 401 17 31 31
+clip 432 16 32 32
+rect 432 16 32 32 1
+rect 433 17 31 31 0
+unclip
+update 433 17 31 31
+clip 464 16 32 32
+rect 464 16 32 32 1
+rect 465 17 31 31 0
+unclip
+update 465 17 31 31
+clip 16 48 32 32
+rect 16 48 32 32 1
+rect 17 49 31 31 0
+unclip
+update 17 49 31 31
+clip 48 48 32 32
+rect 48 48 32 32 1
+rect 49 49 31 31 2
+rect 62 57 5 19 3
+circle 64 60 8 4 4
+circle 70 56 4 4 4
+circle 58 56 4 4 4
+circle 72 62 4 4 4
+circle 56 62 4 4 4
+unclip
+update 49 49 31 31
+clip 80 48 32 32
+rect 80 48 32 32 1
+rect 81 49 31 31 0
+unclip
+update 81 49 31 31
+clip 112 48 32 32
+rect 112 48 32 32 1
+rect 113 49 31 31 2
+rect 126 57 5 19 3
+circle 128 60 8 4 4
+circle 134 56 4 4 4
+circle 122 56 4 4 4
+circle 136 62 4 4 4
+circle 120 62 4 4 4
+unclip
+update 113 49 31 31
+clip 144 48 32 32
+rect 144 48 32 32 1
+rect 145 49 31 31 0
+unclip
+update 145 49 31 31
+clip 176 48 32 32
+rect 176 48 32 32 1
+rect 177 49 31 31 0
+unclip
+update 177 49 31 31
+clip 208 48 32 32
+rect 208 48 32 32 1
+rect 209 49 31 31 0
+unclip
+update 209 49 31 31
+clip 240 48 32 32
+rect 240 48 32 32 1
+rect 241 49 31 31 0
+unclip
+update 241 49 31 31
+clip 272 48 32 32
+rect 272 48 32 32 1
+rect 273 49 31 31 2
+rect 286 57 5 19 3
+circle 288 60 8 4 4
+circle 294 56 4 4 4
+circle 282 56 4 4 4
+circle 296 62 4 4 4
+circle 280 62 4 4 4
+unclip
+update 273 49 31 31
+clip 304 48 32 32
+rect 304 48 32 32 1
+rect 305 49 31 31 2
+rect 318 57 5 19 3
+circle 320 60 8 4 4
+circle 326 56 4 4 4
+circle 314 56 4 4 4
+circle 328 62 4 4 4
+circle 312 62 4 4 4
+unclip
+update 305 49 31 31
+clip 336 48 32 32
+rect 336 48 32 32 1
+rect 337 49 31 31 0
+unclip
+update 337 49 31 31
+clip 368 48 32 32
+rect 368 48 32 32 1
+rect 369 49 31 31 0
+unclip
+update 369 49 31 31
+clip 400 48 32 32
+rect 400 48 32 32 1
+rect 401 49 31 31 2
+rect 414 57 5 19 3
+circle 416 60 8 4 4
+circle 422 56 4 4 4
+circle 410 56 4 4 4
+circle 424 62 4 4 4
+circle 408 62 4 4 4
+unclip
+update 401 49 31 31
+clip 432 48 32 32
+rect 432 48 32 32 1
+rect 433 49 31 31 0
+unclip
+update 433 49 31 31
+clip 464 48 32 32
+rect 464 48 32 32 1
+rect 465 49 31 31 0
+unclip
+update 465 49 31 31
+clip 16 80 32 32
+rect 16 80 32 32 1
+rect 17 81 31 31 0
+unclip
+update 17 81 31 31
+clip 48 80 32 32
+rect 48 80 32 32 1
+rect 49 81 31 31 2
+rect 62 89 5 19 3
+circle 64 92 8 4 4
+circle 70 88 4 4 4
+circle 58 88 4 4 4
+circle 72 94 4 4 4
+circle 56 94 4 4 4
+unclip
+update 49 81 31 31
+clip 80 80 32 32
+rect 80 80 32 32 1
+rect 81 81 31 31 0
+unclip
+update 81 81 31 31
+clip 112 80 32 32
+rect 112 80 32 32 1
+rect 113 81 31 31 0
+unclip
+update 113 81 31 31
+clip 144 80 32 32
+rect 144 80 32 32 1
+rect 145 81 31 31 0
+unclip
+update 145 81 31 31
+clip 176 80 32 32
+rect 176 80 32 32 1
+rect 177 81 31 31 0
+unclip
+update 177 81 31 31
+clip 208 80 32 32
+rect 208 80 32 32 1
+rect 209 81 31 31 0
+unclip
+update 209 81 31 31
+clip 240 80 32 32
+rect 240 80 32 32 1
+rect 241 81 31 31 0
+unclip
+update 241 81 31 31
+clip 272 80 32 32
+rect 272 80 32 32 1
+rect 273 81 31 31 0
+unclip
+update 273 81 31 31
+clip 304 80 32 32
+rect 304 80 32 32 1
+rect 305 81 31 31 0
+unclip
+update 305 81 31 31
+clip 336 80 32 32
+rect 336 80 32 32 1
+rect 337 81 31 31 0
+unclip
+update 337 81 31 31
+clip 368 80 32 32
+rect 368 80 32 32 1
+rect 369 81 31 31 0
+unclip
+update 369 81 31 31
+clip 400 80 32 32
+rect 400 80 32 32 1
+rect 401 81 31 31 0
+unclip
+update 401 81 31 31
+clip 432 80 32 32
+rect 432 80 32 32 1
+rect 433 81 31 31 0
+unclip
+update 433 81 31 31
+clip 464 80 32 32
+rect 464 80 32 32 1
+rect 465 81 31 31 0
+unclip
+update 465 81 31 31
+clip 16 112 32 32
+rect 16 112 32 32 1
+rect 17 113 31 31 0
+unclip
+update 17 113 31 31
+clip 48 112 32 32
+rect 48 112 32 32 1
+rect 49 113 31 31 2
+rect 62 121 5 19 3
+circle 64 124 8 4 4
+circle 70 120 4 4 4
+circle 58 120 4 4 4
+circle 72 126 4 4 4
+circle 56 126 4 4 4
+unclip
+update 49 113 31 31
+clip 80 112 32 32
+rect 80 112 32 32 1
+rect 81 113 31 31 0
+unclip
+update 81 113 31 31
+clip 112 112 32 32
+rect 112 112 32 32 1
+rect 113 113 31 31 0
+unclip
+update 113 113 31 31
+clip 144 112 32 32
+rect 144 112 32 32 1
+rect 145 113 31 31 0
+unclip
+update 145 113 31 31
+clip 176 112 32 32
+rect 176 112 32 32 1
+rect 177 113 31 31 2
+rect 190 121 5 19 3
+circle 192 124 8 4 4
+circle 198 120 4 4 4
+circle 186 120 4 4 4
+circle 200 126 4 4 4
+circle 184 126 4 4 4
+unclip
+update 177 113 31 31
+clip 208 112 32 32
+rect 208 112 32 32 1
+rect 209 113 31 31 0
+unclip
+update 209 113 31 31
+clip 240 112 32 32
+rect 240 112 32 32 1
+rect 241 113 31 31 0
+unclip
+update 241 113 31 31
+clip 272 112 32 32
+rect 272 112 32 32 1
+rect 273 113 31 31 0
+unclip
+update 273 113 31 31
+clip 304 112 32 32
+rect 304 112 32 32 1
+rect 305 113 31 31 0
+unclip
+update 305 113 31 31
+clip 336 112 32 32
+rect 336 112 32 32 1
+rect 337 113 31 31 0
+unclip
+update 337 113 31 31
+clip 368 112 32 32
+rect 368 112 32 32 1
+rect 369 113 31 31 0
+unclip
+update 369 113 31 31
+clip 400 112 32 32
+rect 400 112 32 32 1
+rect 401 113 31 31 0
+unclip
+update 401 113 31 31
+clip 432 112 32 32
+rect 432 112 32 32 1
+rect 433 113 31 31 2
+rect 446 121 5 19 3
+circle 448 124 8 4 4
+circle 454 120 4 4 4
+circle 442 120 4 4 4
+circle 456 126 4 4 4
+circle 440 126 4 4 4
+unclip
+update 433 113 31 31
+clip 464 112 32 32
+rect 464 112 32 32 1
+rect 465 113 31 31 0
+unclip
+update 465 113 31 31
+clip 16 144 32 32
+rect 16 144 32 32 1
+rect 17 145 31 31 0
+unclip
+update 17 145 31 31
+clip 48 144 32 32
+rect 48 144 32 32 1
+rect 49 145 31 31 0
+unclip
+update 49 145 31 31
+clip 80 144 32 32
+rect 80 144 32 32 1
+rect 81 145 31 31 0
+unclip
+update 81 145 31 31
+clip 112 144 32 32
+rect 112 144 32 32 1
+rect 113 145 31 31 0
+unclip
+update 113 145 31 31
+clip 144 144 32 32
+rect 144 144 32 32 1
+rect 145 145 31 31 0
+unclip
+update 145 145 31 31
+clip 176 144 32 32
+rect 176 144 32 32 1
+rect 177 145 31 31 0
+unclip
+update 177 145 31 31
+clip 208 144 32 32
+rect 208 144 32 32 1
+rect 209 145 31 31 0
+unclip
+update 209 145 31 31
+clip 240 144 32 32
+rect 240 144 32 32 1
+rect 241 145 31 31 0
+unclip
+update 241 145 31 31
+clip 272 144 32 32
+rect 272 144 32 32 1
+rect 273 145 31 31 0
+unclip
+update 273 145 31 31
+clip 304 144 32 32
+rect 304 144 32 32 1
+rect 305 145 31 31 0
+unclip
+update 305 145 31 31
+clip 336 144 32 32
+rect 336 144 32 32 1
+rect 337 145 31 31 2
+rect 350 153 5 19 3
+circle 352 156 8 4 4
+circle 358 152 4 4 4
+circle 346 152 4 4 4
+circle 360 158 4 4 4
+circle 344 158 4 4 4
+unclip
+update 337 145 31 31
+clip 368 144 32 32
+rect 368 144 32 32 1
+rect 369 145 31 31 0
+unclip
+update 369 145 31 31
+clip 400 144 32 32
+rect 400 144 32 32 1
+rect 401 145 31 31 0
+unclip
+update 401 145 31 31
+clip 432 144 32 32
+rect 432 144 32 32 1
+rect 433 145 31 31 0
+unclip
+update 433 145 31 31
+clip 464 144 32 32
+rect 464 144 32 32 1
+rect 465 145 31 31 2
+rect 478 153 5 19 3
+circle 480 156 8 4 4
+circle 486 152 4 4 4
+circle 474 152 4 4 4
+circle 488 158 4 4 4
+circle 472 158 4 4 4
+unclip
+update 465 145 31 31
+clip 16 176 32 32
+rect 16 176 32 32 1
+rect 17 177 31 31 0
+unclip
+update 17 177 31 31
+clip 48 176 32 32
+rect 48 176 32 32 1
+rect 49 177 31 31 0
+unclip
+update 49 177 31 31
+clip 80 176 32 32
+rect 80 176 32 32 1
+rect 81 177 31 31 0
+unclip
+update 81 177 31 31
+clip 112 176 32 32
+rect 112 176 32 32 1
+rect 113 177 31 31 0
+unclip
+update 113 177 31 31
+clip 144 176 32 32
+rect 144 176 32 32 1
+rect 145 177 31 31 0
+unclip
+update 145 177 31 31
+clip 176 176 32 32
+rect 176 176 32 32 1
+rect 177 177 31 31 0
+unclip
+update 177 177 31 31
+clip 208 176 32 32
+rect 208 176 32 32 1
+rect 209 177 31 31 2
+rect 222 185 5 19 3
+circle 224 188 8 4 4
+circle 230 184 4 4 4
+circle 218 184 4 4 4
+circle 232 190 4 4 4
+circle 216 190 4 4 4
+unclip
+update 209 177 31 31
+clip 240 176 32 32
+rect 240 176 32 32 1
+rect 241 177 31 31 0
+unclip
+update 241 177 31 31
+clip 272 176 32 32
+rect 272 176 32 32 1
+rect 273 177 31 31 0
+unclip
+update 273 177 31 31
+clip 304 176 32 32
+rect 304 176 32 32 1
+rect 305 177 31 31 0
+unclip
+update 305 177 31 31
+clip 336 176 32 32
+rect 336 176 32 32 1
+rect 337 177 31 31 0
+unclip
+update 337 177 31 31
+clip 368 176 32 32
+rect 368 176 32 32 1
+rect 369 177 31 31 0
+unclip
+update 369 177 31 31
+clip 400 176 32 32
+rect 400 176 32 32 1
+rect 401 177 31 31 0
+unclip
+update 401 177 31 31
+clip 432 176 32 32
+rect 432 176 32 32 1
+rect 433 177 31 31 0
+unclip
+update 433 177 31 31
+clip 464 176 32 32
+rect 464 176 32 32 1
+rect 465 177 31 31 0
+unclip
+update 465 177 31 31
+clip 16 208 32 32
+rect 16 208 32 32 1
+rect 17 209 31 31 0
+unclip
+update 17 209 31 31
+clip 48 208 32 32
+rect 48 208 32 32 1
+rect 49 209 31 31 0
+unclip
+update 49 209 31 31
+clip 80 208 32 32
+rect 80 208 32 32 1
+rect 81 209 31 31 0
+unclip
+update 81 209 31 31
+clip 112 208 32 32
+rect 112 208 32 32 1
+rect 113 209 31 31 2
+rect 126 217 5 19 3
+circle 128 220 8 4 4
+circle 134 216 4 4 4
+circle 122 216 4 4 4
+circle 136 222 4 4 4
+circle 120 222 4 4 4
+unclip
+update 113 209 31 31
+clip 144 208 32 32
+rect 144 208 32 32 1
+rect 145 209 31 31 0
+unclip
+update 145 209 31 31
+clip 176 208 32 32
+rect 176 208 32 32 1
+rect 177 209 31 31 0
+unclip
+update 177 209 31 31
+clip 208 208 32 32
+rect 208 208 32 32 1
+rect 209 209 31 31 0
+unclip
+update 209 209 31 31
+clip 240 208 32 32
+rect 240 208 32 32 1
+rect 241 209 31 31 0
+unclip
+update 241 209 31 31
+clip 272 208 32 32
+rect 272 208 32 32 1
+rect 273 209 31 31 0
+unclip
+update 273 209 31 31
+clip 304 208 32 32
+rect 304 208 32 32 1
+rect 305 209 31 31 2
+rect 318 217 5 19 3
+circle 320 220 8 4 4
+circle 326 216 4 4 4
+circle 314 216 4 4 4
+circle 328 222 4 4 4
+circle 312 222 4 4 4
+unclip
+update 305 209 31 31
+clip 336 208 32 32
+rect 336 208 32 32 1
+rect 337 209 31 31 0
+unclip
+update 337 209 31 31
+clip 368 208 32 32
+rect 368 208 32 32 1
+rect 369 209 31 31 2
+rect 382 217 5 19 3
+circle 384 220 8 4 4
+circle 390 216 4 4 4
+circle 378 216 4 4 4
+circle 392 222 4 4 4
+circle 376 222 4 4 4
+unclip
+update 369 209 31 31
+clip 400 208 32 32
+rect 400 208 32 32 1
+rect 401 209 31 31 0
+unclip
+update 401 209 31 31
+clip 432 208 32 32
+rect 432 208 32 32 1
+rect 433 209 31 31 0
+unclip
+update 433 209 31 31
+clip 464 208 32 32
+rect 464 208 32 32 1
+rect 465 209 31 31 2
+rect 478 217 5 19 3
+circle 480 220 8 4 4
+circle 486 216 4 4 4
+circle 474 216 4 4 4
+circle 488 222 4 4 4
+circle 472 222 4 4 4
+unclip
+update 465 209 31 31
+clip 16 240 32 32
+rect 16 240 32 32 1
+rect 17 241 31 31 2
+rect 30 249 5 19 3
+circle 32 252 8 4 4
+circle 38 248 4 4 4
+circle 26 248 4 4 4
+circle 40 254 4 4 4
+circle 24 254 4 4 4
+unclip
+update 17 241 31 31
+clip 48 240 32 32
+rect 48 240 32 32 1
+rect 49 241 31 31 2
+rect 62 249 5 19 3
+circle 64 252 8 4 4
+circle 70 248 4 4 4
+circle 58 248 4 4 4
+circle 72 254 4 4 4
+circle 56 254 4 4 4
+unclip
+update 49 241 31 31
+clip 80 240 32 32
+rect 80 240 32 32 1
+rect 81 241 31 31 0
+unclip
+update 81 241 31 31
+clip 112 240 32 32
+rect 112 240 32 32 1
+rect 113 241 31 31 2
+rect 126 249 5 19 3
+circle 128 252 8 4 4
+circle 134 248 4 4 4
+circle 122 248 4 4 4
+circle 136 254 4 4 4
+circle 120 254 4 4 4
+unclip
+update 113 241 31 31
+clip 144 240 32 32
+rect 144 240 32 32 1
+rect 145 241 31 31 0
+unclip
+update 145 241 31 31
+clip 176 240 32 32
+rect 176 240 32 32 1
+rect 177 241 31 31 2
+rect 190 249 5 19 3
+circle 192 252 8 4 4
+circle 198 248 4 4 4
+circle 186 248 4 4 4
+circle 200 254 4 4 4
+circle 184 254 4 4 4
+unclip
+update 177 241 31 31
+clip 208 240 32 32
+rect 208 240 32 32 1
+rect 209 241 31 31 0
+unclip
+update 209 241 31 31
+clip 240 240 32 32
+rect 240 240 32 32 1
+rect 241 241 31 31 0
+unclip
+update 241 241 31 31
+clip 272 240 32 32
+rect 272 240 32 32 1
+rect 273 241 31 31 0
+unclip
+update 273 241 31 31
+clip 304 240 32 32
+rect 304 240 32 32 1
+rect 305 241 31 31 2
+rect 318 249 5 19 3
+circle 320 252 8 4 4
+circle 326 248 4 4 4
+circle 314 248 4 4 4
+circle 328 254 4 4 4
+circle 312 254 4 4 4
+unclip
+update 305 241 31 31
+clip 336 240 32 32
+rect 336 240 32 32 1
+rect 337 241 31 31 0
+unclip
+update 337 241 31 31
+clip 368 240 32 32
+rect 368 240 32 32 1
+rect 369 241 31 31 0
+unclip
+update 369 241 31 31
+clip 400 240 32 32
+rect 400 240 32 32 1
+rect 401 241 31 31 0
+unclip
+update 401 241 31 31
+clip 432 240 32 32
+rect 432 240 32 32 1
+rect 433 241 31 31 2
+rect 446 249 5 19 3
+circle 448 252 8 4 4
+circle 454 248 4 4 4
+circle 442 248 4 4 4
+circle 456 254 4 4 4
+circle 440 254 4 4 4
+unclip
+update 433 241 31 31
+clip 464 240 32 32
+rect 464 240 32 32 1
+rect 465 241 31 31 0
+unclip
+update 465 241 31 31
+clip 16 272 32 32
+rect 16 272 32 32 1
+rect 17 273 31 31 0
+unclip
+update 17 273 31 31
+clip 48 272 32 32
+rect 48 272 32 32 1
+rect 49 273 31 31 2
+rect 62 281 5 19 3
+circle 64 284 8 4 4
+circle 70 280 4 4 4
+circle 58 280 4 4 4
+circle 72 286 4 4 4
+circle 56 286 4 4 4
+unclip
+update 49 273 31 31
+clip 80 272 32 32
+rect 80 272 32 32 1
+rect 81 273 31 31 0
+unclip
+update 81 273 31 31
+clip 112 272 32 32
+rect 112 272 32 32 1
+rect 113 273 31 31 0
+unclip
+update 113 273 31 31
+clip 144 272 32 32
+rect 144 272 32 32 1
+rect 145 273 31 31 0
+unclip
+update 145 273 31 31
+clip 176 272 32 32
+rect 176 272 32 32 1
+rect 177 273 31 31 0
+unclip
+update 177 273 31 31
+clip 208 272 32 32
+rect 208 272 32 32 1
+rect 209 273 31 31 0
+unclip
+update 209 273 31 31
+clip 240 272 32 32
+rect 240 272 32 32 1
+rect 241 273 31 31 0
+unclip
+update 241 273 31 31
+clip 272 272 32 32
+rect 272 272 32 32 1
+rect 273 273 31 31 0
+unclip
+update 273 273 31 31
+clip 304 272 32 32
+rect 304 272 32 32 1
+rect 305 273 31 31 0
+unclip
+update 305 273 31 31
+clip 336 272 32 32
+rect 336 272 32 32 1
+rect 337 273 31 31 0
+unclip
+update 337 273 31 31
+clip 368 272 32 32
+rect 368 272 32 32 1
+rect 369 273 31 31 2
+rect 382 281 5 19 3
+circle 384 284 8 4 4
+circle 390 280 4 4 4
+circle 378 280 4 4 4
+circle 392 286 4 4 4
+circle 376 286 4 4 4
+unclip
+update 369 273 31 31
+clip 400 272 32 32
+rect 400 272 32 32 1
+rect 401 273 31 31 0
+unclip
+update 401 273 31 31
+clip 432 272 32 32
+rect 432 272 32 32 1
+rect 433 273 31 31 0
+unclip
+update 433 273 31 31
+clip 464 272 32 32
+rect 464 272 32 32 1
+rect 465 273 31 31 0
+unclip
+update 465 273 31 31
+clip 16 304 32 32
+rect 16 304 32 32 1
+rect 17 305 31 31 0
+unclip
+update 17 305 31 31
+clip 48 304 32 32
+rect 48 304 32 32 1
+rect 49 305 31 31 0
+unclip
+update 49 305 31 31
+clip 80 304 32 32
+rect 80 304 32 32 1
+rect 81 305 31 31 0
+unclip
+update 81 305 31 31
+clip 112 304 32 32
+rect 112 304 32 32 1
+rect 113 305 31 31 0
+unclip
+update 113 305 31 31
+clip 144 304 32 32
+rect 144 304 32 32 1
+rect 145 305 31 31 2
+rect 158 313 5 19 3
+circle 160 316 8 4 4
+circle 166 312 4 4 4
+circle 154 312 4 4 4
+circle 168 318 4 4 4
+circle 152 318 4 4 4
+unclip
+update 145 305 31 31
+clip 176 304 32 32
+rect 176 304 32 32 1
+rect 177 305 31 31 0
+unclip
+update 177 305 31 31
+clip 208 304 32 32
+rect 208 304 32 32 1
+rect 209 305 31 31 2
+rect 222 313 5 19 3
+circle 224 316 8 4 4
+circle 230 312 4 4 4
+circle 218 312 4 4 4
+circle 232 318 4 4 4
+circle 216 318 4 4 4
+unclip
+update 209 305 31 31
+clip 240 304 32 32
+rect 240 304 32 32 1
+rect 241 305 31 31 2
+rect 254 313 5 19 3
+circle 256 316 8 4 4
+circle 262 312 4 4 4
+circle 250 312 4 4 4
+circle 264 318 4 4 4
+circle 248 318 4 4 4
+unclip
+update 241 305 31 31
+clip 272 304 32 32
+rect 272 304 32 32 1
+rect 273 305 31 31 0
+unclip
+update 273 305 31 31
+clip 304 304 32 32
+rect 304 304 32 32 1
+rect 305 305 31 31 2
+rect 318 313 5 19 3
+circle 320 316 8 4 4
+circle 326 312 4 4 4
+circle 314 312 4 4 4
+circle 328 318 4 4 4
+circle 312 318 4 4 4
+unclip
+update 305 305 31 31
+clip 336 304 32 32
+rect 336 304 32 32 1
+rect 337 305 31 31 0
+unclip
+update 337 305 31 31
+clip 368 304 32 32
+rect 368 304 32 32 1
+rect 369 305 31 31 0
+unclip
+update 369 305 31 31
+clip 400 304 32 32
+rect 400 304 32 32 1
+rect 401 305 31 31 0
+unclip
+update 401 305 31 31
+clip 432 304 32 32
+rect 432 304 32 32 1
+rect 433 305 31 31 2
+rect 446 313 5 19 3
+circle 448 316 8 4 4
+circle 454 312 4 4 4
+circle 442 312 4 4 4
+circle 456 318 4 4 4
+circle 440 318 4 4 4
+unclip
+update 433 305 31 31
+clip 464 304 32 32
+rect 464 304 32 32 1
+rect 465 305 31 31 0
+unclip
+update 465 305 31 31
+clip 16 336 32 32
+rect 16 336 32 32 1
+rect 17 337 31 31 0
+unclip
+update 17 337 31 31
+clip 48 336 32 32
+rect 48 336 32 32 1
+rect 49 337 31 31 0
+unclip
+update 49 337 31 31
+clip 80 336 32 32
+rect 80 336 32 32 1
+rect 81 337 31 31 0
+unclip
+update 81 337 31 31
+clip 112 336 32 32
+rect 112 336 32 32 1
+rect 113 337 31 31 0
+unclip
+update 113 337 31 31
+clip 144 336 32 32
+rect 144 336 32 32 1
+rect 145 337 31 31 0
+unclip
+update 145 337 31 31
+clip 176 336 32 32
+rect 176 336 32 32 1
+rect 177 337 31 31 2
+rect 190 345 5 19 3
+circle 192 348 8 4 4
+circle 198 344 4 4 4
+circle 186 344 4 4 4
+circle 200 350 4 4 4
+circle 184 350 4 4 4
+unclip
+update 177 337 31 31
+clip 208 336 32 32
+rect 208 336 32 32 1
+rect 209 337 31 31 0
+unclip
+update 209 337 31 31
+clip 240 336 32 32
+rect 240 336 32 32 1
+rect 241 337 31 31 0
+unclip
+update 241 337 31 31
+clip 272 336 32 32
+rect 272 336 32 32 1
+rect 273 337 31 31 0
+unclip
+update 273 337 31 31
+clip 304 336 32 32
+rect 304 336 32 32 1
+rect 305 337 31 31 2
+rect 318 345 5 19 3
+circle 320 348 8 4 4
+circle 326 344 4 4 4
+circle 314 344 4 4 4
+circle 328 350 4 4 4
+circle 312 350 4 4 4
+unclip
+update 305 337 31 31
+clip 336 336 32 32
+rect 336 336 32 32 1
+rect 337 337 31 31 0
+unclip
+update 337 337 31 31
+clip 368 336 32 32
+rect 368 336 32 32 1
+rect 369 337 31 31 0
+unclip
+update 369 337 31 31
+clip 400 336 32 32
+rect 400 336 32 32 1
+rect 401 337 31 31 0
+unclip
+update 401 337 31 31
+clip 432 336 32 32
+rect 432 336 32 32 1
+rect 433 337 31 31 0
+unclip
+update 433 337 31 31
+clip 464 336 32 32
+rect 464 336 32 32 1
+rect 465 337 31 31 0
+unclip
+update 465 337 31 31
+clip 16 368 32 32
+rect 16 368 32 32 1
+rect 17 369 31 31 0
+unclip
+update 17 369 31 31
+clip 48 368 32 32
+rect 48 368 32 32 1
+rect 49 369 31 31 0
+unclip
+update 49 369 31 31
+clip 80 368 32 32
+rect 80 368 32 32 1
+rect 81 369 31 31 0
+unclip
+update 81 369 31 31
+clip 112 368 32 32
+rect 112 368 32 32 1
+rect 113 369 31 31 0
+unclip
+update 113 369 31 31
+clip 144 368 32 32
+rect 144 368 32 32 1
+rect 145 369 31 31 0
+unclip
+update 145 369 31 31
+clip 176 368 32 32
+rect 176 368 32 32 1
+rect 177 369 31 31 0
+unclip
+update 177 369 31 31
+clip 208 368 32 32
+rect 208 368 32 32 1
+rect 209 369 31 31 0
+unclip
+update 209 369 31 31
+clip 240 368 32 32
+rect 240 368 32 32 1
+rect 241 369 31 31 0
+unclip
+update 241 369 31 31
+clip 272 368 32 32
+rect 272 368 32 32 1
+rect 273 369 31 31 0
+unclip
+update 273 369 31 31
+clip 304 368 32 32
+rect 304 368 32 32 1
+rect 305 369 31 31 0
+unclip
+update 305 369 31 31
+clip 336 368 32 32
+rect 336 368 32 32 1
+rect 337 369 31 31 0
+unclip
+update 337 369 31 31
+clip 368 368 32 32
+rect 368 368 32 32 1
+rect 369 369 31 31 0
+unclip
+update 369 369 31 31
+clip 400 368 32 32
+rect 400 368 32 32 1
+rect 401 369 31 31 2
+rect 414 377 5 19 3
+circle 416 380 8 4 4
+circle 422 376 4 4 4
+circle 410 376 4 4 4
+circle 424 382 4 4 4
+circle 408 382 4 4 4
+unclip
+update 401 369 31 31
+clip 432 368 32 32
+rect 432 368 32 32 1
+rect 433 369 31 31 0
+unclip
+update 433 369 31 31
+clip 464 368 32 32
+rect 464 368 32 32 1
+rect 465 369 31 31 0
+unclip
+update 465 369 31 31
+clip 16 400 32 32
+rect 16 400 32 32 1
+rect 17 401 31 31 2
+rect 30 409 5 19 3
+circle 32 412 8 4 4
+circle 38 408 4 4 4
+circle 26 408 4 4 4
+circle 40 414 4 4 4
+circle 24 414 4 4 4
+unclip
+update 17 401 31 31
+clip 48 400 32 32
+rect 48 400 32 32 1
+rect 49 401 31 31 0
+unclip
+update 49 401 31 31
+clip 80 400 32 32
+rect 80 400 32 32 1
+rect 81 401 31 31 0
+unclip
+update 81 401 31 31
+clip 112 400 32 32
+rect 112 400 32 32 1
+rect 113 401 31 31 0
+unclip
+update 113 401 31 31
+clip 144 400 32 32
+rect 144 400 32 32 1
+rect 145 401 31 31 2
+rect 158 409 5 19 3
+circle 160 412 8 4 4
+circle 166 408 4 4 4
+circle 154 408 4 4 4
+circle 168 414 4 4 4
+circle 152 414 4 4 4
+unclip
+update 145 401 31 31
+clip 176 400 32 32
+rect 176 400 32 32 1
+rect 177 401 31 31 0
+unclip
+update 177 401 31 31
+clip 208 400 32 32
+rect 208 400 32 32 1
+rect 209 401 31 31 0
+unclip
+update 209 401 31 31
+clip 240 400 32 32
+rect 240 400 32 32 1
+rect 241 401 31 31 0
+unclip
+update 241 401 31 31
+clip 272 400 32 32
+rect 272 400 32 32 1
+rect 273 401 31 31 0
+unclip
+update 273 401 31 31
+clip 304 400 32 32
+rect 304 400 32 32 1
+rect 305 401 31 31 0
+unclip
+update 305 401 31 31
+clip 336 400 32 32
+rect 336 400 32 32 1
+rect 337 401 31 31 0
+unclip
+update 337 401 31 31
+clip 368 400 32 32
+rect 368 400 32 32 1
+rect 369 401 31 31 0
+unclip
+update 369 401 31 31
+clip 400 400 32 32
+rect 400 400 32 32 1
+rect 401 401 31 31 0
+unclip
+update 401 401 31 31
+clip 432 400 32 32
+rect 432 400 32 32 1
+rect 433 401 31 31 0
+unclip
+update 433 401 31 31
+clip 464 400 32 32
+rect 464 400 32 32 1
+rect 465 401 31 31 0
+unclip
+update 465 401 31 31
+clip 16 432 32 32
+rect 16 432 32 32 1
+rect 17 433 31 31 0
+unclip
+update 17 433 31 31
+clip 48 432 32 32
+rect 48 432 32 32 1
+rect 49 433 31 31 0
+unclip
+update 49 433 31 31
+clip 80 432 32 32
+rect 80 432 32 32 1
+rect 81 433 31 31 0
+unclip
+update 81 433 31 31
+clip 112 432 32 32
+rect 112 432 32 32 1
+rect 113 433 31 31 0
+unclip
+update 113 433 31 31
+clip 144 432 32 32
+rect 144 432 32 32 1
+rect 145 433 31 31 2
+rect 158 441 5 19 3
+circle 160 444 8 4 4
+circle 166 440 4 4 4
+circle 154 440 4 4 4
+circle 168 446 4 4 4
+circle 152 446 4 4 4
+unclip
+update 145 433 31 31
+clip 176 432 32 32
+rect 176 432 32 32 1
+rect 177 433 31 31 0
+unclip
+update 177 433 31 31
+clip 208 432 32 32
+rect 208 432 32 32 1
+rect 209 433 31 31 2
+rect 222 441 5 19 3
+circle 224 444 8 4 4
+circle 230 440 4 4 4
+circle 218 440 4 4 4
+circle 232 446 4 4 4
+circle 216 446 4 4 4
+unclip
+update 209 433 31 31
+clip 240 432 32 32
+rect 240 432 32 32 1
+rect 241 433 31 31 2
+rect 254 441 5 19 3
+circle 256 444 8 4 4
+circle 262 440 4 4 4
+circle 250 440 4 4 4
+circle 264 446 4 4 4
+circle 248 446 4 4 4
+unclip
+update 241 433 31 31
+clip 272 432 32 32
+rect 272 432 32 32 1
+rect 273 433 31 31 0
+unclip
+update 273 433 31 31
+clip 304 432 32 32
+rect 304 432 32 32 1
+rect 305 433 31 31 0
+unclip
+update 305 433 31 31
+clip 336 432 32 32
+rect 336 432 32 32 1
+rect 337 433 31 31 2
+rect 350 441 5 19 3
+circle 352 444 8 4 4
+circle 358 440 4 4 4
+circle 346 440 4 4 4
+circle 360 446 4 4 4
+circle 344 446 4 4 4
+unclip
+update 337 433 31 31
+clip 368 432 32 32
+rect 368 432 32 32 1
+rect 369 433 31 31 0
+unclip
+update 369 433 31 31
+clip 400 432 32 32
+rect 400 432 32 32 1
+rect 401 433 31 31 0
+unclip
+update 401 433 31 31
+clip 432 432 32 32
+rect 432 432 32 32 1
+rect 433 433 31 31 0
+unclip
+update 433 433 31 31
+clip 464 432 32 32
+rect 464 432 32 32 1
+rect 465 433 31 31 0
+unclip
+update 465 433 31 31
+clip 16 464 32 32
+rect 16 464 32 32 1
+rect 17 465 31 31 0
+unclip
+update 17 465 31 31
+clip 48 464 32 32
+rect 48 464 32 32 1
+rect 49 465 31 31 2
+rect 62 473 5 19 3
+circle 64 476 8 4 4
+circle 70 472 4 4 4
+circle 58 472 4 4 4
+circle 72 478 4 4 4
+circle 56 478 4 4 4
+unclip
+update 49 465 31 31
+clip 80 464 32 32
+rect 80 464 32 32 1
+rect 81 465 31 31 0
+unclip
+update 81 465 31 31
+clip 112 464 32 32
+rect 112 464 32 32 1
+rect 113 465 31 31 2
+rect 126 473 5 19 3
+circle 128 476 8 4 4
+circle 134 472 4 4 4
+circle 122 472 4 4 4
+circle 136 478 4 4 4
+circle 120 478 4 4 4
+unclip
+update 113 465 31 31
+clip 144 464 32 32
+rect 144 464 32 32 1
+rect 145 465 31 31 0
+unclip
+update 145 465 31 31
+clip 176 464 32 32
+rect 176 464 32 32 1
+rect 177 465 31 31 0
+unclip
+update 177 465 31 31
+clip 208 464 32 32
+rect 208 464 32 32 1
+rect 209 465 31 31 0
+unclip
+update 209 465 31 31
+clip 240 464 32 32
+rect 240 464 32 32 1
+rect 241 465 31 31 0
+unclip
+update 241 465 31 31
+clip 272 464 32 32
+rect 272 464 32 32 1
+rect 273 465 31 31 0
+unclip
+update 273 465 31 31
+clip 304 464 32 32
+rect 304 464 32 32 1
+rect 305 465 31 31 0
+unclip
+update 305 465 31 31
+clip 336 464 32 32
+rect 336 464 32 32 1
+rect 337 465 31 31 0
+unclip
+update 337 465 31 31
+clip 368 464 32 32
+rect 368 464 32 32 1
+rect 369 465 31 31 0
+unclip
+update 369 465 31 31
+clip 400 464 32 32
+rect 400 464 32 32 1
+rect 401 465 31 31 2
+rect 414 473 5 19 3
+circle 416 476 8 4 4
+circle 422 472 4 4 4
+circle 410 472 4 4 4
+circle 424 478 4 4 4
+circle 408 478 4 4 4
+unclip
+update 401 465 31 31
+clip 432 464 32 32
+rect 432 464 32 32 1
+rect 433 465 31 31 0
+unclip
+update 433 465 31 31
+clip 464 464 32 32
+rect 464 464 32 32 1
+rect 465 465 31 31 0
+unclip
+update 465 465 31 31
+rect 16 497 32 47 0
+text 32 528 1 16 1 1 "5"
+update 16 497 32 47
+rect 48 497 32 47 0
+text 64 528 1 16 1 1 "2"
+update 48 497 32 47
+rect 80 497 32 47 0
+text 96 528 1 16 1 1 "2"
+update 80 497 32 47
+rect 112 497 32 47 0
+text 128 528 1 16 1 1 "5"
+update 112 497 32 47
+rect 144 497 32 47 0
+text 160 528 1 16 1 1 "2"
+update 144 497 32 47
+rect 176 497 32 47 0
+text 192 528 1 16 1 1 "4"
+update 176 497 32 47
+rect 208 497 32 47 0
+text 224 528 1 16 1 1 "2"
+update 208 497 32 47
+rect 240 497 32 47 0
+text 256 528 1 16 1 1 "3"
+update 240 497 32 47
+rect 272 497 32 47 0
+text 288 528 1 16 1 1 "3"
+update 272 497 32 47
+rect 304 497 32 47 0
+text 320 528 1 16 1 1 "4"
+update 304 497 32 47
+rect 336 497 32 47 0
+text 352 528 1 16 1 1 "2"
+update 336 497 32 47
+rect 368 497 32 47 0
+text 384 528 1 16 1 1 "3"
+update 368 497 32 47
+rect 400 497 32 47 0
+text 416 528 1 16 1 1 "2"
+update 400 497 32 47
+rect 432 497 32 47 0
+text 448 528 1 16 1 1 "3"
+update 432 497 32 47
+rect 464 497 32 47 0
+text 480 528 1 16 1 1 "3"
+update 464 497 32 47
+rect 497 16 47 32 0
+text 528 32 1 16 258 1 "5"
+update 497 16 47 32
+rect 497 48 47 32 0
+text 528 64 1 16 258 1 "2"
+update 497 48 47 32
+rect 497 80 47 32 0
+text 528 96 1 16 258 1 "3"
+update 497 80 47 32
+rect 497 112 47 32 0
+text 528 128 1 16 258 1 "3"
+update 497 112 47 32
+rect 497 144 47 32 0
+text 528 160 1 16 258 1 "2"
+update 497 144 47 32
+rect 497 176 47 32 0
+text 528 192 1 16 258 1 "5"
+update 497 176 47 32
+rect 497 208 47 32 0
+text 528 224 1 16 258 1 "1"
+update 497 208 47 32
+rect 497 240 47 32 0
+text 528 256 1 16 258 1 "6"
+update 497 240 47 32
+rect 497 272 47 32 0
+text 528 288 1 16 258 1 "1"
+update 497 272 47 32
+rect 497 304 47 32 0
+text 528 320 1 16 258 1 "4"
+update 497 304 47 32
+rect 497 336 47 32 0
+text 528 352 1 16 258 1 "1"
+update 497 336 47 32
+rect 497 368 47 32 0
+text 528 384 1 16 258 1 "3"
+update 497 368 47 32
+rect 497 400 47 32 0
+text 528 416 1 16 258 1 "3"
+update 497 400 47 32
+rect 497 432 47 32 0
+text 528 448 1 16 258 1 "1"
+update 497 432 47 32
+rect 497 464 47 32 0
+text 528 480 1 16 258 1 "5"
+update 497 464 47 32
+update 0 0 544 544
+end_draw

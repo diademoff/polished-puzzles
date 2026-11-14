@@ -1,0 +1,258 @@
+traceSchema 1
+game "Palisade"
+id "5x5n5:a313d3d3f32a1"
+params "5x5n5"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 292 292
+palette 800,800,800 633,633,633 0,0,0 720,720,0 720,720,720 1000,0,0
+changed_state false false
+start_draw
+rect 0 0 292 292 0
+rect 24 24 4 4 2
+rect 72 24 4 4 2
+rect 120 24 4 4 2
+rect 168 24 4 4 2
+rect 216 24 4 4 2
+rect 264 24 4 4 2
+rect 24 72 4 4 2
+rect 72 72 4 4 2
+rect 120 72 4 4 2
+rect 168 72 4 4 2
+rect 216 72 4 4 2
+rect 264 72 4 4 2
+rect 24 120 4 4 2
+rect 72 120 4 4 2
+rect 120 120 4 4 2
+rect 168 120 4 4 2
+rect 216 120 4 4 2
+rect 264 120 4 4 2
+rect 24 168 4 4 2
+rect 72 168 4 4 2
+rect 120 168 4 4 2
+rect 168 168 4 4 2
+rect 216 168 4 4 2
+rect 264 168 4 4 2
+rect 24 216 4 4 2
+rect 72 216 4 4 2
+rect 120 216 4 4 2
+rect 168 216 4 4 2
+rect 216 216 4 4 2
+rect 264 216 4 4 2
+rect 24 264 4 4 2
+rect 72 264 4 4 2
+rect 120 264 4 4 2
+rect 168 264 4 4 2
+rect 216 264 4 4 2
+rect 264 264 4 4 2
+update 0 0 292 292
+status "Region size: 5"
+clip 24 24 52 52
+rect 28 28 44 44 0
+rect 28 24 44 4 2
+rect 72 28 4 44 3
+rect 28 72 44 4 3
+rect 24 28 4 44 2
+unclip
+update 24 24 52 52
+clip 72 24 52 52
+rect 76 28 44 44 0
+text 98 50 1 24 257 2 "3"
+rect 76 24 44 4 2
+rect 120 28 4 44 3
+rect 76 72 44 4 3
+rect 72 28 4 44 3
+unclip
+update 72 24 52 52
+clip 120 24 52 52
+rect 124 28 44 44 0
+text 146 50 1 24 257 2 "1"
+rect 124 24 44 4 2
+rect 168 28 4 44 3
+rect 124 72 44 4 3
+rect 120 28 4 44 3
+unclip
+update 120 24 52 52
+clip 168 24 52 52
+rect 172 28 44 44 0
+text 194 50 1 24 257 2 "3"
+rect 172 24 44 4 2
+rect 216 28 4 44 3
+rect 172 72 44 4 3
+rect 168 28 4 44 3
+unclip
+update 168 24 52 52
+clip 216 24 52 52
+rect 220 28 44 44 0
+rect 220 24 44 4 2
+rect 264 28 4 44 2
+rect 220 72 44 4 3
+rect 216 28 4 44 3
+unclip
+update 216 24 52 52
+clip 24 72 52 52
+rect 28 76 44 44 0
+rect 28 72 44 4 3
+rect 72 76 4 44 3
+rect 28 120 44 4 3
+rect 24 76 4 44 2
+unclip
+update 24 72 52 52
+clip 72 72 52 52
+rect 76 76 44 44 0
+rect 76 72 44 4 3
+rect 120 76 4 44 3
+rect 76 120 44 4 3
+rect 72 76 4 44 3
+unclip
+update 72 72 52 52
+clip 120 72 52 52
+rect 124 76 44 44 0
+rect 124 72 44 4 3
+rect 168 76 4 44 3
+rect 124 120 44 4 3
+rect 120 76 4 44 3
+unclip
+update 120 72 52 52
+clip 168 72 52 52
+rect 172 76 44 44 0
+text 194 98 1 24 257 2 "3"
+rect 172 72 44 4 3
+rect 216 76 4 44 3
+rect 172 120 44 4 3
+rect 168 76 4 44 3
+unclip
+update 168 72 52 52
+clip 216 72 52 52
+rect 220 76 44 44 0
+rect 220 72 44 4 3
+rect 264 76 4 44 2
+rect 220 120 44 4 3
+rect 216 76 4 44 3
+unclip
+update 216 72 52 52
+clip 24 120 52 52
+rect 28 124 44 44 0
+rect 28 120 44 4 3
+rect 72 124 4 44 3
+rect 28 168 44 4 3
+rect 24 124 4 44 2
+unclip
+update 24 120 52 52
+clip 72 120 52 52
+rect 76 124 44 44 0
+rect 76 120 44 4 3
+rect 120 124 4 44 3
+rect 76 168 44 4 3
+rect 72 124 4 44 3
+unclip
+update 72 120 52 52
+clip 120 120 52 52
+rect 124 124 44 44 0
+rect 124 120 44 4 3
+rect 168 124 4 44 3
+rect 124 168 44 4 3
+rect 120 124 4 44 3
+unclip
+update 120 120 52 52
+clip 168 120 52 52
+rect 172 124 44 44 0
+text 194 146 1 24 257 2 "3"
+rect 172 120 44 4 3
+rect 216 124 4 44 3
+rect 172 168 44 4 3
+rect 168 124 4 44 3
+unclip
+update 168 120 52 52
+clip 216 120 52 52
+rect 220 124 44 44 0
+rect 220 120 44 4 3
+rect 264 124 4 44 2
+rect 220 168 44 4 3
+rect 216 124 4 44 3
+unclip
+update 216 120 52 52
+clip 24 168 52 52
+rect 28 172 44 44 0
+rect 28 168 44 4 3
+rect 72 172 4 44 3
+rect 28 216 44 4 3
+rect 24 172 4 44 2
+unclip
+update 24 168 52 52
+clip 72 168 52 52
+rect 76 172 44 44 0
+rect 76 168 44 4 3
+rect 120 172 4 44 3
+rect 76 216 44 4 3
+rect 72 172 4 44 3
+unclip
+update 72 168 52 52
+clip 120 168 52 52
+rect 124 172 44 44 0
+rect 124 168 44 4 3
+rect 168 172 4 44 3
+rect 124 216 44 4 3
+rect 120 172 4 44 3
+unclip
+update 120 168 52 52
+clip 168 168 52 52
+rect 172 172 44 44 0
+rect 172 168 44 4 3
+rect 216 172 4 44 3
+rect 172 216 44 4 3
+rect 168 172 4 44 3
+unclip
+update 168 168 52 52
+clip 216 168 52 52
+rect 220 172 44 44 0
+rect 220 168 44 4 3
+rect 264 172 4 44 2
+rect 220 216 44 4 3
+rect 216 172 4 44 3
+unclip
+update 216 168 52 52
+clip 24 216 52 52
+rect 28 220 44 44 0
+text 50 242 1 24 257 2 "3"
+rect 28 216 44 4 3
+rect 72 220 4 44 3
+rect 28 264 44 4 2
+rect 24 220 4 44 2
+unclip
+update 24 216 52 52
+clip 72 216 52 52
+rect 76 220 44 44 0
+text 98 242 1 24 257 2 "2"
+rect 76 216 44 4 3
+rect 120 220 4 44 3
+rect 76 264 44 4 2
+rect 72 220 4 44 3
+unclip
+update 72 216 52 52
+clip 120 216 52 52
+rect 124 220 44 44 0
+rect 124 216 44 4 3
+rect 168 220 4 44 3
+rect 124 264 44 4 2
+rect 120 220 4 44 3
+unclip
+update 120 216 52 52
+clip 168 216 52 52
+rect 172 220 44 44 0
+text 194 242 1 24 257 2 "1"
+rect 172 216 44 4 3
+rect 216 220 4 44 3
+rect 172 264 44 4 2
+rect 168 220 4 44 3
+unclip
+update 168 216 52 52
+clip 216 216 52 52
+rect 220 220 44 44 0
+rect 220 216 44 4 3
+rect 264 220 4 44 2
+rect 220 264 44 4 2
+rect 216 220 4 44 3
+unclip
+update 216 216 52 52
+update 0 0 292 292
+end_draw

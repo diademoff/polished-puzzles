@@ -1,0 +1,259 @@
+traceSchema 1
+game "Guess"
+id "c6p4g10Bm:ac769e34"
+params "c6p4g10Bm"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 263 420
+palette 800,800,800 0,0,0 0,0,0 500,1000,1000 1000,500,500 533,533,533 1000,0,0 1000,1000,0 0,1000,0 200,300,1000 1000,500,0 500,0,700 500,300,300 400,800,1000 700,1000,700 1000,600,1000 0,0,0 1000,1000,1000
+changed_state false false
+blitter_new 1 34 34
+start_draw
+rect 0 0 263 420 0
+rect 80 368 140 2 1
+update 0 0 263 420
+rect 15 105 34 34 0
+circle 31 121 15 6 1
+update 15 105 34 34
+rect 15 140 34 34 0
+circle 31 156 15 7 1
+update 15 140 34 34
+rect 15 175 34 34 0
+circle 31 191 15 8 1
+update 15 175 34 34
+rect 15 210 34 34 0
+circle 31 226 15 9 1
+update 15 210 34 34
+rect 15 245 34 34 0
+circle 31 261 15 10 1
+update 15 245 34 34
+rect 15 280 34 34 0
+circle 31 296 15 11 1
+update 15 280 34 34
+rect 79 331 34 34 0
+circle 95 347 15 5 5
+update 79 331 34 34
+update 80 363 32 2
+rect 114 331 34 34 0
+circle 130 347 15 5 5
+update 114 331 34 34
+update 115 363 32 2
+rect 149 331 34 34 0
+circle 165 347 15 5 5
+update 149 331 34 34
+update 150 363 32 2
+rect 184 331 34 34 0
+circle 200 347 15 5 5
+update 184 331 34 34
+update 185 363 32 2
+rect 220 332 31 31 0
+circle 228 340 5 5 5
+circle 242 340 5 5 5
+circle 228 354 5 5 5
+circle 242 354 5 5 5
+update 220 332 31 31
+rect 79 296 34 34 0
+circle 95 312 15 5 5
+update 79 296 34 34
+update 80 328 32 2
+rect 114 296 34 34 0
+circle 130 312 15 5 5
+update 114 296 34 34
+update 115 328 32 2
+rect 149 296 34 34 0
+circle 165 312 15 5 5
+update 149 296 34 34
+update 150 328 32 2
+rect 184 296 34 34 0
+circle 200 312 15 5 5
+update 184 296 34 34
+update 185 328 32 2
+rect 220 297 31 31 0
+circle 228 305 5 5 5
+circle 242 305 5 5 5
+circle 228 319 5 5 5
+circle 242 319 5 5 5
+update 220 297 31 31
+rect 79 261 34 34 0
+circle 95 277 15 5 5
+update 79 261 34 34
+update 80 293 32 2
+rect 114 261 34 34 0
+circle 130 277 15 5 5
+update 114 261 34 34
+update 115 293 32 2
+rect 149 261 34 34 0
+circle 165 277 15 5 5
+update 149 261 34 34
+update 150 293 32 2
+rect 184 261 34 34 0
+circle 200 277 15 5 5
+update 184 261 34 34
+update 185 293 32 2
+rect 220 262 31 31 0
+circle 228 270 5 5 5
+circle 242 270 5 5 5
+circle 228 284 5 5 5
+circle 242 284 5 5 5
+update 220 262 31 31
+rect 79 226 34 34 0
+circle 95 242 15 5 5
+update 79 226 34 34
+update 80 258 32 2
+rect 114 226 34 34 0
+circle 130 242 15 5 5
+update 114 226 34 34
+update 115 258 32 2
+rect 149 226 34 34 0
+circle 165 242 15 5 5
+update 149 226 34 34
+update 150 258 32 2
+rect 184 226 34 34 0
+circle 200 242 15 5 5
+update 184 226 34 34
+update 185 258 32 2
+rect 220 227 31 31 0
+circle 228 235 5 5 5
+circle 242 235 5 5 5
+circle 228 249 5 5 5
+circle 242 249 5 5 5
+update 220 227 31 31
+rect 79 191 34 34 0
+circle 95 207 15 5 5
+update 79 191 34 34
+update 80 223 32 2
+rect 114 191 34 34 0
+circle 130 207 15 5 5
+update 114 191 34 34
+update 115 223 32 2
+rect 149 191 34 34 0
+circle 165 207 15 5 5
+update 149 191 34 34
+update 150 223 32 2
+rect 184 191 34 34 0
+circle 200 207 15 5 5
+update 184 191 34 34
+update 185 223 32 2
+rect 220 192 31 31 0
+circle 228 200 5 5 5
+circle 242 200 5 5 5
+circle 228 214 5 5 5
+circle 242 214 5 5 5
+update 220 192 31 31
+rect 79 156 34 34 0
+circle 95 172 15 5 5
+update 79 156 34 34
+update 80 188 32 2
+rect 114 156 34 34 0
+circle 130 172 15 5 5
+update 114 156 34 34
+update 115 188 32 2
+rect 149 156 34 34 0
+circle 165 172 15 5 5
+update 149 156 34 34
+update 150 188 32 2
+rect 184 156 34 34 0
+circle 200 172 15 5 5
+update 184 156 34 34
+update 185 188 32 2
+rect 220 157 31 31 0
+circle 228 165 5 5 5
+circle 242 165 5 5 5
+circle 228 179 5 5 5
+circle 242 179 5 5 5
+update 220 157 31 31
+rect 79 121 34 34 0
+circle 95 137 15 5 5
+update 79 121 34 34
+update 80 153 32 2
+rect 114 121 34 34 0
+circle 130 137 15 5 5
+update 114 121 34 34
+update 115 153 32 2
+rect 149 121 34 34 0
+circle 165 137 15 5 5
+update 149 121 34 34
+update 150 153 32 2
+rect 184 121 34 34 0
+circle 200 137 15 5 5
+update 184 121 34 34
+update 185 153 32 2
+rect 220 122 31 31 0
+circle 228 130 5 5 5
+circle 242 130 5 5 5
+circle 228 144 5 5 5
+circle 242 144 5 5 5
+update 220 122 31 31
+rect 79 86 34 34 0
+circle 95 102 15 5 5
+update 79 86 34 34
+update 80 118 32 2
+rect 114 86 34 34 0
+circle 130 102 15 5 5
+update 114 86 34 34
+update 115 118 32 2
+rect 149 86 34 34 0
+circle 165 102 15 5 5
+update 149 86 34 34
+update 150 118 32 2
+rect 184 86 34 34 0
+circle 200 102 15 5 5
+update 184 86 34 34
+update 185 118 32 2
+rect 220 87 31 31 0
+circle 228 95 5 5 5
+circle 242 95 5 5 5
+circle 228 109 5 5 5
+circle 242 109 5 5 5
+update 220 87 31 31
+rect 79 51 34 34 0
+circle 95 67 15 5 5
+update 79 51 34 34
+update 80 83 32 2
+rect 114 51 34 34 0
+circle 130 67 15 5 5
+update 114 51 34 34
+update 115 83 32 2
+rect 149 51 34 34 0
+circle 165 67 15 5 5
+update 149 51 34 34
+update 150 83 32 2
+rect 184 51 34 34 0
+circle 200 67 15 5 5
+update 184 51 34 34
+update 185 83 32 2
+rect 220 52 31 31 0
+circle 228 60 5 5 5
+circle 242 60 5 5 5
+circle 228 74 5 5 5
+circle 242 74 5 5 5
+update 220 52 31 31
+rect 79 16 34 34 0
+circle 95 32 15 5 5
+update 79 16 34 34
+update 80 48 32 2
+rect 114 16 34 34 0
+circle 130 32 15 5 5
+update 114 16 34 34
+update 115 48 32 2
+rect 149 16 34 34 0
+circle 165 32 15 5 5
+update 149 16 34 34
+update 150 48 32 2
+rect 184 16 34 34 0
+circle 200 32 15 5 5
+update 184 16 34 34
+update 185 48 32 2
+rect 220 17 31 31 0
+circle 228 25 5 5 5
+circle 242 25 5 5 5
+circle 228 39 5 5 5
+circle 242 39 5 5 5
+update 220 17 31 31
+rect 71 17 2 32 0
+update 71 17 2 32
+rect 71 17 2 32 4
+update 71 17 2 32
+rect 80 372 140 35 5
+update 80 372 140 35
+update 0 0 263 420
+end_draw

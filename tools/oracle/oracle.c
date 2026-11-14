@@ -24,6 +24,7 @@
  *   {"op":"status","state":"..."}
  *   {"op":"keys","state":"...","seq":"108 108 522"}
  *   {"op":"trace","state":"..."}
+ *   {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
  *
  * Responses (flat JSON objects):
  *
@@ -1158,24 +1159,22 @@ static void do_presets(const char *gamename)
     free_frontend(&fe);
 }
 
-static void do_new(const char *gamename, const char *params,
-                   const char *seed)
+/* Creates a new game in `fe`. Returns NULL on success and an error
+ * message on failure. The caller owns `fe`. */
+static const char *make_game(frontend *fe, const char *gamename,
+                             const char *params, const char *seed,
+                             const drawing_api *api, void *handle)
 {
     const game *g = find_game(gamename);
-    frontend fe = {0};
     char *id;
     const char *error;
 
-    if (!g) {
-        put_error("unknown game");
-        return;
-    }
-    if (!seed) {
-        put_error("new needs a seed");
-        return;
-    }
+    if (!g)
+        return "unknown game";
+    if (!seed)
+        return "new needs a seed";
 
-    fe.me = midend_new(&fe, g, &oracle_drawing, NULL);
+    fe->me = midend_new(fe, g, api, handle);
 
     /*
      * Always pass "params#seed" in DEF_PARAMS mode. With an empty
@@ -1196,17 +1195,69 @@ static void do_new(const char *gamename, const char *params,
         sprintf(id, "%s#%s", par, seed);
         sfree(par);
     }
-    error = midend_game_id_int(fe.me, id, DEF_PARAMS, false);
+    error = midend_game_id_int(fe->me, id, DEF_PARAMS, false);
     sfree(id);
     if (error) {
-        free_frontend(&fe);
+        free_frontend(fe);
+        return error;
+    }
+    midend_new_game(fe->me);
+    size_frontend(fe);
+    return NULL;
+}
+
+static void do_new(const char *gamename, const char *params,
+                   const char *seed)
+{
+    frontend fe = {0};
+    const char *error = make_game(&fe, gamename, params, seed,
+                                  &oracle_drawing, NULL);
+
+    if (error) {
         put_error(error);
         return;
     }
-    midend_new_game(fe.me);
-    size_frontend(&fe);
     put_state(&fe);
     free_frontend(&fe);
+}
+
+static void put_trace(frontend *fe, trace_ctx *trace)
+{
+    float *colours;
+    char *id;
+    char *params;
+    int ncolours = 0, i;
+
+    /*
+     * One redraw of a fresh midend is the trace. The first redraw of a
+     * new drawstate clears the window with colour 0, and that clear is
+     * part of the contract.
+     */
+    midend_redraw(fe->me);
+    colours = midend_colours(fe->me, &ncolours);
+    id = midend_get_game_id(fe->me);
+    params = midend_get_current_params(fe->me, true);
+
+    fputs("{\"ok\":true,\"trace\":{\"traceSchema\":1,\"game\":", stdout);
+    put_json_string(midend_which_game(fe->me)->name);
+    fputs(",\"id\":", stdout);
+    put_json_string(id);
+    fputs(",\"params\":", stdout);
+    put_json_string(params);
+    printf(",\"w\":%d,\"h\":%d,\"palette\":[", fe->width, fe->height);
+    for (i = 0; i < ncolours; i++)
+        printf("%s[%ld,%ld,%ld]", i ? "," : "",
+               lroundf(colours[i * 3 + 0] * 1000.0F),
+               lroundf(colours[i * 3 + 1] * 1000.0F),
+               lroundf(colours[i * 3 + 2] * 1000.0F));
+    fputs("],\"ops\":[", stdout);
+    if (trace->ops.buf)
+        fputs(trace->ops.buf, stdout);
+    fputs("]}}\n", stdout);
+
+    sfree(colours);
+    sfree(id);
+    sfree(params);
 }
 
 static void do_trace(const char *save)
@@ -1214,54 +1265,42 @@ static void do_trace(const char *save)
     frontend fe = {0};
     trace_ctx trace = {0};
     const char *error;
-    float *colours;
-    char *id;
-    char *params;
-    int ncolours = 0, i;
 
     if (!save) {
         put_error("missing state");
         return;
     }
-
     error = open_state_with(&fe, save, &recording_drawing, &trace);
     if (error) {
         put_error(error);
         return;
     }
 
-    /*
-     * One redraw of a fresh midend is the trace. The first redraw of a
-     * new drawstate clears the window with colour 0, and that clear is
-     * part of the contract.
-     */
-    midend_redraw(fe.me);
-    colours = midend_colours(fe.me, &ncolours);
-    id = midend_get_game_id(fe.me);
-    params = midend_get_current_params(fe.me, true);
+    put_trace(&fe, &trace);
 
-    fputs("{\"ok\":true,\"trace\":{\"traceSchema\":1,\"game\":", stdout);
-    put_json_string(midend_which_game(fe.me)->name);
-    fputs(",\"id\":", stdout);
-    put_json_string(id);
-    fputs(",\"params\":", stdout);
-    put_json_string(params);
-    printf(",\"w\":%d,\"h\":%d,\"palette\":[", fe.width, fe.height);
-    for (i = 0; i < ncolours; i++)
-        printf("%s[%ld,%ld,%ld]", i ? "," : "",
-               lroundf(colours[i * 3 + 0] * 1000.0F),
-               lroundf(colours[i * 3 + 1] * 1000.0F),
-               lroundf(colours[i * 3 + 2] * 1000.0F));
-    fputs("],\"ops\":[", stdout);
-    if (trace.ops.buf)
-        fputs(trace.ops.buf, stdout);
-    fputs("]}}\n", stdout);
-
-    sfree(colours);
-    sfree(id);
-    sfree(params);
-    sfree(trace.ops.buf);
+    /* Freeing the midend frees its blitters, which appends to the trace
+     * buffer. The frontend must go before the buffer. */
     free_frontend(&fe);
+    sfree(trace.ops.buf);
+}
+
+static void do_trace_new(const char *gamename, const char *params,
+                         const char *seed)
+{
+    frontend fe = {0};
+    trace_ctx trace = {0};
+    const char *error = make_game(&fe, gamename, params, seed,
+                                  &recording_drawing, &trace);
+
+    if (error) {
+        put_error(error);
+        return;
+    }
+
+    put_trace(&fe, &trace);
+
+    free_frontend(&fe);
+    sfree(trace.ops.buf);
 }
 
 static void do_key_seq(const char *save, const char *seq)
@@ -1444,6 +1483,13 @@ int main(int argc, char **argv)
                        field_string(&req, "seq"));
         } else if (!strcmp(op, "trace")) {
             do_trace(field_string(&req, "state"));
+        } else if (!strcmp(op, "traceNew")) {
+            const char *game = field_string(&req, "game");
+            if (!game)
+                put_error("traceNew needs a game");
+            else
+                do_trace_new(game, field_string(&req, "params"),
+                             field_string(&req, "seed"));
         } else {
             put_error("unknown op");
         }

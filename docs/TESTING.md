@@ -43,7 +43,8 @@ cursor games: the cursor lives in the frontend state (`game_ui`), which
 is not part of the save file, so separate `key` requests would reset it.
 
 `trace` records one `midend_redraw` through the recording drawing API.
-The contract is `docs/adr/0003-strict-draw-traces.md`.
+`traceNew` creates the game first, so a trace does not depend on the
+save format. The contract is `docs/adr/0003-strict-draw-traces.md`.
 
 ## 3. Parity tests
 
@@ -148,8 +149,9 @@ Required:
 
 - Geometry goldens are JSON/JSON.gz and are diffed in the PR.
 - Strict draw traces are canonical text in
-  `testdata/trace/<game>/<params>.trace`, one operation per line. They
-  are regenerated with `tools/gen-traces.sh` and compared in
+  `testdata/trace/<game>/<params>.trace`, one operation per line. Every
+  game and every preset is frozen: 288 files for the Android build.
+  They are regenerated with `tools/gen-traces.sh` and compared in
   `StrictTraceTest`. The contract is `docs/adr/0003-strict-draw-traces.md`.
 - Screenshots cover UI regressions. Compare with a tolerance, on a
   fixed configuration (size, density, theme, font).

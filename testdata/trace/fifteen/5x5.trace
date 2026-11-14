@@ -5,6 +5,7 @@ params "5x5"
 upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
 size 288 288
 palette 800,800,800 0,0,0 967,967,967 633,633,633
+changed_state false false
 start_draw
 rect 0 0 288 288 0
 poly 2 2 5 265 265 265 22 217 70 70 217 22 265

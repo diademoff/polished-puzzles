@@ -6,7 +6,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Level: strict. Every game that has a frozen trace.
+ * Level: strict. Every game and preset.
  *
  * Compares the oracle draw trace with `testdata/trace/<game>/<params>.trace`.
  * The compared stream is the whole drawing contract: coordinates,
@@ -30,7 +30,7 @@ class StrictTraceTest {
     @Test
     fun `the frozen traces match the oracle`() = OracleClient().use { oracle ->
         val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
-        for (game in GenTraces.GAMES) {
+        for (game in oracle.games().sorted()) {
             val dir = File(testdata, "trace/$game")
             assertTrue("missing trace directory for $game", dir.isDirectory)
 
@@ -50,8 +50,10 @@ class StrictTraceTest {
 
             for (file in files) {
                 val params = paramsOf(file)
-                val state = oracle.newGame(game, params, GenTraces.SEED)
-                val actual = TraceNormalizer.normalize(oracle.trace(state.state), upstream)
+                val actual = TraceNormalizer.normalize(
+                    oracle.traceNew(game, params, GenTraces.SEED),
+                    upstream,
+                )
                 assertEquals("trace for $game '$params'", file.readText(), actual)
             }
         }

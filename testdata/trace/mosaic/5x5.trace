@@ -1,0 +1,217 @@
+traceSchema 1
+game "Mosaic"
+id "5x5:c323f6546a6a4a4b4"
+params "5x5"
+upstream "790f5851507be5845164d3ae7b32b2f86717fe50"
+size 192 192
+palette 800,800,800 580,769,745 0,400,388 78,78,78 925,925,925 392,392,392 1000,0,0 1000,784,784
+changed_state false false
+start_draw
+rect 0 0 192 192 0
+clip 14 14 32 32
+rect 14 14 32 1 2
+rect 14 14 1 32 2
+rect 15 15 31 31 1
+unclip
+update 14 14 32 32
+clip 46 14 32 32
+rect 46 14 32 1 2
+rect 46 14 1 32 2
+rect 47 15 31 31 1
+unclip
+update 46 14 32 32
+clip 78 14 32 32
+rect 78 14 32 1 2
+rect 78 14 1 32 2
+rect 79 15 31 31 1
+unclip
+update 78 14 32 32
+clip 110 14 32 32
+rect 110 14 32 1 2
+rect 110 14 1 32 2
+rect 111 15 31 31 1
+text 127 31 1 19 257 3 "3"
+unclip
+update 110 14 32 32
+clip 142 14 32 32
+rect 142 14 32 1 2
+rect 142 14 1 32 2
+rect 143 15 31 31 1
+text 159 31 1 19 257 3 "2"
+unclip
+update 142 14 32 32
+clip 174 14 32 32
+rect 174 14 1 32 2
+unclip
+update 174 14 32 32
+clip 14 46 32 32
+rect 14 46 32 1 2
+rect 14 46 1 32 2
+rect 15 47 31 31 1
+text 31 63 1 19 257 3 "3"
+unclip
+update 14 46 32 32
+clip 46 46 32 32
+rect 46 46 32 1 2
+rect 46 46 1 32 2
+rect 47 47 31 31 1
+unclip
+update 46 46 32 32
+clip 78 46 32 32
+rect 78 46 32 1 2
+rect 78 46 1 32 2
+rect 79 47 31 31 1
+unclip
+update 78 46 32 32
+clip 110 46 32 32
+rect 110 46 32 1 2
+rect 110 46 1 32 2
+rect 111 47 31 31 1
+unclip
+update 110 46 32 32
+clip 142 46 32 32
+rect 142 46 32 1 2
+rect 142 46 1 32 2
+rect 143 47 31 31 1
+unclip
+update 142 46 32 32
+clip 174 46 32 32
+rect 174 46 1 32 2
+unclip
+update 174 46 32 32
+clip 14 78 32 32
+rect 14 78 32 1 2
+rect 14 78 1 32 2
+rect 15 79 31 31 1
+unclip
+update 14 78 32 32
+clip 46 78 32 32
+rect 46 78 32 1 2
+rect 46 78 1 32 2
+rect 47 79 31 31 1
+unclip
+update 46 78 32 32
+clip 78 78 32 32
+rect 78 78 32 1 2
+rect 78 78 1 32 2
+rect 79 79 31 31 1
+text 95 95 1 19 257 3 "6"
+unclip
+update 78 78 32 32
+clip 110 78 32 32
+rect 110 78 32 1 2
+rect 110 78 1 32 2
+rect 111 79 31 31 1
+text 127 95 1 19 257 3 "5"
+unclip
+update 110 78 32 32
+clip 142 78 32 32
+rect 142 78 32 1 2
+rect 142 78 1 32 2
+rect 143 79 31 31 1
+text 159 95 1 19 257 3 "4"
+unclip
+update 142 78 32 32
+clip 174 78 32 32
+rect 174 78 1 32 2
+unclip
+update 174 78 32 32
+clip 14 110 32 32
+rect 14 110 32 1 2
+rect 14 110 1 32 2
+rect 15 111 31 31 1
+text 31 127 1 19 257 3 "6"
+unclip
+update 14 110 32 32
+clip 46 110 32 32
+rect 46 110 32 1 2
+rect 46 110 1 32 2
+rect 47 111 31 31 1
+unclip
+update 46 110 32 32
+clip 78 110 32 32
+rect 78 110 32 1 2
+rect 78 110 1 32 2
+rect 79 111 31 31 1
+text 95 127 1 19 257 3 "6"
+unclip
+update 78 110 32 32
+clip 110 110 32 32
+rect 110 110 32 1 2
+rect 110 110 1 32 2
+rect 111 111 31 31 1
+unclip
+update 110 110 32 32
+clip 142 110 32 32
+rect 142 110 32 1 2
+rect 142 110 1 32 2
+rect 143 111 31 31 1
+text 159 127 1 19 257 3 "4"
+unclip
+update 142 110 32 32
+clip 174 110 32 32
+rect 174 110 1 32 2
+unclip
+update 174 110 32 32
+clip 14 142 32 32
+rect 14 142 32 1 2
+rect 14 142 1 32 2
+rect 15 143 31 31 1
+unclip
+update 14 142 32 32
+clip 46 142 32 32
+rect 46 142 32 1 2
+rect 46 142 1 32 2
+rect 47 143 31 31 1
+text 63 159 1 19 257 3 "4"
+unclip
+update 46 142 32 32
+clip 78 142 32 32
+rect 78 142 32 1 2
+rect 78 142 1 32 2
+rect 79 143 31 31 1
+unclip
+update 78 142 32 32
+clip 110 142 32 32
+rect 110 142 32 1 2
+rect 110 142 1 32 2
+rect 111 143 31 31 1
+unclip
+update 110 142 32 32
+clip 142 142 32 32
+rect 142 142 32 1 2
+rect 142 142 1 32 2
+rect 143 143 31 31 1
+text 159 159 1 19 257 3 "4"
+unclip
+update 142 142 32 32
+clip 174 142 32 32
+rect 174 142 1 32 2
+unclip
+update 174 142 32 32
+clip 14 174 32 32
+rect 14 174 32 1 2
+unclip
+update 14 174 32 32
+clip 46 174 32 32
+rect 46 174 32 1 2
+unclip
+update 46 174 32 32
+clip 78 174 32 32
+rect 78 174 32 1 2
+unclip
+update 78 174 32 32
+clip 110 174 32 32
+rect 110 174 32 1 2
+unclip
+update 110 174 32 32
+clip 142 174 32 32
+rect 142 174 32 1 2
+unclip
+update 142 174 32 32
+clip 174 174 32 32
+unclip
+update 174 174 32 32
+status "Clues left: 11"
+update 0 0 192 192
+end_draw

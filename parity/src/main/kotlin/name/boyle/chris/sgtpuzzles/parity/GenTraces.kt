@@ -3,8 +3,7 @@ package name.boyle.chris.sgtpuzzles.parity
 import java.io.File
 
 /**
- * Freezes the strict draw trace of every preset of the games whose
- * renderer exists.
+ * Freezes the strict draw trace of every preset of every game.
  *
  * Usage (normally through tools/gen-traces.sh):
  *
@@ -24,9 +23,6 @@ object GenTraces {
 
     const val SEED = "12345"
 
-    /** Games with a frozen trace. Add a game when its renderer lands. */
-    val GAMES = listOf("fifteen")
-
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size == 2) { "usage: genTraces <testdata dir> <UPSTREAM.lock>" }
@@ -37,12 +33,18 @@ object GenTraces {
 
         var files = 0
         OracleClient().use { oracle ->
-            for (game in GAMES) {
+            for (game in oracle.games().sorted()) {
                 val presets = oracle.presets(game).map { it.params }.distinct().sorted()
                 require(presets.isNotEmpty()) { "$game has no presets" }
+                val names = mutableSetOf<String>()
                 for (params in presets) {
-                    val state = oracle.newGame(game, params, SEED)
-                    val text = TraceNormalizer.normalize(oracle.trace(state.state), upstream)
+                    require(names.add(fileName(params))) {
+                        "$game: preset names collide after sanitizing: $params"
+                    }
+                    val text = TraceNormalizer.normalize(
+                        oracle.traceNew(game, params, SEED),
+                        upstream,
+                    )
                     val file = File(root, "$game/${fileName(params)}.trace")
                     file.parentFile.mkdirs()
                     file.writeText(text)
@@ -50,7 +52,7 @@ object GenTraces {
                 }
             }
         }
-        println("traces: $files files for ${GAMES.joinToString()}, upstream ${upstream.take(7)}")
+        println("traces: $files files, upstream ${upstream.take(7)}")
     }
 
     /** A params string can contain characters that are not file-safe. */

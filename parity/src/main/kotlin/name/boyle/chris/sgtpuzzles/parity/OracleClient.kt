@@ -142,6 +142,24 @@ class OracleClient(
         request(mapOf("op" to "trace", "state" to state)).field("trace") as JsonValue.Obj
 
     /**
+     * Creates a new game and records its first redraw in one request.
+     *
+     * This avoids the save-file round trip, which some upstream presets
+     * cannot survive: for example `pegs 5x5random` serialises an invalid
+     * long-term parameter string. A trace describes a game, a params
+     * string, and a seed, so it does not need the save format.
+     */
+    fun traceNew(game: String, params: String, seed: String): JsonValue.Obj =
+        request(
+            mapOf(
+                "op" to "traceNew",
+                "game" to game,
+                "params" to params,
+                "seed" to seed,
+            ),
+        ).field("trace") as JsonValue.Obj
+
+    /**
      * Sends one request and returns the response. Throws on an error
      * response. String values are quoted; Int and Long values are sent
      * as bare JSON numbers.

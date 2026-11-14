@@ -62,6 +62,7 @@ Requests:
 {"op":"id","state":"..."}
 {"op":"keys","state":"...","seq":"108 108 522"}
 {"op":"trace","state":"..."}
+{"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
 ```
 
 `keys` replays a whole key sequence inside one midend. The cursor of a
@@ -71,6 +72,11 @@ a space- or comma-separated list of button codes; the pointer is `0,0`.
 
 `trace` records one redraw through the recording drawing API. It is the
 strict trace described in `docs/adr/0003-strict-draw-traces.md`.
+`traceNew` creates the game and records it in one request, without a
+save-file round trip. Some upstream presets cannot survive that round
+trip: `pegs 5x5random`, for example, serialises `5x5cross` as its
+long-term params, which `validate_params` rejects on load. A trace is
+about a game, params, and a seed, so it does not need the save format.
 
 Responses:
 
