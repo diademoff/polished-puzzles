@@ -19,6 +19,7 @@
  *   {"op":"key","state":"...","x":0,"y":0,"k":76}
  *   {"op":"keySized","state":"...","w":411,"h":702,"x":0,"y":0,"k":512}
  *   {"op":"layout","state":"...","w":411,"h":702}
+ *   {"op":"gestureSized","state":"...","w":411,"h":702,"x0":0,"y0":0,"x1":0,"y1":0,"steps":4}
  *   {"op":"undo","state":"..."}
  *   {"op":"redo","state":"..."}
  *   {"op":"solve","state":"..."}
@@ -2142,6 +2143,44 @@ static void do_key_sized(const jobject *req)
     free_frontend(&fe);
 }
 
+static void do_gesture_sized(const jobject *req)
+{
+    const char *save = field_string(req, "state");
+    long view_width = 0, view_height = 0;
+    long x0 = 0, y0 = 0, x1 = 0, y1 = 0, steps = 0;
+    frontend fe = {0};
+    const char *error;
+    long i;
+
+    if (!save || !field_int(req, "w", &view_width) ||
+        !field_int(req, "h", &view_height) ||
+        !field_int(req, "x0", &x0) || !field_int(req, "y0", &y0) ||
+        !field_int(req, "x1", &x1) || !field_int(req, "y1", &y1) ||
+        !field_int(req, "steps", &steps) ||
+        view_width < 1 || view_height < 1 ||
+        view_width > 100000 || view_height > 100000 ||
+        steps < 1 || steps > 1000) {
+        put_error("gestureSized needs a state, w, h, x0, y0, x1, y1, and steps");
+        return;
+    }
+
+    error = open_state_sized(save, &fe, view_width, view_height);
+    if (error) {
+        put_error(error);
+        return;
+    }
+
+    midend_process_key(fe.me, (int)x0, (int)y0, LEFT_BUTTON);
+    for (i = 1; i <= steps; i++) {
+        long x = x0 + (x1 - x0) * i / steps;
+        long y = y0 + (y1 - y0) * i / steps;
+        midend_process_key(fe.me, (int)x, (int)y, LEFT_DRAG);
+    }
+    midend_process_key(fe.me, (int)x1, (int)y1, LEFT_RELEASE);
+    put_state(&fe);
+    free_frontend(&fe);
+}
+
 static void do_state_op(const char *op, const jobject *req)
 {
     const char *save = field_string(req, "state");
@@ -2285,6 +2324,8 @@ int main(int argc, char **argv)
             do_layout(&req);
         } else if (!strcmp(op, "keySized")) {
             do_key_sized(&req);
+        } else if (!strcmp(op, "gestureSized")) {
+            do_gesture_sized(&req);
         } else if (!strcmp(op, "keys")) {
             do_key_seq(field_string(&req, "state"),
                        field_string(&req, "seq"));

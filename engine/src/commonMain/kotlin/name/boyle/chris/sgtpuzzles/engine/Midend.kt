@@ -68,6 +68,22 @@ class Midend private constructor(
         return minimum
     }
 
+    /**
+     * The geometry the app should draw and read input with for a view of
+     * [viewWidth] x [viewHeight]. The board is centred in the view.
+     */
+    fun geometryFor(viewWidth: Int, viewHeight: Int): BoardGeometry {
+        val tile = largestTileFor(viewWidth, viewHeight)
+        val board = game.computeSize(params, tile)
+        return BoardGeometry(
+            tileSize = tile,
+            originX = (viewWidth - board.width) / 2,
+            originY = (viewHeight - board.height) / 2,
+            width = board.width,
+            height = board.height,
+        )
+    }
+
     /** `midend_get_game_id`: short parameters, a colon, and the description. */
     fun id(): String = game.encodeParams(currentParams, false) + ":" + desc
 

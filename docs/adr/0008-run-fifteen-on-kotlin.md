@@ -105,3 +105,8 @@ Negative:
   size and by the swipe case in `GamePlayParameterizedTest`. The input
   tile size is the displayed size, not the preferred size used by the
   stateless oracle.
+- `BoardGeometry` is the single value for the tile size, the board
+  origin, and the board size. Redraw, input, the cursor rectangle, and
+  size negotiation read it, so they cannot use different geometry.
+- `FifteenInputParityTest` compares `DOWN`, `DRAG`, and `UP` against C
+  at the size the oracle chooses for each viewport.

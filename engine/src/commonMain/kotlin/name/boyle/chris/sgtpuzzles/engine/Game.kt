@@ -117,6 +117,12 @@ object Buttons {
     const val LEFT_BUTTON = 0x0200
     const val MIDDLE_BUTTON = 0x0201
     const val RIGHT_BUTTON = 0x0202
+    const val LEFT_DRAG = 0x0203
+    const val MIDDLE_DRAG = 0x0204
+    const val RIGHT_DRAG = 0x0205
+    const val LEFT_RELEASE = 0x0206
+    const val MIDDLE_RELEASE = 0x0207
+    const val RIGHT_RELEASE = 0x0208
     const val CURSOR_UP = 0x0209
     const val CURSOR_DOWN = 0x020A
     const val CURSOR_LEFT = 0x020B

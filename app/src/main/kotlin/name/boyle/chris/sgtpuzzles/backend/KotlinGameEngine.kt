@@ -10,6 +10,7 @@ import name.boyle.chris.sgtpuzzles.buttons.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.ArrowMode as EngineArrowMode
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder
 import name.boyle.chris.sgtpuzzles.config.CustomDialogBuilder
+import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
 import name.boyle.chris.sgtpuzzles.engine.DrawSink
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
 import name.boyle.chris.sgtpuzzles.engine.Game
@@ -76,11 +77,7 @@ class KotlinGameEngine private constructor(
     private val state: Game.State get() = midend.state
     private val fifteenState: Fifteen.State get() = state as Fifteen.State
 
-    private var tileSize = game.preferredTileSize
-    private var winWidth = 1
-    private var winHeight = 1
-    private var originX = 0
-    private var originY = 0
+    private var geometry = BoardGeometry.preferred(game, midend.params)
     private var sized = false
     private var firstDraw = true
     private var invertCursor = false
@@ -99,11 +96,24 @@ class KotlinGameEngine private constructor(
         override fun endDraw() {}
 
         override fun rect(x: Int, y: Int, width: Int, height: Int, colour: Int) {
-            viewCallbacks.fillRect(x + originX, y + originY, width, height, colour)
+            viewCallbacks.fillRect(
+                x + geometry.originX,
+                y + geometry.originY,
+                width,
+                height,
+                colour,
+            )
         }
 
         override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {
-            viewCallbacks.drawPoly(1.0f, points, originX, originY, outlineColour, fillColour)
+            viewCallbacks.drawPoly(
+                1.0f,
+                points,
+                geometry.originX,
+                geometry.originY,
+                outlineColour,
+                fillColour,
+            )
         }
 
         override fun text(
@@ -116,7 +126,14 @@ class KotlinGameEngine private constructor(
             text: String,
         ) {
             val flags = (if (font == Text.FONT_FIXED) 0x10 else 0) or align
-            viewCallbacks.drawText(x + originX, y + originY, flags, size, colour, text)
+            viewCallbacks.drawText(
+                x + geometry.originX,
+                y + geometry.originY,
+                flags,
+                size,
+                colour,
+                text,
+            )
         }
 
         override fun update(x: Int, y: Int, width: Int, height: Int) {}
@@ -128,7 +145,6 @@ class KotlinGameEngine private constructor(
 
     init {
         applyPrefs(initialPrefs)
-        setPreferredSize()
         Log.d(TAG, "using the Kotlin backend for ${game.backendName}")
     }
 
@@ -291,7 +307,12 @@ class KotlinGameEngine private constructor(
     override fun keyEvent(x: Int, y: Int, k: Int) {
         if (!sized || k < 0) return
         val before = midend.status()
-        val outcome = midend.processKey(x - originX, y - originY, k, tileSize)
+        val outcome = midend.processKey(
+            geometry.toGameX(x),
+            geometry.toGameY(y),
+            k,
+            geometry.tileSize,
+        )
         if (outcome != KeyOutcome.SomeEffect) return
         afterStateChange(before)
     }
@@ -311,15 +332,15 @@ class KotlinGameEngine private constructor(
     override fun resizeEvent(x: Int, y: Int, bottomInset: Int) {
         val availableWidth = x
         val availableHeight = y - bottomInset
-        tileSize = midend.largestTileFor(availableWidth, availableHeight)
-        val size = game.computeSize(midend.params, tileSize)
-        winWidth = size.width
-        winHeight = size.height
-        originX = (availableWidth - winWidth) / 2
-        originY = (availableHeight - winHeight) / 2
+        geometry = midend.geometryFor(availableWidth, availableHeight)
         sized = true
         firstDraw = true
-        viewCallbacks.unClip(originX, originY, x - originX, availableHeight - originY)
+        viewCallbacks.unClip(
+            geometry.originX,
+            geometry.originY,
+            x - geometry.originX,
+            availableHeight - geometry.originY,
+        )
         redraw()
     }
 
@@ -369,17 +390,22 @@ class KotlinGameEngine private constructor(
 
     override val cursorLocation: RectF
         get() {
-            val border = tileSize / 2
+            val border = geometry.tileSize / 2
             val x = fifteenState.gapPos % fifteenState.width
             val y = fifteenState.gapPos / fifteenState.width
-            val left = originX + x * tileSize + border
-            val top = originY + y * tileSize + border
-            return RectF(left.toFloat(), top.toFloat(), (left + tileSize).toFloat(), (top + tileSize).toFloat())
+            val left = geometry.originX + x * geometry.tileSize + border
+            val top = geometry.originY + y * geometry.tileSize + border
+            return RectF(
+                left.toFloat(),
+                top.toFloat(),
+                (left + geometry.tileSize).toFloat(),
+                (top + geometry.tileSize).toFloat(),
+            )
         }
 
     @get:VisibleForTesting
     override val gameSizeInGameCoords: Point
-        get() = Point(winWidth, winHeight)
+        get() = Point(geometry.width, geometry.height)
 
     @VisibleForTesting
     override fun freezePartialRedo() {
@@ -405,12 +431,6 @@ class KotlinGameEngine private constructor(
 
     private fun shortParams(): String = game.encodeParams(midend.currentParams, false)
 
-    private fun setPreferredSize() {
-        val size = game.computeSize(midend.params, game.preferredTileSize)
-        winWidth = size.width
-        winHeight = size.height
-    }
-
     private fun afterStateChange(previousStatus: Int) {
         activityCallbacks.changedState(midend.canUndo, midend.canRedo)
         if (previousStatus == 0 && midend.status() == 1 && !fifteenState.usedSolve) {
@@ -422,10 +442,16 @@ class KotlinGameEngine private constructor(
     private fun redraw() {
         viewCallbacks.startDraw()
         if (firstDraw) {
-            viewCallbacks.fillRect(originX, originY, winWidth, winHeight, 0)
+            viewCallbacks.fillRect(
+                geometry.originX,
+                geometry.originY,
+                geometry.width,
+                geometry.height,
+                0,
+            )
             firstDraw = false
         }
-        game.redraw(state, sink, tileSize)
+        game.redraw(state, sink, geometry.tileSize)
         activityCallbacks.setStatus(midend.statusText())
         viewCallbacks.endDraw()
     }

@@ -127,6 +127,36 @@ class OracleClient(
         ),
     )
 
+    /**
+     * Resizes to the view, then drags from `(x0, y0)` to `(x1, y1)`:
+     * `DOWN`, [steps] interpolated `DRAG`s, then `UP`. This is the same
+     * sequence the Android shell sends for a swipe.
+     */
+    fun gestureSized(
+        state: String,
+        x0: Int,
+        y0: Int,
+        x1: Int,
+        y1: Int,
+        steps: Int,
+        width: Int,
+        height: Int,
+    ): GameState = GameState.of(
+        request(
+            mapOf(
+                "op" to "gestureSized",
+                "state" to state,
+                "w" to width,
+                "h" to height,
+                "x0" to x0,
+                "y0" to y0,
+                "x1" to x1,
+                "y1" to y1,
+                "steps" to steps,
+            ),
+        ),
+    )
+
     fun key(state: String, x: Int, y: Int, k: Int): GameState =
         GameState.of(
             request(

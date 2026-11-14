@@ -173,6 +173,13 @@ class GamePlayParameterizedTest(
                 KEYCODE_DPAD_UP, KEYCODE_DPAD_CENTER),
             Example(FIFTEEN, "2x2:1,2,0,3", KEYCODE_DPAD_LEFT),
             Example(
+                FIFTEEN, "2x2:1,2,0,3",
+                GeneralClickAction(
+                    Tap.SINGLE,
+                    squareProportions(0.25, 0.25), Press.FINGER, 0, 0,
+                ),
+            ),
+            Example(
                 FIFTEEN, "2x2:1,0,3,2",
                 GeneralSwipeAction(
                     Swipe.SLOW,
@@ -317,7 +324,7 @@ class GamePlayParameterizedTest(
             )
         )
 
-        @Parameterized.Parameters(name = "{0}:{1}")
+        @Parameterized.Parameters(name = "{index}:{0}:{1}")
         @JvmStatic
         fun data(): Iterable<Array<Any?>> =
             (examples + BackendName.all.minus(examples.map { it.backend }.toSet()).map {

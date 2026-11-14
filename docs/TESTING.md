@@ -31,6 +31,7 @@ Minimal scenario:
 new(game, params, seed) -> state
 key(state, x, y, k)     -> state + flags
 keySized(state, w, h, x, y, k) -> state after resizing
+gestureSized(state, w, h, x0, y0, x1, y1, steps) -> state after a swipe
 layout(state, w, h)     -> game size after midend_size
 keys(state, seq)        -> state + flags
 undo/redo(state)        -> state + flags
@@ -63,6 +64,11 @@ game-local key, so a differential test can exercise input at a tile size
 other than the preferred size. The ordinary `key` operation uses the
 preferred size and cannot see a mismatch between the drawn and the input
 geometry.
+
+`gestureSized` resizes the same way, then sends the shell's swipe
+sequence: `DOWN` at the start, interpolated `DRAG` events, then `UP` at
+the end. It catches a game that handles a click but not a drag or a
+release, and it checks that a swipe does not add more moves than C does.
 
 `trace` records one `midend_redraw` through the recording drawing API.
 `traceNew` creates the game first, so a trace does not depend on the
@@ -218,6 +224,9 @@ Engine tests:
   an invalid save. One test derives every cell rectangle from the
   drawing sink at tile sizes 48, 63, 82, and 100, then feeds the cell
   centers back into `processKey`; drawing and input must agree.
+- `BoardGeometryTest` checks that the one geometry value used for
+  drawing, input, the cursor, and size negotiation fits and centers the
+  board on phone, tablet, landscape, and tiny viewports.
 - `RandomParityTest` is strict. It compares `random_bits` for every
   bit width 1..31 and `random_upto` for limits up to 2^27, across ten
   seeds, and transfers encoded generator state in both directions.
@@ -248,7 +257,9 @@ Engine tests:
 - `FifteenInputParityTest` is semantic. It asks the oracle to choose a
   board size for phone, tablet, landscape, and tiny viewports, then
   compares the Kotlin layout and the C/Kotlin state after clicking the
-  gap, every in-board neighbour, and a diagonal cell at that size.
+  gap, every in-board neighbour, and a diagonal cell at that size. It
+  also compares a swipe into the gap and a swipe that starts on the gap,
+  using the same `DOWN`, `DRAG`, `UP` sequence as the shell.
 - `FifteenTraceTest` is strict. It draws the Kotlin board through
   `KotlinTraceSink`, normalises it with the same `TraceNormalizer` as
   the oracle, and compares the result with a fresh oracle trace and
@@ -257,8 +268,10 @@ Engine tests:
   generated save is the frozen oracle save.
 - `GamePlayParameterizedTest` asserts that the running `fifteen` engine
   is `KotlinGameEngine`, then completes the 2x2 game through the real
-  shell on the emulator. One fifteen case uses a swipe, so tap and drag
-  coordinate mapping is covered, not only key input.
+  shell on the emulator. The fifteen cases cover a hardware key, a tap,
+  and a swipe, so tap and drag coordinate mapping is covered, not only
+  key input. Parameter names include the index, so two cases with the
+  same game ID cannot silently replace each other.
 - `SaveParityTest` is strict. It parses and rewrites every file in
   `testdata/saves/`, then makes the oracle load the original and the
   Kotlin text and compare the game id. It also recomputes the preset
@@ -276,7 +289,7 @@ Engine tests:
 
 Device run on the API 36 emulator, 2026-11-14:
 
-- 56 tests, 53 passed, 3 skipped (the fastlane screenshot tests skip
+- 61 tests, 58 passed, 3 skipped (the fastlane screenshot tests skip
   themselves without the fastlane argument), 0 failed. The Compose
   renderer is active in all game tests.
 - `GamePlayParameterizedTest[Palisade 2x3n3:d33]` was stale, not a
