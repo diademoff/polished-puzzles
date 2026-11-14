@@ -848,8 +848,10 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
         if (boardRecorder.shouldCompact && !compacting) {
             compacting = true
             post {
-                boardRecorder.reset()
-                parent.gameViewResized()
+                if (isAttachedToWindow) {
+                    boardRecorder.reset()
+                    parent.gameViewResized()
+                }
                 compacting = false
             }
         }
