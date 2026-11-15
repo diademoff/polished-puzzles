@@ -6,6 +6,7 @@ import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
@@ -95,6 +96,12 @@ class KotlinGamesTest {
     fun `filling is registered but the app still uses C`() {
         assertEquals(Filling, KotlinGames.gameFor(FILLING))
         assertFalse(KotlinGames.handles(FILLING))
+    }
+
+    @Test
+    fun `netslide is registered but the app still uses C`() {
+        assertEquals(Netslide, KotlinGames.gameFor(NETSLIDE))
+        assertFalse(KotlinGames.handles(NETSLIDE))
     }
 
     @Test
