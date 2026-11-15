@@ -991,8 +991,8 @@ two enablement debts:
   timeout; no production guard is added, because a bound would change
   the seed stream.
 
-`range` has two C undefined-behavior guards, one seam decision, and
-one enablement debt:
+`range` has one C undefined-behavior guard, one C-defined solver rule,
+one seam decision, and one enablement debt:
 
 - The connectedness reasoning finds its DFS root with
   `for (i = 0; i < n && grid[i] == BLACK; ++i);` and then writes
@@ -1001,20 +1001,21 @@ one enablement debt:
   player can paint every cell black with clicks and then press `h`, so
   the path is reachable. The port treats "no non-black cell" as "no
   moves"; `RangeTest` pins the empty answer and that `h` returns
-  `Unused`. The shipped C build keeps assertions, so the oracle cannot
-  be asked.
-- The recursion reasoning appends moves made on duplicated states to
-  the caller's buffer, including moves from a branch that later
-  contradicts (`range.c:605-638`). Both callers size that buffer at
-  `n` (`range.c:322`, `1426-1427`), so C can write past it on a board
-  that the non-recursive techniques cannot crack. The port keeps the
-  moves in a growable list, rolls back a rejected branch, and repeats
-  the outer pass only while the player's state changed, which leaves
-  every C-defined answer unchanged. `RangeTest` pins the stalled
-  `4x4:1o` answer `SB,1,0B,0,1W,1,1W,0,2W,2,0`, and `RangeGameTest`
-  covers the hint and the solve on the same shape. The oracle hangs on
-  that board, so the answer is a port definition, not a comparison.
-  Neither guard is a deviation, and `DEVIATIONS.md` is unchanged.
+  `Unused`. `RangeGameTest` pins the hint guard only and does not ask
+  the oracle. The shipped C build keeps assertions, and an
+  AddressSanitizer build of the oracle aborts at `range.c:467`.
+- The recursion reasoning takes the move buffer by value and returns it
+  unchanged (`range.c:605-638`). The `do_solve` call on a duplicated
+  state advances only its own copy of the end pointer, so the moves a
+  branch finds never reach the caller's buffer. The `SOLVE` string
+  therefore holds only the moves of the techniques 0-2, and a board
+  that only recursion can crack answers `S`; the hint on the same
+  board finds no move. The port runs every branch on a scratch list
+  and discards it. `RangeGameTest` pins `3x3:d3_3c` (`S`, and `h`
+  does not move), `4x3:1e4e`
+  (`SB,1,0B,0,1W,1,1W,0,2W,2,0`), and `4x4:2_5k5b` (eight moves)
+  against the oracle. The guard is not a deviation, and
+  `DEVIATIONS.md` is unchanged.
 - `solve_game` reads `states[0]` in C (`midend.c:2109`), while the
   Kotlin seam passes the current state. `Range` keeps the decoded
   initial grid in `Shared` and solves that, so a move does not change

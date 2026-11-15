@@ -11,10 +11,11 @@ import kotlin.test.assertTrue
  * Engine tests for the range port.
  *
  * Most of the game is compared with the oracle in the `:parity` module.
- * This suite pins the two C undefined-behavior spots (`range.c:465-471`
- * and `range.c:605-638`), which the oracle cannot be asked about because
- * its build keeps assertions, and the parts that have no seam method
- * yet: the current key label and the generator attempt count.
+ * This suite pins the C undefined-behavior spot at `range.c:465-471`,
+ * which the oracle cannot be asked about because its build keeps
+ * assertions, the by-value recursion buffer of `range.c:605-638`, and
+ * the parts that have no seam method yet: the current key label and the
+ * generator attempt count.
  */
 class RangeTest {
 
@@ -58,15 +59,15 @@ class RangeTest {
     }
 
     /**
-     * A clue that leaves the board undecided makes C's recursion append
-     * moves from a branch that does not fill the board, repeat the outer
-     * pass because the buffer grew, and write past its `n`-move buffer
-     * (`range.c:322`, `605-638`). The oracle hangs on this board, so the
-     * answer is a port definition: a rejected branch is rolled back, and
-     * the pass loop stops when the player's state did not change.
+     * `solver_reasoning_recursion` gets the move buffer by value and
+     * returns it unchanged (`range.c:605-638`), so a recursive branch
+     * never adds to the answer. This board needs recursion to be
+     * cracked as a puzzle, and C answers with the five moves that the
+     * techniques 0-2 find; the oracle returns the same string. A port
+     * that keeps the branch moves answers more moves.
      */
     @Test
-    fun `the recursive branch stays bounded on a stalled board`() {
+    fun `a recursion only board returns the non-recursive moves`() {
         val midend = Midend.fromGameId(Range, "4x4:1o")
         assertEquals(
             "SB,1,0B,0,1W,1,1W,0,2W,2,0",

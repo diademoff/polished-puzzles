@@ -234,21 +234,22 @@ class RangeInputParityTest {
         }
 
         // A clue click with each button: no move, but the cursor moves
-        // and the ring hides.
+        // and the ring hides. The clue at (0,1) is not the initial
+        // cursor (0,0), so the assertion proves that the click moved it.
         val tile = 32
         val clueMidend = Midend.fromSave(Range, SgtpSave.parse(save))
         val ui = clueMidend.ui as Range.Ui
         ui.cursorShow = true
         for (button in listOf(Buttons.LEFT_BUTTON, Buttons.RIGHT_BUTTON, Buttons.MIDDLE_BUTTON)) {
             val gridBefore = (clueMidend.state as Range.State).grid.copyOf()
-            val outcome = clueMidend.processKey(24, 24, button, tile)
+            val outcome = clueMidend.processKey(48, 16, button, tile)
             assertEquals("clue click $button", KeyOutcome.Unused, outcome)
             assertEquals("clue click $button state", 1, clueMidend.stateCount)
             assertTrue(
                 "clue click $button keeps the grid",
                 gridBefore.contentEquals((clueMidend.state as Range.State).grid),
             )
-            assertEquals("clue click $button cursor", "0,0", "${ui.r},${ui.c}")
+            assertEquals("clue click $button cursor", "0,1", "${ui.r},${ui.c}")
             assertEquals("clue click $button hides the ring", false, ui.cursorShow)
             ui.cursorShow = true
         }
@@ -271,10 +272,12 @@ class RangeInputParityTest {
             middleGrid.contentEquals((middle.state as Range.State).grid),
         )
 
-        // The click moved the cursor, so DOWN DOWN Enter paints (1,0).
+        // The click moved the cursor to the clue (0,1) and hid the ring,
+        // so the first DOWN only reveals it, the second DOWN walks to
+        // (1,1), and Enter paints that empty cell.
         val chain = Midend.fromSave(Range, SgtpSave.parse(save))
         val points = listOf(
-            OracleClient.Point(24, 24, Buttons.LEFT_BUTTON),
+            OracleClient.Point(48, 16, Buttons.LEFT_BUTTON),
             OracleClient.Point(0, 0, Buttons.CURSOR_DOWN),
             OracleClient.Point(0, 0, Buttons.CURSOR_DOWN),
             OracleClient.Point(0, 0, Buttons.CURSOR_SELECT),
@@ -283,7 +286,7 @@ class RangeInputParityTest {
         play(chain, points, tile)
         assertEquals("click then keys", expected.state.state, chain.serialise().serialise())
         assertEquals(
-            listOf("B,1,0"),
+            listOf("B,1,1"),
             SgtpSave.parse(chain.serialise().serialise()).values("MOVE"),
         )
     }

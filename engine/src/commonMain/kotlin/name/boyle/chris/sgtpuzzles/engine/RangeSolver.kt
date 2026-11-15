@@ -13,19 +13,19 @@ package name.boyle.chris.sgtpuzzles.engine
  * 4. recursion: assume a colour, run the techniques, accept a full
  *    board.
  *
- * Two C hazards are defined here instead of copied:
+ * Two C details need care:
  *
  * - `solver_reasoning_connectedness` writes its DFS root outside the
  *   arrays when the whole board is black (`range.c:465-471`). The port
  *   returns no moves for that board.
- * - A recursive branch appends its moves to the shared buffer
- *   (`range.c:605-638`) and C repeats the outer pass because the buffer
- *   grew although the player's state did not change. The buffer is `n`
- *   entries, so C loops until it writes past the array. The port grows
- *   the list and repeats a pass only while the player's state changed,
- *   so a stalled board terminates after one recursion pass. The
- *   returned moves for a C-defined board are unchanged, because there
- *   the buffer grows only when the player's state grows.
+ * - `solver_reasoning_recursion` receives the move buffer by value
+ *   (`range.c:605-638`). The `do_solve` call on a duplicated state
+ *   advances only its own copy of the end pointer, so a branch's moves
+ *   never reach the caller's buffer. The answer therefore holds only
+ *   the moves of the techniques 0-2, and a board that needs recursion
+ *   answers `S` for Solve and nothing for Hint. The port runs every
+ *   branch on a scratch list and discards it, which is the same
+ *   by-value rule.
  *
  * `solve` copies its input, as `solve_internal` duplicates the state, so
  * a caller's grid is never changed.
@@ -81,10 +81,10 @@ internal object RangeSolver {
 
     /**
      * `do_solve`: one pass over the four techniques, repeated while the
-     * pass added a move to [state]. C compares the buffer end instead;
-     * a recursive branch appends to the buffer without changing [state],
-     * and that is the undefined case described above, so the state is
-     * the progress signal here.
+     * pass added a move. C compares the buffer end, which grows only
+     * when a technique appends a move; [progress] counts the same moves.
+     * The recursion technique adds none of the branch moves to [moves],
+     * so both signals agree.
      */
     private fun doSolve(
         state: IntArray,
@@ -106,7 +106,7 @@ internal object RangeSolver {
                     DIFF_ADJACENCY -> adjacency(state, width, height, moves)
                     DIFF_CONNECTEDNESS -> connectedness(state, width, height, moves)
                     else -> {
-                        recursion(state, clues, width, height, moves, difficulty)
+                        recursion(state, clues, width, height)
                         0
                     }
                 }
@@ -388,13 +388,16 @@ internal object RangeSolver {
     /**
      * `solver_reasoning_recursion` from `range.c:605-638`.
      *
-     * A branch keeps the moves its techniques find only when it fills
-     * the board. C keeps the moves of a rejected branch in the shared
-     * buffer too (`range.c:625-631`); that is the undefined case: the
-     * outer pass then repeats forever because the buffer grew although
-     * the player's state did not, so C writes past its `n`-entry buffer.
-     * The port rolls a rejected branch back, which keeps C's moves for
-     * every board where C stays inside the buffer.
+     * C passes the buffer by value and every reasoning returns the new
+     * end pointer, so the `do_solve` call on a duplicated state
+     * advances only its own copy. A branch's moves are written at the
+     * caller's offset and never returned, so they are not part of the
+     * solution: only the techniques 0-2 move [moves]. A branch that
+     * fills the board ends the reasoning, and its moves are discarded
+     * as well. The port gives each branch a scratch list and drops it.
+     *
+     * The branch runs at [DIFF_RECURSION], which is the constant C
+     * passes to `do_solve` for it.
      *
      * The `recursive_result == NULL` arm of C is dead: no reasoning
      * returns NULL, so `do_solve` never does.
@@ -404,23 +407,17 @@ internal object RangeSolver {
         clues: List<Int>,
         width: Int,
         height: Int,
-        moves: MutableList<Move>,
-        difficulty: Int,
     ) {
         val n = width * height
         for (cell in 0 until n) {
             if (state[cell] != EMPTY) continue
-            val r = cell / width
-            val c = cell % width
             for (colour in M_BLACK..M_WHITE) {
-                val mark = moves.size
                 val branch = state.copyOf()
                 branch[cell] = if (colour == M_BLACK) BLACK else WHITE
-                doSolve(branch, clues, width, height, moves, difficulty)
+                doSolve(branch, clues, width, height, ArrayList<Move>(), DIFF_RECURSION)
                 var i = 0
                 while (i < n && branch[i] != EMPTY) i++
                 if (i == n) return
-                while (moves.size > mark) moves.removeAt(moves.size - 1)
             }
         }
     }

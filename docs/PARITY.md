@@ -614,17 +614,23 @@ Notes:
   cursor keys, and a keypad digit. `requestKeys` is arrow mode 3 with
   no labels on every preset.
 
-  Two C undefined-behavior spots get defined port results, pinned by
-  `RangeTest`, and are not deviations. On an all-black board the
+  One C undefined-behavior spot gets a defined port result, pinned by
+  `RangeTest`, and is not a deviation. On an all-black board the
   connectedness reasoning finds no DFS root and writes outside
   `dfs_parent`/`dfs_depth` (`range.c:465-471`); the port treats "no
-  non-black cell" as "no moves". The recursion reasoning appends moves
-  from duplicated states to the caller's `n`-move buffer and can
-  overrun it on a board it cannot crack (`range.c:322`, `605-638`);
-  the port keeps the moves in a growable list and stops the outer pass
-  when the player's state did not change, which leaves every
-  C-defined answer unchanged. The shipped C build keeps assertions,
-  so the oracle cannot be asked about either path.
+  non-black cell" as "no moves". The shipped C build keeps assertions,
+  so the oracle cannot be asked about that path.
+
+  The recursion reasoning takes the move buffer by value
+  (`range.c:605-638`). The `do_solve` call on a duplicated state
+  advances only its own copy of the end pointer, so a branch's moves
+  never reach the caller's buffer. A `SOLVE` string therefore holds
+  only the moves of the techniques 0-2, and a board that only
+  recursion can crack answers `S`; the hint on the same board finds no
+  move. The port runs every branch on a scratch list and discards it.
+  `RangeGameTest` pins `3x3:d3_3c` (`S`, and `h` does not move),
+  `4x3:1e4e` (`SB,1,0B,0,1W,1,1W,0,2W,2,0`), and `4x4:2_5k5b` (eight
+  moves) against the oracle.
   `validate_params` bounds `w + h` at 128, so the area is at most 4096
   cells and no huge-area guard is needed.
 

@@ -323,6 +323,61 @@ class RangeGameTest {
         assertEquals(1, midend.status())
     }
 
+    /**
+     * C gives `solver_reasoning_recursion` the move buffer by value
+     * (`range.c:605-638`), and the `do_solve` call on a duplicated
+     * state advances only its own copy of the end pointer. A branch's
+     * moves therefore never reach the caller's buffer, and the
+     * `SOLVE` string holds only the moves of the techniques 0-2.
+     *
+     * These three boards need recursion to be cracked as a puzzle, so
+     * C answers `S` or with the few moves the non-recursive techniques
+     * find. A port that keeps the branch moves appends them after
+     * those; the pre-fix port answered six, nine, and twelve moves for
+     * the three boards below, in that order.
+     */
+    @Test
+    fun `recursion moves are not part of the solve answer`() = OracleClient().use { oracle ->
+        val cases = listOf(
+            Triple("3x3", "d3_3c", "S"),
+            Triple("4x3", "1e4e", "SB,1,0B,0,1W,1,1W,0,2W,2,0"),
+            Triple("4x4", "2_5k5b", "SB,1,0B,0,2W,1,1W,2,1W,1,2W,0,3W,2,0W,1,3"),
+        )
+        for ((params, desc, expected) in cases) {
+            val where = "$params:$desc"
+            val save = historySave(params, desc, emptyList(), 1)
+            val solved = oracle.solve(save)
+            val solve = SgtpSave.parse(solved.state).value("SOLVE")!!
+            assertEquals("$where oracle SOLVE", expected, solve)
+
+            val midend = Midend.fromSave(Range, SgtpSave.parse(save))
+            midend.takeCompletedEvent()
+            assertTrue("$where solves", midend.solve())
+            assertEquals(
+                "$where SOLVE",
+                solve,
+                SgtpSave.parse(midend.serialise().serialise()).value("SOLVE"),
+            )
+            assertEquals("$where solve save", solved.state, midend.serialise().serialise())
+            assertEquals("$where solve status", 1, midend.status())
+        }
+    }
+
+    /**
+     * The hint reads the first move of the same answer
+     * (`range.c:1425-1445`), so the by-value buffer decides it too: a
+     * board that only recursion can crack has no hint.
+     */
+    @Test
+    fun `a recursion only board has no hint`() = OracleClient().use { oracle ->
+        val save = historySave("3x3", "d3_3c", emptyList(), 1)
+        assertEquals("C adds no move", save, oracle.keys(save, listOf('h'.code)).state)
+
+        val midend = Midend.fromSave(Range, SgtpSave.parse(save))
+        assertEquals(KeyOutcome.Unused, midend.processKey(0, 0, 'h'.code, TILE))
+        assertEquals("a hint adds no state", 1, midend.stateCount)
+    }
+
     @Test
     fun `hint returns the first solver move`() = OracleClient().use { oracle ->
         val start = oracle.newGame("range", "9x6", SEED)
@@ -350,10 +405,16 @@ class RangeGameTest {
             playKeys(afterClick.state.state, listOf('h'.code)),
         )
 
-        // A full board has no hint.
+        // An all-black board has no hint. The oracle is not asked here:
+        // `solver_reasoning_connectedness` finds no DFS root when every
+        // cell is black and then writes `dfs_parent[i]` and
+        // `dfs_depth[i]` past the arrays (`range.c:465-471`). The
+        // shipped C build keeps assertions, and an AddressSanitizer
+        // build of the oracle aborts at `range.c:467`, so this is a
+        // port definition: no non-black cell means no moves. The
+        // engine `RangeTest` pins the same guard.
         val allBlack = (0 until 9).joinToString("") { "B,${it / 3},${it % 3}" }
         val full = historySave("3x3", "i", listOf("MOVE" to allBlack), 2)
-        assertEquals(full, oracle.keys(full, listOf('h'.code)).state)
         val fullMidend = Midend.fromSave(Range, SgtpSave.parse(full))
         assertEquals(
             KeyOutcome.Unused,
