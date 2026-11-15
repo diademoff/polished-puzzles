@@ -255,6 +255,10 @@ Engine tests:
 - `GameSeamTest` checks the seam operations that more than one game
   uses: the `canSolve` property, and that slant keeps its status text
   empty while `wantsStatusBar` is false.
+- `GameIdTest` pins the parameter validation of `midend_game_id_int`: a
+  game ID validates with `full = false` because it has a description,
+  so a short id is accepted, while `newGame`, which has no description,
+  validates the full form and rejects it.
 - `DrawStateTest` pins the drawstate lifecycle with a test-only game
   that allocates one blitter. The first draw allocates it before
   `start_draw`; a move, undo, redo, solve, and restart keep the same

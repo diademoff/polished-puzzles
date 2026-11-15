@@ -571,7 +571,11 @@ class Midend private constructor(
             val paramsText = gameId.substring(0, colon)
             val desc = gameId.substring(colon + 1)
             val currentParams = game.decodeParams(paramsText)
-            game.validateParams(currentParams, true)?.let { error(it) }
+            // `midend_game_id_int` validates with `desc == NULL`, and a
+            // game ID always has a description. A short id may leave a
+            // parameter out on purpose: the description then determines
+            // it, so only the full validation belongs to a new game.
+            game.validateParams(currentParams, false)?.let { error(it) }
             game.validateDesc(currentParams, desc)?.let { error(it) }
             val params = game.decodeParams(game.encodeParams(currentParams, false))
             return Midend(
