@@ -13,8 +13,17 @@ internal object AuxInfo {
 
     private const val HEX = "0123456789abcdef"
 
-    fun encode(text: String): String {
-        val bytes = text.encodeToByteArray()
+    fun encode(text: String): String = encodeBytes(text.encodeToByteArray())
+
+    fun decode(text: String): String =
+        decodeBytes(text, text.length / 2).toString(Charsets.ISO_8859_1)
+
+    /**
+     * `obfuscate_bitmap` plus `bin2hex` for a whole number of bytes.
+     * The bytes are obfuscated in place, as C does, so the caller must
+     * pass an array it owns. `guess` uses this for its description.
+     */
+    fun encodeBytes(bytes: ByteArray): String {
         obfuscate(bytes, bytes.size * 8, false)
         return buildString(bytes.size * 2) {
             for (b in bytes) {
@@ -24,9 +33,18 @@ internal object AuxInfo {
         }
     }
 
-    fun decode(text: String): String {
-        val bytes = ByteArray(text.length / 2)
-        for (i in 0 until bytes.size * 2) {
+    /**
+     * `hex2bin` plus the decode direction of `obfuscate_bitmap`, for
+     * [size] bytes. A non-hex character is a zero nibble, as C's
+     * `hex2bin` does. The caller checks the text length first, as every
+     * upstream caller does.
+     */
+    fun decodeBytes(text: String, size: Int): ByteArray {
+        require(text.length >= size * 2) {
+            "hex text is too short for $size bytes: '${text}'"
+        }
+        val bytes = ByteArray(size)
+        for (i in 0 until size * 2) {
             val c = text[i]
             val value = when (c) {
                 in '0'..'9' -> c - '0'
@@ -38,7 +56,7 @@ internal object AuxInfo {
                 (value shl (4 * (1 - (i % 2))))).toByte()
         }
         obfuscate(bytes, bytes.size * 8, true)
-        return bytes.toString(Charsets.ISO_8859_1)
+        return bytes
     }
 
     private fun obfuscate(bitmap: ByteArray, bits: Int, decode: Boolean) {
