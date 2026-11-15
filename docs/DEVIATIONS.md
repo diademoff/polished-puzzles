@@ -83,6 +83,29 @@ Anything not listed here is a bug.
 - **Upstream:** none
 - **Date:** 2026-11-14
 
+### D-003: Black Box rejects an impossible ball range before generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_params` never checks `maxballs`
+  against the grid. `w3h3m1M100` is accepted, and `new_game_desc` can
+  then draw more balls than the nine arena cells, so the collision retry
+  never finds a free cell and generation loops forever. The Kotlin
+  validator keeps the C messages and still accepts the parameter set,
+  but `newDesc` throws a clear `IllegalArgumentException` when
+  `maxBalls > w*h`, before the first random draw. For every feasible
+  range the seed, `DESC`, and save text are unchanged.
+- **Why:** an impossible request can never be generated, and a hang in
+  the UI or the generator is worse than a rejection. The guard is
+  deterministic, so the same request always fails the same way.
+- **Test:**
+  `parity/src/test/kotlin/.../BlackBoxDescTest.kt::an impossible ball range is rejected before generation`
+  (a five-second timeout) and
+  `engine/src/commonTest/kotlin/.../BlackBoxTest.kt::an impossible ball range is rejected before generation`
+- **Scope:** `blackbox`
+- **Upstream:** none known
+- **Date:** 2026-11-15
+
 ## Examples
 
 Allowed:

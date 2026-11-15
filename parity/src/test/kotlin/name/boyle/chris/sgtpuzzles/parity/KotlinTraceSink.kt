@@ -129,7 +129,17 @@ class KotlinTraceSink : DrawSink {
         )
     }
 
+    /**
+     * The last status text this drawing emitted. Upstream `drawing.c`
+     * keeps `laststatus` per drawing and skips an unchanged text, so a
+     * warm frame has no status line when the input already drew the same
+     * text. A cold trace still has its one status line.
+     */
+    private var lastStatus: String? = null
+
     override fun status(text: String) {
+        if (text == lastStatus) return
+        lastStatus = text
         record(
             "op" to JsonValue.Str("status"),
             "text" to JsonValue.Str(text),
