@@ -389,7 +389,7 @@ class SameGameTest {
         assertEquals(Game.CursorRect(16, 16, 32, 32), SameGame.cursorLocation(ui, win, 32))
 
         val sink = RecordingSink()
-        SameGame.redraw(win, ui, sink, 32)
+        SameGame.redraw(win, ui, Game.NoDrawState, sink, 32)
         assertTrue(sink.lines.isEmpty(), "a completed board hides the cursor")
         assertTrue(sink.rects.none { it.colour == COL_IMPOSSIBLE })
     }
@@ -474,7 +474,7 @@ class SameGameTest {
         val ui = SameGame.newUi(state) as SameGame.Ui
 
         val plain = RecordingSink()
-        SameGame.redraw(state, ui, plain, 32)
+        SameGame.redraw(state, ui, Game.NoDrawState, plain, 32)
         assertEquals(2, plain.polys.size)
         assertEquals(4, plain.updates.size)
         assertEquals(0, plain.lines.size)
@@ -486,7 +486,7 @@ class SameGameTest {
         assertEquals(2, ui.nselected)
 
         val selected = RecordingSink()
-        SameGame.redraw(state, ui, selected, 32)
+        SameGame.redraw(state, ui, Game.NoDrawState, selected, 32)
         assertTrue(selected.rects.count { it.colour == COL_SEL } >= 2)
 
         // The cursor over a selected tile uses the lowlight colour.
@@ -494,7 +494,7 @@ class SameGameTest {
         ui.ysel = 0
         ui.displaysel = true
         val cursor = RecordingSink()
-        SameGame.redraw(state, ui, cursor, 32)
+        SameGame.redraw(state, ui, Game.NoDrawState, cursor, 32)
         assertEquals(4, cursor.lines.size)
         assertTrue(cursor.lines.all { it.colour == COL_LOWLIGHT })
 
@@ -502,7 +502,7 @@ class SameGameTest {
         val freshUi = SameGame.newUi(state) as SameGame.Ui
         freshUi.displaysel = true
         val highlight = RecordingSink()
-        SameGame.redraw(state, freshUi, highlight, 32)
+        SameGame.redraw(state, freshUi, Game.NoDrawState, highlight, 32)
         assertEquals(4, highlight.lines.size)
         assertTrue(highlight.lines.all { it.colour == COL_HIGHLIGHT })
 
@@ -511,7 +511,7 @@ class SameGameTest {
             "M0",
         )!!
         val deadSink = RecordingSink()
-        SameGame.redraw(dead, SameGame.newUi(dead), deadSink, 32)
+        SameGame.redraw(dead, SameGame.newUi(dead), Game.NoDrawState, deadSink, 32)
         assertEquals(3, deadSink.rects.count { it.colour == COL_IMPOSSIBLE })
     }
 
@@ -552,6 +552,10 @@ class SameGameTest {
         }
 
         override fun status(text: String) {}
+        override fun blitterNew(width: Int, height: Int): Int = 0
+        override fun blitterFree(id: Int) {}
+        override fun blitterSave(id: Int, x: Int, y: Int) {}
+        override fun blitterLoad(id: Int, x: Int, y: Int) {}
     }
 
     private companion object {

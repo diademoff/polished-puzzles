@@ -13,7 +13,7 @@ package name.boyle.chris.sgtpuzzles.engine
  * moves, the score, the selection, the status text, the palette, and
  * the drawing order match C.
  *
- * There is no drawstate in the Kotlin seam, so [redraw] draws the whole
+ * This game uses [Game.NoDrawState], so [redraw] draws the whole
  * board and both recessed polygons on every call. The completion flash
  * is not ported: it does not change the state or the save file, and
  * `docs/PARITY.md` allows animation differences.
@@ -429,7 +429,13 @@ object SameGame : Game {
         out[index * 3 + 2] = b
     }
 
-    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
+    override fun redraw(
+        state: Game.State,
+        ui: Game.Ui,
+        drawState: Game.DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    ) {
         val s = state as State
         val u = ui as Ui
         val w = s.params.width
@@ -442,8 +448,8 @@ object SameGame : Game {
 
         /*
          * The recessed area. C draws it only on the first redraw of a
-         * drawstate, but the seam has no drawstate, so draw it every
-         * time. The result is the same for the first draw.
+         * drawstate, but this game uses [Game.NoDrawState], so draw it
+         * every time. The result is the same for the first draw.
          */
         val coords = IntArray(10)
         coords[0] = coord(w) + HIGHLIGHT_WIDTH - 1 - tilegap

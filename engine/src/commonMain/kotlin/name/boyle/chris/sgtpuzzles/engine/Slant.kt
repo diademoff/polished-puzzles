@@ -456,7 +456,13 @@ object Slant : Game {
         return ret
     }
 
-    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
+    override fun redraw(
+        state: Game.State,
+        ui: Game.Ui,
+        drawState: Game.DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    ) {
         val s = state as State
         val u = ui as Ui
         val w = s.params.width

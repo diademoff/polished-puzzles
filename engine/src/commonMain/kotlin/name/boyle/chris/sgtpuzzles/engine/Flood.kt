@@ -13,7 +13,7 @@ package name.boyle.chris.sgtpuzzles.engine
  * file holds the parameters, the state, the moves, the status text, the
  * palette, and the drawing.
  *
- * There is no drawstate in the Kotlin seam, so [redraw] draws the whole
+ * This game uses [Game.NoDrawState], so [redraw] draws the whole
  * board, including the two recessed polygons, on every call. C draws
  * them once per drawstate. The completion flash and the defeat flash are
  * not ported: they do not change the state or the save file, and
@@ -505,7 +505,13 @@ object Flood : Game {
         out[index * 3 + 2] = b
     }
 
-    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
+    override fun redraw(
+        state: Game.State,
+        ui: Game.Ui,
+        drawState: Game.DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    ) {
         val s = state as State
         val u = ui as Ui
         val w = s.width
@@ -519,9 +525,10 @@ object Flood : Game {
         fun coord(value: Int): Int = value * tileSize + border
 
         /*
-         * The recessed area. C draws it once per drawstate; the seam has
-         * no drawstate, so draw it on every redraw. The trace is always
-         * a first redraw, so the order and the coordinates match.
+         * The recessed area. C draws it once per drawstate; this game
+         * uses [Game.NoDrawState], so draw it on every redraw. The trace
+         * is always a first redraw, so the order and the coordinates
+         * match.
          */
         val coords = IntArray(10)
         coords[0] = coord(w) + highlightWidth - 1

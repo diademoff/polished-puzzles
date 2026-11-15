@@ -885,7 +885,7 @@ class SixteenTest {
         val ui = Sixteen.newUi(state) as Sixteen.Ui
 
         val plain = RecordingSink()
-        Sixteen.redraw(state, ui, plain, 48)
+        Sixteen.redraw(state, ui, Game.NoDrawState, plain, 48)
         assertEquals(2 + 16 + 32, plain.polys.size)
         assertEquals(16, plain.updates.size)
         assertEquals(16, plain.rects.size)
@@ -899,7 +899,7 @@ class SixteenTest {
         ui.curX = 3
         ui.curY = 2
         val cursor = RecordingSink()
-        Sixteen.redraw(state, ui, cursor, 48)
+        Sixteen.redraw(state, ui, Game.NoDrawState, cursor, 48)
         assertEquals(plain.polys.size, cursor.polys.size)
         assertEquals(1, cursor.rects.count { it.colour == 3 })
         assertEquals(15, cursor.rects.count { it.colour == 0 })
@@ -909,7 +909,7 @@ class SixteenTest {
         ui.curX = 0
         ui.curY = -1
         val top = RecordingSink()
-        Sixteen.redraw(state, ui, top, 48)
+        Sixteen.redraw(state, ui, Game.NoDrawState, top, 48)
         assertEquals(plain.polys.size + 1, top.polys.size)
         val arrow = top.polys[2 + 16]
         assertEquals(14, arrow.points.size)
@@ -921,19 +921,19 @@ class SixteenTest {
         ui.curX = -1
         ui.curY = 0
         val left = RecordingSink()
-        Sixteen.redraw(state, ui, left, 48)
+        Sixteen.redraw(state, ui, Game.NoDrawState, left, 48)
         assertEquals(Update(0, 48, 48, 48), left.updates.first())
 
         ui.curX = 0
         ui.curY = 4
         val bottom = RecordingSink()
-        Sixteen.redraw(state, ui, bottom, 48)
+        Sixteen.redraw(state, ui, Game.NoDrawState, bottom, 48)
         assertEquals(Update(48, 240, 48, 48), bottom.updates.first())
 
         // At tile 10 the highlight width is zero, so the triangles use
         // the full tile and the inner rectangle covers it.
         val tiny = RecordingSink()
-        Sixteen.redraw(state, Sixteen.newUi(state), tiny, 10)
+        Sixteen.redraw(state, Sixteen.newUi(state), Game.NoDrawState, tiny, 10)
         assertEquals(Size(60, 60).width, Sixteen.computeSize(Sixteen.decodeParams("4x4"), 10).width)
         assertTrue(tiny.rects.all { it.w == 10 && it.h == 10 })
     }
@@ -1079,5 +1079,9 @@ class SixteenTest {
         }
 
         override fun status(text: String) {}
+        override fun blitterNew(width: Int, height: Int): Int = 0
+        override fun blitterFree(id: Int) {}
+        override fun blitterSave(id: Int, x: Int, y: Int) {}
+        override fun blitterLoad(id: Int, x: Int, y: Int) {}
     }
 }

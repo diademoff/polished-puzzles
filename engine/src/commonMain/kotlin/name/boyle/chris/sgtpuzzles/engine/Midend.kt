@@ -37,6 +37,27 @@ class Midend private constructor(
     var ui: Game.Ui = game.newUi(state)
         private set
 
+    /**
+     * The drawing cache, mirroring upstream `me->drawstate`. The midend
+     * owns one at a time. It is not part of the save file.
+     *
+     * The seam has no close method, so the shell owns process lifetime
+     * and this cache is never freed explicitly. A replacement or a tile
+     * size change frees the old one through its sink before the next
+     * one is created.
+     */
+    var drawState: Game.DrawState? = null
+        private set
+
+    /** The sink that created [drawState], so a free reaches the same one. */
+    private var drawStateSink: DrawSink? = null
+
+    /** The tile size [drawState] was created for. */
+    private var drawStateTileSize = 0
+
+    /** True when the next draw must free the cache and create a new one. */
+    private var drawStateDirty = true
+
     /** Set when `changedState` reports a completion; cleared by a take. */
     private var completedEvent = false
 
@@ -132,6 +153,7 @@ class Midend private constructor(
             completedEvent = true
         }
         statePos--
+        invalidateDrawState()
         return true
     }
 
@@ -141,6 +163,7 @@ class Midend private constructor(
             completedEvent = true
         }
         statePos++
+        invalidateDrawState()
         return true
     }
 
@@ -161,6 +184,7 @@ class Midend private constructor(
         entries += Entry(restarted, desc, MoveType.RESTART)
         statePos++
         if (game.changedState(ui, previous, restarted)) completedEvent = true
+        invalidateDrawState()
         return true
     }
 
@@ -178,6 +202,7 @@ class Midend private constructor(
         // `midend_solve` calls changed_state for its UI effect but ignores
         // the return value, so a solve never raises the completion event.
         game.changedState(ui, previous, solved)
+        invalidateDrawState()
         return true
     }
 
@@ -309,6 +334,7 @@ class Midend private constructor(
                     entries += Entry(next, result.text, MoveType.MOVE)
                     statePos++
                     if (game.changedState(ui, previous, next)) completedEvent = true
+                    invalidateDrawState()
                     return KeyOutcome.SomeEffect
                 }
 
@@ -370,9 +396,10 @@ class Midend private constructor(
      * fresh drawstate: it clears the window and updates the whole area.
      */
     fun recordRedraw(sink: DrawSink) {
+        val drawState = ensureDrawState(tileSize, sink)
         sink.startDraw()
         sink.rect(0, 0, size.width, size.height, 0)
-        game.redraw(state, ui, sink, tileSize)
+        game.redraw(state, ui, drawState, sink, tileSize)
         if (game.wantsStatusBar) sink.status(statusText())
         sink.update(0, 0, size.width, size.height)
         sink.endDraw()
@@ -380,8 +407,48 @@ class Midend private constructor(
 
     /** The first redraw of a new game: `changed_state` comes before the draw. */
     fun recordNewGameTrace(sink: DrawSink) {
+        // `midend_new_game` calls `changed_state` before `midend_size`
+        // allocates the first blitter, so a caching game emits
+        // changed_state, then blitter_new, then start_draw. Recreate an
+        // existing cache, as a new game also does.
+        invalidateDrawState()
         sink.changedState(false, false)
         recordRedraw(sink)
+    }
+
+    /**
+     * Ensures the drawstate matches [tileSize] before a draw starts.
+     *
+     * The first call creates the cache, so a game's `blitter_new` is
+     * recorded before `start_draw`, as a fresh C drawstate is. A
+     * tile-size change or a stale cache frees the old one through the
+     * sink that created it, then creates a new one. The shell calls
+     * this before its own `startDraw`; [recordRedraw] calls it too.
+     */
+    fun ensureDrawState(tileSize: Int, sink: DrawSink): Game.DrawState {
+        val existing = drawState
+        if (existing != null && !drawStateDirty && drawStateTileSize == tileSize) {
+            return existing
+        }
+        if (existing != null) {
+            game.freeDrawState(existing, drawStateSink ?: sink)
+        }
+        val created = game.newDrawState(state, tileSize, sink)
+        drawState = created
+        drawStateSink = sink
+        drawStateTileSize = tileSize
+        drawStateDirty = false
+        return created
+    }
+
+    /**
+     * Marks the cache stale, as `midend_force_redraw` replaces a
+     * drawstate. The next [ensureDrawState] frees it and creates one for
+     * the current state, so a game never draws from a cache that
+     * belongs to another state.
+     */
+    private fun invalidateDrawState() {
+        drawStateDirty = true
     }
 
     /** Serialises the state exactly as upstream `midend_serialise`. */

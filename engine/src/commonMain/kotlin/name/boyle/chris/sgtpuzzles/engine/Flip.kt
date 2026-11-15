@@ -13,12 +13,12 @@ package name.boyle.chris.sgtpuzzles.engine
  * lights alone. The player then clicks the hinted cells to complete the
  * game. The status text tells the two phases apart.
  *
- * The generator is in [FlipGeneration]. There is no drawstate in the
- * Kotlin seam, so [redraw] draws the grid and the whole board on every
- * call; C draws the grid once per drawstate. The diagonal-flip animation
- * and the completion flash are not ported: the seam has no animation
- * time, and `docs/PARITY.md` allows animation differences. The state,
- * the text format, and the save file do not depend on them.
+ * The generator is in [FlipGeneration]. This game uses
+ * [Game.NoDrawState], so [redraw] draws the grid and the whole board on
+ * every call; C draws the grid once per drawstate. The diagonal-flip
+ * animation and the completion flash are not ported: the seam has no
+ * animation time, and `docs/PARITY.md` allows animation differences. The
+ * state, the text format, and the save file do not depend on them.
  */
 object Flip : Game {
 
@@ -580,12 +580,18 @@ object Flip : Game {
     }
 
     /**
-     * `game_redraw` for the first redraw of a drawstate. The seam has no
-     * drawstate, so the grid lines, the board update, and every tile are
-     * drawn on every call. The status text is written by the midend, not
-     * here: writing it twice would duplicate the line.
+     * `game_redraw` for the first redraw of a drawstate. This game uses
+     * [Game.NoDrawState], so the grid lines, the board update, and every
+     * tile are drawn on every call. The status text is written by the
+     * midend, not here: writing it twice would duplicate the line.
      */
-    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
+    override fun redraw(
+        state: Game.State,
+        ui: Game.Ui,
+        drawState: Game.DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    ) {
         val s = state as State
         val u = ui as Ui
         val w = s.width

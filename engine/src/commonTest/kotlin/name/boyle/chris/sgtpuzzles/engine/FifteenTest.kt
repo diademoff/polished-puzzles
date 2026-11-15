@@ -184,7 +184,7 @@ class FifteenTest {
         for (tile in listOf(48, 63, 82, 100)) {
             val sink = UpdateSink()
             val midend = Midend.fromGameId(Fifteen, id)
-            Fifteen.redraw(midend.state, midend.ui, sink, tile)
+            Fifteen.redraw(midend.state, midend.ui, Game.NoDrawState, sink, tile)
             val cells = sink.updates.associateBy { it.x to it.y }
             assertEquals(16, cells.size, "tile $tile")
 
@@ -311,6 +311,10 @@ class FifteenTest {
         }
         override fun clip(x: Int, y: Int, width: Int, height: Int) {}
         override fun unclip() {}
+        override fun blitterNew(width: Int, height: Int): Int = 0
+        override fun blitterFree(id: Int) {}
+        override fun blitterSave(id: Int, x: Int, y: Int) {}
+        override fun blitterLoad(id: Int, x: Int, y: Int) {}
     }
 
     @Test

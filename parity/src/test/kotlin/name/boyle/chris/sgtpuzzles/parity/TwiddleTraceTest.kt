@@ -18,7 +18,7 @@ import java.io.File
  * triangles, the cursor edges, and the status line are compared with a
  * fresh oracle trace and with the frozen traces for every preset.
  *
- * Every trace is a first redraw: the seam has no drawstate, so the port
+ * Every trace is a first redraw: the port uses `NoDrawState`, so it
  * always draws the recessed frame and the whole board. The rotation
  * animation and the flash are not ported, so no trace may be taken after
  * a move in a live midend: the oracle trace would contain the animation

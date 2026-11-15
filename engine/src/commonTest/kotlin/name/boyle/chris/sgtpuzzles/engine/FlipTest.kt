@@ -354,7 +354,7 @@ class FlipTest {
 
         val state = Flip.newState(Flip.decodeParams("3x3c"), "d074191345d1644c17058,c90") as Flip.State
         val plain = RecordingSink()
-        Flip.redraw(state, Flip.newUi(state), plain, 48)
+        Flip.redraw(state, Flip.newUi(state), Game.NoDrawState, plain, 48)
 
         // Eight grid lines, then the diagram lines: 9 self entries are
         // rectangles and the other 24 matrix entries are four lines each.
@@ -369,7 +369,7 @@ class FlipTest {
         val ui = Flip.newUi(state) as Flip.Ui
         Flip.setCursorVisible(ui, true)
         val cursor = RecordingSink()
-        Flip.redraw(state, ui, cursor, 48)
+        Flip.redraw(state, ui, Game.NoDrawState, cursor, 48)
         assertEquals(plain.lines.size, cursor.lines.size)
         assertEquals(0, plain.lines.count { it.colour == 6 })
         // Cell (0,0) has three matrix entries: its self rectangle plus
@@ -380,13 +380,13 @@ class FlipTest {
         // A hint draws three nested rectangles of four lines per cell.
         val hinted = Flip.executeMove(state, "S000110011") as Flip.State
         val hintSink = RecordingSink()
-        Flip.redraw(hinted, Flip.newUi(hinted), hintSink, 48)
+        Flip.redraw(hinted, Flip.newUi(hinted), Game.NoDrawState, hintSink, 48)
         assertEquals(12 * 4, hintSink.lines.count { it.colour == 5 })
 
         // A zero matrix draws no diagram at all.
         val dark = Flip.newState(Flip.decodeParams("3x3c"), "000000000000000000000,001")
         val darkSink = RecordingSink()
-        Flip.redraw(dark, Flip.newUi(dark), darkSink, 48)
+        Flip.redraw(dark, Flip.newUi(dark), Game.NoDrawState, darkSink, 48)
         assertEquals(8, darkSink.lines.size)
         assertEquals(9, darkSink.rects.size)
     }
@@ -573,5 +573,9 @@ class FlipTest {
         override fun status(text: String) {
             statuses += text
         }
+        override fun blitterNew(width: Int, height: Int): Int = 0
+        override fun blitterFree(id: Int) {}
+        override fun blitterSave(id: Int, x: Int, y: Int) {}
+        override fun blitterLoad(id: Int, x: Int, y: Int) {}
     }
 }

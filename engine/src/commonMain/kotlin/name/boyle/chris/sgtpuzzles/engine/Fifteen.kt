@@ -330,7 +330,13 @@ object Fifteen : Game {
         return ret
     }
 
-    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
+    override fun redraw(
+        state: Game.State,
+        ui: Game.Ui,
+        drawState: Game.DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    ) {
         val s = state as State
         val border = tileSize / 2
         val highlight = tileSize / 20

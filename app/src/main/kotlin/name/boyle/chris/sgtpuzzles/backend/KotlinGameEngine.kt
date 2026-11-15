@@ -220,6 +220,21 @@ class KotlinGameEngine private constructor(
         override fun status(text: String) {
             activityCallbacks.setStatus(text)
         }
+
+        override fun blitterNew(width: Int, height: Int): Int =
+            viewCallbacks.blitterAlloc(width, height)
+
+        override fun blitterFree(id: Int) {
+            viewCallbacks.blitterFree(id)
+        }
+
+        override fun blitterSave(id: Int, x: Int, y: Int) {
+            viewCallbacks.blitterSave(id, x + geometry.originX, y + geometry.originY)
+        }
+
+        override fun blitterLoad(id: Int, x: Int, y: Int) {
+            viewCallbacks.blitterLoad(id, x + geometry.originX, y + geometry.originY)
+        }
     }
 
     init {
@@ -524,6 +539,7 @@ class KotlinGameEngine private constructor(
     }
 
     private fun redraw() {
+        val drawState = midend.ensureDrawState(geometry.tileSize, sink)
         viewCallbacks.startDraw()
         if (firstDraw) {
             viewCallbacks.fillRect(
@@ -535,7 +551,7 @@ class KotlinGameEngine private constructor(
             )
             firstDraw = false
         }
-        game.redraw(state, midend.ui, sink, geometry.tileSize)
+        game.redraw(state, midend.ui, drawState, sink, geometry.tileSize)
         activityCallbacks.setStatus(midend.statusText())
         viewCallbacks.endDraw()
     }

@@ -124,6 +124,45 @@ class KotlinTraceSink : DrawSink {
         )
     }
 
+    /** Blitter ids start at 1 in every trace, as the oracle's do. */
+    private var nextBlitterId = 1
+
+    override fun blitterNew(width: Int, height: Int): Int {
+        val id = nextBlitterId++
+        ops += obj(
+            "op" to JsonValue.Str("blitter_new"),
+            "id" to num(id),
+            "w" to num(width),
+            "h" to num(height),
+        )
+        return id
+    }
+
+    override fun blitterFree(id: Int) {
+        ops += obj(
+            "op" to JsonValue.Str("blitter_free"),
+            "id" to num(id),
+        )
+    }
+
+    override fun blitterSave(id: Int, x: Int, y: Int) {
+        ops += obj(
+            "op" to JsonValue.Str("blitter_save"),
+            "id" to num(id),
+            "x" to num(x),
+            "y" to num(y),
+        )
+    }
+
+    override fun blitterLoad(id: Int, x: Int, y: Int) {
+        ops += obj(
+            "op" to JsonValue.Str("blitter_load"),
+            "id" to num(id),
+            "x" to num(x),
+            "y" to num(y),
+        )
+    }
+
     companion object {
         /** Builds the trace object for the first redraw of [midend]. */
         fun trace(midend: Midend): JsonValue.Obj {
@@ -153,9 +192,10 @@ class KotlinTraceSink : DrawSink {
         fun stateTrace(midend: Midend, tileSize: Int): JsonValue.Obj {
             val size = midend.game.computeSize(midend.params, tileSize)
             val sink = KotlinTraceSink()
+            val drawState = midend.ensureDrawState(tileSize, sink)
             sink.startDraw()
             sink.rect(0, 0, size.width, size.height, 0)
-            midend.game.redraw(midend.state, midend.ui, sink, tileSize)
+            midend.game.redraw(midend.state, midend.ui, drawState, sink, tileSize)
             if (midend.game.wantsStatusBar) sink.status(midend.statusText())
             sink.update(0, 0, size.width, size.height)
             sink.endDraw()

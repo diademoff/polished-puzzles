@@ -14,7 +14,7 @@ import kotlin.math.abs
  * single moves, and a plain game places pieces by rank. Both use the
  * upstream random stream in the same order as C.
  *
- * There is no drawstate in the Kotlin seam, so [redraw] draws the frame,
+ * This game uses [Game.NoDrawState], so [redraw] draws the frame,
  * the arrows, and the whole board on every call. C draws them once per
  * drawstate. The slide animation and the completion flash are not
  * ported: the seam has no animation time, and `docs/PARITY.md` allows
@@ -569,10 +569,17 @@ object Sixteen : Game {
 
     /**
      * `game_redraw`. C draws the frame and the static arrows once per
-     * drawstate and skips unchanged tiles. The seam has no drawstate, so
-     * every redraw is a first redraw and emits the whole board.
+     * drawstate and skips unchanged tiles. This game uses
+     * [Game.NoDrawState], so every redraw is a first redraw and emits the
+     * whole board.
      */
-    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
+    override fun redraw(
+        state: Game.State,
+        ui: Game.Ui,
+        drawState: Game.DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    ) {
         val s = state as State
         val u = ui as Ui
         val highlight = tileSize / 20

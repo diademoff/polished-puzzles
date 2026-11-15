@@ -500,7 +500,7 @@ class FloodTest {
         val ui = Flood.newUi(state) as Flood.Ui
 
         val plain = RecordingSink()
-        Flood.redraw(state, ui, plain, 32)
+        Flood.redraw(state, ui, Game.NoDrawState, plain, 32)
         assertEquals(2, plain.polys.size)
         assertEquals(16, plain.updates.size)
         assertEquals(0, plain.circles.size)
@@ -510,19 +510,19 @@ class FloodTest {
         ui.cx = 3
         ui.cy = 0
         val cursor = RecordingSink()
-        Flood.redraw(state, ui, cursor, 32)
+        Flood.redraw(state, ui, Game.NoDrawState, cursor, 32)
         assertTrue(cursor.polys.any { it.fill == -1 })
         assertTrue(cursor.polys.filter { it.fill == -1 }.all { it.colour == 1 })
 
         val solved = Flood.executeMove(state, "S2,0,1,2") as Flood.State
         val preview = RecordingSink()
-        Flood.redraw(solved, Flood.newUi(solved), preview, 32)
+        Flood.redraw(solved, Flood.newUi(solved), Game.NoDrawState, preview, 32)
         assertEquals(4, preview.circles.size)
 
         // At tile 15, `SEP_WIDTH` is 0, so no border or corner squares
         // are drawn. The separator rectangle is still drawn first.
         val tiny = RecordingSink()
-        Flood.redraw(state, Flood.newUi(state), tiny, 15)
+        Flood.redraw(state, Flood.newUi(state), Game.NoDrawState, tiny, 15)
         assertEquals(2, tiny.polys.size)
         assertEquals(16, tiny.rects.count { it.w == 15 && it.h == 15 })
     }
@@ -580,5 +580,9 @@ class FloodTest {
         }
 
         override fun status(text: String) {}
+        override fun blitterNew(width: Int, height: Int): Int = 0
+        override fun blitterFree(id: Int) {}
+        override fun blitterSave(id: Int, x: Int, y: Int) {}
+        override fun blitterLoad(id: Int, x: Int, y: Int) {}
     }
 }

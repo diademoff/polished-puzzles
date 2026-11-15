@@ -79,5 +79,9 @@ class GameSeamTest {
         }
         override fun clip(x: Int, y: Int, width: Int, height: Int) {}
         override fun unclip() {}
+        override fun blitterNew(width: Int, height: Int): Int = 0
+        override fun blitterFree(id: Int) {}
+        override fun blitterSave(id: Int, x: Int, y: Int) {}
+        override fun blitterLoad(id: Int, x: Int, y: Int) {}
     }
 }

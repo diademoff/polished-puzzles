@@ -19,7 +19,7 @@ import java.io.File
  * arrow, and the status line are compared with a fresh oracle trace and
  * with the frozen traces for every preset.
  *
- * Every trace is a first redraw: the seam has no drawstate, so the port
+ * Every trace is a first redraw: the port uses `NoDrawState`, so it
  * draws the frame and the board on every call, and the oracle's frozen
  * traces come from `traceNew` (and from `trace` on a freshly loaded
  * save). A post-input trace in a live midend would show the animation's

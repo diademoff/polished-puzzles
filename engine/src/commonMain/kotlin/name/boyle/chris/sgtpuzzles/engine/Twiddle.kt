@@ -7,9 +7,9 @@ package name.boyle.chris.sgtpuzzles.engine
  * `w*h` numbers in row-major order, separated by commas, or followed by
  * an orientation letter when the puzzle is orientable.
  *
- * The generator is in [TwiddleGeneration]. There is no drawstate in the
- * Kotlin seam, so [redraw] draws the recessed frame and the whole board
- * on every call. C draws the frame once per drawstate and skips
+ * The generator is in [TwiddleGeneration]. This game uses
+ * [Game.NoDrawState], so [redraw] draws the recessed frame and the whole
+ * board on every call. C draws the frame once per drawstate and skips
  * unchanged tiles. The rotation animation and the completion flash are
  * not ported: the seam has no animation time, and `docs/PARITY.md`
  * allows animation differences. The game state, the text, the moves, and
@@ -522,12 +522,18 @@ object Twiddle : Game {
 
     /**
      * `game_redraw` in the settled state. C draws the recessed frame once
-     * per drawstate and redraws only changed tiles. The seam has no
-     * drawstate, so every call is a first redraw and draws everything.
-     * There is no animation and no flash, so the background colour is
-     * always `COL_BACKGROUND`.
+     * per drawstate and redraws only changed tiles. This game uses
+     * [Game.NoDrawState], so every call is a first redraw and draws
+     * everything. There is no animation and no flash, so the background
+     * colour is always `COL_BACKGROUND`.
      */
-    override fun redraw(state: Game.State, ui: Game.Ui, sink: DrawSink, tileSize: Int) {
+    override fun redraw(
+        state: Game.State,
+        ui: Game.Ui,
+        drawState: Game.DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    ) {
         val s = state as State
         val u = ui as Ui
         val border = tileSize / 2

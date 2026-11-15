@@ -95,8 +95,18 @@ interface Game {
      * Draws a complete board into [sink], not an incremental update.
      * The [ui] carries the frontend state that affects drawing, such
      * as a visible cursor. A game without such state ignores it.
+     *
+     * [drawState] is the cache that [newDrawState] returned. A game
+     * that caches a background reads it here; a game without a cache
+     * ignores it.
      */
-    fun redraw(state: State, ui: Ui, sink: DrawSink, tileSize: Int)
+    fun redraw(
+        state: State,
+        ui: Ui,
+        drawState: DrawState,
+        sink: DrawSink,
+        tileSize: Int,
+    )
 
     /**
      * Turns a frontend key into a move. It mirrors `interpret_move`, so
@@ -138,6 +148,27 @@ interface Game {
 
     /** A game with no frontend state of its own. */
     data object NoUi : Ui
+
+    /**
+     * The drawing cache, the counterpart of upstream `game_drawstate`.
+     * It is not part of the save file. The midend creates it before a
+     * draw and frees it with [freeDrawState].
+     */
+    interface DrawState
+
+    /** A game that caches nothing between draws. */
+    data object NoDrawState : DrawState
+
+    /**
+     * `game_new_drawstate`: allocates the cache for [state] at
+     * [tileSize]. A game that uses blitters calls [DrawSink.blitterNew]
+     * here, so the allocation happens before the first `start_draw` of
+     * the drawstate, as a fresh C drawstate does.
+     */
+    fun newDrawState(state: State, tileSize: Int, sink: DrawSink): DrawState = NoDrawState
+
+    /** `game_free_drawstate`: releases what [newDrawState] allocated. */
+    fun freeDrawState(drawState: DrawState, sink: DrawSink) {}
 
     /** A cursor rectangle in game coordinates. */
     data class CursorRect(val left: Int, val top: Int, val width: Int, val height: Int)
@@ -251,6 +282,22 @@ interface DrawSink {
     fun unclip()
     fun update(x: Int, y: Int, width: Int, height: Int)
     fun status(text: String)
+
+    /**
+     * `blitter_new`: allocates a [width] x [height] image buffer and
+     * returns the id that [blitterFree], [blitterSave], and
+     * [blitterLoad] use for it.
+     */
+    fun blitterNew(width: Int, height: Int): Int
+
+    /** `blitter_free`: releases a buffer from [blitterNew]. */
+    fun blitterFree(id: Int)
+
+    /** `blitter_save`: captures the buffer's area at x, y. */
+    fun blitterSave(id: Int, x: Int, y: Int)
+
+    /** `blitter_load`: draws the captured area back at x, y. */
+    fun blitterLoad(id: Int, x: Int, y: Int)
 }
 
 /** Font and alignment constants from upstream `puzzles.h`. */

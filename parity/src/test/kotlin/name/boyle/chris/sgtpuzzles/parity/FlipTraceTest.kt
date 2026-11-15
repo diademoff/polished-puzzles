@@ -17,8 +17,8 @@ import java.io.File
  * rectangles, the cursor colour, and the status line are compared with
  * a fresh oracle trace and with the frozen traces.
  *
- * Every compared trace is a first redraw: the seam has no drawstate, so
- * the port draws the grid and the whole board on every call, and the
+ * Every compared trace is a first redraw: the port uses `NoDrawState`, so
+ * it draws the grid and the whole board on every call, and the
  * oracle fixture is `traceNew` or `trace` on a freshly loaded save. A
  * post-input trace in a live midend would show the animation's first
  * frame; flip has no animation, so cursor traces are compared without
