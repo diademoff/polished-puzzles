@@ -91,6 +91,7 @@ private fun arrowsFor(mode: EngineArrowMode): ArrowMode = when (mode) {
     EngineArrowMode.ARROWS_ONLY -> ArrowMode.ARROWS_ONLY
     EngineArrowMode.ARROWS_LEFT -> ArrowMode.ARROWS_LEFT_CLICK
     EngineArrowMode.ARROWS_LEFT_RIGHT -> ArrowMode.ARROWS_LEFT_RIGHT_CLICK
+    EngineArrowMode.ARROWS_DIAGONALS -> ArrowMode.ARROWS_DIAGONALS
 }
 
 /**

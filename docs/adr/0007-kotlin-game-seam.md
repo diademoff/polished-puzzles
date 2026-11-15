@@ -333,11 +333,8 @@ it returns no labels and sets `ANDROID_ARROWS_LEFT_RIGHT`.
    value is true only for `palisade`; `GamePlay.isPalisadeFullCursor`
    checks the backend before it reads the preference.
 
-3. **The palisade port overrides the operation.** The port reads its own
-   parameters, so it will not need the shell to preset its arrow mode.
-   Until then `palisade` has no Kotlin backend, this amendment only
-   makes the seam able to express the C behavior, and nothing calls the
-   flag for a Kotlin game in the app.
+3. **The palisade port overrides the operation.** The port reads the
+   `fullCursor` argument, as the C game reads the preset arrow mode.
 
 `keysResultFor` gains the flag as a required argument. A default would
 hide a dropped value: a call site that forgot it would compile and

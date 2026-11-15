@@ -88,6 +88,15 @@ class KotlinGameKeysTest {
         assertNotEquals(request, Palisade.requestKeys(params))
     }
 
+    @Test
+    fun `the diagonal arrow mode reaches the app unchanged`() {
+        val result = keysResultFor(DiagonalGame, DiagonalGame.defaultParams(), fullCursor = false)
+
+        assertEquals("a", result.keys)
+        assertEquals("b", result.keysIfArrows)
+        assertEquals(ArrowMode.ARROWS_DIAGONALS, result.arrowMode)
+    }
+
     /**
      * A test-only game that asks for one normal key and one arrow-only
      * key. Every rule is [Fifteen]'s.
@@ -103,6 +112,23 @@ class KotlinGameKeysTest {
 
         // `Game by Fifteen` delegates the two-argument overload to
         // Fifteen, so a delegating game overrides both to keep one answer.
+        override fun requestKeys(params: Game.Params, fullCursor: Boolean): KeyRequest =
+            requestKeys(params)
+    }
+
+    /**
+     * A test-only game that asks for the diagonal arrow mode, the
+     * upstream mode of `inertia`. Every rule is [Fifteen]'s.
+     */
+    private object DiagonalGame : Game by Fifteen {
+        override fun requestKeys(params: Game.Params): KeyRequest = KeyRequest(
+            listOf(
+                KeyLabel('a'.code, "Alpha"),
+                KeyLabel('b'.code, "Beta", needsArrows = true),
+            ),
+            EngineArrowMode.ARROWS_DIAGONALS,
+        )
+
         override fun requestKeys(params: Game.Params, fullCursor: Boolean): KeyRequest =
             requestKeys(params)
     }

@@ -100,7 +100,8 @@ interface Game {
      * return four arrow labels instead of none (`midend.c:1294`,
      * `palisade.c:742-771`). A game without that hack ignores the flag,
      * so the default keeps the one-argument request. The palisade port
-     * overrides this operation and reads its own parameters instead.
+     * overrides this operation and reads [fullCursor], as the C game
+     * reads the preset arrow mode.
      */
     fun requestKeys(params: Params, fullCursor: Boolean): KeyRequest = requestKeys(params)
 
@@ -248,7 +249,19 @@ data class KeyRequest(val labels: List<KeyLabel>, val arrowMode: ArrowMode)
  */
 data class KeyLabel(val button: Int, val name: String, val needsArrows: Boolean = false)
 
-enum class ArrowMode { NONE, ARROWS_ONLY, ARROWS_LEFT_RIGHT, ARROWS_LEFT }
+/**
+ * The arrow mode of a [KeyRequest]. Each mode corresponds to an
+ * `ANDROID_ARROWS_*` constant in `puzzles.h`; [ARROWS_DIAGONALS] is
+ * `ANDROID_ARROWS_DIAGONALS`, the mode that adds the four diagonal
+ * keypad keys.
+ */
+enum class ArrowMode {
+    NONE,
+    ARROWS_ONLY,
+    ARROWS_LEFT_RIGHT,
+    ARROWS_LEFT,
+    ARROWS_DIAGONALS,
+}
 
 sealed interface MoveResult {
     /** A move string that `executeMove` accepts. */
