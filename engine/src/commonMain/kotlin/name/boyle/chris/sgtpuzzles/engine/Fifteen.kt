@@ -423,8 +423,8 @@ object Fifteen : Game {
         var cursorY = s.gapPos / s.width
         var nx = cursorX
         var ny = cursorY
-        // The midend passes the raw button, as C does, so the game drops
-        // the modifiers it does not use.
+        // The midend keeps CTRL and SHFT on a cursor move, so the game
+        // drops the modifiers it does not use.
         var key = Buttons.stripModifiers(button)
 
         when {

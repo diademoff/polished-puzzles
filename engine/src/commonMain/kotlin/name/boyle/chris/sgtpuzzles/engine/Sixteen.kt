@@ -781,12 +781,10 @@ object Sixteen : Game {
         val key = Buttons.stripModifiers(button)
 
         /*
-         * The seam passes the raw button, so the game applies the two
-         * modifier rules that C's `midend_process_key` applies before a
-         * game sees a key: `CTRL` on a key that is not a cursor move is
-         * rejected, and `MOD_NUM_KEYPAD` is kept only on a digit.
-         * Without these rules a modified click would take the cursor
-         * branch here, which C never allows.
+         * The seam passes a canonical button, but keeps CTRL and SHFT on
+         * a cursor move. The game reads both modifiers before it strips
+         * them. Without these two checks a modified click would take the
+         * cursor branch here, which C never allows.
          */
         val cursorKey = Buttons.isCursorMove(key)
         val rawControl = (button and Buttons.MOD_CTRL) != 0

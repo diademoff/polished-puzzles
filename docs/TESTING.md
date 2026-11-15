@@ -255,6 +255,14 @@ Engine tests:
 - `GameSeamTest` checks the seam operations that more than one game
   uses: the `canSolve` property, and that slant keeps its status text
   empty while `wantsStatusBar` is false.
+- `KeyCanonicalisationTest` pins the `midend_process_key` rules that
+  run before a game sees a key: Enter, Return, Ctrl+J, and Ctrl+M as
+  `CURSOR_SELECT`; Space as `CURSOR_SELECT2`; DEL and Ctrl+H as
+  backspace; Ctrl+Shift+Z as redo; Ctrl on a click rejected; the keypad
+  flag kept only on a digit; and the held-button rules for a drag, a
+  release, a drag with no press, and an overlapping second press. Each
+  case asserts a real move, a UI change, or the button that reaches
+  `interpretMove`.
 - `BoardGeometryTest` checks that the one geometry value used for
   drawing, input, the cursor, and size negotiation fits and centers the
   board on phone, tablet, landscape, and tiny viewports.
@@ -298,6 +306,13 @@ Engine tests:
   gap, every in-board neighbour, and a diagonal cell at that size. It
   also compares a swipe into the gap and a swipe that starts on the gap,
   using the same `DOWN`, `DRAG`, `UP` sequence as the shell.
+- `KeyCanonicalisationParityTest` is semantic. It sends the same
+  canonicalising sequences to C through `keys`, `key`, and
+  `pointsSized`: Enter, Space, Return, Ctrl+ASCII, and Ctrl+Shift+Z redo
+  for fifteen and flip, plus a press, drag, and release at real cells,
+  including a drag with no press and an overlapping second press. It
+  compares the save, id, status, and history flags, and asserts the
+  real move or the redo.
 - `FifteenTraceTest` is strict. It draws the Kotlin board through
   `KotlinTraceSink`, normalises it with the same `TraceNormalizer` as
   the oracle, and compares the result with a fresh oracle trace and

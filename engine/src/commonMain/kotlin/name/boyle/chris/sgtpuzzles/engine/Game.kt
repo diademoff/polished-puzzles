@@ -103,10 +103,11 @@ interface Game {
      * the result distinguishes a move, a UI-only change, a key the game
      * ignores, and a key that is valid but does nothing.
      *
-     * [button] arrives with its modifiers, because the midend passes the
-     * raw button as `midend_process_key` does. A game strips the
-     * modifiers it does not use with [Buttons.stripModifiers], exactly
-     * as it would in C.
+     * [button] is canonical, as `midend_process_key` makes it: `CTRL`
+     * and `SHFT` stay only on a cursor move and on TAB, and
+     * `MOD_NUM_KEYPAD` stays only on a digit. A game still calls
+     * [Buttons.stripModifiers] at its entry, because it does not use
+     * those modifiers; a second strip changes nothing.
      */
     fun interpretMove(
         state: State,
@@ -210,6 +211,18 @@ object Buttons {
     fun isCursorMove(button: Int): Boolean =
         button == CURSOR_UP || button == CURSOR_DOWN ||
             button == CURSOR_LEFT || button == CURSOR_RIGHT
+
+    /** `IS_MOUSE_DOWN`: one of the three button presses. */
+    fun isMouseDown(button: Int): Boolean =
+        (button - LEFT_BUTTON) in 0..(RIGHT_BUTTON - LEFT_BUTTON)
+
+    /** `IS_MOUSE_DRAG`: one of the three button drags. */
+    fun isMouseDrag(button: Int): Boolean =
+        (button - LEFT_DRAG) in 0..(RIGHT_DRAG - LEFT_DRAG)
+
+    /** `IS_MOUSE_RELEASE`: one of the three button releases. */
+    fun isMouseRelease(button: Int): Boolean =
+        (button - LEFT_RELEASE) in 0..(RIGHT_RELEASE - LEFT_RELEASE)
 }
 
 /**

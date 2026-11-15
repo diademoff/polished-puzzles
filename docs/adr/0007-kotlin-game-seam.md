@@ -149,7 +149,7 @@ because `newState` always starts with `completed == false`. It is
 reachable only for a game whose initial state can be complete. The
 tests therefore pin the move, solve, undo, and redo paths.
 
-## Amendment: keyboard modifiers reach the game
+## Amendment: input canonicalisation and keyboard modifiers
 
 - **Date:** 2026-11-15
 
@@ -167,28 +167,62 @@ preference.
    `MOD_MASK` is `0x7000`, as in `puzzles.h`. `Buttons.stripModifiers`
    is `STRIP_BUTTON_MODIFIERS`.
 
-2. **The midend splits the key.** `processKey` recognises `UI_UNDO`,
-   `UI_REDO`, and `UI_SOLVE` on the stripped button, so a modified UI
-   key still means the UI action and never reaches the game as a key.
-   `game.interpretMove` then receives the raw button, modifiers
-   included. The history, the `MoveResult` handling, and
+2. **The midend canonicalises the key, then splits it.**
+   `Midend.processKey` is the counterpart of `midend_process_key`, and
+   `reallyProcessKey` is the counterpart of
+   `midend_really_process_key`. The first canonicalises the button, the
+   second recognises `UI_UNDO`, `UI_REDO`, and `UI_SOLVE` and calls
+   `game.interpretMove`. The history, the `MoveResult` handling, and
    `changedState` are unchanged.
 
-3. **Each game strips what it does not use.** Our `processKey` does not
-   reproduce the C filter yet, so every game must drop what it does not
-   use. `Fifteen`, `Slant`, `SameGame`, and `Flood` call
-   `Buttons.stripModifiers` at the entry of `interpretMove`. Their
-   behaviour for unmodified input does not change, and a modified
-   button behaves like the plain button. The seam method documents this
-   contract, and `KeyModifierTest` pins it.
+3. **Each game still strips what it does not use.** A cursor move keeps
+   `CTRL` and `SHFT`, and TAB keeps both; every other key reaches the
+   game stripped. `Fifteen`, `Slant`, `SameGame`, `Flood`, and `Flip`
+   call `Buttons.stripModifiers` at their entry, so a second strip
+   changes nothing. `Sixteen` reads `MOD_CTRL`, `MOD_SHFT`, and
+   `MOD_NUM_KEYPAD` before it strips them, so its shift-lock and pad
+   behavior remains a game rule.
 
-4. **The C canonicalisation is not ported yet.**
-   `midend_process_key` also canonicalises input before the game:
-   `CTRL`+ASCII becomes a control character, `CTRL+SHFT+Z` becomes
-   `UI_REDO`, `CTRL` on a key that is not a cursor move is rejected,
-   and `MOD_NUM_KEYPAD` is kept only on a digit. None of that is in
-   `processKey` today, and the app does not send `CTRL` on a game key.
-   The parity tests use `MOD_SHFT` and `MOD_NUM_KEYPAD` on clicks and
-   cursor keys, which the C midend filters before the backend, so both
-   sides reach the game with the same button. When the shell needs the
-   rest, it belongs in `processKey` before the split.
+4. **The C canonicalisation is ported in the C order.** `processKey`
+   does this, before the game call:
+
+   1. a drag or a release takes the button that is held
+      (`LEFT_DRAG - LEFT_BUTTON` or `LEFT_RELEASE - LEFT_BUTTON`); an
+      event with no held button is ignored;
+   2. a press while another button is held first sends a release for the
+      held button through `reallyProcessKey`, and the two outcomes are
+      combined as C combines them with `min`;
+   3. `CTRL`+ASCII in `0x40..0x7F` becomes the matching control
+      character;
+   4. `CTRL+SHFT+Z` becomes `UI_REDO`;
+   5. `CTRL` on a key that is not a cursor move and has a code of at
+      least `0x20` is rejected; otherwise `CTRL` and `SHFT` are stripped,
+      except on TAB;
+   6. `MOD_NUM_KEYPAD` is kept only on a digit;
+   7. `'\n'` and `'\r'` become `CURSOR_SELECT`, and `' '` becomes
+      `CURSOR_SELECT2`;
+   8. `'\177'` becomes `'\b'`.
+
+   A rejected `CTRL` key returns `Unused` and does not reach the game,
+   so `CTRL+UI_UNDO` is not undo. `SHFT+UI_UNDO` still is, because
+   `SHFT` is stripped. This matches C. An earlier version of this
+   amendment claimed that a modified UI key is always a UI action, which
+   is wrong for `CTRL`.
+
+5. **`pressedMouseButton` is frontend state.** It records the button
+   that is held, starts at 0, and is updated from the final canonical
+   button: a release clears it, and a press stores it. It is not
+   serialised, and `newGame`, `fromGameId`, and `fromSave` start at 0,
+   as `midend_new`, `midend_new_game`, and `midend_deserialise` do in C.
+
+6. **The `BUTTON_BEATS` priority is a seam hook, not a flag.** No ported
+   game declares button priority. `Midend.buttonBeats` is the single
+   place where the future `mines` flag is read; it returns false today.
+   The rule and the flag formula are recorded there, so the `mines` port
+   adds a flag and not new control flow.
+
+The undo and redo aliases that `midend_really_process_key` handles for
+control characters (`\x1A`, `\x1F`, `*`, `#`, `\x12`, `\x19`),
+`UI_QUIT`/`UI_NEWGAME`, and the one-key shortcuts are not ported. The
+Android shell sends the `UI_*` buttons for those actions, and the seam
+has no quit or new-game action to dispatch them to.

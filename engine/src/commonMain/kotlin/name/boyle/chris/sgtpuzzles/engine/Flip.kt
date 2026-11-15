@@ -701,10 +701,9 @@ object Flip : Game {
         val u = ui as Ui
 
         /*
-         * C's midend canonicalises the key before the game sees it: it
-         * keeps modifiers on cursor moves, rejects CTRL on the other
-         * keys, and strips them otherwise. The seam passes the raw
-         * button, so do that here.
+         * The midend canonicalises CTRL and SHFT first: they stay only on
+         * a cursor move and on TAB. The game strips them anyway, because
+         * it does not use them.
          */
         val stripped = Buttons.stripModifiers(button)
         val key = if (Buttons.isCursorMove(stripped)) {

@@ -40,6 +40,13 @@ class Midend private constructor(
     /** Set when `changedState` reports a completion; cleared by a take. */
     private var completedEvent = false
 
+    /**
+     * The mouse button that is currently held, or 0 when none is. It is
+     * frontend state, as upstream `me->pressed_mouse_button` is: it is
+     * not serialised, and a new or a loaded midend starts at 0.
+     */
+    private var pressedMouseButton = 0
+
     val stateCount: Int get() = entries.size
 
     val canUndo: Boolean get() = statePos > 1
@@ -175,16 +182,117 @@ class Midend private constructor(
     }
 
     /**
-     * Applies one frontend key. The state history follows upstream: a
-     * real move truncates the redo branch and appends one entry; a
-     * no-effect key changes nothing.
+     * Applies one frontend key, as `midend_process_key`.
      *
-     * The UI actions are recognised on the stripped button, so a
-     * modified UI key still means undo, redo, or solve. The game gets
-     * the raw button, modifiers included, and strips what it does not
-     * use, as every C game does.
+     * The button is canonicalised before the game sees it: a drag or a
+     * release belongs to the button that is held, an overlapping press
+     * first releases the previous button, `CTRL`+ASCII becomes a control
+     * character, `CTRL+SHFT+Z` becomes redo, a modifier that the game
+     * does not expect is rejected or stripped, and Enter, Space, and DEL
+     * become the cursor select buttons and backspace. The rules and
+     * their order follow `midend.c`.
+     *
+     * The state history follows upstream: a real move truncates the redo
+     * branch and appends one entry; a no-effect key changes nothing.
      */
     fun processKey(x: Int, y: Int, button: Int, tileSize: Int): KeyOutcome {
+        var key = button
+        var outcome = KeyOutcome.Unused
+
+        /*
+         * Harmonise mouse drag and release messages. A frontend can
+         * switch the button or the modifier half way through a drag, so
+         * the midend maps the event to the button it knows is held. An
+         * event with no held button is ignored.
+         */
+        if (Buttons.isMouseDrag(key) || Buttons.isMouseRelease(key)) {
+            if (pressedMouseButton == 0) return KeyOutcome.Unused
+            key = pressedMouseButton + if (Buttons.isMouseDrag(key)) {
+                Buttons.LEFT_DRAG - Buttons.LEFT_BUTTON
+            } else {
+                Buttons.LEFT_RELEASE - Buttons.LEFT_BUTTON
+            }
+        } else if (Buttons.isMouseDown(key) && pressedMouseButton != 0) {
+            /*
+             * A game can give one button priority over another. No
+             * ported game declares the flag, so the hook below is false
+             * and the press is not ignored.
+             */
+            if (buttonBeats(pressedMouseButton, key)) return KeyOutcome.Unused
+
+            /*
+             * The presses overlapped. Invent a release for the button
+             * that was held, so the game sees press, release, press.
+             */
+            outcome = minOutcome(
+                outcome,
+                reallyProcessKey(
+                    x,
+                    y,
+                    pressedMouseButton + (Buttons.LEFT_RELEASE - Buttons.LEFT_BUTTON),
+                    tileSize,
+                ),
+            )
+        }
+
+        /* CTRL+ASCII becomes the matching control character. */
+        if ((key and Buttons.MOD_CTRL) != 0 &&
+            Buttons.stripModifiers(key) in 0x40..0x7F
+        ) {
+            key = key and (0x1F or (Buttons.MOD_MASK and Buttons.MOD_CTRL.inv()))
+        }
+        /* CTRL+SHFT+Z is redo, as in every other desktop program. */
+        if ((key and (Buttons.MOD_MASK.inv() or Buttons.MOD_SHFT)) ==
+            (Buttons.MOD_SHFT or 0x1A)
+        ) {
+            key = Buttons.UI_REDO
+        }
+        /*
+         * A game expects CTRL and SHFT only on a cursor move, and TAB.
+         * CTRL on any other key with a printable code is a mistake, not
+         * a game key, so reject it. Otherwise drop both modifiers.
+         */
+        if (!Buttons.isCursorMove(Buttons.stripModifiers(key))) {
+            if ((key and Buttons.MOD_CTRL) != 0 &&
+                Buttons.stripModifiers(key) >= 0x20
+            ) {
+                return KeyOutcome.Unused
+            }
+            if (Buttons.stripModifiers(key) != '\t'.code) {
+                key = key and (Buttons.MOD_CTRL or Buttons.MOD_SHFT).inv()
+            }
+        }
+        /* A game expects MOD_NUM_KEYPAD only on a digit. */
+        val canonical = Buttons.stripModifiers(key)
+        if (canonical < '0'.code || canonical > '9'.code) {
+            key = key and Buttons.MOD_NUM_KEYPAD.inv()
+        }
+        /* Keyboard Enter, Return, and Space act as the cursor selections. */
+        if (key == '\n'.code || key == '\r'.code) key = Buttons.CURSOR_SELECT
+        if (key == ' '.code) key = Buttons.CURSOR_SELECT2
+
+        /* Both backspace characters (8 and 127) become 8. */
+        if (key == 0x7F) key = '\b'.code
+
+        outcome = minOutcome(outcome, reallyProcessKey(x, y, key, tileSize))
+
+        /* The final button decides what is held. */
+        if (Buttons.isMouseRelease(key)) {
+            pressedMouseButton = 0
+        } else if (Buttons.isMouseDown(key)) {
+            pressedMouseButton = key
+        }
+
+        return outcome
+    }
+
+    /**
+     * The key body of `midend_really_process_key`: the UI actions and the
+     * game call, with the history and `changedState` effects. [processKey]
+     * canonicalises the button before this, and a fabricated button-up
+     * also goes through here.
+     */
+    private fun reallyProcessKey(x: Int, y: Int, button: Int, tileSize: Int): KeyOutcome {
         val stripped = Buttons.stripModifiers(button)
         when (stripped) {
             Buttons.UI_UNDO -> return if (undo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
@@ -208,6 +316,21 @@ class Midend private constructor(
             MoveResult.Unused -> KeyOutcome.Unused
         }
     }
+
+    /**
+     * The `BUTTON_BEATS` priority of `game.flags`. A game may declare
+     * that one held button beats another, so an overlapping press of the
+     * weaker button is ignored instead of released. No ported game
+     * declares the flag yet; `mines` will be the first, with
+     * `BUTTON_BEATS(x, y) = 1 << ((x - LEFT_BUTTON) * 3 + (y - LEFT_BUTTON))`.
+     * The future flag check belongs here, not in [processKey].
+     */
+    @Suppress("UNUSED_PARAMETER")
+    private fun buttonBeats(pressed: Int, button: Int): Boolean = false
+
+    /** `min(ret, ret2)`: the outcome that shows the most effect. */
+    private fun minOutcome(a: KeyOutcome, b: KeyOutcome): KeyOutcome =
+        if (a.ordinal <= b.ordinal) a else b
 
     /**
      * Draws a complete board into [sink], including the operations the

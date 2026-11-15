@@ -688,7 +688,7 @@ class SixteenTest {
     fun `the C midend modifier filter applies to the raw button`() {
         // C's `midend_process_key` rejects `CTRL` on a key that is not a
         // cursor move, and keeps `MOD_NUM_KEYPAD` only on a digit. The
-        // seam passes the raw button, so the game applies both rules.
+        // midend applies both rules; the game keeps a second guard.
         val midend = Midend.fromGameId(
             Sixteen,
             "4x4:13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4",

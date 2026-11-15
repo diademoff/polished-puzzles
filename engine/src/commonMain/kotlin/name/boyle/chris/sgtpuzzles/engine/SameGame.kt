@@ -586,8 +586,8 @@ object SameGame : Game {
         var targetX: Int
         var targetY: Int
 
-        // The midend passes the raw button, as C does, so the game drops
-        // the modifiers it does not use.
+        // The midend keeps CTRL and SHFT on a cursor move, so the game
+        // drops the modifiers it does not use.
         val key = Buttons.stripModifiers(button)
 
         when (key) {

@@ -8,10 +8,11 @@ import kotlin.test.assertTrue
 /**
  * Level: semantic. The keyboard modifier contract of the game seam.
  *
- * The midend passes the raw button to the game, as `midend_process_key`
- * does, and each game drops the modifiers it does not use. A modified
- * button must therefore behave exactly like the plain button, and the UI
- * actions must still be recognised on the stripped button.
+ * The midend canonicalises the button before the game sees it, as
+ * `midend_process_key` does. `CTRL` and `SHFT` stay only on a cursor
+ * move and on TAB; each game still drops the modifiers it does not use.
+ * A modified button that the midend keeps must therefore behave exactly
+ * like the plain one, and a rejected modifier must not reach the game.
  */
 class KeyModifierTest {
 
@@ -39,6 +40,8 @@ class KeyModifierTest {
     /**
      * Sends the same sequence to two midends, one with plain buttons and
      * one with modified buttons, and compares the result of every step.
+     * The modified buttons are ones that the midend strips or that the
+     * game drops, so both sides behave alike.
      */
     private fun assertModifiersIgnored(
         game: Game,
@@ -90,7 +93,7 @@ class KeyModifierTest {
                     x = 96,
                     y = 192,
                     button = Buttons.LEFT_BUTTON,
-                    modified = Buttons.LEFT_BUTTON or Buttons.MOD_CTRL,
+                    modified = Buttons.LEFT_BUTTON or Buttons.MOD_SHFT,
                 ),
             ),
         )
@@ -123,7 +126,7 @@ class KeyModifierTest {
                     x = 2 * tile,
                     y = 2 * tile,
                     button = Buttons.LEFT_BUTTON,
-                    modified = Buttons.LEFT_BUTTON or Buttons.MOD_CTRL,
+                    modified = Buttons.LEFT_BUTTON or Buttons.MOD_SHFT,
                 ),
             ),
             tile,
@@ -170,13 +173,13 @@ class KeyModifierTest {
                     x,
                     y,
                     Buttons.LEFT_BUTTON,
-                    Buttons.LEFT_BUTTON or Buttons.MOD_CTRL,
+                    Buttons.LEFT_BUTTON or Buttons.MOD_SHFT,
                 ),
                 Step(
                     x,
                     y,
                     Buttons.LEFT_BUTTON,
-                    Buttons.LEFT_BUTTON or Buttons.MOD_CTRL,
+                    Buttons.LEFT_BUTTON or Buttons.MOD_SHFT,
                 ),
             ),
             tile,
@@ -228,7 +231,7 @@ class KeyModifierTest {
                     x = (column + 1) * tile,
                     y = (row + 1) * tile,
                     button = Buttons.LEFT_BUTTON,
-                    modified = Buttons.LEFT_BUTTON or Buttons.MOD_CTRL,
+                    modified = Buttons.LEFT_BUTTON or Buttons.MOD_SHFT,
                 ),
             ),
             tile,
@@ -262,20 +265,33 @@ class KeyModifierTest {
     }
 
     @Test
-    fun `the game receives the raw button`() {
+    fun `the midend canonicalises the button before the game`() {
         val recorded = RecordingGame()
         val midend = Midend.newGame(recorded, "4x4", SEED)
         val tile = Fifteen.preferredTileSize
 
+        // CTRL and SHFT stay on a cursor move.
         val modified = Buttons.CURSOR_LEFT or Buttons.MOD_SHFT
         midend.processKey(0, 0, modified, tile)
-        assertEquals(modified, recorded.seen, "the midend must pass every modifier")
+        assertEquals(modified, recorded.seen, "a cursor move keeps its modifiers")
         assertEquals(1, recorded.calls)
 
-        // A UI action is dispatched on the stripped button and never
-        // reaches the game.
-        midend.processKey(0, 0, Buttons.UI_UNDO or Buttons.MOD_CTRL, tile)
-        assertEquals(1, recorded.calls, "a UI key is not a game key")
+        // SHFT is stripped from a key that is not a cursor move.
+        midend.processKey(0, 0, 'h'.code or Buttons.MOD_SHFT, tile)
+        assertEquals('h'.code, recorded.seen, "a hint key loses SHFT")
+        assertEquals(2, recorded.calls)
+
+        // A UI action is dispatched before the game and never reaches it.
+        midend.processKey(0, 0, Buttons.UI_UNDO or Buttons.MOD_SHFT, tile)
+        assertEquals(2, recorded.calls, "a UI key is not a game key")
+
+        // CTRL on a UI key is rejected, because its code is at least
+        // 0x20 and it is not a cursor move.
+        assertEquals(
+            KeyOutcome.Unused,
+            midend.processKey(0, 0, Buttons.UI_UNDO or Buttons.MOD_CTRL, tile),
+        )
+        assertEquals(2, recorded.calls, "a rejected key is not a game key")
     }
 
     @Test
@@ -295,7 +311,7 @@ class KeyModifierTest {
 
         assertEquals(
             KeyOutcome.SomeEffect,
-            midend.processKey(0, 0, Buttons.UI_UNDO or Buttons.MOD_CTRL, tile),
+            midend.processKey(0, 0, Buttons.UI_UNDO or Buttons.MOD_SHFT, tile),
         )
         assertEquals(1, midend.statePos, "undo moves the position once")
         assertEquals(states, midend.stateCount, "undo adds no history")
@@ -316,6 +332,13 @@ class KeyModifierTest {
         assertEquals(2, midend.statePos, "redo moves the position once")
         assertEquals(states, midend.stateCount, "redo adds no history")
         assertEquals(1, midend.status())
+
+        // CTRL on the same UI key is rejected by the C rules.
+        assertEquals(
+            KeyOutcome.Unused,
+            midend.processKey(0, 0, Buttons.UI_REDO or Buttons.MOD_CTRL, tile),
+        )
+        assertEquals(2, midend.statePos, "a rejected redo changes nothing")
     }
 
     @Test
