@@ -13,7 +13,14 @@ internal object AuxInfo {
 
     private const val HEX = "0123456789abcdef"
 
-    fun encode(text: String): String = encodeBytes(text.encodeToByteArray())
+    /**
+     * The text-to-bytes step is ISO-8859-1, the reverse of [decode], so
+     * every byte keeps its value. Upstream `AUXINFO` is a byte string,
+     * not Unicode text. A character outside ISO-8859-1 has no byte, so
+     * the encoder writes `?` for it. Games generate ASCII.
+     */
+    fun encode(text: String): String =
+        encodeBytes(text.toByteArray(Charsets.ISO_8859_1))
 
     fun decode(text: String): String =
         decodeBytes(text, text.length / 2).toString(Charsets.ISO_8859_1)
