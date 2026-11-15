@@ -348,6 +348,37 @@ class OracleClient(
         )
     }
 
+    data class DivvyState(
+        val roots: List<Int>,
+        val sizes: List<Int>,
+        val attempts: Int,
+        val state: String,
+    )
+
+    /**
+     * Runs `divvy_rectangle` from a seed or an encoded generator state.
+     * The response carries the canonical element and class size of every
+     * cell, the attempt count, and the encoded state after the call.
+     */
+    fun divvy(
+        w: Int,
+        h: Int,
+        k: Int,
+        seed: String? = null,
+        state: String? = null,
+    ): DivvyState {
+        val fields = linkedMapOf<String, Any>("op" to "divvy", "w" to w, "h" to h, "k" to k)
+        if (seed != null) fields["seed"] = seed
+        if (state != null) fields["state"] = state
+        val response = request(fields)
+        return DivvyState(
+            roots = response.numberList("roots").map { it.toInt() },
+            sizes = response.numberList("sizes").map { it.toInt() },
+            attempts = response.number("attempts").toInt(),
+            state = response.string("state"),
+        )
+    }
+
     /** Runs a `tdq.c` script and returns every removal, including -1. */
     fun tdq(n: Int, ops: String): List<Int> =
         request(mapOf("op" to "tdq", "n" to n, "ops" to ops))

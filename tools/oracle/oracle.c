@@ -38,6 +38,7 @@
  *   {"op":"matching","nl":3,"nr":4,"adj":"0 1;1 2;0 3"}
  *   {"op":"findloop","n":6,"edges":"0-1 1-2 2-0 3-4"}
  *   {"op":"dsf","kind":"normal","n":10,"ops":"m 0 1 m 2 3"}
+ *   {"op":"divvy","w":5,"h":5,"k":5,"seed":"12345"}
  *   {"op":"tdq","n":10,"ops":"a 3 a 1 r f"}
  *   {"op":"sort","values":"5 3 9 1","mode":"asc"}
  *   {"op":"combi","r":2,"n":5}
@@ -1611,6 +1612,87 @@ static void do_dsf(const jobject *req)
     dsf_free(dsf);
 }
 
+/*
+ * divvy_rectangle. A request carries w, h, k and either a seed or an
+ * encoded state. The response carries the canonical element and the
+ * class size of every cell, the number of attempts that divvy_rectangle
+ * needed, and the encoded state after the call. The state proves that
+ * the shuffle and the per-iteration draws consume the same stream as
+ * the Kotlin port.
+ *
+ * This mirrors divvy_rectangle (divvy.c:658-667): divvy_rectangle_attempt
+ * runs again after a failure, and every attempt redraws the permutation.
+ * The attempt cap is an oracle safety net only. A vector that reaches it
+ * would hang the test process, so the oracle reports an error instead.
+ */
+#define DIVVY_MAX_ATTEMPTS 1000
+#define DIVVY_MAX_CELLS 1000000
+
+static void do_divvy(const jobject *req)
+{
+    const char *seed = field_string(req, "seed");
+    const char *state = field_string(req, "state");
+    long w = 0, h = 0, k = 0;
+    random_state *rs;
+    DSF *dsf = NULL;
+    char *encoded;
+    int wh, attempts = 0, i;
+
+    if (!field_int(req, "w", &w) || !field_int(req, "h", &h) ||
+        !field_int(req, "k", &k)) {
+        put_error("divvy needs w, h, k");
+        return;
+    }
+    if (w < 1 || h < 1 || k < 1) {
+        put_error("divvy needs positive w, h, k");
+        return;
+    }
+    if (w > DIVVY_MAX_CELLS / h) {
+        put_error("divvy needs w*h <= 1000000");
+        return;
+    }
+    wh = (int)(w * h);
+    if (wh % k != 0) {
+        put_error("divvy needs k to divide w*h");
+        return;
+    }
+
+    if (state)
+        rs = random_state_decode(state);
+    else if (seed)
+        rs = random_new(seed, (int)strlen(seed));
+    else {
+        put_error("divvy needs a seed or a state");
+        return;
+    }
+
+    do {
+        dsf = divvy_rectangle_attempt((int)w, (int)h, (int)k, rs);
+        attempts++;
+    } while (!dsf && attempts < DIVVY_MAX_ATTEMPTS);
+
+    if (!dsf) {
+        random_free(rs);
+        put_error("divvy did not find a division within 1000 attempts");
+        return;
+    }
+
+    printf("{\"ok\":true,\"attempts\":%d,\"roots\":[", attempts);
+    for (i = 0; i < wh; i++)
+        printf("%s%d", i ? "," : "", dsf_canonify(dsf, i));
+    fputs("],\"sizes\":[", stdout);
+    for (i = 0; i < wh; i++)
+        printf("%s%d", i ? "," : "", dsf_size(dsf, i));
+    encoded = random_state_encode(rs);
+    fputs("],\"state\":", stdout);
+    put_json_string(encoded);
+    fputs("}\n", stdout);
+
+    sfree(encoded);
+    dsf_free(dsf);
+    random_free(rs);
+}
+
 static void do_tdq(const jobject *req)
 {
     const char *ops = field_string(req, "ops");
@@ -2727,6 +2809,8 @@ int main(int argc, char **argv)
             do_findloop(&req);
         } else if (!strcmp(op, "dsf")) {
             do_dsf(&req);
+        } else if (!strcmp(op, "divvy")) {
+            do_divvy(&req);
         } else if (!strcmp(op, "tdq")) {
             do_tdq(&req);
         } else if (!strcmp(op, "sort")) {

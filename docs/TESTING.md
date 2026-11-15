@@ -47,6 +47,7 @@ randomUpto(seed|state)  -> values + encoded generator state
 sort(values, mode)      -> sorted values
 combi(r, n)             -> combinations in upstream order
 dsf(kind, n, ops)       -> roots, sizes, minima, flip senses
+divvy(w, h, k, seed|state) -> roots, sizes, attempts, encoded state
 tdq(n, ops)             -> every removal
 findloop(n, edges)      -> loop edges and bridges
 matching(nl, nr, adj)   -> matching and permuted adjacency
@@ -325,6 +326,11 @@ Engine tests:
   permutation.
 - `Tree234ParityTest` compares add/find/delete/index results and the
   final sorted order.
+- `DivvyParityTest` compares the canonical elements, the class sizes,
+  the attempt count, and the encoded generator state of
+  `divvy_rectangle` over rectangles, paths, `k = 1`, `k = 2`, `k = w*h`,
+  and seeds that need a retry. `DivvyTest` pins fixed vectors and checks
+  that every region is a connected k-omino.
 - `PegsTest` checks the pegs parameter quirks, the state ownership, the
   text format, the key label, the loose move grammar, the lax
   completion rule, the cursor scan order, and the generator's retry

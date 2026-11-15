@@ -76,6 +76,7 @@ engine/src/
 │  ├─ FindLoop.kt                       # Tarjan bridge finding
 │  ├─ Matching.kt                       # Hopcroft-Karp matching
 │  ├─ Tree234.kt                        # tree234 public behavior
+│  ├─ Divvy.kt                          # random k-omino rectangle divider
 │  ├─ Game.kt                           # game seam and drawing sink
 │  ├─ Midend.kt                         # history and save semantics
 │  └─ Fifteen.kt                        # first ported game

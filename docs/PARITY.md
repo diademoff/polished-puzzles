@@ -171,6 +171,7 @@ C wins.
 | `SAVEFILE` container | parity: `engine/SgtpSave.kt`, both directions | C save corpus |
 | `sort`, `combi` | parity: `engine/Sort.kt`, `engine/Combinations.kt` | C order |
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
+| `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
 | games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, and `mosaic` are `dual-run`, the other games are `C` | the game inventory below |
