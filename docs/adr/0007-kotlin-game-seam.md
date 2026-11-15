@@ -148,3 +148,47 @@ The restart call site cannot raise the event for fifteen or slant,
 because `newState` always starts with `completed == false`. It is
 reachable only for a game whose initial state can be complete. The
 tests therefore pin the move, solve, undo, and redo paths.
+
+## Amendment: keyboard modifiers reach the game
+
+- **Date:** 2026-11-15
+
+`Midend.processKey` removed the modifier bits before it called
+`game.interpretMove`. In C, `midend_process_key` filters the modifiers
+it understands and sends the result to `interpret_move`; `fifteen.c`
+and `sixteen.c` then call `STRIP_BUTTON_MODIFIERS` themselves, while
+`sixteen.c` reads `MOD_SHFT`, `MOD_CTRL`, and `MOD_NUM_KEYPAD` before
+it strips them. A seam that always strips cannot express `sixteen`, and
+its shift-lock and pad behaviour is a game rule, not a shell
+preference.
+
+1. **`Buttons` carries the modifiers.** `MOD_CTRL` is `0x1000`,
+   `MOD_SHFT` is `0x2000`, `MOD_NUM_KEYPAD` is `0x4000`, and
+   `MOD_MASK` is `0x7000`, as in `puzzles.h`. `Buttons.stripModifiers`
+   is `STRIP_BUTTON_MODIFIERS`.
+
+2. **The midend splits the key.** `processKey` recognises `UI_UNDO`,
+   `UI_REDO`, and `UI_SOLVE` on the stripped button, so a modified UI
+   key still means the UI action and never reaches the game as a key.
+   `game.interpretMove` then receives the raw button, modifiers
+   included. The history, the `MoveResult` handling, and
+   `changedState` are unchanged.
+
+3. **Each game strips what it does not use.** Our `processKey` does not
+   reproduce the C filter yet, so every game must drop what it does not
+   use. `Fifteen`, `Slant`, `SameGame`, and `Flood` call
+   `Buttons.stripModifiers` at the entry of `interpretMove`. Their
+   behaviour for unmodified input does not change, and a modified
+   button behaves like the plain button. The seam method documents this
+   contract, and `KeyModifierTest` pins it.
+
+4. **The C canonicalisation is not ported yet.**
+   `midend_process_key` also canonicalises input before the game:
+   `CTRL`+ASCII becomes a control character, `CTRL+SHFT+Z` becomes
+   `UI_REDO`, `CTRL` on a key that is not a cursor move is rejected,
+   and `MOD_NUM_KEYPAD` is kept only on a digit. None of that is in
+   `processKey` today, and the app does not send `CTRL` on a game key.
+   The parity tests use `MOD_SHFT` and `MOD_NUM_KEYPAD` on clicks and
+   cursor keys, which the C midend filters before the backend, so both
+   sides reach the game with the same button. When the shell needs the
+   rest, it belongs in `processKey` before the split.

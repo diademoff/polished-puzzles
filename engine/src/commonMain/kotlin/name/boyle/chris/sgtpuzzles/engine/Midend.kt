@@ -178,6 +178,11 @@ class Midend private constructor(
      * Applies one frontend key. The state history follows upstream: a
      * real move truncates the redo branch and appends one entry; a
      * no-effect key changes nothing.
+     *
+     * The UI actions are recognised on the stripped button, so a
+     * modified UI key still means undo, redo, or solve. The game gets
+     * the raw button, modifiers included, and strips what it does not
+     * use, as every C game does.
      */
     fun processKey(x: Int, y: Int, button: Int, tileSize: Int): KeyOutcome {
         val stripped = Buttons.stripModifiers(button)
@@ -187,7 +192,7 @@ class Midend private constructor(
             Buttons.UI_SOLVE -> return if (solve()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
         }
 
-        return when (val result = game.interpretMove(state, ui, x, y, stripped, tileSize)) {
+        return when (val result = game.interpretMove(state, ui, x, y, button, tileSize)) {
             is MoveResult.Move -> {
                 val previous = state
                 val next = game.executeMove(state, result.text) ?: return KeyOutcome.NoEffect

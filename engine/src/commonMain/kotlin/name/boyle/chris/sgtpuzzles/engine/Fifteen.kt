@@ -423,7 +423,9 @@ object Fifteen : Game {
         var cursorY = s.gapPos / s.width
         var nx = cursorX
         var ny = cursorY
-        var key = button
+        // The midend passes the raw button, as C does, so the game drops
+        // the modifiers it does not use.
+        var key = Buttons.stripModifiers(button)
 
         when {
             key == Buttons.LEFT_BUTTON -> {

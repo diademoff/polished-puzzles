@@ -690,7 +690,11 @@ object Flood : Game {
         var move = -1
         var nullret: MoveResult = MoveResult.NoEffect
 
-        when (button) {
+        // The midend passes the raw button, as C does, so the game drops
+        // the modifiers it does not use.
+        val key = Buttons.stripModifiers(button)
+
+        when (key) {
             Buttons.LEFT_BUTTON -> {
                 tx = fromCoord(x, tileSize)
                 ty = fromCoord(y, tileSize)
@@ -702,7 +706,7 @@ object Flood : Game {
 
             Buttons.CURSOR_UP, Buttons.CURSOR_DOWN,
             Buttons.CURSOR_LEFT, Buttons.CURSOR_RIGHT,
-            -> return moveCursor(button, u, s.width, s.height)
+            -> return moveCursor(key, u, s.width, s.height)
 
             Buttons.CURSOR_SELECT -> {
                 tx = u.cx

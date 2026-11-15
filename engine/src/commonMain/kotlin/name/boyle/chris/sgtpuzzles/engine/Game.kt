@@ -102,6 +102,11 @@ interface Game {
      * Turns a frontend key into a move. It mirrors `interpret_move`, so
      * the result distinguishes a move, a UI-only change, a key the game
      * ignores, and a key that is valid but does nothing.
+     *
+     * [button] arrives with its modifiers, because the midend passes the
+     * raw button as `midend_process_key` does. A game strips the
+     * modifiers it does not use with [Buttons.stripModifiers], exactly
+     * as it would in C.
      */
     fun interpretMove(
         state: State,
@@ -194,8 +199,12 @@ object Buttons {
     const val UI_SOLVE = 0x0212
     const val UI_UNDO = 0x0213
     const val UI_REDO = 0x0214
+    const val MOD_CTRL = 0x1000
+    const val MOD_SHFT = 0x2000
+    const val MOD_NUM_KEYPAD = 0x4000
     const val MOD_MASK = 0x7000
 
+    /** `STRIP_BUTTON_MODIFIERS`: the button without the three modifiers. */
     fun stripModifiers(button: Int): Int = button and MOD_MASK.inv()
 
     fun isCursorMove(button: Int): Boolean =
