@@ -6,7 +6,9 @@ import name.boyle.chris.sgtpuzzles.engine.Fifteen
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.KeyLabel
 import name.boyle.chris.sgtpuzzles.engine.KeyRequest
+import name.boyle.chris.sgtpuzzles.engine.Palisade
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 /**
@@ -63,6 +65,27 @@ class KotlinGameKeysTest {
             Fifteen.requestKeys(Fifteen.defaultParams()),
             Fifteen.requestKeys(Fifteen.defaultParams(), fullCursor = true),
         )
+    }
+
+    @Test
+    fun `palisade takes the shell full-cursor flag`() {
+        val params = Palisade.decodeParams("5x5n5")
+        val half = keysResultFor(Palisade, params, fullCursor = false)
+        val full = keysResultFor(Palisade, params, fullCursor = true)
+
+        assertEquals("", half.keys)
+        assertEquals("", half.keysIfArrows)
+        assertEquals(ArrowMode.ARROWS_LEFT_RIGHT_CLICK, half.arrowMode)
+
+        assertEquals("", full.keys)
+        assertEquals("HJKL", full.keysIfArrows)
+        assertEquals(ArrowMode.ARROWS_ONLY, full.arrowMode)
+
+        // The shell flag is the game's second argument, not a parameter.
+        val request = Palisade.requestKeys(params, fullCursor = true)
+        assertEquals(full.keysIfArrows, request.labels.joinToString("") { it.button.toChar().toString() })
+        assertEquals(EngineArrowMode.ARROWS_ONLY, request.arrowMode)
+        assertNotEquals(request, Palisade.requestKeys(params))
     }
 
     /**

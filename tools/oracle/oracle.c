@@ -26,8 +26,10 @@
  *   {"op":"solve","state":"..."}
  *   {"op":"text","state":"..."}
  *   {"op":"requestkeys","state":"..."}
+ *   {"op":"requestkeys","state":"...","fullCursor":1}
  *   {"op":"status","state":"..."}
  *   {"op":"keys","state":"...","seq":"108 108 522"}
+ *   {"op":"keys","state":"...","seq":"108","prefs":"cursor-mode=full"}
  *   {"op":"trace","state":"..."}
  *   {"op":"trace","state":"...","seq":"524","prefs":"fade-grounded=true"}
  *   {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
@@ -1464,7 +1466,7 @@ static void do_trace_new(const char *gamename, const char *params,
     sfree(trace.last_status);
 }
 
-static void do_key_seq(const char *save, const char *seq)
+static void do_key_seq(const char *save, const char *seq, const char *prefs)
 {
     frontend fe = {0};
     const char *error;
@@ -1480,6 +1482,13 @@ static void do_key_seq(const char *save, const char *seq)
 
     error = open_state(&fe, save);
     if (error) {
+        put_error(error);
+        return;
+    }
+
+    error = apply_prefs(&fe, prefs);
+    if (error) {
+        free_frontend(&fe);
         put_error(error);
         return;
     }
@@ -2699,7 +2708,25 @@ static void do_state_op(const char *op, const jobject *req)
         sfree(text);
     } else if (!strcmp(op, "requestkeys")) {
         int nkeys = 0, arrow_mode = 0, i;
-        key_label *keys = midend_request_keys(fe.me, &nkeys, &arrow_mode);
+        long full_cursor = 0;
+        key_label *keys;
+
+        /*
+         * The game reads the Android full-cursor hint from the
+         * pre-set arrow mode, and `midend_request_keys` always passes
+         * false. The by-game entry point is the only way to ask for
+         * the full-grid request, which palisade returns as four
+         * arrow-only labels.
+         */
+        if (field_int(req, "fullCursor", &full_cursor) && full_cursor != 0) {
+            const game *g = midend_which_game(fe.me);
+            game_params *params = midend_get_params(fe.me);
+            keys = midend_request_keys_by_game(&nkeys, g, params,
+                                               &arrow_mode, true);
+            g->free_params(params);
+        } else {
+            keys = midend_request_keys(fe.me, &nkeys, &arrow_mode);
+        }
 
         printf("{\"ok\":true,\"arrowMode\":%d,\"labels\":[", arrow_mode);
         for (i = 0; i < nkeys; i++) {
@@ -2798,7 +2825,8 @@ int main(int argc, char **argv)
             do_trace_warm(&req);
         } else if (!strcmp(op, "keys")) {
             do_key_seq(field_string(&req, "state"),
-                       field_string(&req, "seq"));
+                       field_string(&req, "seq"),
+                       field_string(&req, "prefs"));
         } else if (!strcmp(op, "trace")) {
             do_trace(&req);
         } else if (!strcmp(op, "tree")) {

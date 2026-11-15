@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
@@ -415,14 +416,31 @@ class PalisadeGameTest {
     @Test
     fun `request keys and the layouts match the oracle`() = OracleClient().use { oracle ->
         val start = oracle.newGame("palisade", "5x5n5", SEED)
+        val params = Palisade.decodeParams("5x5n5")
+
         val half = oracle.requestKeys(start.state)
         assertEquals(3, half.arrowMode)
         assertTrue(half.labels.isEmpty())
-        assertEquals(
-            half.arrowMode,
-            Palisade.requestKeys(Palisade.decodeParams("5x5n5")).let { 3 },
-        )
-        assertTrue(Palisade.requestKeys(Palisade.decodeParams("5x5n5")).labels.isEmpty())
+        for (request in listOf(
+            Palisade.requestKeys(params),
+            Palisade.requestKeys(params, fullCursor = false),
+        )) {
+            assertEquals(ArrowMode.ARROWS_LEFT_RIGHT, request.arrowMode)
+            assertTrue(request.labels.isEmpty())
+        }
+
+        // The full-grid mode is the Android hint, not a parameter. The
+        // game returns four arrow-only labels in C's order.
+        val full = oracle.requestKeys(start.state, fullCursor = true)
+        assertEquals(1, full.arrowMode)
+        assertEquals(listOf("Left", "Bottom", "Top", "Right"), full.labels.map { it.label })
+        assertEquals(listOf('H'.code, 'J'.code, 'K'.code, 'L'.code), full.labels.map { it.button })
+        assertTrue(full.labels.all { it.needsArrows })
+        val fullRequest = Palisade.requestKeys(params, fullCursor = true)
+        assertEquals(ArrowMode.ARROWS_ONLY, fullRequest.arrowMode)
+        assertEquals(full.labels.map { it.label }, fullRequest.labels.map { it.name })
+        assertEquals(full.labels.map { it.button }, fullRequest.labels.map { it.button })
+        assertEquals(full.labels.map { it.needsArrows }, fullRequest.labels.map { it.needsArrows })
 
         val views = listOf(
             411 to 702,

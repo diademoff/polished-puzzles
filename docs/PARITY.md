@@ -174,7 +174,7 @@ C wins.
 | `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, and `mosaic` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, and `palisade` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -211,7 +211,7 @@ submenu entries when a game groups its presets.
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `dual-run` |
 | `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `C` |
 | `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
-| `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `C` |
+| `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `dual-run` |
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `C` |
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `C` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `dual-run` |
@@ -762,6 +762,87 @@ Notes:
   preference-dialog skip, the `Fifteen` casts in `KotlinGameEngine`,
   and the two-release wait are open. `currentKeyLabel` is a tested
   helper because C has no Android call site for it. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `palisade` is `dual-run`. Its parameters and four presets, the decode
+  quirks and validation order, the run-length description, the
+  solver-gated generator, the two-bit border state, the move grammar,
+  the solve, the text format, both cursor modes, the save file, palette,
+  drawing, layout, and input pass the matrix in `PalisadeDescTest`,
+  `PalisadeGameTest`, `PalisadeSaveTest`, `PalisadeTraceTest`,
+  `PalisadeInputParityTest`, `PalisadeCursorTest`, `DivvyParityTest`,
+  and the engine `PalisadeTest` and `DivvyTest`. `PalisadeDescTest`
+  compares the five golden descriptions, the four presets at every seed
+  with their full saves, the numeric seed sweep, the decode quirks and
+  validation messages, the winnow/divvy partition through the encoded
+  RNG state, the accepted huge area that D-007 refuses only at
+  generation, and a generated save that reloads through the engine.
+  `PalisadeGameTest` compares the move grammar, real clicks, both cursor
+  modes, the `H/J/K/L` aliases, control and shift, undo and redo, the
+  completion event, the solve with and without `AUXINFO`, and both
+  `requestKeys` modes. `PalisadeSaveTest` reads the
+  five corpus saves byte for byte and pins the `k == wh` split save and
+  the empty seed. `PalisadeTraceTest` covers the four frozen traces, a
+  loaded save, the cursor ring, the full cursor's eight lines, the warm
+  path, tiles 48, 63, 82, and 100, the 411x702 letterbox, the
+  `clear-complete-regions` preference, and the `S` answer.
+
+  The generator depends on the ported `divvy` library, and
+  `DivvyParityTest` compares the canonical roots, class sizes, attempt
+  count, and the encoded RNG state after the call, including the retry
+  fixtures. The RNG order is one shuffle of the winnow order, then one
+  `divvy_rectangle` per solver-gate attempt; a retry does not reshuffle
+  the winnow order and the winnow itself draws nothing.
+
+  `PalisadeInputParityTest` sends real fence clicks at tiles 48, 63, 82,
+  and 100 and at the 411x702 letterbox (tile 67, origin (2,147)). Every
+  fence changes the border bytes and adds one move, and the final state,
+  id, status, and trace match `pointsSized`. It also covers the
+  half-grid cursor that continues from a clicked edge, the full-grid
+  cursor and its control and shift cycles, the `H/J/K/L` letters in both
+  modes, the full-grid completion of `2x3n3:d33`, empty and one-sided
+  moves, a both-bits edge, and inert letterbox, margin, middle, drag,
+  release, and outward-edge clicks. The oracle `requestkeys` operation
+  takes an optional `fullCursor` field, so the four `H/J/K/L` labels,
+  their buttons, `needsArrows`, and the arrow mode are compared in both
+  modes. The oracle `keys` operation takes an optional `prefs` field, so
+  the full-grid sequences are compared at the state level, not only in
+  the drawing trace. Both fields keep the old default.
+
+  `cursor-mode` (`Half-grid` by default, `Full-grid` when set) changes
+  the input mode, the cursor shape, and the requested keys; it does not
+  change the id, status, text, or save. `clear-complete-regions` changes
+  only the drawn color of a `MAYBE` edge in a complete region. Neither
+  preference is serialized, so the app must apply both to the live UI
+  after `newUi` and after `Midend.fromSave`, call `forceRedraw`, and
+  re-request the keys for `cursor-mode`. `KotlinGameEngine.requestKeys`
+  already passes `palisadeFullCursor` to `Palisade.requestKeys(params,
+  fullCursor)`. The completion flash is not ported; animations and
+  transitions may differ (section 1) and the oracle's `allow_flash` is
+  0, so no trace can contain it.
+
+  D-007 covers generation: C accepts an area up to `INT_MAX` and then
+  allocates tens of gigabytes, so the port rejects an area above 2^20
+  cells at `newDesc` before any RNG draw. Validation keeps the C
+  messages and the accepted `46340x46340` boundary. The app's
+  configuration dialog must surface that guard.
+
+  One save difference is recorded as debt, not as a deviation.
+  `midend.c:2606-2613` drops the `SEED` record when `CPARAMS` fails the
+  full validation, which the `k == wh` split save
+  (`PARAMS 5x5n5`, `CPARAMS 5x5n25`) does. The Kotlin `Midend.fromSave`
+  keeps the seed. The id, status, text, solve, `NSTATES`, and all move
+  records are identical, and `PalisadeSaveTest` pins both sides. A C
+  load of that one hand-written save therefore re-serializes without
+  `SEED`, while Kotlin keeps it. No generated save and no corpus save
+  reaches this path.
+
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
+  C: the three-field configuration dialog (Width, Height, Region size),
+  the two-preference schema and its application, the `Fifteen` casts in
+  `KotlinGameEngine`, and the two-release wait are open. S9 is not
+  needed, because `current_key_label` is `NULL`. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 

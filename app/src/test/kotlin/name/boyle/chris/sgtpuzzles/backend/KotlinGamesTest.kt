@@ -9,6 +9,7 @@ import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Netslide
+import name.boyle.chris.sgtpuzzles.engine.Palisade
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
@@ -130,6 +131,12 @@ class KotlinGamesTest {
     fun `mosaic is registered but the app still uses C`() {
         assertEquals(Mosaic, KotlinGames.gameFor(MOSAIC))
         assertFalse(KotlinGames.handles(MOSAIC))
+    }
+
+    @Test
+    fun `palisade is registered but the app still uses C`() {
+        assertEquals(Palisade, KotlinGames.gameFor(PALISADE))
+        assertFalse(KotlinGames.handles(PALISADE))
     }
 
     @Test

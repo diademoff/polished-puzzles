@@ -35,12 +35,12 @@ gestureSized(state, w, h, x0, y0, x1, y1, steps) -> state after a swipe
 pointsSized(state[, w, h], points[, trace]) -> state after several clicks
 traceWarm(state[, w, h], points) -> state + warm trace
 layout(state, w, h)     -> game size after midend_size
-keys(state, seq)        -> state + flags
+keys(state, seq[, prefs]) -> state + flags
 undo/redo(state)        -> state + flags
 serialise(state)        -> savefile
 load(savefile)          -> state
 solve(state)            -> state
-requestkeys(state)      -> arrow mode + key labels
+requestkeys(state[, fullCursor]) -> arrow mode + key labels
 trace(state[, seq, prefs]) -> draw primitives
 randomBits(seed|state)  -> values + encoded generator state
 randomUpto(seed|state)  -> values + encoded generator state
@@ -60,6 +60,15 @@ that a Kotlin-written file is accepted by C.
 `keys` replays a whole sequence in one midend. It is required for
 cursor games: the cursor lives in the frontend state (`game_ui`), which
 is not part of the save file, so separate `key` requests would reset it.
+The optional `prefs` field applies game preferences first, in the
+upstream preferences file format, so a game mode that only `game_ui`
+holds (for example palisade's `cursor-mode=full`) can be compared at the
+state level.
+
+`requestkeys` asks the game for its extra keys and the arrow mode. The
+optional `fullCursor` field passes the Android full-cursor hint to the
+game, as `android.c` does through `midend_request_keys_by_game`. Without
+it the operation keeps the old behaviour, which always passes false.
 
 `layout` runs `midend_size(..., user_size = true)` for a viewport and
 reports the resulting board size. `keySized` does the same, then subtracts
@@ -1067,6 +1076,70 @@ Engine tests:
   description guard, the retry attempt counts, the shared clue board,
   the `s` move, `changedState`, `currentKeyLabel`, the fresh UI and
   drawstate values, and the palette.
+- `PalisadeDescTest` is semantic. It compares the five golden
+  descriptions, the four presets at every seed with their full saves,
+  a numeric seed sweep, the decode quirks and validation messages, the
+  winnow/divvy partition through the encoded RNG state, the accepted
+  huge area that D-007 refuses only at generation, and a generated
+  save that reloads through the engine.
+- `PalisadeGameTest` is semantic. It compares new games, text, status,
+  real clicks, inert clicks, the half-grid cursor sequences, the
+  full-grid completion of `2x3n3:d33`, control and shift, the loose move
+  grammar (valid and rejected), one-sided and both-bits borders, an `S`
+  completion, undo and redo, the completion event, the solve with and
+  without `AUXINFO`, and both `requestKeys` modes. The full mode is
+  compared through the oracle's `fullCursor` field: labels `Left`,
+  `Bottom`, `Top`, `Right`, buttons `H/J/K/L`, `needsArrows` true, and
+  arrow mode 1; the half mode is arrow mode 3 with no labels.
+- `PalisadeSaveTest` is strict for the save text. It reads all five
+  `palisade` saves in the corpus, rewrites them byte for byte, and
+  makes C agree on the id, status, undo, redo, text, and resave. It
+  pins the `k == wh` split save (`PARAMS 5x5n5`, `CPARAMS 5x5n25`),
+  the empty seed, a garbage `AUXINFO`, and the in-memory history
+  shapes. The split save has one known difference, recorded as debt:
+  C drops `SEED` when `CPARAMS` fails the full validation
+  (`midend.c:2606-2613`) and Kotlin keeps it; the id, status, text,
+  solve, and move records are identical.
+- `PalisadeTraceTest` is strict. It compares the four frozen traces and
+  the oracle `traceNew` for every preset, a loaded save, the cursor
+  ring, the full cursor's eight corner lines, the warm path after a
+  click and after a reveal, sized click traces at tiles 48, 63, 82, and
+  100, the 411x702 letterbox, `clear-complete-regions` on and off, the
+  `S` answer, and the first-draw reset after a resize or a forced
+  redraw. No trace contains a blitter, a circle, or a flash color.
+- `PalisadeInputParityTest` is semantic. It compares the layout at
+  tiles 48, 63, 82, and 100 and the 411x702 letterbox of every preset
+  (tiles 67, 45, 37, and 25, all with a nonzero origin on both axes).
+  It sends real fence clicks on four distinct edges at each tile and
+  the letterbox: every fence changes the border bytes and adds one move
+  and one state, and the final state, id, status, and trace match
+  `pointsSized`. The half-grid cursor continues from the clicked edge
+  through reveal, `ON -> OFF -> maybe -> ON`, the corner no-effect, and
+  a second fence. The full-grid cursor is compared through the oracle's
+  `prefs` field: three control toggles, three shift toggles, the `H/J/K/L`
+  letters in both modes, an outward-edge letter that changes nothing,
+  and the completion of `2x3n3:d33` with the completion event. Empty,
+  one-sided, and both-bits moves match the C state; a both-bits edge
+  ignores a click and a select. Letterbox, margin, middle, lone drag,
+  lone release, and outward-edge clicks change neither the border nor
+  the count. The two preferences are pinned as non-state: `cursor-mode`
+  and `clear-complete-regions` change no id, status, text, or save, and
+  the clear pref is compared through the oracle `trace` with `prefs`.
+- `DivvyParityTest` compares the canonical roots, class sizes, attempt
+  count, and encoded generator state of the direct `divvy` oracle op
+  for the palisade presets, path rectangles, `k = 1`, `k = 2`, and a
+  retry seed; `DivvyTest` pins the fixed vectors, the invalid input
+  guards, and the connected-k-omino invariant.
+- `PalisadeTest` is the engine test. It pins the parameters and
+  presets, the decode quirks, the validation order and the D-007 area
+  guard, the frozen description vectors, the run encoder, the
+  `validateDesc` grammar, the `newState` completed rule and the shared
+  clues, the copy, the `F` grammar, one-sided and both-bits borders, the
+  `S` move, the half-grid and full-grid cursor sequences, the `H/J/K/L`
+  aliases, a real click, the cursor geometry, `requestKeys` in both
+  modes, `computeSize`, the palette, the solver and `isSolved`, the
+  solve with and without `AUXINFO`, the text format, the `changedState`
+  rules, undo/redo/restart events, and a divvy retry.
 
 `lightup` has one deviation and two enablement debts:
 
@@ -1369,6 +1442,33 @@ aggressive 100x100 latency is an enablement debt:
   are pinned in validation only. S8 and S9 are still open, and
   `MOSAIC` is in `KotlinGames.gameFor` but not in `APP_GAMES`, so
   `KotlinGames.handles(MOSAIC)` is false and the app still uses C.
+
+`palisade` has one deviation and two open items:
+
+- D-007: C `validate_params` accepts an area up to `INT_MAX`, and
+  `new_game_desc` then allocates clue, rim, scratch, winnow-order, and
+  `4*wh` addable tables, which is tens of gigabytes. The port rejects an
+  area above 2^20 cells at `newDesc` before any RNG draw, keeps the C
+  messages and the accepted `46340x46340` boundary in validation, and
+  changes no valid game. `PalisadeTest` and `PalisadeDescTest` pin both
+  sides. The app's configuration dialog must apply the guard.
+- Save debt: `midend.c:2606-2613` drops the `SEED` record when
+  `CPARAMS` fails the full validation. The `k == wh` split save
+  (`PARAMS 5x5n5`, `CPARAMS 5x5n25`) is the only reachable shape, and
+  C re-serializes it without `SEED` while Kotlin keeps it. The id,
+  status, text, solve, and every move record are identical, so no
+  deviation entry is added. `PalisadeSaveTest` pins both sides; fixing
+  the shared `Midend.fromSave` would change the save text of that one
+  hand-written file, and no corpus or generated save reaches it.
+- Enablement: the app still uses C. The three-field configuration
+  dialog (Width, Height, Region size), the two-preference schema
+  (`cursor-mode` and `clear-complete-regions`) with an apply after
+  `newUi` and after `Midend.fromSave` plus a forced redraw and a key
+  re-request, the `Fifteen` casts in `KotlinGameEngine`, and the
+  two-release wait are open. `KotlinGameEngine.requestKeys` already
+  passes `palisadeFullCursor` to the game, and S9 is not needed because
+  `current_key_label` is `NULL`. `PALISADE` is in `KotlinGames.gameFor`
+  but not in `APP_GAMES`, so `KotlinGames.handles(PALISADE)` is false.
 
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a

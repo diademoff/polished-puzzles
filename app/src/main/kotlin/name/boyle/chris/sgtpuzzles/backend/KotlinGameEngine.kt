@@ -25,6 +25,7 @@ import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Netslide
+import name.boyle.chris.sgtpuzzles.engine.Palisade
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
@@ -106,9 +107,10 @@ object KotlinGames {
      * Games whose Kotlin implementation is complete enough for the app.
      * `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`,
      * `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`,
-     * `unruly`, `range`, `lightup`, and `mosaic` are in dual-run: their
-     * engines pass the parity matrix, but the app still uses C until the
-     * configuration dialog and the two-release wait are done.
+     * `unruly`, `range`, `lightup`, `mosaic`, and `palisade` are in
+     * dual-run: their engines pass the parity matrix, but the app still
+     * uses C until the configuration dialog and the two-release wait are
+     * done.
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
@@ -130,6 +132,7 @@ object KotlinGames {
         RANGE -> Range
         LIGHTUP -> Lightup
         MOSAIC -> Mosaic
+        PALISADE -> Palisade
         else -> null
     }
 

@@ -441,8 +441,10 @@ class OracleClient(
     data class KeyLabel(val label: String, val button: Int, val needsArrows: Boolean)
 
     /** `midend_request_keys`: the extra keys and the arrow mode. */
-    fun requestKeys(state: String): RequestKeys {
-        val response = request(mapOf("op" to "requestkeys", "state" to state))
+    fun requestKeys(state: String, fullCursor: Boolean = false): RequestKeys {
+        val fields = linkedMapOf<String, Any>("op" to "requestkeys", "state" to state)
+        if (fullCursor) fields["fullCursor"] = 1
+        val response = request(fields)
         val labels = (response.field("labels") as JsonValue.Arr).items.map {
             val item = it as JsonValue.Obj
             KeyLabel(item.string("label"), item.number("button").toInt(), item.bool("needsArrows"))
@@ -454,17 +456,24 @@ class OracleClient(
      * Replays a sequence of key codes inside one midend. Cursor games
      * keep the cursor in the game_ui, which is not part of the save
      * file: separate `key` requests would reset it between keys.
+     *
+     * An optional [prefs] sets game preferences first, in the
+     * preferences file format, so a mode that only the game_ui holds
+     * (for example palisade's `cursor-mode=full`) can be compared.
      */
-    fun keys(state: String, sequence: List<Int>): GameState =
-        GameState.of(
-            request(
-                mapOf(
-                    "op" to "keys",
-                    "state" to state,
-                    "seq" to sequence.joinToString(" "),
-                ),
-            ),
+    fun keys(
+        state: String,
+        sequence: List<Int>,
+        prefs: String? = null,
+    ): GameState {
+        val fields = linkedMapOf<String, Any>(
+            "op" to "keys",
+            "state" to state,
+            "seq" to sequence.joinToString(" "),
         )
+        if (prefs != null) fields["prefs"] = prefs
+        return GameState.of(request(fields))
+    }
 
     /**
      * Records one redraw of [state] as draw operations. The trace
