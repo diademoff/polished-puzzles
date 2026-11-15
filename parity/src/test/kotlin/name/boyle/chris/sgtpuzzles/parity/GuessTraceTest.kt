@@ -414,6 +414,49 @@ class GuessTraceTest {
         )
     }
 
+    @Test
+    fun `a warm frame after the label key redraws the cached pegs`() {
+        val midend = Midend.newGame(Guess, "", "0")
+        val ui = midend.ui as Guess.Ui
+        val sink = OpSink()
+        midend.recordNewGameTrace(sink)
+        assertTrue("the cold frame has no label", sink.ops.none { it.startsWith("text ") })
+        val drawState = midend.drawState
+
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, 'l'.code, TILE))
+        assertTrue(ui.showLabels)
+        assertSame("the label key keeps the drawstate", drawState, midend.drawState)
+        sink.ops.clear()
+        midend.recordRedraw(sink)
+
+        // `show_labels` adds the label flag to every cache entry, so the
+        // warm frame redraws the six colour-bar pegs with their numbers
+        // and all ten empty guess rows. A cache key without the flag
+        // would leave the guess rows unchanged.
+        val texts = sink.ops.filter { it.startsWith("text ") }
+        assertEquals(
+            (1..6).map { "text 31 ${121 + (it - 1) * 35} 1 15 257 1 $it" },
+            texts,
+        )
+        for (colour in 1..6) {
+            assertTrue(
+                "colour $colour is redrawn",
+                sink.ops.contains(
+                    "circle 31 ${121 + (colour - 1) * 35} 15 ${5 + colour} 1",
+                ),
+            )
+        }
+        // Every guess peg is redrawn empty, with no number.
+        assertEquals(
+            40,
+            sink.ops.count { it.startsWith("circle") && it.contains(" 15 5 5") },
+        )
+        assertTrue(
+            "the warm frame allocates nothing",
+            sink.ops.none { it.startsWith("blitter_new") || it.startsWith("blitter_free") },
+        )
+    }
+
     private fun boardWidth(midend: Midend): Int = midend.size.width
 
     private fun boardHeight(midend: Midend): Int = midend.size.height

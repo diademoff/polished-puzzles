@@ -82,6 +82,34 @@ class GuessTest {
     }
 
     @Test
+    fun `the parameter parser saturates like an int atoi`() {
+        fun colours(text: String): Int =
+            (Guess.decodeParams(text) as Guess.Params).ncolours
+
+        // C leaves the overflow undefined; the port saturates, as the
+        // `Pegs` and `SameGame` helpers do.
+        assertEquals(Int.MAX_VALUE, colours("c" + "9".repeat(40)))
+        assertEquals(Int.MAX_VALUE, colours("c+" + "9".repeat(40)))
+        assertEquals(Int.MIN_VALUE, colours("c-" + "9".repeat(40)))
+
+        // The exact boundary, and one past it on each side.
+        assertEquals(Int.MAX_VALUE, colours("c2147483647p4g10Bm"))
+        assertEquals(Int.MAX_VALUE, colours("c2147483648p4g10Bm"))
+        assertEquals(Int.MIN_VALUE, colours("c-2147483648p4g10Bm"))
+        assertEquals(Int.MIN_VALUE, colours("c-2147483649p4g10Bm"))
+
+        // `p` and `g` use the same parser.
+        assertEquals(
+            Int.MAX_VALUE,
+            (Guess.decodeParams("p" + "1".repeat(30)) as Guess.Params).npegs,
+        )
+        assertEquals(
+            Int.MIN_VALUE,
+            (Guess.decodeParams("g-" + "1".repeat(30)) as Guess.Params).nguesses,
+        )
+    }
+
+    @Test
     fun `validation messages are exact and ordered`() {
         fun message(nc: Int, np: Int, ng: Int, blank: Boolean, multiple: Boolean) =
             Guess.validateParams(Guess.Params(nc, np, ng, blank, multiple), true)
@@ -217,6 +245,27 @@ class GuessTest {
         // The case of the hex is not canonicalized by newState.
         val upper = Guess.newState(params, "3EA7") as Guess.State
         assertEquals(state.solution.toList(), upper.solution.toList())
+    }
+
+    @Test
+    fun `state toString omits the solution and keeps the visible fields`() {
+        val params = Guess.decodeParams("c3p2g1bm")
+        val state = Guess.newState(params, "3ea7") as Guess.State
+        assertEquals(listOf(3, 3), state.solution.toList())
+
+        // The visible fields are in the line, so a log is useful.
+        val text = state.toString()
+        assertTrue(text.contains("Guess.State("))
+        assertTrue(text.contains(params.toString()))
+        assertTrue(text.contains("nextGo=0"))
+        assertTrue(text.contains("solved=0"))
+
+        // The hidden answer is not, in any common rendering.
+        assertFalse(text.contains("solution"))
+        assertFalse(text.contains("Solution"))
+        assertFalse(text.contains(state.solution.contentToString()))
+        assertFalse(text.contains(state.solution.joinToString(",")))
+        assertFalse(text.contains(state.solution.joinToString(" ")))
     }
 
     @Test
@@ -1036,4 +1085,3 @@ class GuessTest {
         }
     }
 }
-
