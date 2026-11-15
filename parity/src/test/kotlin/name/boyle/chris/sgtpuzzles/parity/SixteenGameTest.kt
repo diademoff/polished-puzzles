@@ -165,6 +165,11 @@ class SixteenGameTest {
                 actual.serialise().values("MOVE").size,
             )
             assertEquals(
+                "move count for click $index at ($viewX,$viewY)",
+                1,
+                (actual.state as Sixteen.State).moveCount,
+            )
+            assertEquals(
                 "move record for click $index",
                 expectedMoves[index],
                 actual.serialise().values("MOVE").single(),
@@ -267,6 +272,11 @@ class SixteenGameTest {
         actual.processKey(0, 0, Buttons.CURSOR_UP, 48)
         assertEquals(KeyOutcome.SomeEffect, actual.processKey(0, 0, Buttons.CURSOR_SELECT, 48))
         assertEquals("C0,-1", actual.serialise().values("MOVE").single())
+        assertEquals(
+            "the keyboard move counts once",
+            1,
+            (actual.state as Sixteen.State).moveCount,
+        )
         assertEquals("10 15 14  3\n 7 12  5  6\n11  1  8  2\n13  9 16  4\n", actual.textFormat())
     }
 
@@ -531,6 +541,7 @@ class SixteenGameTest {
         assertEquals("S", actual.serialise().value("SOLVE"))
         assertEquals(1, actual.status())
         assertEquals("Moves since auto-solve: 0", actual.statusText())
+        assertEquals(1, (actual.state as Sixteen.State).moveCount)
         assertFalse("a solve never raises the event", actual.takeCompletedEvent())
 
         val expected = oracle.solve(start.state)

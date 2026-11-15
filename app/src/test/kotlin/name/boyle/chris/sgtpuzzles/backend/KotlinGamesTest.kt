@@ -3,6 +3,7 @@ package name.boyle.chris.sgtpuzzles.backend
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -39,6 +40,19 @@ class KotlinGamesTest {
     fun `flood is registered but the app still uses C`() {
         assertEquals(Flood, KotlinGames.gameFor(FLOOD))
         assertFalse(KotlinGames.handles(FLOOD))
+    }
+
+    @Test
+    fun `sixteen is registered but the app still uses C`() {
+        assertEquals(Sixteen, KotlinGames.gameFor(SIXTEEN))
+        assertFalse(KotlinGames.handles(SIXTEEN))
+    }
+
+    @Test
+    fun `the sixteen generator matches the frozen save`() {
+        val expected = File(testdata, "saves/initial/sixteen/4x4.sgtp").readText()
+        val actual = KotlinGames.generate(SIXTEEN, "4x4", "12345")
+        assertEquals(expected, actual)
     }
 
     @Test

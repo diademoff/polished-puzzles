@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, and `flood` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, and `sixteen` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -219,7 +219,7 @@ submenu entries when a game groups its presets.
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `C` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `C` |
-| `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `C` |
+| `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `dual-run` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `C` |
@@ -273,6 +273,19 @@ Notes:
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
   C: the configuration dialog, the `Fifteen` casts in
   `KotlinGameEngine`, and the two-release wait are open. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`.
+- `sixteen` is `dual-run`. Its generator, state, moves, loose move
+  bounds, cursor modes, keypad null move, status text, solver, save
+  file, drawing, layout, and pointer input pass the matrix in
+  `SixteenDescTest`, `SixteenGameTest`, `SixteenSaveTest`,
+  `SixteenTraceTest`, and `SixteenInputParityTest`. The save test pins
+  the `full`-argument quirk: `m` stays in the short id and in both
+  `PARAMS` and `CPARAMS`, unlike flood and fifteen. `KotlinGames.gameFor`
+  knows the Kotlin game, but the app still uses C: the configuration
+  dialog and the two-release wait are open. Undo or redo across a
+  `SOLVE` is Kotlin-only: the C debug oracle asserts in `game_redraw`
+  when a whole board is replaced, which is an upstream animation bug
+  and test tooling, not a deviation. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 
 

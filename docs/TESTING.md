@@ -90,6 +90,14 @@ preferences, so a trace can cover frontend state such as a visible
 cursor or a grounded fade. The contract is
 `docs/adr/0003-strict-draw-traces.md`.
 
+One upstream bug affects the test tooling, not the port: `sixteen`'s
+`game_redraw` asserts when a whole board is replaced, so the C debug
+oracle aborts on undo or redo across a `SOLVE`. `SixteenSaveTest` and
+`SixteenGameTest` compare that transition in Kotlin only, and the save
+test never calls the C `undo` or `redo` operations on a solved save.
+This is an upstream animation bug (`work/specs/sixteen.md`, section 10,
+risk 2), not a game deviation.
+
 ## 3. Parity tests
 
 Every test declares:
@@ -359,6 +367,41 @@ Engine tests:
 - `FloodTraceTest` is strict. It compares every preset with a fresh
   oracle trace and the frozen trace, plus moved, solved, and cheated
   states and a tile-15 trace where the separator is not drawn.
+- `SixteenDescTest` is semantic. It compares parameter decoding and
+  encoding, the validation messages, the five presets, and
+  `params + seed -> DESC` for the presets, extra seeds, and a numeric
+  sweep. The target generator is covered by vectors from `m1` to `m50`,
+  including the rejected retry attempts, because no preset carries `m`.
+- `SixteenGameTest` is semantic. It compares new games, text, status
+  text, crafted moves including the loose bounds and a full cycle, real
+  frame clicks at the phone viewport, keyboard sequences, the three
+  cursor modes, the keypad null move, completion, undo/redo, and solve.
+  `undo from a solved state is a Kotlin-only case` pins the transition
+  the C debug oracle cannot draw.
+- `SixteenSaveTest` is strict for the save text. It reads every
+  `sixteen` save in the corpus, rewrites it byte for byte, and makes
+  the oracle load both versions. It also makes the oracle load a
+  Kotlin-written save for every preset and pins the `full`-argument
+  quirk: `m` stays in the short id and in both `PARAMS` and `CPARAMS`,
+  unlike flood and fifteen. A played move, an undone position with a
+  live redo branch, a solve, and a restart are built in memory, so the
+  history records are covered while the corpus stays frozen.
+- `SixteenInputParityTest` is semantic. It compares the layout at
+  eleven viewports, then sends real clicks on the four frame bands at
+  tile sizes 48, 63, 82, and 100, including a 293x400 view with a
+  non-zero letterbox origin on both axes. Every click must add one
+  MOVE record and one move to the count, and the state, id, and status
+  are compared with `pointsSized`. A click in a cell, on the frame
+  corner, and in the letterbox must change nothing, and the pixel next
+  to the letterbox must still move. The modified-key test compares
+  `MOD_SHFT` and `MOD_CTRL` on cursor keys and `MOD_NUM_KEYPAD` on a
+  digit with the oracle. `CTRL` on a click and `CTRL` on a digit never
+  reach the C game, so those cases are Kotlin-only and are pinned by
+  the engine test.
+- `SixteenTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus moved, solved, and target
+  states, the four cursor arms, and sized traces at tiles 33, 63, and
+  100.
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

@@ -3,6 +3,7 @@ package name.boyle.chris.sgtpuzzles.parity
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
+import name.boyle.chris.sgtpuzzles.engine.SaveRecord
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Size
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
@@ -17,9 +18,14 @@ import org.junit.Test
  * click on every frame band, the keyboard ring, and the modified key
  * path are compared with the oracle.
  *
- * C's midend rejects `CTRL` on a key that is not a cursor move before
- * the game sees it, so there is no oracle result for `CTRL` + digit or
- * `CTRL` + click. The engine test pins those cases.
+ * C's midend rejects `CTRL` on a key that is not a cursor move, and it
+ * drops `MOD_NUM_KEYPAD` from a key that is not a digit, before the
+ * game sees the key. Those two cases have no game-level oracle result,
+ * so they are Kotlin-only: the engine test
+ * `the C midend modifier filter applies to the raw button` pins them.
+ * Every modifier the C midend does deliver is compared with the oracle
+ * here: `MOD_SHFT` and `MOD_CTRL` on a cursor move, and `MOD_NUM_KEYPAD`
+ * on a digit in a lock mode.
  */
 class SixteenInputParityTest {
 
@@ -71,6 +77,152 @@ class SixteenInputParityTest {
     }
 
     @Test
+    fun `a real click on every frame slot moves at tile 48, 63, 82, and 100`() =
+        OracleClient().use { oracle ->
+            val save = saveText(BASE)
+            val start = oracle.id(save)
+
+            // 293 x 400 gives tile 48 with a real letterbox on both
+            // axes. The square views are the exact tile sizes from the
+            // test plan; integer centering leaves a one-pixel origin.
+            val cases = listOf(
+                ClickCase(293, 400, 48, 2, 56),
+                ClickCase(380, 380, 63, 1, 1),
+                ClickCase(494, 494, 82, 1, 1),
+                ClickCase(602, 602, 100, 1, 1),
+            )
+
+            for (case in cases) {
+                val probe = Midend.fromSave(Sixteen, SgtpSave.parse(save))
+                val geometry = probe.geometryFor(case.viewWidth, case.viewHeight)
+                val tile = geometry.tileSize
+                val where = "tile $tile in ${case.viewWidth} x ${case.viewHeight}"
+
+                assertEquals("tile $where", case.tile, tile)
+                assertEquals("origin x $where", case.originX, geometry.originX)
+                assertEquals("origin y $where", case.originY, geometry.originY)
+                assertTrue(
+                    "a non-zero letterbox origin $where",
+                    geometry.originX != 0 || geometry.originY != 0,
+                )
+
+                val row = case.originY + tile + tile / 2
+                val column = case.originX + tile + tile / 2
+                val right = case.originX + (4 + 1) * tile + tile / 2
+                val bottom = case.originY + (4 + 1) * tile + tile / 2
+                val clicks = listOf(
+                    // The four frame bands. The row and the column name
+                    // the line, so a wrong origin or band fails here.
+                    Triple(case.originX + tile / 2, row, Buttons.LEFT_BUTTON) to "R0,-1",
+                    Triple(right, row, Buttons.LEFT_BUTTON) to "R0,1",
+                    Triple(column, case.originY + tile / 2, Buttons.LEFT_BUTTON) to "C0,-1",
+                    Triple(column, bottom, Buttons.LEFT_BUTTON) to "C0,1",
+                    // The right button reverses the direction.
+                    Triple(case.originX + tile / 2, row, Buttons.RIGHT_BUTTON) to "R0,1",
+                    // The pixel next to the letterbox must move, so the
+                    // letterbox case below cannot pass with a broken
+                    // origin.
+                    Triple(
+                        case.originX + 1,
+                        case.originY + tile + 1,
+                        Buttons.LEFT_BUTTON,
+                    ) to "R0,-1",
+                )
+
+                for ((click, move) in clicks) {
+                    val (viewX, viewY, button) = click
+                    val midend = Midend.fromSave(Sixteen, SgtpSave.parse(save))
+                    val movesBefore = midend.serialise().values("MOVE").size
+                    assertEquals(
+                        "outcome for $move at ($viewX,$viewY) $where",
+                        KeyOutcome.SomeEffect,
+                        midend.processKey(
+                            geometry.toGameX(viewX),
+                            geometry.toGameY(viewY),
+                            button,
+                            tile,
+                        ),
+                    )
+                    val moves = midend.serialise().values("MOVE")
+                    assertEquals("one move for $move $where", movesBefore + 1, moves.size)
+                    assertEquals("move record for $move $where", move, moves.single())
+                    assertEquals(
+                        "move count for $move $where",
+                        1,
+                        (midend.state as Sixteen.State).moveCount,
+                    )
+                    assertEquals("status text for $move $where", "Moves: 1", midend.statusText())
+
+                    val expected = oracle.pointsSized(
+                        start.state,
+                        listOf(OracleClient.Point(viewX, viewY, button)),
+                        case.viewWidth,
+                        case.viewHeight,
+                    )
+                    assertEquals(
+                        "C move record for $move $where",
+                        listOf(move),
+                        SgtpSave.parse(expected.state.state).values("MOVE"),
+                    )
+                    assertEquals(
+                        "save for $move $where",
+                        expected.state.state,
+                        midend.serialise().serialise(),
+                    )
+                    assertEquals("id for $move $where", expected.state.id, midend.id())
+                    assertEquals("status for $move $where", expected.state.status, midend.status())
+                }
+
+                // A click in a cell, on the frame corner, and in the
+                // letterbox is a UI update with no move on either side.
+                val inert = listOf(
+                    Triple(column, row, Buttons.LEFT_BUTTON),
+                    Triple(
+                        case.originX + tile / 2,
+                        case.originY + tile / 2,
+                        Buttons.LEFT_BUTTON,
+                    ),
+                    Triple(case.originX - 1, case.originY - 1, Buttons.LEFT_BUTTON),
+                )
+                for ((viewX, viewY, button) in inert) {
+                    val midend = Midend.fromSave(Sixteen, SgtpSave.parse(save))
+                    assertEquals(
+                        "an inert click is a UI update at ($viewX,$viewY) $where",
+                        KeyOutcome.SomeEffect,
+                        midend.processKey(
+                            geometry.toGameX(viewX),
+                            geometry.toGameY(viewY),
+                            button,
+                            tile,
+                        ),
+                    )
+                    assertEquals(
+                        "an inert click adds no move at ($viewX,$viewY) $where",
+                        emptyList<String>(),
+                        midend.serialise().values("MOVE"),
+                    )
+                    assertEquals(
+                        "an inert click keeps the save at ($viewX,$viewY) $where",
+                        save,
+                        midend.serialise().serialise(),
+                    )
+
+                    val expected = oracle.pointsSized(
+                        start.state,
+                        listOf(OracleClient.Point(viewX, viewY, button)),
+                        case.viewWidth,
+                        case.viewHeight,
+                    )
+                    assertEquals(
+                        "C: an inert click changes nothing at ($viewX,$viewY) $where",
+                        save,
+                        expected.state.state,
+                    )
+                }
+            }
+        }
+
+    @Test
     fun `a modified click matches the oracle`() = OracleClient().use { oracle ->
         val save = oracle.newGame("sixteen", "4x4", SEED)
         val probe = Midend.newGame(Sixteen, "4x4", SEED)
@@ -105,9 +257,24 @@ class SixteenInputParityTest {
                     tile,
                 ),
             )
-            assertEquals("save with modifier $modifier", expected.state, actual.serialise().serialise())
+            assertEquals(
+                "save with modifier $modifier",
+                expected.state,
+                actual.serialise().serialise(),
+            )
             assertEquals("id with modifier $modifier", expected.id, actual.id())
             assertTrue(actual.canUndo)
+            assertEquals(
+                "the click adds one move with modifier $modifier",
+                listOf("R0,-1"),
+                actual.serialise().values("MOVE"),
+            )
+            assertEquals(
+                "move count with modifier $modifier",
+                1,
+                (actual.state as Sixteen.State).moveCount,
+            )
+            assertEquals("status text with modifier $modifier", "Moves: 1", actual.statusText())
         }
     }
 
@@ -144,6 +311,11 @@ class SixteenInputParityTest {
             assertEquals("status for $sequence", expected.status, actual.status())
             assertEquals("undo for $sequence", expected.canUndo, actual.canUndo)
             assertEquals("redo for $sequence", expected.canRedo, actual.canRedo)
+            assertEquals(
+                "move count for $sequence",
+                SgtpSave.parse(expected.state).values("MOVE").size,
+                (actual.state as Sixteen.State).moveCount,
+            )
         }
 
         // The direction of a modified key is not always the plain one:
@@ -169,7 +341,30 @@ class SixteenInputParityTest {
         val originY: Int,
     )
 
+    private data class ClickCase(
+        val viewWidth: Int,
+        val viewHeight: Int,
+        val tile: Int,
+        val originX: Int,
+        val originY: Int,
+    )
+
+    private fun saveText(desc: String): String {
+        val records = arrayListOf(
+            SaveRecord("SAVEFILE", SgtpSave.MAGIC),
+            SaveRecord("VERSION", SgtpSave.VERSION),
+            SaveRecord("GAME", Sixteen.name),
+            SaveRecord("PARAMS", "4x4"),
+            SaveRecord("CPARAMS", "4x4"),
+            SaveRecord("DESC", desc),
+            SaveRecord("NSTATES", "1"),
+            SaveRecord("STATEPOS", "1"),
+        )
+        return SgtpSave.of(records).serialise()
+    }
+
     private companion object {
         const val SEED = "12345"
+        const val BASE = "13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4"
     }
 }
