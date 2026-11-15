@@ -4,6 +4,8 @@ import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SameGame
+import name.boyle.chris.sgtpuzzles.engine.SaveRecord
+import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -226,6 +228,79 @@ class SameGameInputParityTest {
                 )
             }
         }
+
+    @Test
+    fun `a modified cursor key does not move the cursor`() = OracleClient().use { oracle ->
+        val params = "5x2c3s2"
+        val save = saveText(params, "1,1,0,0,0,0,0,0,0,0")
+        val plain = listOf(
+            Buttons.CURSOR_RIGHT,
+            Buttons.CURSOR_SELECT,
+            Buttons.CURSOR_SELECT,
+        )
+        val modified = listOf(
+            Buttons.CURSOR_RIGHT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_SHFT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL,
+            Buttons.CURSOR_SELECT,
+            Buttons.CURSOR_SELECT,
+        )
+
+        // The oracle is the evidence: both sequences remove the group at
+        // (0,0) and (1,0), so the two modified cursor keys are not
+        // cursor moves. A cursor that moved would reach a blank cell.
+        val expectedPlain = oracle.keys(save, plain)
+        val expectedModified = oracle.keys(save, modified)
+        assertEquals(
+            "a modified cursor key must not move the samegame cursor",
+            expectedPlain.state,
+            expectedModified.state,
+        )
+        assertEquals(listOf("M0,1"), SgtpSave.parse(expectedModified.state).values("MOVE"))
+
+        val tile = SameGame.preferredTileSize
+        val midend = Midend.fromSave(SameGame, SgtpSave.parse(save))
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_RIGHT, tile),
+        )
+        for (key in listOf(
+            Buttons.CURSOR_RIGHT or Buttons.MOD_SHFT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL,
+        )) {
+            assertEquals("outcome for $key", KeyOutcome.Unused, midend.processKey(0, 0, key, tile))
+            assertEquals("cursor x for $key", 1, (midend.ui as SameGame.Ui).xsel)
+            assertEquals("cursor y for $key", 0, (midend.ui as SameGame.Ui).ysel)
+        }
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_SELECT, tile),
+        )
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_SELECT, tile),
+        )
+        assertEquals(listOf("M0,1"), midend.serialise().values("MOVE"))
+        assertEquals("save", expectedModified.state, midend.serialise().serialise())
+        assertEquals("id", expectedModified.id, midend.id())
+        assertEquals("status", expectedModified.status, midend.status())
+        assertEquals("undo", expectedModified.canUndo, midend.canUndo)
+        assertEquals("redo", expectedModified.canRedo, midend.canRedo)
+    }
+
+    private fun saveText(params: String, desc: String): String {
+        val records = arrayListOf(
+            SaveRecord("SAVEFILE", SgtpSave.MAGIC),
+            SaveRecord("VERSION", SgtpSave.VERSION),
+            SaveRecord("GAME", "Same Game"),
+            SaveRecord("PARAMS", params),
+            SaveRecord("CPARAMS", params),
+            SaveRecord("DESC", desc),
+            SaveRecord("NSTATES", "1"),
+            SaveRecord("STATEPOS", "1"),
+        )
+        return SgtpSave.of(records).serialise()
+    }
 
     private data class Viewport(
         val label: String,

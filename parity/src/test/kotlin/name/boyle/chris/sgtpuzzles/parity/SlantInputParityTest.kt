@@ -3,6 +3,7 @@ package name.boyle.chris.sgtpuzzles.parity
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
+import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -105,6 +106,60 @@ class SlantInputParityTest {
         assertEquals("save swipe", expected.state, actual.serialise().serialise())
         assertEquals("id swipe", expected.id, actual.id())
         assertTrue("the swipe did not move", actual.canUndo)
+    }
+
+    @Test
+    fun `a modified cursor key does not move the cursor`() = OracleClient().use { oracle ->
+        val start = oracle.newGame("slant", "4x4", SEED)
+        val plain = listOf(Buttons.CURSOR_RIGHT, Buttons.CURSOR_SELECT)
+        val modified = listOf(
+            Buttons.CURSOR_RIGHT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_SHFT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL,
+            Buttons.CURSOR_SELECT,
+        )
+
+        // The oracle is the evidence: both sequences select the same
+        // cell, so the two modified cursor keys are not cursor moves.
+        val expectedPlain = oracle.keys(start.state, plain)
+        val expectedModified = oracle.keys(start.state, modified)
+        assertEquals(
+            "a modified cursor key must not move the slant cursor",
+            expectedPlain.state,
+            expectedModified.state,
+        )
+        assertEquals(listOf("\\1,0"), moves(expectedModified.state))
+
+        val tile = Slant.preferredTileSize
+        val midend = Midend.newGame(Slant, "4x4", SEED)
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_RIGHT, tile),
+        )
+        for (key in listOf(
+            Buttons.CURSOR_RIGHT or Buttons.MOD_SHFT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL,
+        )) {
+            assertEquals("outcome for $key", KeyOutcome.Unused, midend.processKey(0, 0, key, tile))
+            assertEquals("cursor x for $key", 1, (midend.ui as Slant.Ui).curX)
+            assertEquals("cursor y for $key", 0, (midend.ui as Slant.Ui).curY)
+        }
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_SELECT, tile),
+        )
+        assertEquals(listOf("\\1,0"), midend.serialise().values("MOVE"))
+        assertSame("a modified cursor key", expectedModified, midend)
+    }
+
+    private fun moves(save: String): List<String> = SgtpSave.parse(save).values("MOVE")
+
+    private fun assertSame(label: String, expected: GameState, actual: Midend) {
+        assertEquals("save $label", expected.state, actual.serialise().serialise())
+        assertEquals("id $label", expected.id, actual.id())
+        assertEquals("status $label", expected.status, actual.status())
+        assertEquals("undo $label", expected.canUndo, actual.canUndo)
+        assertEquals("redo $label", expected.canRedo, actual.canRedo)
     }
 
     private companion object {

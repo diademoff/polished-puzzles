@@ -340,14 +340,15 @@ object Slant : Game {
         var targetX = 0
         var targetY = 0
 
-        // The midend keeps CTRL and SHFT on a cursor move, so the game
-        // drops the modifiers it does not use.
-        val key = Buttons.stripModifiers(button)
-
-        if (key == Buttons.LEFT_BUTTON || key == Buttons.RIGHT_BUTTON) {
-            var effective = key
+        /*
+         * C compares the exact button, so a modified cursor move is not
+         * a cursor move. The midend keeps CTRL and SHFT on a cursor key,
+         * so it falls through to `Unused` here, as in `slant.c`.
+         */
+        if (button == Buttons.LEFT_BUTTON || button == Buttons.RIGHT_BUTTON) {
+            var effective = button
             if (u.swapButtons) {
-                effective = if (key == Buttons.LEFT_BUTTON) {
+                effective = if (button == Buttons.LEFT_BUTTON) {
                     Buttons.RIGHT_BUTTON
                 } else {
                     Buttons.LEFT_BUTTON
@@ -361,22 +362,22 @@ object Slant : Game {
                 return MoveResult.Unused
             }
             u.curVisible = false
-        } else if (key == Buttons.CURSOR_SELECT || key == Buttons.CURSOR_SELECT2) {
+        } else if (button == Buttons.CURSOR_SELECT || button == Buttons.CURSOR_SELECT2) {
             if (!u.curVisible) {
                 u.curVisible = true
                 return MoveResult.UiUpdate
             }
             targetX = u.curX
             targetY = u.curY
-            action = if (key == Buttons.CURSOR_SELECT2) {
+            action = if (button == Buttons.CURSOR_SELECT2) {
                 Action.ANTICLOCKWISE
             } else {
                 Action.CLOCKWISE
             }
-        } else if (Buttons.isCursorMove(key)) {
+        } else if (Buttons.isCursorMove(button)) {
             val oldX = u.curX
             val oldY = u.curY
-            when (key) {
+            when (button) {
                 Buttons.CURSOR_UP -> u.curY = maxOf(u.curY - 1, 0)
                 Buttons.CURSOR_DOWN -> u.curY = minOf(u.curY + 1, h - 1)
                 Buttons.CURSOR_LEFT -> u.curX = maxOf(u.curX - 1, 0)
@@ -392,16 +393,16 @@ object Slant : Game {
             } else {
                 MoveResult.NoEffect
             }
-        } else if (key == '\\'.code || key == '\b'.code || key == '/'.code) {
+        } else if (button == '\\'.code || button == '\b'.code || button == '/'.code) {
             val slash = s.soln[u.curY * w + u.curX]
             val current = when (slash) {
                 -1 -> '\\'
                 0 -> '\b'
                 else -> '/'
             }
-            if (key == current.code) return MoveResult.NoEffect
+            if (button == current.code) return MoveResult.NoEffect
             return MoveResult.Move(
-                (if (key == '\b'.code) 'C' else key.toChar()).toString() +
+                (if (button == '\b'.code) 'C' else button.toChar()).toString() +
                     u.curX + "," + u.curY,
             )
         }

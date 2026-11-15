@@ -586,11 +586,12 @@ object SameGame : Game {
         var targetX: Int
         var targetY: Int
 
-        // The midend keeps CTRL and SHFT on a cursor move, so the game
-        // drops the modifiers it does not use.
-        val key = Buttons.stripModifiers(button)
-
-        when (key) {
+        /*
+         * C compares the exact button, so a modified cursor move is not
+         * a cursor move. The midend keeps CTRL and SHFT on a cursor key,
+         * so it falls through to `Unused` here, as in `samegame.c`.
+         */
+        when (button) {
             Buttons.LEFT_BUTTON, Buttons.RIGHT_BUTTON -> {
                 u.displaysel = false
                 targetX = fromCoord(x, tileSize)
@@ -599,7 +600,7 @@ object SameGame : Game {
 
             Buttons.CURSOR_UP, Buttons.CURSOR_DOWN,
             Buttons.CURSOR_LEFT, Buttons.CURSOR_RIGHT,
-            -> return moveCursor(key, u, s.params.width, s.params.height)
+            -> return moveCursor(button, u, s.params.width, s.params.height)
 
             Buttons.CURSOR_SELECT, Buttons.CURSOR_SELECT2 -> {
                 u.displaysel = true
@@ -619,7 +620,7 @@ object SameGame : Game {
 
         val index = targetY * s.params.width + targetX
         if (u.selected[index]) {
-            if (key == Buttons.RIGHT_BUTTON || key == Buttons.CURSOR_SELECT2) {
+            if (button == Buttons.RIGHT_BUTTON || button == Buttons.CURSOR_SELECT2) {
                 selClear(u)
                 return MoveResult.UiUpdate
             }

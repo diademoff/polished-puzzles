@@ -690,11 +690,12 @@ object Flood : Game {
         var move = -1
         var nullret: MoveResult = MoveResult.NoEffect
 
-        // The midend keeps CTRL and SHFT on a cursor move, so the game
-        // drops the modifiers it does not use.
-        val key = Buttons.stripModifiers(button)
-
-        when (key) {
+        /*
+         * C compares the exact button, so a modified cursor move is not
+         * a cursor move. The midend keeps CTRL and SHFT on a cursor key,
+         * so it falls through to `Unused` here, as in `flood.c`.
+         */
+        when (button) {
             Buttons.LEFT_BUTTON -> {
                 tx = fromCoord(x, tileSize)
                 ty = fromCoord(y, tileSize)
@@ -706,7 +707,7 @@ object Flood : Game {
 
             Buttons.CURSOR_UP, Buttons.CURSOR_DOWN,
             Buttons.CURSOR_LEFT, Buttons.CURSOR_RIGHT,
-            -> return moveCursor(key, u, s.width, s.height)
+            -> return moveCursor(button, u, s.width, s.height)
 
             Buttons.CURSOR_SELECT -> {
                 tx = u.cx

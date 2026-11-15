@@ -346,6 +346,56 @@ class FloodInputParityTest {
         )
     }
 
+    @Test
+    fun `a modified cursor key does not move the cursor`() = OracleClient().use { oracle ->
+        val params = "4x4c3m0"
+        val save = saveText(params, "1200120012001200,4", emptyList())
+        val plain = listOf(Buttons.CURSOR_RIGHT, Buttons.CURSOR_SELECT)
+        val modified = listOf(
+            Buttons.CURSOR_RIGHT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_SHFT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL,
+            Buttons.CURSOR_SELECT,
+        )
+
+        // The oracle is the evidence: both sequences flood with colour
+        // 2 from cell (1,0), so the modified cursor keys are not cursor
+        // moves. A cursor that moved would reach colour 0.
+        val expectedPlain = oracle.keys(save, plain)
+        val expectedModified = oracle.keys(save, modified)
+        assertEquals(
+            "a modified cursor key must not move the flood cursor",
+            expectedPlain.state,
+            expectedModified.state,
+        )
+        assertEquals(listOf("M2"), SgtpSave.parse(expectedModified.state).values("MOVE"))
+
+        val tile = Flood.preferredTileSize
+        val midend = Midend.fromSave(Flood, SgtpSave.parse(save))
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_RIGHT, tile),
+        )
+        for (key in listOf(
+            Buttons.CURSOR_RIGHT or Buttons.MOD_SHFT,
+            Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL,
+        )) {
+            assertEquals("outcome for $key", KeyOutcome.Unused, midend.processKey(0, 0, key, tile))
+            assertEquals("cursor x for $key", 1, (midend.ui as Flood.Ui).cx)
+            assertEquals("cursor y for $key", 0, (midend.ui as Flood.Ui).cy)
+        }
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_SELECT, tile),
+        )
+        assertEquals(listOf("M2"), midend.serialise().values("MOVE"))
+        assertEquals("save", expectedModified.state, midend.serialise().serialise())
+        assertEquals("id", expectedModified.id, midend.id())
+        assertEquals("status", expectedModified.status, midend.status())
+        assertEquals("undo", expectedModified.canUndo, midend.canUndo)
+        assertEquals("redo", expectedModified.canRedo, midend.canRedo)
+    }
+
     private data class Viewport(
         val label: String,
         val params: String,
