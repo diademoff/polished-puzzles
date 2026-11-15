@@ -5,6 +5,7 @@ import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Midend
+import name.boyle.chris.sgtpuzzles.engine.SaveRecord
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -20,7 +21,9 @@ import org.junit.Test
  * letterboxed view. The two `STYLUS_BASED` cycles, the clue, border,
  * and letterbox no-moves, the cursor keys with their modifiers, a
  * hidden-cursor select, a press-drag-release, and `show-lit-blobs` are
- * compared with the oracle. Every real light or mark changes the grid
+ * compared with the oracle. A real-click win on the clue-less 3x3
+ * board is compared click by click, then after undo, redo, and a
+ * post-win click. Every real light or mark changes the grid
  * and adds one move; a UI-only action changes neither.
  *
  * The click bands come from `FROMCOORD` in `lightup.c:81`, so a
@@ -585,6 +588,95 @@ class LightupInputParityTest {
         }
 
     @Test
+    fun `a real-click win survives undo, redo, and a post-win move`() =
+        OracleClient().use { oracle ->
+            // A clue-less 3x3 board is won by three lights on the
+            // diagonal opposite the one they do not overlap.
+            val save = saveText(PARAMS_3X3, DESC_3X3)
+            val tile = 32
+            val view = 4 * tile // 3 * 32 + 2 * 16
+
+            var expected = oracle.id(save)
+            assertEquals("start status", 0, expected.status)
+            val midend = Midend.fromSave(Lightup, SgtpSave.parse(save))
+            assertEquals("start id", expected.id, midend.id())
+            assertEquals("start save", expected.state, midend.serialise().serialise())
+            assertEquals("start status", expected.status, midend.status())
+
+            val cells = listOf(2 to 0, 1 to 1, 0 to 2)
+            for ((step, cell) in cells.withIndex()) {
+                val x = cell.first * tile + tile / 2
+                val y = cell.second * tile + tile / 2
+                assertEquals(
+                    "click $step outcome",
+                    KeyOutcome.SomeEffect,
+                    midend.processKey(x, y, Buttons.LEFT_BUTTON, tile),
+                )
+                expected = oracle.pointsSized(
+                    expected.state,
+                    listOf(OracleClient.Point(x, y, Buttons.LEFT_BUTTON)),
+                    width = view,
+                    height = view,
+                ).state
+                assertEquals("click $step id", expected.id, midend.id())
+                assertEquals("click $step save", expected.state, midend.serialise().serialise())
+                assertEquals("click $step status", expected.status, midend.status())
+            }
+            assertEquals("the clicks win", 1, midend.status())
+            assertTrue("the win raises the event", midend.takeCompletedEvent())
+            val winText = midend.serialise().serialise()
+
+            // Undo from the win clears the status and opens a redo.
+            assertTrue("undo", midend.undo())
+            val undone = oracle.undo(winText)
+            assertEquals("undo id", undone.id, midend.id())
+            assertEquals("undo save", undone.state, midend.serialise().serialise())
+            assertEquals("undo status", undone.status, midend.status())
+            assertEquals("undo status is open", 0, midend.status())
+            assertTrue("undo opens a redo", midend.canRedo)
+            assertFalse("undo raises no event", midend.takeCompletedEvent())
+
+            // Redo returns to the win and raises the event again.
+            assertTrue("redo", midend.redo())
+            val redone = oracle.redo(undone.state)
+            assertEquals("redo id", redone.id, midend.id())
+            assertEquals("redo save", redone.state, midend.serialise().serialise())
+            assertEquals("redo status", redone.status, midend.status())
+            assertEquals("redo status is won", 1, midend.status())
+            assertTrue("redo raises the event again", midend.takeCompletedEvent())
+
+            // A real left click on a light after the win emits `I`, so
+            // the light becomes a mark and the status stays sticky.
+            val x = 2 * tile + tile / 2
+            val y = tile / 2
+            assertEquals(
+                "post-win click outcome",
+                KeyOutcome.SomeEffect,
+                midend.processKey(x, y, Buttons.LEFT_BUTTON, tile),
+            )
+            val postWin = oracle.pointsSized(
+                redone.state,
+                listOf(OracleClient.Point(x, y, Buttons.LEFT_BUTTON)),
+                width = view,
+                height = view,
+            ).state
+            assertEquals("post-win id", postWin.id, midend.id())
+            assertEquals("post-win save", postWin.state, midend.serialise().serialise())
+            assertEquals("post-win status", postWin.status, midend.status())
+            assertEquals("post-win status is sticky", 1, midend.status())
+            assertFalse("a post-win move is not a new win", midend.takeCompletedEvent())
+
+            val reloaded = oracle.id(midend.serialise().serialise())
+            assertEquals("post-win C reload id", postWin.id, reloaded.id)
+            assertEquals("post-win C reload status", postWin.status, reloaded.status)
+            assertEquals(
+                "post-win C reload text",
+                oracle.text(postWin.state),
+                oracle.text(reloaded.state),
+            )
+        }
+
+    @Test
     fun `requestKeys matches the oracle in every preset`() = OracleClient().use { oracle ->
         for (preset in Lightup.presets()) {
             val start = oracle.newGame("lightup", preset.params, SEED)
@@ -602,6 +694,20 @@ class LightupInputParityTest {
     }
 
     private fun midend(): Midend = Midend.newGame(Lightup, PARAMS, SEED)
+
+    /** A start save for a hand-written description; no seed is needed. */
+    private fun saveText(params: String, desc: String): String = SgtpSave.of(
+        listOf(
+            SaveRecord("SAVEFILE", SgtpSave.MAGIC),
+            SaveRecord("VERSION", SgtpSave.VERSION),
+            SaveRecord("GAME", Lightup.name),
+            SaveRecord("PARAMS", params),
+            SaveRecord("CPARAMS", params),
+            SaveRecord("DESC", desc),
+            SaveRecord("NSTATES", "1"),
+            SaveRecord("STATEPOS", "1"),
+        ),
+    ).serialise()
 
     private fun moves(midend: Midend): List<String> =
         SgtpSave.parse(midend.serialise().serialise()).values("MOVE")
@@ -643,6 +749,10 @@ class LightupInputParityTest {
     private companion object {
         const val SEED = "12345"
         const val PARAMS = "7x7b20s3d0"
+
+        /** A clue-less 3x3 board; every white cell can hold a light. */
+        const val PARAMS_3X3 = "3x3b20s3d0"
+        const val DESC_3X3 = "i"
 
         /** The two cycles have three states: empty, light, impossible. */
         const val CYCLE_STEPS = 3

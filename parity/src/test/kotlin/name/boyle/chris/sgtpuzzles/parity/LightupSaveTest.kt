@@ -143,9 +143,22 @@ class LightupSaveTest {
 
     @Test
     fun `history records round-trip in both directions`() = OracleClient().use { oracle ->
-        val solve = oracle.newGame("lightup", "7x7b20s3d0", SEED).let { start ->
-            SgtpSave.parse(oracle.solve(start.state).state).value("SOLVE")!!
-        }
+        // The 14x14 Hard board has long `L` and `I` lists: the answer is
+        // 410 characters with 30 lights and 45 impossible marks.
+        val longStart = oracle.newGame("lightup", LONG_PARAMS, SEED)
+        val longSave = SgtpSave.parse(longStart.state)
+        val longAnswer = SgtpSave.parse(oracle.solve(longStart.state).state).value("SOLVE")!!
+        assertEquals("the long answer length", 410, longAnswer.length)
+        assertEquals(
+            "the long answer lights",
+            30,
+            longAnswer.split(';').count { it.startsWith("L") },
+        )
+        assertEquals(
+            "the long answer marks",
+            45,
+            longAnswer.split(';').count { it.startsWith("I") },
+        )
 
         val cases = listOf(
             History("played light", listOf("MOVE" to "L1,0"), 2, 0),
@@ -157,7 +170,15 @@ class LightupSaveTest {
                 0,
                 canRedo = true,
             ),
-            History("solve with a long L and I list", listOf("SOLVE" to solve), 2, 1),
+            History(
+                "solve with a long L and I list",
+                listOf("SOLVE" to longAnswer),
+                2,
+                1,
+                params = longSave.value("PARAMS")!!,
+                cparams = longSave.value("CPARAMS")!!,
+                desc = longSave.value("DESC")!!,
+            ),
             History(
                 "restart",
                 listOf("MOVE" to "L1,0", "RESTART" to DESC_7X7),
@@ -181,25 +202,47 @@ class LightupSaveTest {
             assertEquals("${case.label} can undo", expected.canUndo, midend.canUndo)
             assertEquals("${case.label} can redo", expected.canRedo, midend.canRedo)
             assertEquals("${case.label} text", oracle.text(text), midend.textFormat())
+
+            // C reloads the Kotlin text and reports the same id, status,
+            // and text, so the record and the resulting board survive.
+            val reloaded = oracle.id(midend.serialise().serialise())
+            assertEquals("${case.label} C reload id", expected.id, reloaded.id)
+            assertEquals("${case.label} C reload status", case.status, reloaded.status)
+            assertEquals("${case.label} C reload can undo", expected.canUndo, reloaded.canUndo)
+            assertEquals("${case.label} C reload can redo", expected.canRedo, reloaded.canRedo)
             assertEquals(
-                "${case.label} C reloads the Kotlin text",
-                expected.id,
-                oracle.id(midend.serialise().serialise()).id,
+                "${case.label} C reload text",
+                oracle.text(text),
+                oracle.text(reloaded.state),
             )
             assertNull("${case.label} AUXINFO", SgtpSave.parse(text).value("AUXINFO"))
             assertNull("${case.label} UI", SgtpSave.parse(text).value("UI"))
         }
 
-        // The solve record has both L and I entries on a Hard board.
-        val hard = Midend.newGame(Lightup, "7x7b20s3d2", SEED)
-        assertTrue(hard.solve())
-        val solveRecord = SgtpSave.parse(hard.serialise().serialise()).value("SOLVE")!!
-        assertTrue("L entries", solveRecord.contains(";L"))
-        assertTrue("I entries", solveRecord.contains(";I"))
+        // Solve the long board from the start save, so the whole
+        // post-solve save and the solved board are compared with C, not
+        // only the id.
+        val longExpected = oracle.solve(longStart.state)
+        val longMidend = Midend.fromSave(Lightup, SgtpSave.parse(longStart.state))
+        assertTrue("Kotlin solves the long board", longMidend.solve())
+        val longText = longMidend.serialise().serialise()
+        assertEquals("the long solve text", longExpected.state, longText)
+        assertEquals("the long solve id", longExpected.id, longMidend.id())
+        assertEquals("the long solve status", 1, longMidend.status())
         assertEquals(
-            "the solve record reloads in C",
-            hard.id(),
-            oracle.id(hard.serialise().serialise()).id,
+            "the long solve record",
+            longAnswer,
+            SgtpSave.parse(longText).value("SOLVE"),
+        )
+
+        val longReloaded = oracle.id(longText)
+        assertEquals("the long solve C reload id", longExpected.id, longReloaded.id)
+        assertEquals("the long solve C reload status", 1, longReloaded.status)
+        assertTrue("the long solve C reload can undo", longReloaded.canUndo)
+        assertEquals(
+            "the long solve C reload text",
+            oracle.text(longExpected.state),
+            oracle.text(longReloaded.state),
         )
     }
 
@@ -209,6 +252,9 @@ class LightupSaveTest {
         val statePos: Int,
         val status: Int,
         val canRedo: Boolean = false,
+        val params: String = PARAMS_7X7,
+        val cparams: String = params,
+        val desc: String = DESC_7X7,
     )
 
     private fun historySave(case: History): String {
@@ -216,10 +262,10 @@ class LightupSaveTest {
             SaveRecord("SAVEFILE", SgtpSave.MAGIC),
             SaveRecord("VERSION", SgtpSave.VERSION),
             SaveRecord("GAME", Lightup.name),
-            SaveRecord("PARAMS", "7x7b20s3d0"),
-            SaveRecord("CPARAMS", "7x7b20s3d0"),
+            SaveRecord("PARAMS", case.params),
+            SaveRecord("CPARAMS", case.cparams),
             SaveRecord("SEED", SEED),
-            SaveRecord("DESC", DESC_7X7),
+            SaveRecord("DESC", case.desc),
         )
         all += SaveRecord("NSTATES", (1 + case.records.size).toString())
         all += SaveRecord("STATEPOS", case.statePos.toString())
@@ -229,6 +275,8 @@ class LightupSaveTest {
 
     private companion object {
         const val SEED = "12345"
+        const val PARAMS_7X7 = "7x7b20s3d0"
+        const val LONG_PARAMS = "14x14b20s2d2"
         const val DESC_7X7 = "Be1j4e3aBeBj1e1"
     }
 }

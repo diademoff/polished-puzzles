@@ -965,16 +965,17 @@ Engine tests:
   C compare id, status, undo, redo, and text. It pins the
   `PARAMS`/`CPARAMS` split, makes C load a Kotlin save for every preset,
   and round-trips a played light, an impossible mark, an undone
-  position with a live redo branch, a `SOLVE`, and a `RESTART`. No
-  save has a `UI` or an `AUXINFO` record.
+  position with a live redo branch, a `SOLVE`, and a `RESTART`. The
+  `SOLVE` case uses the 14x14 Hard board: the 410-character answer with
+  30 `L` and 45 `I` entries is compared byte for byte, the same board
+  is solved from the start save, and C reloads the Kotlin save with the
+  same id, status, and text. No save has a `UI` or an `AUXINFO` record.
 - `LightupTraceTest` is strict. It compares the nine frozen traces and
   the oracle `traceNew` for every preset, the frame polygon, the
   column-major tile order, the clue text and its error colour, a light,
   an overlap, an impossible mark, the cursor ring, sized traces at
   tiles 48, 63, 82, and 100, the letterboxed 411x702 view, the
-  `show-lit-blobs` blob line, and the warm path. The cache test pins
-  that a preference change alone does not dirty a tile, while
-  `forceRedraw` applies it.
+  `show-lit-blobs` blob line, and the warm path.
 - `LightupInputParityTest` is semantic. It compares the layout at the
   four exact tiles (48, 63, 82, and 100) and the 411x702 letterbox at
   tile 51 with origin (2,147), then sends real `STYLUS_BASED` left and
@@ -984,7 +985,10 @@ Engine tests:
   and a middle click change neither. It also covers the four arrows,
   `SHFT` and `CTRL` on an arrow, `SHFT` and `CTRL` on a select, a
   hidden-cursor select, a keypad digit, TAB, and backspace, plus a
-  press-drag-release, a lone drag, and a lone release. The
+  press-drag-release, a lone drag, and a lone release. A real-click win
+  on the clue-less 3x3 board is compared click by click, then after
+  undo, redo, and a post-win click: the save, id, and status must match
+  at every step, and C must reload the final save. The
   `show-lit-blobs` setting is compared on and off through the oracle's
   `prefs` field; the state, id, status, and save must not change, and
   the cached `DrawState.flags` must not contain the preference.
@@ -994,8 +998,9 @@ Engine tests:
   order and both D-006 messages, the `newDesc` rejection, the
   description grammar, copy and array independence, the `STYLUS_BASED`
   return values, `currentKeyLabel` without an out-of-bounds read, the
-  sticky completion, the initial-state solve, the dirty cache, the
-  preference outside the cached flags, and the palette.
+  sticky completion, the initial-state solve, the dirty cache, a
+  preference change that dirties no tile while `forceRedraw` applies
+  it, the preference outside the cached flags, and the palette.
 
 `lightup` has one deviation and two enablement debts:
 
@@ -1020,7 +1025,7 @@ Engine tests:
   `DrawState.flags`: C reads it in `tile_redraw`
   (`lightup.c:2219`), so a warm frame after a preference change alone
   is empty. The truth of this rule is pinned by `LightupTest` and
-  `LightupTraceTest`; the app wiring is still open.
+  `LightupInputParityTest`; the app wiring is still open.
 - S8 and S9: the configuration dialog (Width, Height,
   `%age of black squares`, Symmetry, and Difficulty) and the preference
   schema are open, and `currentKeyLabel` is a tested helper with no
