@@ -141,8 +141,10 @@ interface Game {
 
     /**
      * Frontend state, the counterpart of upstream `game_ui`. It is not
-     * part of the save file: a load and an undo keep the game's own
-     * state but reset the shell-owned cursor.
+     * part of [State], the history, equality, or the `.sgtp` state
+     * payload. A game whose upstream struct has an `encode_ui` stores
+     * its UI in the separate `UI` record; every other game has no such
+     * record, so a load creates a fresh UI.
      */
     interface Ui
 
@@ -178,6 +180,23 @@ interface Game {
     data class CursorRect(val left: Int, val top: Int, val width: Int, val height: Int)
 
     fun newUi(state: State): Ui = NoUi
+
+    /**
+     * `encode_ui`: the value of the save file's `UI` record, or null
+     * when this game has no such record. The value must be printable
+     * ASCII, so the writer rejects anything else instead of writing a
+     * corrupt file.
+     */
+    fun encodeUi(ui: Ui): String? = null
+
+    /**
+     * `decode_ui`: restores the UI from the value of a `UI` record.
+     * [state] is the state the save was in, as C passes
+     * `states[statepos-1].state` to `decode_ui`. A save without the
+     * record, and a game that ignores it, keep the fresh UI from
+     * [newUi].
+     */
+    fun decodeUi(state: State, text: String): Ui = newUi(state)
 
     fun setCursorVisible(ui: Ui, visible: Boolean) {}
 

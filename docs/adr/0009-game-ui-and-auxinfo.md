@@ -21,8 +21,10 @@ only the state, and `newDesc` returned only the description.
 
 1. **The midend owns one `Game.Ui` object.** `Game.newUi(state)` creates
    it; `Midend` passes it to `interpretMove`, `setCursorVisible`,
-   `cursorLocation`, and `redraw`. A load creates a fresh UI, as
-   upstream does. The UI is never serialised.
+   `cursorLocation`, and `redraw`. A load creates a fresh UI, then a
+   game that provides `decodeUi` restores its own UI from the `UI`
+   record. The UI never enters the state, the history, equality, or the
+   `.sgtp` state payload.
 2. **A cursor rectangle is a game-coordinate value.** `Game.CursorRect`
    carries left, top, width, and height. The shell adds the board
    origin; the game does not know about the viewport.
@@ -42,7 +44,19 @@ only the state, and `newDesc` returned only the description.
    `redraw`, so a game can draw frontend state that is not in
    `Game.State`, such as slant's cursor cell and its optional grounded
    fade. A game without such state ignores the parameter. The UI stays
-   out of the state, the history, and the save file.
+   out of the state and the history.
+7. **A game may write a `UI` record.** `Game.encodeUi(ui)` returns the
+   record value, or null when the game has none, as upstream
+   `encode_ui` does. `Midend.serialise` writes `UI` after `AUXINFO` and
+   before `NSTATES`, and only when the value is non-null, so the record
+   order matches `midend_serialise`. `Game.decodeUi(state, text)`
+   restores the UI on load; `state` is the current state, as C passes
+   `states[statepos-1].state` to `decode_ui`. A save without `UI`, and
+   a game without `decodeUi`, use `newUi`. The value must be printable
+   ASCII: `SaveRecord` rejects anything else, so a bad value fails the
+   save instead of writing a corrupt file. The UI record does not
+   change `id()`, `status()`, or `textFormat()`, and no current game
+   writes it, so existing saves are unchanged.
 
 ## Consequences
 
@@ -54,7 +68,9 @@ Positive:
 - the Kotlin renderer can draw slant's cursor and grounded fade, and
   `SlantTraceTest` pins both against the oracle;
 - the app can validate a Kotlin game in dual-run without a feature flag
-  in the user-facing settings.
+  in the user-facing settings;
+- a game that upstream saves a UI, such as guess or blackbox, can
+  round-trip its save when it is ported.
 
 Negative:
 
@@ -64,9 +80,9 @@ Negative:
 - the app still uses C for slant, so the new cursor and fade drawing is
   checked by parity traces but is not yet visible through the Android
   shell;
-- the midend now has two pieces of state that are not in the save file
-  (the UI and the auxiliary text); tests must keep them out of
-  serialisation.
+- the UI is frontend state that a ported game may write to the save
+  file, so the tests must keep it out of `Game.State`, the history, and
+  the game ID. `UiSaveTest` pins both the record and that separation.
 
 ## Alternatives
 

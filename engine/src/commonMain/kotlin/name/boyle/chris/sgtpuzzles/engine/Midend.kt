@@ -25,6 +25,7 @@ class Midend private constructor(
     val auxInfo: String?,
     private val entries: MutableList<Entry>,
     var statePos: Int,
+    initialUi: Game.Ui? = null,
 ) {
 
     enum class MoveType { NEWGAME, MOVE, SOLVE, RESTART }
@@ -33,8 +34,13 @@ class Midend private constructor(
 
     val state: Game.State get() = entries[statePos - 1].state
 
-    /** The frontend state, mirroring upstream `game_ui`. */
-    var ui: Game.Ui = game.newUi(state)
+    /**
+     * The frontend state, mirroring upstream `game_ui`. It is not in
+     * [State], the history, [id], [status], or [textFormat]. A game
+     * that provides `encodeUi` stores it in the save file's `UI`
+     * record; a load restores it through `decodeUi`.
+     */
+    var ui: Game.Ui = initialUi ?: game.newUi(state)
         private set
 
     /**
@@ -533,6 +539,9 @@ class Midend private constructor(
         seed?.let { records += seedRecord(it) }
         records += SaveRecord("DESC", desc)
         auxInfo?.let { records += SaveRecord("AUXINFO", AuxInfo.encode(it)) }
+        // `encode_ui` writes its record only when it has one, between
+        // `AUXINFO` and `NSTATES`, as `midend_serialise` does.
+        game.encodeUi(ui)?.let { records += SaveRecord("UI", it) }
         records += SaveRecord("NSTATES", entries.size.toString())
         records += SaveRecord("STATEPOS", statePos.toString())
         for (index in 1 until entries.size) {
@@ -684,14 +693,21 @@ class Midend private constructor(
             }
 
             return Midend(
-                game,
-                params,
-                currentParams,
-                seed,
-                desc,
-                save.value("AUXINFO")?.let { AuxInfo.decode(it) },
-                entries,
-                statePos,
+                game = game,
+                params = params,
+                currentParams = currentParams,
+                seed = seed,
+                desc = desc,
+                auxInfo = save.value("AUXINFO")?.let { AuxInfo.decode(it) },
+                entries = entries,
+                statePos = statePos,
+                // C creates a fresh UI, then lets `decode_ui` update it
+                // from the record and the current state. The seam folds
+                // both steps into `decodeUi`, and a save without the
+                // record keeps the fresh UI.
+                initialUi = save.value("UI")?.let {
+                    game.decodeUi(entries[statePos - 1].state, it)
+                },
             )
         }
 
