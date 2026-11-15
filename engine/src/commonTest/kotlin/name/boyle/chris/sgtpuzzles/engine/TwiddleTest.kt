@@ -525,9 +525,11 @@ class TwiddleTest {
         fun click(ui: Twiddle.Ui, x: Int, y: Int, tile: Int, button: Int = Buttons.LEFT_BUTTON) =
             Twiddle.interpretMove(state, ui, x, y, button, tile)
 
-        // Tile 48, 63, and 103 and n = 2: the bands start at
-        // (k+1)*t - t/2 + 1 and the rest is inert. The y coordinate is
-        // the first accepted pixel, so the x band is the only variable.
+        // Tile 48, 63, and 103 and n = 2: band k starts at
+        // k*t + t/2 + (n-1)*t/2 and is t pixels wide; the rest is inert.
+        // Each `/` truncates, so with n = 2 an odd tile moves the start
+        // one pixel earlier. The y coordinate is the first accepted
+        // pixel, so the x band is the only variable.
         for ((tile, edges) in listOf(
             48 to listOf(47, 48, 95, 96, 143, 144),
             63 to listOf(61, 62, 124, 125, 187, 188),

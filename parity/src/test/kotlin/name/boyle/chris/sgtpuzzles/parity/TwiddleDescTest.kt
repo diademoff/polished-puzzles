@@ -17,8 +17,10 @@ import org.junit.Test
  * rejected attempt still costs all three draws. A game without a target
  * draws `random_upto(2)` for the total move count before the loop, so a
  * target game and a plain game with the same seed diverge from the first
- * call. The retry fixtures below are the only cheap way to catch a
- * generator that resets the grid, the counters, or the draw order.
+ * call. The retry fixtures below pin the per-pass reset of the
+ * `prevmoves` counters and the `x`, `y`, `r` draw order. A generator
+ * that also resets the grid on a retry passes these literals too, so
+ * they do not separate it.
  */
 class TwiddleDescTest {
 
@@ -182,6 +184,8 @@ class TwiddleDescTest {
             Triple("2x2n2m2", "2", "2x2n2m2:4,3,2,1"),
             Triple("3x3n3", "1", "3x3n3:9,8,7,6,5,4,3,2,1"),
             Triple("3x3n2r", "15", "3x3n2r:1,2,3,3,1,3,2,2,1"),
+            Triple("2x3n2", "8", "2x3n2:1,6,4,3,5,2"),
+            Triple("3x2n2", "164", "3x2n2:3,1,2,5,6,4"),
         )
 
         for ((params, seed, id) in fixtures) {
@@ -189,10 +193,11 @@ class TwiddleDescTest {
             assertEquals("Kotlin id for '$params' seed=$seed", id, Midend.newGame(Twiddle, params, seed).id())
         }
 
-        // The second pass keeps the grid and reuses the move count, so a
-        // generator that resets the board or draws a new count fails on
-        // these literals. The move count itself is not in the id; the
-        // status text of the same game pins it.
+        // A generator that allocates `prevmoves` once and keeps the
+        // counters across passes fails on the two rectangle literals.
+        // The other fixtures pin the `x`, `y`, `r` draw order. The move
+        // count itself is not in the id; the status text of the same
+        // game pins it.
         assertEquals("Moves: 0 (target 2)", Midend.newGame(Twiddle, "2x2n2m2", "2").statusText())
 
         // A one-pass generator would agree on the easy seeds but not on

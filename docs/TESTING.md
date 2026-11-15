@@ -481,15 +481,16 @@ Engine tests:
 - `TwiddleDescTest` is semantic. It compares parameter decoding and
   encoding, the validation messages, the eight presets, and
   `params + seed -> DESC` for the presets, extra boards, and a numeric
-  seed sweep. The retry fixtures pin the generator loop: the grid is
-  kept between passes, the counters are zeroed, and the move count is
-  not drawn again.
+  seed sweep. The retry fixtures pin the generator loop: the
+  `prevmoves` counters are zeroed on every pass, and each attempt draws
+  `x`, then `y`, then `r`. A generator that also resets the grid on a
+  retry passes these literals too, so no fixture separates it.
 - `TwiddleGameTest` is semantic. It compares new games, text, the status
-  line including the target suffix, the move grammar, clicks, keyboard
-  sequences, the cursor rules, completion, undo/redo, and solve. A
-  sorted description stays open until a move, which is the upstream
-  quirk. The completion event fires on the last move and on the redo,
-  but not on a solve.
+  line including the target suffix, the move grammar, the requested
+  keys, the palette, completion, undo/redo, and solve. A sorted
+  description stays open until a move, which is the upstream quirk. The
+  completion event fires on the last move and on the redo, but not on a
+  solve.
 - `TwiddleSaveTest` is strict for the save text. It reads every
   `twiddle` save in the corpus, rewrites it byte for byte, and makes the
   oracle load both versions. It also makes the oracle load a
@@ -506,9 +507,10 @@ Engine tests:
   move and change the board; a pixel outside a band, the letterbox, the
   outer frame, a middle click, and a lone drag or release must change
   neither the board nor the count. It also covers the right button, a
-  press-drag-release, the keyboard corners, the keypad edges on `4x4n2`
-  and their rejection on `3x3n2`, the cursor keys and select, and the
-  requested arrow mode for every preset.
+  press-drag-release, the letter keys `a`-`d` and `A`-`D`, the keypad
+  corners, the keypad edges on `4x4n2` and their rejection on `3x3n2`,
+  the cursor keys with their modifiers, the cursor visibility rules, and
+  the requested arrow mode for every preset.
 - `TwiddleTraceTest` is strict. It compares every preset with a fresh
   oracle trace and the frozen trace, plus moved, completed, solved, and
   target states, the cursor edges, and sized traces. The rotation
