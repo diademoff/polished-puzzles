@@ -23,11 +23,14 @@ import java.io.File
  * `PARAMS` and `CPARAMS`. That is the opposite of flood and fifteen,
  * whose short form drops the non-geometric parameters.
  *
- * The history cases are built here, so the corpus stays frozen. One
- * case, undo or redo across a `SOLVE`, is compared in Kotlin only: the
- * C debug oracle asserts in `game_redraw` when a whole board is
- * replaced (`work/specs/sixteen.md`, section 10, risk 2). That is an
- * upstream animation bug and test tooling, not a game deviation.
+ * The history cases are built here, so the corpus stays frozen. A
+ * `SOLVE` record is undone and redone in both implementations: the
+ * midend clears the animation for every record type that is not `MOVE`,
+ * so the C debug oracle does not reach its `abs(dx) == TILE_SIZE`
+ * assertion. A `MOVE` record whose move text is `S` does reach it, so
+ * that one shape is compared in Kotlin only and pinned here
+ * (`work/specs/sixteen.md`, section 10, risk 2). That is an upstream
+ * animation bug in the game's redraw, not a game deviation.
  */
 class SixteenSaveTest {
 
@@ -138,10 +141,10 @@ class SixteenSaveTest {
             History("solve", listOf(SaveRecord("SOLVE", "S")), 2) {
                 oracle.solve(base).state
             },
-            // There is no restart operation in the oracle. Undo from a
-            // RESTART entry is safe, because the move type suppresses
-            // the animation; a redo into one would replace the whole
-            // board and hits the same upstream assertion as a solve.
+            // There is no restart operation in the oracle. Undo from
+            // a RESTART entry is safe, and so is a redo into one: the
+            // midend clears the animation for every record type that is
+            // not MOVE, so the whole-board replacement is not drawn.
             History(
                 "restart",
                 listOf(SaveRecord("MOVE", "R0,1"), SaveRecord("RESTART", desc)),
@@ -218,26 +221,100 @@ class SixteenSaveTest {
             assertEquals("${case.label} reloaded text", oracle.text(cText), reloaded.textFormat())
         }
 
-        // Undo and redo across a SOLVE are Kotlin-only. The C debug
-        // oracle aborts in game_redraw here, so this test never calls
-        // the C undo or redo on a solved save. SixteenGameTest pins the
-        // same behavior; it is repeated at the save level because this
-        // is the file that documents the exclusion.
-        val solvedText = historySave(
-            params,
-            desc,
-            listOf(SaveRecord("SOLVE", "S")),
-            2,
-        )
+        // Undo and redo across a SOLVE are safe in C. The midend clears
+        // the animation for every record type that is not `MOVE`, and a
+        // `SOLVE` also has no `SOLVE_ANIMATES` flag for this game, so
+        // `game_redraw` never reaches the `abs(dx) == TILE_SIZE`
+        // assertion. The shape that does abort the debug oracle is a
+        // `MOVE` record whose move text is `S`; it has its own test
+        // below.
+        val solvedText = oracle.solve(base).state
+        assertEquals("SOLVE", SgtpSave.parse(solvedText).records.last().key)
+        var solvedExpected = oracle.id(solvedText)
         val solved = Midend.fromSave(Sixteen, SgtpSave.parse(solvedText))
+        assertEquals("the solved save", solvedExpected.state, solved.serialise().serialise())
+        assertEquals(solvedExpected.id, solved.id())
+        assertEquals(solvedExpected.status, solved.status())
+
+        solvedExpected = oracle.undo(solvedText)
         assertTrue("undo from a solved state", solved.undo())
+        assertEquals(
+            "undo writes the C text",
+            solvedExpected.state,
+            solved.serialise().serialise(),
+        )
+        assertEquals("undo id", solvedExpected.id, solved.id())
+        assertEquals("undo status", solvedExpected.status, solved.status())
+        assertEquals("undo canUndo", solvedExpected.canUndo, solved.canUndo)
+        assertEquals("undo canRedo", solvedExpected.canRedo, solved.canRedo)
+        assertFalse("the undo leaves the solve", (solved.state as Sixteen.State).usedSolve)
         assertEquals("Moves: 0", solved.statusText())
-        assertFalse((solved.state as Sixteen.State).usedSolve)
-        assertTrue("a redo branch is live", solved.canRedo)
+
+        solvedExpected = oracle.redo(solvedExpected.state)
         assertTrue("redo into the solved state", solved.redo())
-        assertTrue((solved.state as Sixteen.State).usedSolve)
+        assertEquals(
+            "redo writes the C text",
+            solvedExpected.state,
+            solved.serialise().serialise(),
+        )
+        assertEquals("redo id", solvedExpected.id, solved.id())
+        assertEquals("redo status", solvedExpected.status, solved.status())
+        assertEquals("redo canUndo", solvedExpected.canUndo, solved.canUndo)
+        assertEquals("redo canRedo", solvedExpected.canRedo, solved.canRedo)
+        assertTrue("the redo enters the solve", (solved.state as Sixteen.State).usedSolve)
         assertEquals("Moves since auto-solve: 0", solved.statusText())
-        assertFalse("the redo branch is gone", solved.canRedo)
+    }
+
+    @Test
+    fun `a MOVE record with the solve text is pinned without the oracle`() {
+        // C executes the text `S` for a `MOVE` record exactly as for a
+        // `SOLVE` record, so the board is the same. The record type is
+        // not. The midend keeps the animation for `MOVE`, and
+        // `game_redraw` then asserts on the whole-board replacement:
+        //
+        //   {"op":"undo","state":<NSTATES 2, STATEPOS 2, MOVE :1:S>}
+        //   sixteen.c:1076: game_redraw: Assertion
+        //   `abs(dx) == TILE_SIZE' failed.  exit 134
+        //
+        // The same save at `STATEPOS 1` aborts on `redo`. A release C
+        // build may not abort, because `NDEBUG` removes the assertion,
+        // but the debug oracle cannot run this comparison. So the save
+        // shape is pinned here and the history is checked in Kotlin
+        // only.
+        val desc = "13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4"
+        val moveSolve = historySave("4x4", desc, listOf(SaveRecord("MOVE", "S")), 2)
+        assertEquals(
+            "the pinned save shape",
+            "SAVEFILE:41:Simon Tatham's Portable Puzzle Collection\n" +
+                "VERSION :1:1\n" +
+                "GAME    :7:Sixteen\n" +
+                "PARAMS  :3:4x4\n" +
+                "CPARAMS :3:4x4\n" +
+                "DESC    :38:13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4\n" +
+                "NSTATES :1:2\n" +
+                "STATEPOS:1:2\n" +
+                "MOVE    :1:S\n",
+            moveSolve,
+        )
+
+        val midend = Midend.fromSave(Sixteen, SgtpSave.parse(moveSolve))
+        assertTrue(
+            "the solve text marks the state solved",
+            (midend.state as Sixteen.State).usedSolve,
+        )
+        assertEquals("Moves since auto-solve: 0", midend.statusText())
+        assertEquals("MOVE", midend.serialise().records.last().key)
+        assertEquals("S", midend.serialise().value("MOVE"))
+
+        assertTrue("undo from the move solve", midend.undo())
+        assertFalse("the undo leaves the solve", (midend.state as Sixteen.State).usedSolve)
+        assertEquals("Moves: 0", midend.statusText())
+        assertTrue("a redo branch is live", midend.canRedo)
+
+        assertTrue("redo into the move solve", midend.redo())
+        assertTrue("the redo enters the solve", (midend.state as Sixteen.State).usedSolve)
+        assertEquals("Moves since auto-solve: 0", midend.statusText())
+        assertFalse("the redo branch is gone", midend.canRedo)
     }
 
     private data class History(

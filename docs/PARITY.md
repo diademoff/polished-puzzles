@@ -282,10 +282,12 @@ Notes:
   the `full`-argument quirk: `m` stays in the short id and in both
   `PARAMS` and `CPARAMS`, unlike flood and fifteen. `KotlinGames.gameFor`
   knows the Kotlin game, but the app still uses C: the configuration
-  dialog and the two-release wait are open. Undo or redo across a
-  `SOLVE` is Kotlin-only: the C debug oracle asserts in `game_redraw`
-  when a whole board is replaced, which is an upstream animation bug
-  and test tooling, not a deviation. The seam is
+  dialog and the two-release wait are open. A `SOLVE` record is undone
+  and redone against the oracle, because the midend clears the animation
+  for every record type that is not `MOVE`. A `MOVE` record whose move
+  text is `S` is Kotlin-only: the C debug oracle asserts in `game_redraw`
+  when that whole board is replaced, which is an upstream animation bug
+  in the test tooling, not a deviation. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 
 

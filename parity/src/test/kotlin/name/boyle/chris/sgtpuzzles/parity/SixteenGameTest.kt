@@ -567,23 +567,46 @@ class SixteenGameTest {
     }
 
     @Test
-    fun `undo from a solved state is a Kotlin-only case`() {
-        // C's animation path asserts `abs(dx) == TILE_SIZE` when a whole
-        // board is replaced, so the oracle aborts on `<undo>` after a
-        // SOLVE (work/specs/sixteen.md, section 10, risk 2). The state
-        // transition itself is a normal undo. This test pins the
-        // exclusion and the Kotlin behaviour.
-        val save = saveText("4x4", "13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4", emptyList(), "S")
-        val midend = Midend.fromSave(Sixteen, SgtpSave.parse(save))
-        assertTrue((midend.state as Sixteen.State).usedSolve)
-        assertTrue(midend.undo())
-        assertFalse((midend.state as Sixteen.State).usedSolve)
-        assertEquals("Moves: 0", midend.statusText())
-        assertTrue(midend.canRedo)
+    fun `undo and redo across a solve match the oracle`() = OracleClient().use { oracle ->
+        // The oracle builds the solved save, then undoes and redoes it.
+        // A `SOLVE` record never animates: the midend clears the
+        // animation for every record type that is not `MOVE`, and this
+        // game has no `SOLVE_ANIMATES` flag, so `game_redraw` never
+        // reaches the `abs(dx) == TILE_SIZE` assertion here. A `MOVE`
+        // record whose move text is `S` is the shape that does; it has
+        // no oracle comparison and is pinned in SixteenSaveTest.
+        val base = saveText("4x4", "13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4")
+        val solvedText = oracle.solve(base).state
+        assertEquals(
+            "the oracle writes a SOLVE record",
+            "SOLVE",
+            SgtpSave.parse(solvedText).records.last().key,
+        )
+        assertEquals("S", SgtpSave.parse(solvedText).value("SOLVE"))
 
-        assertTrue(midend.redo())
-        assertTrue((midend.state as Sixteen.State).usedSolve)
-        assertEquals("Moves since auto-solve: 0", midend.statusText())
+        var expected = oracle.id(solvedText)
+        val actual = Midend.fromSave(Sixteen, SgtpSave.parse(solvedText))
+        assertSame("the solved save", expected, actual)
+        assertTrue((actual.state as Sixteen.State).usedSolve)
+        assertEquals("Moves since auto-solve: 0", actual.statusText())
+
+        expected = oracle.undo(solvedText)
+        assertTrue(actual.undo())
+        assertSame("undo from a solved state", expected, actual)
+        assertEquals("Moves: 0", actual.statusText())
+        assertEquals(0, actual.status())
+        assertFalse((actual.state as Sixteen.State).usedSolve)
+        assertTrue("a redo branch is live", actual.canRedo)
+        assertFalse("an undo of a solve raises no event", actual.takeCompletedEvent())
+
+        expected = oracle.redo(expected.state)
+        assertTrue(actual.redo())
+        assertSame("redo into the solved state", expected, actual)
+        assertEquals("Moves since auto-solve: 0", actual.statusText())
+        assertEquals(1, actual.status())
+        assertTrue((actual.state as Sixteen.State).usedSolve)
+        assertFalse("the redo branch is gone", actual.canRedo)
+        assertEquals("SOLVE", actual.serialise().records.last().key)
     }
 
     private data class Case(

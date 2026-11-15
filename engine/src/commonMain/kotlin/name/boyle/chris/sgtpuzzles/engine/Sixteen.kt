@@ -744,17 +744,18 @@ object Sixteen : Game {
     fun currentKeyLabel(ui: Game.Ui, state: Game.State, button: Int): String {
         val u = ui as Ui
         val s = state as State
-        val key = Buttons.stripModifiers(button)
-        if ((key == Buttons.CURSOR_SELECT || key == Buttons.CURSOR_SELECT2) &&
+        // C tests the raw button: `IS_CURSOR_SELECT` is false when a
+        // modifier is set, so a modified select has no label.
+        if ((button == Buttons.CURSOR_SELECT || button == Buttons.CURSOR_SELECT2) &&
             u.cursorVisible
         ) {
             if (u.curX == -1 || u.curX == s.width || u.curY == -1 || u.curY == s.height) {
-                return if (key == Buttons.CURSOR_SELECT2) "Back" else "Slide"
+                return if (button == Buttons.CURSOR_SELECT2) "Back" else "Slide"
             }
-            if (key == Buttons.CURSOR_SELECT) {
+            if (button == Buttons.CURSOR_SELECT) {
                 return if (u.cursorMode == CursorMode.LOCK_TILE) "Unlock" else "Lock tile"
             }
-            if (key == Buttons.CURSOR_SELECT2) {
+            if (button == Buttons.CURSOR_SELECT2) {
                 return if (u.cursorMode == CursorMode.LOCK_POSITION) "Unlock" else "Lock pos"
             }
         }

@@ -91,12 +91,14 @@ cursor or a grounded fade. The contract is
 `docs/adr/0003-strict-draw-traces.md`.
 
 One upstream bug affects the test tooling, not the port: `sixteen`'s
-`game_redraw` asserts when a whole board is replaced, so the C debug
-oracle aborts on undo or redo across a `SOLVE`. `SixteenSaveTest` and
-`SixteenGameTest` compare that transition in Kotlin only, and the save
-test never calls the C `undo` or `redo` operations on a solved save.
-This is an upstream animation bug (`work/specs/sixteen.md`, section 10,
-risk 2), not a game deviation.
+`game_redraw` asserts when a whole board is replaced. The midend clears
+the animation for every record type that is not `MOVE`, so a `SOLVE` or
+`RESTART` record is safe to undo and redo. A `MOVE` record whose move
+text is `S` is not: the C debug oracle aborts at `sixteen.c:1076` on
+undo from it and on redo into it. `SixteenSaveTest` compares the `SOLVE`
+history with the oracle and pins that one `MOVE :1:S` save in Kotlin
+only, with a comment. This is an upstream animation bug
+(`work/specs/sixteen.md`, section 10, risk 2), not a game deviation.
 
 ## 3. Parity tests
 
@@ -376,8 +378,9 @@ Engine tests:
   text, crafted moves including the loose bounds and a full cycle, real
   frame clicks at the phone viewport, keyboard sequences, the three
   cursor modes, the keypad null move, completion, undo/redo, and solve.
-  `undo from a solved state is a Kotlin-only case` pins the transition
-  the C debug oracle cannot draw.
+  `undo and redo across a solve match the oracle` compares the state,
+  id, status, and history flags with C; the `SOLVE` record never
+  animates, so the C debug oracle runs it.
 - `SixteenSaveTest` is strict for the save text. It reads every
   `sixteen` save in the corpus, rewrites it byte for byte, and makes
   the oracle load both versions. It also makes the oracle load a
@@ -385,7 +388,11 @@ Engine tests:
   quirk: `m` stays in the short id and in both `PARAMS` and `CPARAMS`,
   unlike flood and fifteen. A played move, an undone position with a
   live redo branch, a solve, and a restart are built in memory, so the
-  history records are covered while the corpus stays frozen.
+  history records are covered while the corpus stays frozen. One save
+  shape is Kotlin-only: a `MOVE` record whose move text is `S` aborts
+  the C debug oracle in `game_redraw`, so
+  `a MOVE record with the solve text is pinned without the oracle`
+  asserts the exact save text and the Kotlin undo/redo behaviour.
 - `SixteenInputParityTest` is semantic. It compares the layout at
   eleven viewports, then sends real clicks on the four frame bands at
   tile sizes 48, 63, 82, and 100, including a 293x400 view with a

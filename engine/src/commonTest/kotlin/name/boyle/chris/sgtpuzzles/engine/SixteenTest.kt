@@ -444,11 +444,23 @@ class SixteenTest {
             "13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4",
         ) as Sixteen.State
 
-        for (move in listOf("R0,0", "C0,0", "R0,4", "R0,-4", "C0,4", "C0,-4", "R3,4", "C3,-4")) {
+        // `last_movement_sense` is `dx + dy`, so it records the delta
+        // even when the rotation is a full cycle and no tile moves.
+        val cycles = listOf(
+            "R0,0" to 0,
+            "C0,0" to 0,
+            "R0,4" to 4,
+            "R0,-4" to -4,
+            "C0,4" to 4,
+            "C0,-4" to -4,
+            "R3,4" to 4,
+            "C3,-4" to -4,
+        )
+        for ((move, sense) in cycles) {
             val after = Sixteen.executeMove(state, move) as Sixteen.State
             assertEquals(state.tiles.toList(), after.tiles.toList(), "board after $move")
             assertEquals(1, after.moveCount, "move count after $move")
-            assertNotNull(after.lastMovementSense)
+            assertEquals(sense, after.lastMovementSense, "sense after $move")
         }
 
         // The bounds are `-h..w` for a row and `-h..h` for a column.
@@ -806,6 +818,15 @@ class SixteenTest {
             "",
             Sixteen.currentKeyLabel(ui, state, Buttons.LEFT_BUTTON),
         )
+        // `IS_CURSOR_SELECT` reads the raw button, so a modifier makes
+        // the label empty even though the select alone has a label.
+        ui.curX = 2
+        ui.curY = 2
+        ui.cursorMode = Sixteen.CursorMode.UNLOCKED
+        assertEquals(
+            "",
+            Sixteen.currentKeyLabel(ui, state, Buttons.CURSOR_SELECT or Buttons.MOD_SHFT),
+        )
     }
 
     @Test
@@ -1008,9 +1029,10 @@ class SixteenTest {
 
     @Test
     fun `undo from a solved state returns to the previous board`() {
-        // C's animation path asserts on this transition and aborts the
-        // oracle, so it can only be checked in Kotlin. The state itself
-        // is well defined: the history is a normal undo.
+        // The history is a normal undo. `SixteenGameTest` compares the
+        // same transition with C: the midend suppresses the animation
+        // for a `SOLVE` record, so the debug oracle can run it. This
+        // test pins the engine path without the oracle.
         val midend = Midend.fromGameId(
             Sixteen,
             "4x4:13,15,14,3,10,12,5,6,7,1,8,2,11,9,16,4",
