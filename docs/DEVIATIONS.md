@@ -179,6 +179,51 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-15
 
+### D-006: Light Up rejects two parameter sets that never terminate
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts two parameter sets that do not terminate.
+  First, `w = 46340` and `h = 46340` with any `blackpc`, `symm`, and
+  `difficulty` passes `validate_params`, because C tests
+  `w > INT_MAX / h` (`lightup.c:357-360`). `new_state` then allocates
+  two arrays of `w*h = 2,147,395,600` elements (`lightup.c:386-390`),
+  about 17 GB, and the generator runs the solver over the board.
+  Second, `blackpc = 100` with `difficulty` 1 or 2 passes the percentage
+  and difficulty checks (`lightup.c:362-363`, `372-373`). Every attempt
+  produces an all-black board, which `puzzle_is_good` accepts at the
+  requested difficulty and also at `difficulty - 1`, so the attempt is
+  rejected at `lightup.c:1595-1602`, and the `blackpc < 90` bump at
+  `1609` cannot fire, so the loop never ends. The Kotlin
+  `validateParams` rejects both before any allocation or generation.
+  An area above 2^20 cells returns
+  `Width times height is too large for this build`. The exact 2^20
+  boundary is accepted, and every preset is far below it. `blackpc = 100`
+  with a positive difficulty returns
+  `A board of 100% black squares cannot be generated at this difficulty`.
+  `blackpc` from 5 to 99 at any difficulty is unchanged, and
+  `blackpc = 100` at difficulty 0 still generates the all-`B`
+  description that C generates. `newDesc` repeats both guards, so a
+  direct caller cannot hang.
+- **Why:** a hang in the app or in the generator is worse than a
+  deterministic rejection. The guards depend only on the parameters, so
+  the same request always fails the same way. They are not game rules:
+  no seed, `DESC`, `AUXINFO`, or `.sgtp` text of a valid game changes,
+  because every valid parameter set is untouched.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../LightupTest.kt::validation follows the C order and the two guards`
+  pins the two messages, the `2^20` boundary, and the accepted presets;
+  `...::newDesc refuses the two non-terminating parameter sets` pins
+  the `newDesc` rejection and the unchanged all-black difficulty-0
+  description;
+  `parity/src/test/kotlin/.../LightupDescTest.kt::validation messages match the oracle in order`
+  pins the C validation order and the two guard messages. No test
+  calls `newDesc` or `newState` on `46340x46340` or on `7x7b100d1`,
+  because C does not terminate.
+- **Scope:** `lightup`
+- **Upstream:** none known
+- **Date:** 2026-11-15
+
 ## Examples
 
 Allowed:

@@ -949,6 +949,84 @@ Engine tests:
   not match its params, the stored description tail, and
   `currentKeyLabel`. The output-order regression on a stalled board is
   the frozen `4x4:1o` answer `SB,1,0B,0,1W,1,1W,0,2W,2,0`.
+- `LightupDescTest` is semantic. It compares the nine presets, the
+  decode quirks, the exact validation messages in C order, and
+  `params + seed -> DESC` for every preset with the golden seed and a
+  numeric sweep. It also pins the black-percentage ramp fixtures and
+  the two D-006 guard messages.
+- `LightupGameTest` is semantic. It compares new games, text, status,
+  the move grammar, the `STYLUS_BASED` cycles, the select and modified
+  keys, a hidden-cursor select, completion and its stickiness, the
+  solver strings with their `I` marks, a solve after a wrong light,
+  undo, redo, restart, `requestKeys`, `currentKeyLabel`, and the
+  vacuous clicks at the preferred tile.
+- `LightupSaveTest` is strict for the save text. It reads all ten
+  `lightup` saves in the corpus, rewrites them byte for byte, and makes
+  C compare id, status, undo, redo, and text. It pins the
+  `PARAMS`/`CPARAMS` split, makes C load a Kotlin save for every preset,
+  and round-trips a played light, an impossible mark, an undone
+  position with a live redo branch, a `SOLVE`, and a `RESTART`. No
+  save has a `UI` or an `AUXINFO` record.
+- `LightupTraceTest` is strict. It compares the nine frozen traces and
+  the oracle `traceNew` for every preset, the frame polygon, the
+  column-major tile order, the clue text and its error colour, a light,
+  an overlap, an impossible mark, the cursor ring, sized traces at
+  tiles 48, 63, 82, and 100, the letterboxed 411x702 view, the
+  `show-lit-blobs` blob line, and the warm path. The cache test pins
+  that a preference change alone does not dirty a tile, while
+  `forceRedraw` applies it.
+- `LightupInputParityTest` is semantic. It compares the layout at the
+  four exact tiles (48, 63, 82, and 100) and the 411x702 letterbox at
+  tile 51 with origin (2,147), then sends real `STYLUS_BASED` left and
+  right cycles with matching releases at all five views. Every press
+  must change the grid and add one move and one state; a release adds
+  neither. A clue, black cell, the four border bands, the letterbox,
+  and a middle click change neither. It also covers the four arrows,
+  `SHFT` and `CTRL` on an arrow, `SHFT` and `CTRL` on a select, a
+  hidden-cursor select, a keypad digit, TAB, and backspace, plus a
+  press-drag-release, a lone drag, and a lone release. The
+  `show-lit-blobs` setting is compared on and off through the oracle's
+  `prefs` field; the state, id, status, and save must not change, and
+  the cached `DrawState.flags` must not contain the preference.
+  `requestKeys` is compared on every preset: arrow mode 3 and no
+  labels.
+- `LightupTest` is the engine test. It pins the parameters, the guard
+  order and both D-006 messages, the `newDesc` rejection, the
+  description grammar, copy and array independence, the `STYLUS_BASED`
+  return values, `currentKeyLabel` without an out-of-bounds read, the
+  sticky completion, the initial-state solve, the dirty cache, the
+  preference outside the cached flags, and the palette.
+
+`lightup` has one deviation and two enablement debts:
+
+- D-006: C accepts `46340x46340`, allocates about 17 GB, and does not
+  terminate; C also accepts `blackpc = 100` with difficulty 1 or 2 and
+  loops forever, because the difficulty check rejects every all-black
+  attempt and the `blackpc < 90` ramp cannot fire. The port rejects the
+  first with `Width times height is too large for this build` above
+  2^20 cells and the second with
+  `A board of 100% black squares cannot be generated at this difficulty`.
+  The exact 2^20 boundary and every valid parameter set are unchanged,
+  including `blackpc = 100` at difficulty 0. `LightupTest` and
+  `LightupDescTest` pin both messages and the unchanged all-black
+  description.
+- The `show-lit-blobs` preference (boolean, default true) lives on
+  `Lightup.Ui.drawBlobsWhenLit`, because the seam has no preference
+  hook. The app adapter must parse `show-lit-blobs=true|false` and set
+  `Lightup.Ui.drawBlobsWhenLit` on the live UI after `newUi` and after
+  `Midend.fromSave`, because there is no `decodeUi` and a load recreates
+  the UI. It must force a redraw after the change, as C recreates the
+  drawstate on a preference change. The value must not enter
+  `DrawState.flags`: C reads it in `tile_redraw`
+  (`lightup.c:2219`), so a warm frame after a preference change alone
+  is empty. The truth of this rule is pinned by `LightupTest` and
+  `LightupTraceTest`; the app wiring is still open.
+- S8 and S9: the configuration dialog (Width, Height,
+  `%age of black squares`, Symmetry, and Difficulty) and the preference
+  schema are open, and `currentKeyLabel` is a tested helper with no
+  Android call site. `LIGHTUP` is in `KotlinGames.gameFor` and not in
+  `APP_GAMES`, so `KotlinGames.handles(LIGHTUP)` is false and the app
+  still uses C. The two-release wait also applies.
 
 `unruly` has two C undefined-behavior guards, one seam decision, and
 two enablement debts:

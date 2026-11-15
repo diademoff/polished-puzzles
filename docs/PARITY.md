@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, and `range` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, and `lightup` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -202,7 +202,7 @@ submenu entries when a game groups its presets.
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `dual-run` |
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `C` |
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `C` |
-| `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `C` |
+| `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `dual-run` |
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `C` |
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `C` |
@@ -647,6 +647,69 @@ Notes:
   needed before that click can be compared with C. `currentKeyLabel`
   is a tested helper because C has no Android call site for it. The
   seam is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `lightup` is `dual-run`. Its parameters and nine presets, the
+  decode quirks and validation order, the run-length description, the
+  solver-gated generator, the black-percentage ramp, state, the `L`/`I`
+  move grammar, the sticky completion, the solve diff with its
+  `F_IMPOSSIBLE` marks, the text format, the cursor, `requestKeys`, the
+  save file, palette, drawing, layout, and input pass the matrix in
+  `LightupDescTest`, `LightupGameTest`, `LightupSaveTest`,
+  `LightupTraceTest`, `LightupInputParityTest`, and the engine
+  `LightupTest`. `LightupDescTest` compares every preset at the golden
+  seed and a numeric sweep, the decode quirks, the exact messages, the
+  ramp fixtures, and the guard messages. `LightupGameTest` compares the
+  move grammar, the two `STYLUS_BASED` cycles, the select and modified
+  keys, a hidden-cursor select, completion, every preset's `SOLVE` with
+  its `L`/`I` counts, a solve after a wrong light, the initial-state
+  fallback, undo, redo, restart, and the vacuous clicks at the
+  preferred tile. `LightupSaveTest` reads all ten corpus saves,
+  rewrites them byte for byte, and compares id, status, undo, redo, and
+  text; it pins the `PARAMS`/`CPARAMS` split and round-trips a played
+  light, an impossible mark, an undone position with a live redo
+  branch, a `SOLVE`, and a `RESTART`. No save has a `UI` or an
+  `AUXINFO` record.
+
+  `LightupTraceTest` covers the nine frozen traces, the frame polygon,
+  the column-major draw order, the clue text and its error colour, a
+  light, an overlap, an impossible mark, the cursor ring, sized traces
+  at tiles 48, 63, 82, and 100, the letterboxed 411x702 view, the
+  `show-lit-blobs` blob, and the warm path. `LightupInputParityTest`
+  sends real left and right stylus cycles with releases at those four
+  tiles and at the 411x702 letterbox (tile 51, origin (2,147)), checks
+  a clue, black cell, the border bands, the letterbox, and a middle
+  click as inert, and covers the arrows, modified arrows, a
+  hidden-cursor select, `SHFT`/`CTRL` on a select, a keypad digit, TAB,
+  backspace, a press-drag-release, a lone drag, and a lone release.
+  Every real light or mark changes the grid and adds one move and one
+  state; a release and a UI-only action change neither. The preference
+  is compared on and off through the oracle's `prefs` field; the state,
+  id, status, and save do not change, and the cached `DrawState.flags`
+  do not contain the value.
+
+  The generator is gated by the solver twice per attempt, and the
+  surviving clues are the ones the solver marked `F_NUMBERUSED`, so a
+  solver difference changes every `DESC`. The `SOLVE` string is the
+  solver's final board diff, including the `F_IMPOSSIBLE` marks, in
+  column-major order; the presets carry 0 to 45 `I` entries. Both are
+  compared exactly. Two accepted parameter sets do not terminate in C:
+  `46340x46340` allocates about 17 GB, and `blackpc = 100` with
+  difficulty 1 or 2 loops because the difficulty check rejects every
+  all-black attempt. The port rejects both before generation; this is
+  D-006, and the valid parameters are unchanged. The `show-lit-blobs`
+  preference lives on `Lightup.Ui.drawBlobsWhenLit` with a true
+  default. The app adapter must parse it and set the live UI after
+  `newUi` and after `Midend.fromSave`, then force a redraw; the value
+  must not enter `DrawState.flags`, because C reads it in `tile_redraw`
+  and a warm frame after a preference change alone is empty.
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
+  C: the configuration schema (Width, Height, `%age of black squares`,
+  Symmetry, Difficulty), the preference schema and application, the
+  `Fifteen` casts in `KotlinGameEngine`, and the two-release wait are
+  open. `currentKeyLabel` is a tested helper because C has no Android
+  call site for it. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 ## 8. Goldens

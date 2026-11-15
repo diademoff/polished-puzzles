@@ -6,6 +6,7 @@ import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
@@ -116,6 +117,12 @@ class KotlinGamesTest {
     fun `range is registered but the app still uses C`() {
         assertEquals(Range, KotlinGames.gameFor(RANGE))
         assertFalse(KotlinGames.handles(RANGE))
+    }
+
+    @Test
+    fun `lightup is registered but the app still uses C`() {
+        assertEquals(Lightup, KotlinGames.gameFor(LIGHTUP))
+        assertFalse(KotlinGames.handles(LIGHTUP))
     }
 
     @Test
