@@ -820,6 +820,109 @@ Engine tests:
   pointer bands, the cursor-hiding click, `currentKeyLabel`,
   `cursorLocation`, `computeSize`, the palette, and `formatG`.
 
+- `UnrulyDescTest` is semantic. It compares the seven presets with
+  their verbatim `8x8dt` text, the decode quirks (`8`, `8x8x8`, `8X8`,
+  a trailing space, `8x8dte`, `8u8`, `8x8tu`), the `u`/`d` order, the
+  five validation messages in C order, and `params + seed -> DESC` for
+  every preset with nine seed strings and a numeric sweep. It pins the
+  golden ids, the generated run alphabet without `y`/`Y`, the accepted
+  `46340x46340` and `8x34u` boundaries without generating them, and
+  the invalid-difficulty encoder guard: an index outside `0..2`
+  writes a plain `d` instead of reading past `unruly_diffchars`.
+  Generation runs under a two-minute timeout, because the retry loops
+  are unbounded.
+- `UnrulyGameTest` is semantic. It compares new games, text, and
+  status; the `sscanf` move grammar including junk, spaces, signs,
+  leading zeros, and 32-bit wrap; every preset's `SOLVE` string; a
+  stalled `8x8:zzo` board and an invalid `8x8:AAAzzl` board, where
+  Kotlin returns null and C names `No solution found.` or
+  `Puzzle is invalid.`; an already solved board; completion, undo,
+  redo, and a restart; 45 real clicks to a full board; and the warm
+  click frame. The solve reads the decoded initial grid, so a click
+  that contradicts the answer leaves the `SOLVE` record unchanged;
+  the test pins that case and the `Midend.solve` call. `requestKeys`
+  is arrow mode 3 with no labels on every preset.
+- `UnrulySaveTest` is strict for the save text. It reads all eight
+  `unruly` saves in the corpus, rewrites them byte for byte, and makes
+  the oracle compare id, status, undo, redo, and text. A Kotlin save
+  for every preset loads in C with the same id and text. The `full`
+  split is pinned (`PARAMS 8x8dt`, `CPARAMS 8x8dn`, no `d` in the id),
+  and a played click, an undone position with a live redo branch, a
+  `SOLVE`, and a `RESTART` are built in memory and round-tripped in
+  both directions. A hand-written `AUXINFO` record round-trips and is
+  ignored by the solve. No `UI` record appears.
+- `UnrulyTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, a horizontal three, a vertical
+  three, a count error, the two unique match bars, and a completed
+  board without a flash. Sized traces cover tiles 48, 63, 82, and 100
+  for `8x8`, `10x10`, and `14x14`, the three 411x702 letterbox
+  viewports at origin (3,148), (2,147), and (3,148), and the 200x200
+  views. A warm frame after one click and after two clicks is exactly
+  `start_draw`, `end_draw`, and no trace contains a status line, a
+  blitter, a line, or a polygon.
+- `UnrulyInputParityTest` is semantic. It compares the layout for
+  every preset at the four exact tile sizes and at the 411x702,
+  720x1280, 1024x600, and 200x200 viewports, then sends real clicks at
+  tiles 48, 63, 82, and 100 and at the 411x702 letterbox of every
+  board size (tile 45 with origin (3,148), 37 with (2,147), and 27 with
+  (3,148)). It covers the left cycle (one, zero, clear), the right and
+  middle mapping, the half-tile border, the last cell and one pixel
+  past it, a clue click with a visible ring, a press, drag, and
+  release (one move at the press), a click then a cursor key and a
+  select, and the keyboard including modified cursor keys and a keypad
+  digit. Every real placement changes the grid and adds one state; a
+  border or letterbox click, a clue click, a lone drag, and a lone
+  release change neither the grid nor the save.
+- `UnrulyTest` is the engine test. It pins the parameter decode and
+  encode, the validation order, `validateDesc`, the immutable mask and
+  the initial grid, the three-way count result, the error bits, the
+  five solver techniques and the restart rule, generation
+  determinism, the move grammar, the sticky completion and the unique
+  rule, `changedState`, undo, redo, restart, the solve from the
+  initial grid, `currentKeyLabel`, `cursorLocation`, `computeSize`,
+  the palette, the drawstate cache, the error frames, and the
+  encoder and unique-pair guards.
+
+`unruly` has two C undefined-behavior guards, one seam decision, and
+two enablement debts:
+
+- `encode_params` indexes `unruly_diffchars[diff]` with no bound
+  (`unruly.c:238`). Validation runs before every encoding in the
+  midend, so an invalid `diff` never reaches it. The port writes a
+  plain `d` for any index outside `0..2`; `UnrulyDescTest` pins the
+  three values `3`, `99`, and `-1`. This is a port definition, not a
+  game-rule change.
+- `unruly_solver_check_uniques` asserts `nonmatch != -1` and
+  `grid[i1] == EMPTY` (`unruly.c:671`, `674`). The counters are
+  rebuilt from the grid and updated on every placement, and a cell
+  holds only `EMPTY`, `N_ONE`, or `N_ZERO`, so a consistent state
+  cannot reach either assert. The port skips the pair instead of
+  indexing `-1` or overwriting a value; `UnrulyTest` pins the
+  already-blocked pair and a lying counter. The oracle is not asked
+  for either path, because the shipped C build keeps assertions.
+- A stalled or inconsistent board returns null from `Game.solve`,
+  because the seam has no error out-parameter. C sets
+  `No solution found.` or `Puzzle is invalid.` and returns `NULL`. The
+  seven presets always solve, so the English messages are pinned only
+  by the engine test and `UnrulyGameTest`; this is the same seam debt
+  as `flip`, not a deviation.
+- `validate_params` accepts `46340x46340`, because the area check
+  stays `w > INT_MAX / h` as C writes it. Generation would then
+  allocate a 2,147,395,600-cell grid and mask, more than 10 GB in this
+  port, and run the solver over it. No test calls `newDesc` or
+  `newState` on a huge accepted area; `validateParams` pins the
+  accepted `46340x46340` side and the rejected `65536x65536` side.
+  The configuration dialog needs a guard before `UNRULY` is enabled.
+  A guard rejects parameters that C accepts, so it needs a new
+  deviation entry and a test, and it must not change any accepted
+  normal parameter. Until then this is enablement debt, not a
+  deviation.
+- The generator retries without a bound in two nested loops
+  (`unruly.c:1379-1476`). A solver defect that over-fills can make the
+  "too easy" test fail forever. The generation tests run with a
+  timeout; no production guard is added, because a bound would change
+  the seed stream.
+
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in
 Kotlin, while C reports `No solution exists for this position`. The

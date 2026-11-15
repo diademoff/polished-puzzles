@@ -224,7 +224,7 @@ class UnrulyDescTest {
         assertNull(Unruly.validateParams(Unruly.Params(48, 48, true, 0), true))
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `descriptions match the oracle for every preset and seed`() =
         OracleClient().use { oracle ->
             val seeds = listOf(
@@ -264,7 +264,7 @@ class UnrulyDescTest {
             }
         }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `a numeric seed sweep does not hide an rng order error`() =
         OracleClient().use { oracle ->
             for (params in listOf("8x8dt", "10x10de", "14x14dn")) {

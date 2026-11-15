@@ -13,6 +13,7 @@ import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
+import name.boyle.chris.sgtpuzzles.engine.Unruly
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -102,6 +103,12 @@ class KotlinGamesTest {
     fun `netslide is registered but the app still uses C`() {
         assertEquals(Netslide, KotlinGames.gameFor(NETSLIDE))
         assertFalse(KotlinGames.handles(NETSLIDE))
+    }
+
+    @Test
+    fun `unruly is registered but the app still uses C`() {
+        assertEquals(Unruly, KotlinGames.gameFor(UNRULY))
+        assertFalse(KotlinGames.handles(UNRULY))
     }
 
     @Test

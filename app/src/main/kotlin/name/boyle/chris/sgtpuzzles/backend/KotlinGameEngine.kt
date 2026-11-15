@@ -30,6 +30,7 @@ import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Text
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
+import name.boyle.chris.sgtpuzzles.engine.Unruly
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.MenuEntry
 import java.io.ByteArrayOutputStream
@@ -91,10 +92,10 @@ object KotlinGames {
     /**
      * Games whose Kotlin implementation is complete enough for the app.
      * `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`,
-     * `pegs`, `guess`, `blackbox`, `cube`, `filling`, and `netslide`
-     * are in dual-run: their engines pass the parity matrix, but the app
-     * still uses C until the configuration dialog and the two-release
-     * wait are done.
+     * `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, and
+     * `unruly` are in dual-run: their engines pass the parity matrix, but
+     * the app still uses C until the configuration dialog and the
+     * two-release wait are done.
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
@@ -112,6 +113,7 @@ object KotlinGames {
         CUBE -> Cube
         FILLING -> Filling
         NETSLIDE -> Netslide
+        UNRULY -> Unruly
         else -> null
     }
 

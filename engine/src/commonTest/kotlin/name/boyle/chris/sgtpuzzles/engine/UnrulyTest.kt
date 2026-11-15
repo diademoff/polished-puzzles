@@ -540,6 +540,49 @@ class UnrulyTest {
     }
 
     @Test
+    fun `the unique technique skips an impossible pair instead of the C asserts`() {
+        // C continues when the blocked cell already holds `block`
+        // (`unruly.c:674`). The port skips the same pair.
+        val blocked = board(
+            6, 6,
+            0 to 0 to UnrulySolver.N_ONE,
+            1 to 0 to UnrulySolver.N_ONE,
+            2 to 0 to UnrulySolver.N_ONE,
+            0 to 2 to UnrulySolver.N_ONE,
+            1 to 2 to UnrulySolver.N_ONE,
+            2 to 2 to UnrulySolver.N_ZERO,
+        )
+        val blockedBefore = blocked.copyOf()
+        val blockedScratch = UnrulySolver.newScratch(blocked, 6, 6)
+        assertEquals(0, UnrulySolver.checkAllUniques(blocked, 6, 6, blockedScratch))
+        assertTrue(blockedBefore.contentEquals(blocked))
+
+        // C names `-1` as a column when `nonmatch` is -1
+        // (`unruly.c:671`). The counters are rebuilt from the grid on
+        // every public path, so only a lying counter reaches it. The
+        // port skips the pair instead of indexing `-1`.
+        val lying = board(
+            6, 6,
+            0 to 0 to UnrulySolver.N_ONE,
+            1 to 0 to UnrulySolver.N_ONE,
+            0 to 2 to UnrulySolver.N_ONE,
+            1 to 2 to UnrulySolver.N_ONE,
+        )
+        val lyingBefore = lying.copyOf()
+        val ones = IntArray(6)
+        ones[0] = 3
+        ones[2] = 2
+        assertEquals(
+            0,
+            UnrulySolver.checkUniques(
+                lying, 6, 6, ones, true, UnrulySolver.N_ONE, UnrulySolver.N_ZERO,
+                UnrulySolver.newScratch(lying, 6, 6),
+            ),
+        )
+        assertTrue(lyingBefore.contentEquals(lying))
+    }
+
+    @Test
     fun `validation returns the three-way count result and the error bits`() {
         val solved = IntArray(64) { index -> if (SOLVE_8X8[index + 1] == '1') 1 else 2 }
         assertEquals(0, UnrulySolver.validateCounts(solved, 8, 8, null, null))
@@ -848,7 +891,7 @@ class UnrulyTest {
     // Generation and vacuity
     // ------------------------------------------------------------------
 
-    @Test
+    @Test(timeout = 120_000)
     fun `generation is deterministic and uses the run alphabet`() {
         assertEquals("bEACHcBdBDEalcbAbbBa", Midend.newGame(Unruly, "8x8dt", "12345").desc)
         assertEquals("bEACHcBdBDEaleAbbc", Midend.newGame(Unruly, "8x8de", "12345").desc)

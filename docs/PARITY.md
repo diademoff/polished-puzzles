@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, and `netslide` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, and `unruly` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -228,7 +228,7 @@ submenu entries when a game groups its presets.
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `dual-run` |
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `C` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `C` |
-| `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `C` |
+| `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `dual-run` |
 | `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `C` |
 
 Notes:
@@ -500,6 +500,77 @@ Notes:
   the huge-area guard, and the two-release wait are open. `currentKeyLabel`
   is a tested helper because C has no Android call site for it. The seam
   is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `unruly` is `dual-run`. Its parameters and presets, the run-length
+  description, the nested fill and winnow loops, the five-technique
+  deduction solver, state, loose move grammar, completion, the empty
+  status text, the cursor, `requestKeys`, the save file, palette,
+  drawing, layout, and input pass the matrix in `UnrulyDescTest`,
+  `UnrulyGameTest`, `UnrulySaveTest`, `UnrulyInputParityTest`,
+  `UnrulyTraceTest`, and the engine `UnrulyTest`. The generator and the
+  solver decide every `DESC`, so `UnrulyDescTest` compares all seven
+  presets with nine seed strings and a numeric sweep, and pins the
+  decode quirks, the validation order, the run alphabet, and the
+  golden ids. `UnrulyGameTest` compares the move grammar including
+  junk, spaces, signs, leading zeros, and 32-bit wrap, every preset's
+  `SOLVE`, a stalled and an invalid board, completion, undo, redo, a
+  restart, real clicks to a full board, and the warm click frame.
+  `UnrulySaveTest` reads all eight `unruly` corpus saves, rewrites
+  them byte for byte, and compares id, status, undo, redo, and text;
+  it makes C load a Kotlin save for every preset and round-trips a
+  played click, an undone position with a live redo branch, a `SOLVE`,
+  and a `RESTART`. A hand-written `AUXINFO` record round-trips and the
+  solve ignores it. The `full` split is pinned:
+  `PARAMS 8x8dt` and `CPARAMS 8x8dn` in the same save, and no `d` in
+  the id. The preset strings keep `8x8dn` verbatim, because the short
+  form would drop the difficulty.
+
+  The solve reads the decoded initial grid, because `midend_solve`
+  passes `states[0]` and C never reads the current board. A click that
+  contradicts the answer does not change the `SOLVE` record, and
+  `UnrulyGameTest` pins that case, the engine test, and the
+  `Midend.solve` path.
+
+  `UnrulyInputParityTest` sends real clicks at tiles 48, 63, 82, and
+  100 and at the 411x702 letterbox of every board size (tile 45 with
+  origin (3,148), 37 with (2,147), and 27 with (3,148)). It checks the
+  left cycle, the right and middle mapping, the half-tile border, the
+  last cell and one pixel past it, a clue click, a press, drag, and
+  release (one move at the press), and a click followed by a cursor key
+  and a select. Every real placement changes the grid and adds one
+  state; a border or letterbox click, a clue click, a lone drag, and a
+  lone release change neither. `requestKeys` is arrow mode 3 with no
+  labels on every preset. The keyboard is compared with the oracle,
+  including modified cursor keys and a keypad digit.
+
+  Two C undefined-behavior spots are port guards, not game-rule
+  changes. `encode_params` writes a plain `d` for a difficulty outside
+  `0..2` instead of reading past `unruly_diffchars` (`unruly.c:238`),
+  and the unique technique skips a pair that would index `-1` or
+  overwrite a value instead of tripping the two C asserts
+  (`unruly.c:671`, `674`). Validation runs before encoding, and the
+  counters are rebuilt from the grid, so neither guard is reachable
+  from a validated save; both are pinned by `UnrulyDescTest` and
+  `UnrulyTest`. A failed solve returns null, because the seam has no
+  error out-parameter; C reports `No solution found.` or `Puzzle is
+  invalid.` instead. The seven presets always solve, so this is the
+  `flip` seam debt and not a deviation.
+
+  `validate_params` accepts `46340x46340`, and the generator's retry
+  loops are unbounded, so a huge accepted area would allocate a
+  2.1-billion-cell grid and mask, more than 10 GB in this port, and run
+  the solver over it. No test calls `newDesc` or `newState` on a huge
+  accepted area; `validateParams` pins both the accepted `46340x46340`
+  boundary and the rejected `65536x65536` side, and the generation
+  tests run with a timeout. That guard is enablement debt, not a
+  deviation (see `TESTING.md`). `KotlinGames.gameFor` knows the
+  Kotlin game, but the app still uses C: the four-field configuration
+  dialog, the preference-dialog skip, the `Fifteen` casts in
+  `KotlinGameEngine`, the huge-area guard, and the two-release wait are
+  open. `currentKeyLabel` is a tested helper because C has no Android
+  call site for it. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 ## 8. Goldens
