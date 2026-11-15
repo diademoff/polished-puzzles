@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, and `filling` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, and `netslide` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -209,7 +209,7 @@ submenu entries when a game groups its presets.
 | `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `C` |
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `C` |
 | `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `C` |
-| `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `C` |
+| `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
 | `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `C` |
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `C` |
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `C` |
@@ -456,6 +456,50 @@ Notes:
   `KotlinGameEngine`, the huge-area guard, the S9 call site for
   `currentKeyLabel`, and the two-release wait are open. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `netslide` is `dual-run`. Its parameters and presets, the `tree234`
+  generator, the before-shuffle barrier candidate list, the shuffle,
+  the stored `AUXINFO` answer, state, loose move grammar, slide
+  arithmetic, pointer bands, cursor ring, `requestKeys`, save file,
+  palette, drawing, layout, and input pass the matrix in
+  `NetslideDescTest`, `NetslideGameTest`, `NetslideSaveTest`,
+  `NetslideInputParityTest`, `NetslideTraceTest`, and the engine
+  `NetslideTest`. `NetslideSaveTest` reads all ten `netslide` corpus
+  saves, rewrites them byte for byte, and compares id, status, undo,
+  redo, text, and `AUXINFO`. It makes C load a Kotlin save for every
+  preset plus wrapping, barrier-rate, move-target, and non-square
+  vectors, and round-trips a row slide, a column slide, the identity
+  `R0,3`, an undone position with a live redo branch, a `SOLVE`, and a
+  `RESTART` in both directions. The `full` split is pinned: the `b`
+  rate stays in `CPARAMS` only, so `PARAMS 3x3` and `CPARAMS 3x3b1`
+  describe the same save and the id has no `b`. The preset strings keep
+  `3x3b1` verbatim, because the short form would drop the rate.
+
+  `NetslideInputParityTest` sends real row and column slides at tiles
+  48, 63, 82, and 100 and at the letterboxed 411x702 viewport (tile 82,
+  origin (0,145)), and checks centre, corner, centre-band, outside, and
+  letterbox clicks as inert. Every real slide changes the board and
+  adds one move and one state; an inert click returns `Unused`, changes
+  neither, and leaves the warm frame unchanged. A drag is not
+  supported: `BackendName.dragMode` is `PREVENT` and `interpret_move`
+  returns `NULL`, so a press, drag, and release makes one move at the
+  press. The cursor ring is walked with `RIGHT`/`LEFT` on the top and
+  bottom rows and `UP`/`DOWN` on the side columns, then a select is
+  compared with the oracle. `requestKeys` is arrow mode 3 with no
+  labels on every preset.
+
+  D-005 rejects a NaN barrier rate with `Barrier probability must be a
+  number` instead of reproducing the C abort at `netslide.c:629`.
+  `validate_params` accepts `46340x46340` and generation then allocates
+  about 17 GB of two `IntArray`s and does not finish, as C does with
+  about 4.3 GB. That guard is enablement debt, not a deviation (see
+  `TESTING.md`). `KotlinGames.gameFor` knows the Kotlin game, but the
+  app still uses C: the five-field configuration dialog, the
+  preference-dialog skip, the `Fifteen` casts in `KotlinGameEngine`,
+  the huge-area guard, and the two-release wait are open. `currentKeyLabel`
+  is a tested helper because C has no Android call site for it. The seam
+  is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 ## 8. Goldens

@@ -148,6 +148,37 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-15
 
+### D-005: Netslide rejects a NaN barrier probability
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** the parameter string `3x3bnan` decodes to
+  `width = 3`, `height = 3`, `barrier_probability = NaN`, and
+  `movetarget = 0`. C `validate_params` (`netslide.c:312-325`) accepts
+  it, because both range tests compare false: `NaN < 0` and `NaN > 1`.
+  `new_game_desc` then evaluates
+  `nbarriers = (int)(params->barrier_probability * count234(barriertree))`
+  at `netslide.c:628`. The cast of NaN to `int` is undefined behavior;
+  on the shipped build it yields `INT_MIN`, so the assertion at
+  `netslide.c:629` fails and C aborts. The Kotlin `validateParams`
+  returns `Barrier probability must be a number` before any generation
+  or allocation. The C `custom_params` field for "Barrier probability"
+  uses `(float)atof` (`netslide.c:308`), which accepts `nan`, so a user
+  can reach this path from the configuration dialog.
+- **Why:** an abort is not acceptable in the app, and the check is
+  deterministic: the same parameter text always gets the same error.
+  No valid parameter set changes its seed, `DESC`, `AUXINFO`, or save
+  text, because a finite rate is untouched.
+- **Test:**
+  `parity/src/test/kotlin/.../NetslideDescTest.kt::a NaN barrier rate is rejected instead of aborting`
+  pins the message, the NaN field, and the `Midend.newGame` rejection.
+  The C abort is not run, because it would kill the oracle process.
+- **Review:** the owner should review this entry before `netslide` is
+  enabled in the app.
+- **Scope:** `netslide`
+- **Upstream:** none known
+- **Date:** 2026-11-15
+
 ## Examples
 
 Allowed:

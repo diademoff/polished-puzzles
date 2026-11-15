@@ -764,6 +764,58 @@ Engine tests:
   out-of-grid cursor must change neither. The `2x2` digit rule is
   compared, so `3` is accepted on `2x2` and rejected on `1x2`.
 
+- `NetslideDescTest` is semantic. It compares the parameter decode and
+  encode quirks, including the short form that drops `b`, the `%g` text
+  for `0.1`, `0.25`, and `0.9999`, and the `strtod` rescan that makes
+  `3x3b1e-1m5` lose its move target. It compares the five validation
+  messages in order, the nine presets with their verbatim `3x3b1` text,
+  and `params + seed -> DESC + AUXINFO` for 24 parameter strings and
+  nine seeds. It pins the aux answer `S15c9d6234`, the generator draw
+  state, and D-005: `3x3bnan` gets `Barrier probability must be a
+  number`, while C accepts the rate and aborts at `netslide.c:629`.
+- `NetslideGameTest` is semantic. It compares new games, text, and
+  status, the loose `sscanf` move grammar including junk, spaces, signs,
+  and leading zeros, the row and column slide arithmetic (`|d| = w` is
+  an identity that still counts, `|d| > 1` is a scramble), the pointer
+  bands at tile 48, the cursor ring with a select at each end, undo and
+  redo with the completion event, a restart, and a solve with and
+  without `AUXINFO`. It also round-trips the corpus save and a save for
+  every preset and extra vector in both directions.
+- `NetslideSaveTest` is strict for the save text. It reads all ten
+  `netslide` saves in the corpus, rewrites them byte for byte, and
+  makes the oracle compare the id, status, undo, redo, text, and
+  `AUXINFO`. A Kotlin save for every preset plus wrapping, barrier-rate,
+  move-target, non-square, and `2x2` vectors loads in C with the same
+  id, canonical text, and `AUXINFO` length. The `full` split is pinned
+  (`PARAMS 3x3`, `CPARAMS 3x3b1`, no `b` in the id), and a row slide, a
+  column slide, the identity `R0,3`, an undone position with a live
+  redo branch, a `SOLVE`, and a `RESTART` are built in memory and
+  round-tripped in both directions. A live Kotlin row-plus-column
+  history, its undo branch, its redo, a solve, and a restart are loaded
+  by C. No `UI`, `PRIVDESC`, or `TIME` record appears.
+- `NetslideTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, cold traces of loaded and moved
+  states, the cursor traces with `RIGHT`, `SELECT`, and `SELECT2`, warm
+  cursor and inert frames (97 operations, no tile, no status, no clear),
+  and sized traces at tiles 48, 63, 82, and 100 and at the letterboxed
+  411x702 viewport. No trace contains a blitter operation.
+- `NetslideInputParityTest` is semantic, with one strict warm frame. It
+  compares the layout at tiles 48, 63, 82, and 100 and at the
+  letterboxed 411x702 viewport with origin (0,145), then sends real row
+  and column slides in all four bands at each view. It checks the
+  centre cell, a frame corner, both centre bands, a pixel past the right
+  edge, and a letterbox click as inert. It also sends a press, drag,
+  and release at tile 63 (one move at the press), a full cursor ring
+  with a select, and `requestKeys` on every preset. A real slide must
+  change the board, add one move, and add one state; an inert click
+  must change neither, must return `Unused`, and must leave the warm
+  drawstate unchanged.
+- `NetslideTest` is the engine test. It pins the deep copy, the slide
+  arithmetic, the loose move grammar, the `S` move, `compute_active`,
+  the corner flags, the five status patterns, the cursor ring, the
+  pointer bands, the cursor-hiding click, `currentKeyLabel`,
+  `cursorLocation`, `computeSize`, the palette, and `formatG`.
+
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in
 Kotlin, while C reports `No solution exists for this position`. The
@@ -824,9 +876,9 @@ state.
   The parity and engine tests pin only the rejected side of the
   boundary. Any app path that validates user input, in particular the
   configuration dialog, needs a guard before `CUBE` is enabled. A guard
-  would reject parameters that C accepts, so it needs a D-005 entry and
-  a test, and it must not change any accepted normal parameter. Until
-  then this is enablement debt, not a deviation.
+  would reject parameters that C accepts, so it needs a new deviation
+  entry and a test, and it must not change any accepted normal
+  parameter. Until then this is enablement debt, not a deviation.
 
 `filling` has two C undefined-behavior decisions, one C solver crash,
 one C solver defect, one deviation, and one enablement debt:
@@ -875,9 +927,29 @@ The first, second, and fourth decisions are port definitions, so
   or `newState` on a huge accepted area; only the rejected
   `46341x46341` boundary is pinned. The configuration dialog needs a
   guard before `FILLING` is enabled. A guard rejects parameters that C
-  accepts, so it needs a D-005 entry and a test, and it must not change
-  any accepted normal parameter. Until then this is enablement debt,
-  not a deviation.
+  accepts, so it needs a new deviation entry and a test, and it must not
+  change any accepted normal parameter. Until then this is enablement
+  debt, not a deviation.
+
+`netslide` has one deviation and one enablement debt:
+
+- D-005: `3x3bnan` passes C `validate_params` because both range tests
+  compare false with NaN. `new_game_desc` then casts NaN to `int` at
+  `netslide.c:628`, which is undefined behavior and fails the assertion
+  at `netslide.c:629`; the shipped build aborts. The port rejects the
+  rate with `Barrier probability must be a number` before generation.
+  `NetslideDescTest` pins the message and `Midend.newGame`; the oracle
+  is not asked to abort.
+- `validate_params` accepts `46340x46340`, because the area check stays
+  `w > INT_MAX / h` as C writes it. Generation then allocates two
+  `IntArray`s of 2,147,395,600 cells, about 17 GB, and does not finish.
+  C has the same accepted boundary and allocates about 4.3 GB. No test
+  calls `newDesc` or `newState` on a huge accepted area; only the
+  rejected `46341x46341` side is pinned. The configuration dialog needs
+  a guard before `NETSLIDE` is enabled. A guard rejects parameters that
+  C accepts, so it needs a new deviation entry and a test, and it must
+  not change any accepted normal parameter. Until then this is
+  enablement debt, not a deviation.
 
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
