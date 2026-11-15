@@ -90,32 +90,49 @@ class FillingGameTest {
 
     @Test
     fun `requested keys match the oracle`() = OracleClient().use { oracle ->
-        val game = oracle.newGame("filling", "9x7", SEED)
-        val expected = oracle.requestKeys(game.state)
-        val actual = Filling.requestKeys(Filling.decodeParams("9x7"))
+        // `filling.c:1302-1325` returns the same eleven buttons for
+        // every preset and does not read the parameters.
+        for (params in listOf("9x7", "13x9", "17x13")) {
+            val game = oracle.newGame("filling", params, SEED)
+            val expected = oracle.requestKeys(game.state)
+            val actual = Filling.requestKeys(Filling.decodeParams(params))
 
-        assertEquals("arrow mode", 3, expected.arrowMode)
-        assertEquals(ArrowMode.ARROWS_LEFT_RIGHT, actual.arrowMode)
-        assertEquals("key count", 11, actual.labels.size)
-        assertEquals(
-            "key labels",
-            expected.labels.map { it.label },
-            actual.labels.map { it.name },
-        )
-        assertEquals(
-            "key buttons",
-            expected.labels.map { it.button },
-            actual.labels.map { it.button },
-        )
-        assertEquals(
-            "needs arrows",
-            expected.labels.map { it.needsArrows },
-            actual.labels.map { it.needsArrows },
-        )
-        assertEquals(
-            listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Clear"),
-            actual.labels.map { it.name },
-        )
+            assertEquals("arrow mode for '$params'", 3, expected.arrowMode)
+            assertEquals(
+                "Kotlin arrow mode for '$params'",
+                ArrowMode.ARROWS_LEFT_RIGHT,
+                actual.arrowMode,
+            )
+            assertEquals("key count for '$params'", 11, actual.labels.size)
+            assertEquals(
+                "key labels for '$params'",
+                expected.labels.map { it.label },
+                actual.labels.map { it.name },
+            )
+            assertEquals(
+                "key buttons for '$params'",
+                expected.labels.map { it.button },
+                actual.labels.map { it.button },
+            )
+            assertEquals(
+                "needs arrows for '$params'",
+                expected.labels.map { it.needsArrows },
+                actual.labels.map { it.needsArrows },
+            )
+            assertEquals(
+                "no key needs arrows for '$params'",
+                List(11) { false },
+                actual.labels.map { it.needsArrows },
+            )
+            assertEquals(
+                listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "Clear"),
+                actual.labels.map { it.name },
+            )
+            assertEquals(
+                listOf(49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 8),
+                actual.labels.map { it.button },
+            )
+        }
     }
 
     @Test

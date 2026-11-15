@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, and `cube` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, and `filling` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -195,7 +195,7 @@ submenu entries when a game groups its presets.
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
-| `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `C` |
+| `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `dual-run` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `dual-run` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `dual-run` |
 | `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `C` |
@@ -396,6 +396,59 @@ Notes:
   skip, the `Fifteen` casts in `KotlinGameEngine`, the huge-area guard,
   and the two-release wait are open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
+- `filling` is `dual-run`. Its parameters, description generator,
+  deduction solver, state, move grammar, completion, status text, save
+  file, palette, drawing, layout, input, and `requestKeys` pass the
+  matrix in `FillingDescTest`, `FillingGameTest`,
+  `FillingInputParityTest`, `FillingTraceTest`, and the engine
+  `FillingTest`. The generator and the solver decide every `DESC`, so
+  `FillingDescTest` compares every preset with four seeds and pins the
+  decode quirks and the wide clue alphabet. `FillingGameTest` compares
+  the move grammar, the solver strings including a stalled board,
+  completion, undo, redo, and a real click plus digit. The four
+  `filling` saves in the corpus are read and rewritten by the generic
+  `SaveParityTest`, and the move-grammar test makes C load a
+  Kotlin-written save for every accepted move. The trace test covers
+  the three frozen traces, a selected cell, the cursor ring, a
+  completed `1x2` board, and sized traces at tiles 48, 63, 82, and 100,
+  plus the letterboxed 411x702 viewport at origin (2,206). A warm frame
+  after a click and after a click plus digit is exactly `start_draw`,
+  `end_draw`.
+
+  The input test sends real clicks and a click plus digit at tiles 48,
+  63, 82, and 100, then repeats the four tiles with a nonzero letterbox
+  origin. It also covers a cursor plus digit, a digit alone, a clear
+  with and without a filled cell, and a letterbox click followed by the
+  cursor-select keys. Every real fill changes the board and adds one
+  move; a selection click, a clear with nothing to clear, and an
+  out-of-grid cursor change neither. `requestKeys` is compared on every
+  preset: arrow mode 3 with `1`..`9`, `0`, and `Clear`, and no key needs
+  arrows.
+
+  Four C defects are release-build behavior, so the port keeps them and
+  pins them in `FillingTest` instead of adding a deviation:
+  `current_key_label` reads `ui->sel` with no NULL test
+  (`filling.c:1450`); an Android letterbox click leaves the cursor
+  outside the grid and the cursor-select paths index the clue and
+  selection arrays without a bounds test (`filling.c:1449`,
+  `1503-1508`, `1531-1532`, `1545-1546`); the solver asserts on an
+  overfull 1-region (`filling.c:796`); and a stalled solve returns a
+  partial board while C sets an error the midend ignores
+  (`filling.c:1378-1390`). The port treats a null selection as "not
+  selected", an out-of-grid cursor as "no cell", skips the overfull
+  region, and returns the partial board. The C oracle cannot be asked
+  for the first three paths, so they are pinned in the engine test; the
+  partial solve is compared with the oracle.
+
+  `validate_params` accepts `46340x46340`, and generation then
+  allocates about 8.6 GB of boards and hangs, as C does. That guard is
+  enablement debt, not a deviation (see `TESTING.md`). `KotlinGames.gameFor`
+  knows the Kotlin game, but the app still uses C: the configuration
+  schema, the preference-dialog skip, the `Fifteen` casts in
+  `KotlinGameEngine`, the huge-area guard, the S9 call site for
+  `currentKeyLabel`, and the two-release wait are open. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 ## 8. Goldens
 

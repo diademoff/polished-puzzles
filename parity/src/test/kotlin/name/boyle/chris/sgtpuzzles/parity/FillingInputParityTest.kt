@@ -7,6 +7,8 @@ import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SaveRecord
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -14,8 +16,16 @@ import java.io.File
  * Level: semantic. Game: filling.
  *
  * Layout, real pointer clicks at several tile sizes, a drag selection,
- * the cursor-only fill, and the `w == h == 2` digit rule are compared
+ * the cursor-only fill, the digit-only key, the clear key, the
+ * out-of-grid cursor, and the `w == h == 2` digit rule are compared
  * with the oracle. Drawing and input use one geometry.
+ *
+ * Real clicks, click and digit, cursor and digit, digit alone, clear,
+ * and the out-of-grid cursor run at tiles 48, 63, 82, and 100. Each
+ * tile also has a letterboxed viewport with a nonzero origin. A real
+ * fill must change the board and add one move; a selection click, a
+ * clear with nothing to clear, and an out-of-grid cursor must change
+ * neither.
  */
 class FillingInputParityTest {
 
@@ -69,7 +79,8 @@ class FillingInputParityTest {
                 val where = "${case.label} at ($viewX,$viewY) tile $tile origin " +
                     "(${geometry.originX},${geometry.originY})"
 
-                val before = SgtpSave.parse(midend.serialise().serialise()).values("MOVE").size
+                val startSave = midend.serialise().serialise()
+                val before = state.board.copyOf()
                 val expected = oracle.pointsSized(
                     start.state,
                     listOf(
@@ -86,6 +97,14 @@ class FillingInputParityTest {
                     KeyOutcome.SomeEffect,
                     midend.processKey(gameX, gameY, Buttons.LEFT_BUTTON, tile),
                 )
+                assertTrue(
+                    "a click leaves the board alone $where",
+                    before.contentEquals((midend.state as Filling.State).board),
+                )
+                assertEquals("a click keeps the save $where", startSave,
+                    midend.serialise().serialise())
+                assertEquals("a click adds no state $where", 1, midend.stateCount)
+
                 assertEquals(
                     "outcome $where",
                     KeyOutcome.SomeEffect,
@@ -93,7 +112,7 @@ class FillingInputParityTest {
                 )
 
                 val moves = SgtpSave.parse(midend.serialise().serialise()).values("MOVE")
-                assertEquals("one move $where", before + 1, moves.size)
+                assertEquals("one move $where", 1, moves.size)
                 assertEquals(
                     "the move names the clicked cell $where",
                     "${cy * state.width + cx}_5",
@@ -102,6 +121,13 @@ class FillingInputParityTest {
                 assertEquals("save $where", expected.state.state,
                     midend.serialise().serialise())
                 assertEquals("status $where", expected.state.status, midend.status())
+                val after = (midend.state as Filling.State).board
+                assertNotEquals(
+                    "a real fill changes the board $where",
+                    before.toList(),
+                    after.toList(),
+                )
+                assertEquals("a real fill adds one state $where", 2, midend.stateCount)
                 assertTrace(
                     "drawing $where",
                     expected.trace,
@@ -195,6 +221,268 @@ class FillingInputParityTest {
     }
 
     @Test
+    fun `a cursor fill, a digit alone, a clear, and an out-of-grid cursor at four tiles`() =
+        OracleClient().use { oracle ->
+            val clickSave = oracle.newGame("filling", "13x9", SEED).state
+            val cursorSave = oracle.newGame("filling", "9x7", SEED).state
+
+            for (case in letterboxViews) {
+                val label = "${case.label} at ${case.width}x${case.height}"
+                val tile = case.tile
+
+                // Cursor and digit. A fresh midend hides the cursor at
+                // (0,0). The left key shows it and clamps it there, and
+                // the digit fills the empty first cell.
+                val cursorExpected = oracle.keys(
+                    cursorSave,
+                    listOf(Buttons.CURSOR_LEFT, '5'.code),
+                )
+                val cursor = Midend.fromSave(Filling, SgtpSave.parse(cursorSave))
+                assertEquals(
+                    "$label cursor key outcome",
+                    KeyOutcome.SomeEffect,
+                    cursor.processKey(0, 0, Buttons.CURSOR_LEFT, tile),
+                )
+                assertEquals(
+                    "$label cursor key alone keeps the save",
+                    cursorSave,
+                    cursor.serialise().serialise(),
+                )
+                assertEquals(
+                    "$label cursor digit outcome",
+                    KeyOutcome.SomeEffect,
+                    cursor.processKey(0, 0, '5'.code, tile),
+                )
+                assertEquals(
+                    "$label cursor fill save",
+                    cursorExpected.state,
+                    cursor.serialise().serialise(),
+                )
+                assertEquals(
+                    "$label cursor fill move",
+                    listOf("0_5"),
+                    SgtpSave.parse(cursor.serialise().serialise()).values("MOVE"),
+                )
+                assertEquals("$label cursor fill adds one state", 2, cursor.stateCount)
+                assertNotEquals(
+                    "$label cursor fill changes the board",
+                    0,
+                    (cursor.state as Filling.State).board[0],
+                )
+
+                // The click, digit, and clear cases use one empty cell
+                // of the 13x9 default board.
+                val probe = Midend.fromSave(Filling, SgtpSave.parse(clickSave))
+                val geometry = probe.geometryFor(case.width, case.height)
+                assertEquals("tile $label", tile, geometry.tileSize)
+                assertTrue(
+                    "$label must have a nonzero letterbox origin",
+                    geometry.originX > 0 && geometry.originY > 0,
+                )
+                val state = probe.state as Filling.State
+                val (cx, cy) = firstEmptyCell(state)
+                val cell = cy * state.width + cx
+                val gameX = cx * tile + tile / 2
+                val gameY = cy * tile + tile / 2
+                val viewX = geometry.originX + gameX
+                val viewY = geometry.originY + gameY
+                val board = state.board.copyOf()
+
+                // A real click only selects: no state, no move, no board.
+                val clickExpected = oracle.pointsSized(
+                    clickSave,
+                    listOf(OracleClient.Point(viewX, viewY, Buttons.LEFT_BUTTON)),
+                    case.width,
+                    case.height,
+                )
+                assertEquals("$label click keeps C's save", clickSave,
+                    clickExpected.state.state)
+                assertEquals(
+                    "$label click outcome",
+                    KeyOutcome.SomeEffect,
+                    probe.processKey(gameX, gameY, Buttons.LEFT_BUTTON, tile),
+                )
+                assertEquals("$label click adds no state", 1, probe.stateCount)
+                assertEquals("$label click keeps the save", clickSave,
+                    probe.serialise().serialise())
+                assertTrue(
+                    "$label click keeps the board",
+                    board.contentEquals((probe.state as Filling.State).board),
+                )
+
+                // A digit with no selection and a hidden cursor does
+                // nothing.
+                val digit = Midend.fromSave(Filling, SgtpSave.parse(clickSave))
+                val digitExpected = oracle.pointsSized(
+                    clickSave,
+                    listOf(OracleClient.Point(viewX, viewY, '5'.code)),
+                    case.width,
+                    case.height,
+                )
+                assertEquals("$label digit keeps C's save", clickSave,
+                    digitExpected.state.state)
+                assertEquals(
+                    "$label digit outcome",
+                    KeyOutcome.NoEffect,
+                    digit.processKey(gameX, gameY, '5'.code, tile),
+                )
+                assertEquals("$label digit adds no state", 1, digit.stateCount)
+                assertEquals("$label digit keeps the save", clickSave,
+                    digit.serialise().serialise())
+                assertTrue(
+                    "$label digit keeps the board",
+                    board.contentEquals((digit.state as Filling.State).board),
+                )
+
+                // A clear with a selection but an empty cell clears the
+                // selection and adds no move.
+                val clear = Midend.fromSave(Filling, SgtpSave.parse(clickSave))
+                val clearExpected = oracle.pointsSized(
+                    clickSave,
+                    listOf(
+                        OracleClient.Point(viewX, viewY, Buttons.LEFT_BUTTON),
+                        OracleClient.Point(viewX, viewY, '\b'.code),
+                    ),
+                    case.width,
+                    case.height,
+                )
+                assertEquals("$label clear keeps C's save", clickSave,
+                    clearExpected.state.state)
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    clear.processKey(gameX, gameY, Buttons.LEFT_BUTTON, tile),
+                )
+                assertEquals(
+                    "$label clear outcome",
+                    KeyOutcome.SomeEffect,
+                    clear.processKey(gameX, gameY, '\b'.code, tile),
+                )
+                assertEquals("$label clear adds no state", 1, clear.stateCount)
+                assertEquals("$label clear keeps the save", clickSave,
+                    clear.serialise().serialise())
+
+                // A clear on a filled cell is a real move: the board
+                // changes and one state is added.
+                val fillAndClear = Midend.fromSave(Filling, SgtpSave.parse(clickSave))
+                val fillClearExpected = oracle.pointsSized(
+                    clickSave,
+                    listOf(
+                        OracleClient.Point(viewX, viewY, Buttons.LEFT_BUTTON),
+                        OracleClient.Point(viewX, viewY, '5'.code),
+                        OracleClient.Point(viewX, viewY, Buttons.LEFT_BUTTON),
+                        OracleClient.Point(viewX, viewY, '\b'.code),
+                    ),
+                    case.width,
+                    case.height,
+                )
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    fillAndClear.processKey(gameX, gameY, Buttons.LEFT_BUTTON, tile),
+                )
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    fillAndClear.processKey(gameX, gameY, '5'.code, tile),
+                )
+                assertEquals(
+                    "$label clear fills the cell",
+                    5,
+                    (fillAndClear.state as Filling.State).board[cell],
+                )
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    fillAndClear.processKey(gameX, gameY, Buttons.LEFT_BUTTON, tile),
+                )
+                assertEquals(
+                    "$label clear filled outcome",
+                    KeyOutcome.SomeEffect,
+                    fillAndClear.processKey(gameX, gameY, '\b'.code, tile),
+                )
+                assertEquals(
+                    "$label clear filled save",
+                    fillClearExpected.state.state,
+                    fillAndClear.serialise().serialise(),
+                )
+                assertEquals(
+                    "$label fill and clear move",
+                    listOf("${cell}_5", "${cell}_0"),
+                    SgtpSave.parse(fillAndClear.serialise().serialise()).values("MOVE"),
+                )
+                assertEquals(
+                    "$label fill and clear adds two states",
+                    3,
+                    fillAndClear.stateCount,
+                )
+                assertEquals(
+                    "$label clear restores the empty cell",
+                    0,
+                    (fillAndClear.state as Filling.State).board[cell],
+                )
+
+                // The letterbox click moves the cursor outside the grid
+                // but changes nothing. The C result can be compared
+                // here: the click does not read the clue board.
+                val outside = Midend.fromSave(Filling, SgtpSave.parse(clickSave))
+                val letterboxExpected = oracle.pointsSized(
+                    clickSave,
+                    listOf(OracleClient.Point(0, 0, Buttons.LEFT_BUTTON)),
+                    case.width,
+                    case.height,
+                )
+                assertEquals("$label letterbox keeps C's save", clickSave,
+                    letterboxExpected.state.state)
+                assertEquals(
+                    "$label letterbox outcome",
+                    KeyOutcome.SomeEffect,
+                    outside.processKey(
+                        -geometry.originX,
+                        -geometry.originY,
+                        Buttons.LEFT_BUTTON,
+                        tile,
+                    ),
+                )
+                assertEquals("$label letterbox adds no state", 1, outside.stateCount)
+                assertEquals("$label letterbox keeps the save", clickSave,
+                    outside.serialise().serialise())
+                val outsideUi = outside.ui as Filling.Ui
+                assertTrue(
+                    "$label letterbox cursor is outside the grid",
+                    outsideUi.curX < 0 || outsideUi.curX >= state.width ||
+                        outsideUi.curY < 0 || outsideUi.curY >= state.height,
+                )
+
+                // C indexes `clues[w*cur_y+cur_x]` in the cursor-select
+                // paths without a bounds test, so the out-of-grid guard
+                // is pinned here and not compared with the oracle.
+                val outX = -geometry.originX
+                val outY = -geometry.originY
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    outside.processKey(outX, outY, Buttons.CURSOR_SELECT, tile),
+                )
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    outside.processKey(outX, outY, Buttons.CURSOR_SELECT, tile),
+                )
+                assertEquals(
+                    KeyOutcome.SomeEffect,
+                    outside.processKey(outX, outY, Buttons.CURSOR_SELECT2, tile),
+                )
+                assertEquals(
+                    "$label out-of-grid digit outcome",
+                    KeyOutcome.NoEffect,
+                    outside.processKey(outX, outY, '5'.code, tile),
+                )
+                assertEquals("$label out-of-grid adds no state", 1, outside.stateCount)
+                assertEquals("$label out-of-grid keeps the save", clickSave,
+                    outside.serialise().serialise())
+                assertTrue(
+                    "$label out-of-grid keeps the board",
+                    board.contentEquals((outside.state as Filling.State).board),
+                )
+            }
+        }
+
+    @Test
     fun `the two by two digit rule matches the oracle`() = OracleClient().use { oracle ->
         // On `2x2`, the digit 3 is allowed even though `max(w, h)` is 2.
         val square = saveText("2x2", "3aaa")
@@ -273,6 +561,16 @@ class FillingInputParityTest {
         val tile: Int,
     )
 
+    private val letterboxViews = listOf(
+        // The exact board is 14 x 10 tiles; each viewport is a few
+        // pixels larger in both directions but too small for the next
+        // tile size, so the tile stays fixed and the origin is nonzero.
+        Viewport("tile48-letterbox", "13x9", 680, 520, 48),
+        Viewport("tile63-letterbox", "13x9", 890, 650, 63),
+        Viewport("tile82-letterbox", "13x9", 1155, 840, 82),
+        Viewport("tile100-letterbox", "13x9", 1410, 1020, 100),
+    )
+
     private val viewports = listOf(
         Viewport("phone", "13x9", 411, 702, 29),
         Viewport("tablet", "13x9", 720, 1280, 51),
@@ -283,7 +581,7 @@ class FillingInputParityTest {
         Viewport("tile100", "13x9", 1400, 1000, 100),
         Viewport("phone-9x7", "9x7", 411, 702, 41),
         Viewport("tile60-9x7", "9x7", 672, 480, 60),
-    )
+    ) + letterboxViews
 
     private fun saveText(params: String, desc: String): String {
         val records = arrayListOf(

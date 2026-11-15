@@ -2,6 +2,7 @@ package name.boyle.chris.sgtpuzzles.backend
 
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
 import name.boyle.chris.sgtpuzzles.engine.Cube
+import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
@@ -88,6 +89,12 @@ class KotlinGamesTest {
     fun `cube is registered but the app still uses C`() {
         assertEquals(Cube, KotlinGames.gameFor(CUBE))
         assertFalse(KotlinGames.handles(CUBE))
+    }
+
+    @Test
+    fun `filling is registered but the app still uses C`() {
+        assertEquals(Filling, KotlinGames.gameFor(FILLING))
+        assertFalse(KotlinGames.handles(FILLING))
     }
 
     @Test

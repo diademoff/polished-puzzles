@@ -720,6 +720,39 @@ Engine tests:
   neither the board nor the count. `requestKeys` is arrow mode 1 with no
   labels.
 
+- `FillingDescTest` is semantic. It compares the three presets, the
+  default, the `decode_params` quirks (`13`, ` 13x9`, `+13x9`, `13X9`,
+  `13x 9`, `13x+9`), the three validation messages and their order, and
+  `params + seed -> DESC` for every preset with the golden seed and
+  additional seeds. It pins the accepted wide clue alphabet (`:` is 10
+  for `13x9`, `?` is 15 and `A` is 17 for `17x13`) and the run
+  arithmetic `z` = 26, `za` = 27, `zz` = 52. It pins only the rejected
+  side of the area boundary; no test generates a huge accepted area.
+- `FillingGameTest` is semantic. It compares new games, text, and
+  status; the `strtol` base-0 move grammar including octal, hex, 32-bit
+  wrap, white space, and a sign; the solver strings for every preset, a
+  stalled `5x5:y` board, small deduction fixtures, and an `AUXINFO`
+  answer; completion, undo, and redo; a real click plus digit; and the
+  warm click and click-plus-digit frames. `requestKeys` is compared on
+  every preset, including the `1`..`9`, `0`, and `Clear` labels and
+  `needsArrows`.
+- `FillingTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus a selected cell, the cursor
+  ring, a completed `1x2` board, and sized traces at tiles 48, 63, 82,
+  and 100 and at the letterboxed 411x702 viewport (tile 29, origin
+  (2,206)). It also asserts that the cold trace of every preset carries
+  no status line.
+- `FillingInputParityTest` is semantic. It compares the layout for
+  thirteen viewports, then sends real clicks and a click plus digit at
+  tiles 48, 63, 82, and 100. A second set of the four tiles uses a
+  letterboxed viewport with a nonzero origin. It covers a drag
+  selection, a cursor plus digit, a digit alone, a clear with nothing
+  to clear, a clear on a filled cell, and a letterbox click followed by
+  the cursor-select keys. A real fill must change the board and add one
+  move; a selection click, a clear with nothing to clear, and an
+  out-of-grid cursor must change neither. The `2x2` digit rule is
+  compared, so `3` is accepted on `2x2` and rejected on `1x2`.
+
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in
 Kotlin, while C reports `No solution exists for this position`. The
@@ -783,6 +816,54 @@ state.
   would reject parameters that C accepts, so it needs a D-004 entry and
   a test, and it must not change any accepted normal parameter. Until
   then this is enablement debt, not a deviation.
+
+`filling` has three C undefined-behavior decisions, one C solver
+defect, and one enablement debt, and no deviation:
+
+- `current_key_label` reads `ui->sel` with no NULL test
+  (`filling.c:1450`). A fresh UI has `sel == NULL`, so a key label over
+  a non-clue cell dereferences NULL. The port treats a null selection as
+  "not selected" and returns `Select`. `FillingTest` pins it.
+- An Android letterbox click sets `cur_x` and `cur_y` from the raw cell
+  formula, even outside the board (`filling.c:1503-1508`), and the
+  cursor-select paths index `clues[w*cur_y+cur_x]` and
+  `sel[w*cur_y+cur_x]` without a bounds test (`filling.c:1449`,
+  `1531-1532`, `1545-1546`). The port treats an out-of-grid cursor as
+  "no cell": nothing is selected, toggled, or filled, and no read or
+  write leaves the array. `FillingTest` pins the cursor and selection
+  state at the preferred tile; `FillingInputParityTest` pins the same
+  result at tiles 48, 63, 82, and 100. The C oracle is not asked for
+  the cursor-select paths, because it reads out of bounds; the letterbox
+  click itself is compared, because it does not read the clue board.
+- The solver asserts on an overfull region of 1s
+  (`assert(s->board[i] != 1)`, `filling.c:796`), which two adjacent 1
+  clues or two player-filled 1s can produce. The release build skips
+  the region. The port takes the release path and still returns a
+  board. `FillingTest` pins `2x2:1a1a` as `s1212`. A debug oracle
+  aborts on that fixture, so the case is not compared.
+- A stalled solve still returns the best partial board while C sets
+  `Sorry, I couldn't find a solution` and the midend ignores the error
+  (`filling.c:1378-1390`, `midend.c:2113-2117`). C applies the partial
+  board. The port returns the same partial board, so Kotlin also applies
+  it and `Midend.solve` returns true. The status stays 0 and `cheated`
+  is set. `FillingTest` and `FillingGameTest` pin the `5x5:y` answer
+  `s` plus 25 zeros; a port that returned `null` would differ. This is
+  C behavior, not a game-rule change.
+
+None of these four behavior decisions is a deviation, so
+`DEVIATIONS.md` is unchanged.
+
+`filling` has one enablement debt:
+
+- `validate_params` accepts `46340x46340`, because the area check stays
+  `w > INT_MAX / h` as C writes it. Generation then allocates about
+  8.6 GB of `int` boards and does not finish. No test calls `newDesc`
+  or `newState` on a huge accepted area; only the rejected
+  `46341x46341` boundary is pinned. The configuration dialog needs a
+  guard before `FILLING` is enabled. A guard rejects parameters that C
+  accepts, so it needs a D-004 entry and a test, and it must not change
+  any accepted normal parameter. Until then this is enablement debt,
+  not a deviation.
 
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
