@@ -26,6 +26,7 @@ import org.junit.Test
  * - `filling.c:2178`: `"Filling", "games.filling", "filling"`
  * - `netslide.c:1861`: `"Netslide", "games.netslide", "netslide"`
  * - `unruly.c:2034`: `"Unruly", "games.unruly", "unruly"`
+ * - `range.c:1855`: `"Range", "games.range", "range"`
  *
  * The oracle is not available to app unit tests, so the expected value
  * is the third field of these initializers. `HelpActivity` accepts only
@@ -50,6 +51,7 @@ class HelpTopicTest {
         FILLING to "filling",
         NETSLIDE to "netslide",
         UNRULY to "unruly",
+        RANGE to "range",
     )
 
     @Test

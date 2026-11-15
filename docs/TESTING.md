@@ -887,6 +887,68 @@ Engine tests:
   initial grid, `currentKeyLabel`, `cursorLocation`, `computeSize`,
   the palette, the drawstate cache, the error frames, and the
   encoder and unique-pair guards.
+- `RangeDescTest` is semantic. It compares the four presets with the
+  oracle titles and `params`, the `signed char` decode (`300x6` is
+  `44x6`, `+9x6` and `9X6` are `9x9`, `9x6x7` is `9x6`, `128` is
+  `-128`, and `65536x65536` is `0x0`), the five validation messages in
+  C order including the accepted `64x64` and `127x1` boundaries, the
+  run alphabet, the five frozen golden entries, and
+  `params + seed -> DESC` for every preset with nine seed strings and
+  a numeric sweep. It pins the retry seeds `3x3` seed 3 and `3x5`
+  seed 2, and it checks that `newDesc` never writes aux info.
+- `RangeGameTest` is semantic. It compares new games, text, and status
+  for the default and four presets, the `1x3` game-id text, the
+  `sscanf("%c,%d,%d")` move grammar including spaces, signs, leading
+  zeros, 32-bit wrap, and the rejected forms, a clue overwritten by a
+  move, the black-set-only win with and without dots, the sticky
+  status, `changedState`, undo and redo across a completion, every
+  preset's `SOLVE`, the `S` answer of an already solved first state,
+  the hint on a fresh, a moved, and a full board, and the keys. The
+  solve reads the decoded initial grid, so a click that contradicts
+  the answer leaves the `SOLVE` record unchanged; the test pins that
+  case. `requestKeys` is arrow mode 3 with no labels on every preset.
+- `RangeSaveTest` is strict for the save text. It reads all five
+  `range` saves in the corpus, rewrites them byte for byte, and makes
+  the oracle compare id, status, undo, redo, and text. `PARAMS` and
+  `CPARAMS` are equal, the record order is pinned, and `default.sgtp`
+  equals `9x6.sgtp` because the default params are `9x6`. A Kotlin
+  save for every preset loads in C with the same id and text. A played
+  click, an undone position with a live redo branch, a `SOLVE`, a
+  `RESTART`, and a `MOVE` that starts with `S` are built in memory and
+  round-tripped in both directions; a live click, solve, and restart
+  write the oracle text. A hand-written `AUXINFO` record round-trips
+  and is ignored by the solve, and the trailing comma and the
+  signed-char parameter id round-trip. No `UI` record appears.
+- `RangeTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, one outline plus a fill and an
+  update per cell, a cursor trace, a moved board, the error marks of
+  adjacent blacks, a small or a big clue, and a split board, the warm
+  path after a real click and after a border click, a cursor on a
+  black cell, sized traces at tiles 48, 63, 82, and 100, a 411x702
+  letterbox, and the lowlight derived from a second background. No
+  trace contains a blitter, a line, a circle, or a status line.
+- `RangeInputParityTest` is semantic. It compares the layout of every
+  preset at the four exact tile sizes and the 411x702, 720x1280,
+  1024x600, and 200x200 viewports, then sends real clicks at tiles 48,
+  63, 82, and 100 and at the 411x702 letterbox of every preset, where
+  at least one origin is nonzero (the `9x6` board has origin (0,207)
+  at tile 41). Each click of the left cycle (`B`, `W`, `E`) and the
+  right cycle (`W`, `B`, `E`) must change the cell, add one `MOVE`,
+  and add one state. A clue click with each button, a border or
+  letterbox click, a lone drag, and a lone release return `Unused` and
+  change neither the grid nor the history. It also covers the
+  press, drag, and release (one move at the press), a click followed
+  by two cursor keys and a select, the arrow ring, the shift paint
+  (including the both-cells-non-empty update), `CTRL`+arrow, a keypad
+  digit, and `requestKeys` on every preset. The `Mouse button order`
+  preference is pinned on the engine side, because the oracle's
+  `pointsSized` cannot apply a preference.
+- `RangeTest` is the engine test. It pins the frozen `9x6` solve
+  string, the two C undefined-behavior guards, the sticky completion,
+  copy and equality, the generator attempt count, a grid that does
+  not match its params, the stored description tail, and
+  `currentKeyLabel`. The output-order regression on a stalled board is
+  the frozen `4x4:1o` answer `SB,1,0B,0,1W,1,1W,0,2W,2,0`.
 
 `unruly` has two C undefined-behavior guards, one seam decision, and
 two enablement debts:
@@ -928,6 +990,59 @@ two enablement debts:
   "too easy" test fail forever. The generation tests run with a
   timeout; no production guard is added, because a bound would change
   the seed stream.
+
+`range` has two C undefined-behavior guards, one seam decision, and
+one enablement debt:
+
+- The connectedness reasoning finds its DFS root with
+  `for (i = 0; i < n && grid[i] == BLACK; ++i);` and then writes
+  `dfs_parent[i]` and `dfs_depth[i]` (`range.c:465-471`). On an
+  all-black board `i == n`, so both writes are outside the arrays. A
+  player can paint every cell black with clicks and then press `h`, so
+  the path is reachable. The port treats "no non-black cell" as "no
+  moves"; `RangeTest` pins the empty answer and that `h` returns
+  `Unused`. The shipped C build keeps assertions, so the oracle cannot
+  be asked.
+- The recursion reasoning appends moves made on duplicated states to
+  the caller's buffer, including moves from a branch that later
+  contradicts (`range.c:605-638`). Both callers size that buffer at
+  `n` (`range.c:322`, `1426-1427`), so C can write past it on a board
+  that the non-recursive techniques cannot crack. The port keeps the
+  moves in a growable list, rolls back a rejected branch, and repeats
+  the outer pass only while the player's state changed, which leaves
+  every C-defined answer unchanged. `RangeTest` pins the stalled
+  `4x4:1o` answer `SB,1,0B,0,1W,1,1W,0,2W,2,0`, and `RangeGameTest`
+  covers the hint and the solve on the same shape. The oracle hangs on
+  that board, so the answer is a port definition, not a comparison.
+  Neither guard is a deviation, and `DEVIATIONS.md` is unchanged.
+- `solve_game` reads `states[0]` in C (`midend.c:2109`), while the
+  Kotlin seam passes the current state. `Range` keeps the decoded
+  initial grid in `Shared` and solves that, so a move does not change
+  the `SOLVE` record. `RangeGameTest` plays a click that contradicts
+  the answer and pins that the record still matches C. This is a seam
+  decision, not a game-rule change.
+- The parameters are two `signed char` fields (`range.c:92`), so
+  `decode_params` truncates and the `atoi` quirks are part of the
+  format: `300x6` is `44x6`, `+9x6` and `9X6` are `9x9`, and `9x` is
+  rejected. `RangeDescTest` pins each quirk against the oracle. The
+  `w + h <= 128` validation bound caps the board at `64x64`, so unlike
+  `unruly`, `filling`, and `netslide`, no huge-area guard is needed.
+- The `Mouse button order` preference (`left-mouse-button=fill|dot`)
+  lives on `Range.Ui.swapButtons` with a false default, because the
+  seam has no preference hook. The app adapter must parse the value
+  and set `swapButtons` after `newUi` and after `Midend.fromSave`,
+  because `range.c` has no `decodeUi` and a load recreates the UI. The
+  value must reach the live `Ui`, not only the stored text; the shell
+  already reloads prefs when `preferencesName` changes. The oracle's
+  `pointsSized` and `traceWarm` have no `prefs` field, so a swapped
+  click cannot be compared with C yet; `RangeInputParityTest` pins the
+  rule on the engine side against `range.c:1368-1375` (a left press
+  cycles forwards and a right press backwards, and a select key is not
+  swapped). A `prefs` field on `pointsSized` is needed before that
+  click can be C-compared. Until then this is enablement debt, not a
+  deviation.
+- `currentKeyLabel` is a tested helper because C has no Android call
+  site yet (seam item S9).
 
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in

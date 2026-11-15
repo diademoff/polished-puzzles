@@ -91,15 +91,41 @@ class RangeInputParityTest {
                     board.width,
                     board.height,
                 )
-                play(midend, left, tile)
+                // Play the cycle one click at a time. Every click is a
+                // real move: it changes the cell, adds one MOVE, and
+                // adds one state.
+                val leftValues = listOf(Range.BLACK, Range.WHITE, Range.EMPTY)
+                val leftMoves = listOf("B,0,2", "W,0,2", "E,0,2")
+                for (i in leftValues.indices) {
+                    val before = midend.serialise().serialise()
+                    assertEquals(
+                        "left click ${i + 1} $where",
+                        KeyOutcome.SomeEffect,
+                        midend.processKey(x, y, Buttons.LEFT_BUTTON, tile),
+                    )
+                    assertEquals(
+                        "left click ${i + 1} grid $where",
+                        leftValues[i],
+                        (midend.state as Range.State).grid[2],
+                    )
+                    assertNotEquals(
+                        "left click ${i + 1} save $where",
+                        before,
+                        midend.serialise().serialise(),
+                    )
+                    assertEquals(
+                        "left click ${i + 1} moves $where",
+                        leftMoves.subList(0, i + 1),
+                        SgtpSave.parse(midend.serialise().serialise()).values("MOVE"),
+                    )
+                    assertEquals(
+                        "left click ${i + 1} states $where",
+                        2 + i,
+                        midend.stateCount,
+                    )
+                }
                 assertEquals("left cycle $where", expectedLeft.state.state,
                     midend.serialise().serialise())
-                assertEquals(
-                    "left cycle moves $where",
-                    listOf("B,0,2", "W,0,2", "E,0,2"),
-                    SgtpSave.parse(midend.serialise().serialise()).values("MOVE"),
-                )
-                assertEquals("three moves add three states $where", 4, midend.stateCount)
 
                 val rightMidend = Midend.fromSave(Range, SgtpSave.parse(start.state))
                 val right = listOf(
@@ -113,17 +139,41 @@ class RangeInputParityTest {
                     board.width,
                     board.height,
                 )
-                play(rightMidend, right, tile)
+                val rightValues = listOf(Range.WHITE, Range.BLACK, Range.EMPTY)
+                val rightMoves = listOf("W,0,2", "B,0,2", "E,0,2")
+                for (i in rightValues.indices) {
+                    val before = rightMidend.serialise().serialise()
+                    assertEquals(
+                        "right click ${i + 1} $where",
+                        KeyOutcome.SomeEffect,
+                        rightMidend.processKey(x, y, Buttons.RIGHT_BUTTON, tile),
+                    )
+                    assertEquals(
+                        "right click ${i + 1} grid $where",
+                        rightValues[i],
+                        (rightMidend.state as Range.State).grid[2],
+                    )
+                    assertNotEquals(
+                        "right click ${i + 1} save $where",
+                        before,
+                        rightMidend.serialise().serialise(),
+                    )
+                    assertEquals(
+                        "right click ${i + 1} moves $where",
+                        rightMoves.subList(0, i + 1),
+                        SgtpSave.parse(rightMidend.serialise().serialise()).values("MOVE"),
+                    )
+                    assertEquals(
+                        "right click ${i + 1} states $where",
+                        2 + i,
+                        rightMidend.stateCount,
+                    )
+                }
                 assertEquals("right cycle $where", expectedRight.state.state,
                     rightMidend.serialise().serialise())
-                assertEquals(
-                    "right cycle moves $where",
-                    listOf("W,0,2", "B,0,2", "E,0,2"),
-                    SgtpSave.parse(rightMidend.serialise().serialise()).values("MOVE"),
-                )
 
-                // Vacuity guard: a real click changes the grid and the
-                // move count, the next click changes both again.
+                // Vacuity guard: a fourth left click starts the cycle
+                // again and adds one more state.
                 val before = midend.serialise().serialise()
                 assertEquals(
                     KeyOutcome.SomeEffect,
@@ -160,6 +210,7 @@ class RangeInputParityTest {
                 336,
             )
             val midend = Midend.fromSave(Range, SgtpSave.parse(save))
+            val gridBefore = (midend.state as Range.State).grid.copyOf()
             val outcome = midend.processKey(x, y, button, 48)
             val inCell = x == 120 && (y == 24 || y == 71 || y == 72)
             assertEquals("($x,$y) outcome", inCell, outcome == KeyOutcome.SomeEffect)
@@ -167,8 +218,14 @@ class RangeInputParityTest {
             assertEquals("($x,$y) C save", expected.state.state,
                 midend.serialise().serialise())
 
-            // Vacuity guard: the two in-cell clicks change the grid,
+            // Vacuity guard: the three in-cell clicks change the grid,
             // every other band changes neither the grid nor the history.
+            val gridAfter = (midend.state as Range.State).grid
+            if (inCell) {
+                assertTrue("($x,$y) changes the grid", !gridBefore.contentEquals(gridAfter))
+            } else {
+                assertTrue("($x,$y) keeps the grid", gridBefore.contentEquals(gridAfter))
+            }
             assertEquals(
                 "($x,$y) clue or border",
                 if (inCell) 1 else 0,
@@ -176,20 +233,43 @@ class RangeInputParityTest {
             )
         }
 
-        // A clue click with each button, and a middle click on an empty
-        // cell: no move, but the cursor moves and the ring hides.
+        // A clue click with each button: no move, but the cursor moves
+        // and the ring hides.
         val tile = 32
         val clueMidend = Midend.fromSave(Range, SgtpSave.parse(save))
         val ui = clueMidend.ui as Range.Ui
         ui.cursorShow = true
         for (button in listOf(Buttons.LEFT_BUTTON, Buttons.RIGHT_BUTTON, Buttons.MIDDLE_BUTTON)) {
+            val gridBefore = (clueMidend.state as Range.State).grid.copyOf()
             val outcome = clueMidend.processKey(24, 24, button, tile)
             assertEquals("clue click $button", KeyOutcome.Unused, outcome)
             assertEquals("clue click $button state", 1, clueMidend.stateCount)
+            assertTrue(
+                "clue click $button keeps the grid",
+                gridBefore.contentEquals((clueMidend.state as Range.State).grid),
+            )
             assertEquals("clue click $button cursor", "0,0", "${ui.r},${ui.c}")
             assertEquals("clue click $button hides the ring", false, ui.cursorShow)
             ui.cursorShow = true
         }
+
+        // A middle click on an empty cell is also a no-move, and it
+        // moves the cursor and hides the ring.
+        val middle = Midend.fromSave(Range, SgtpSave.parse(save))
+        val middleUi = middle.ui as Range.Ui
+        middleUi.cursorShow = true
+        val middleGrid = (middle.state as Range.State).grid.copyOf()
+        assertEquals(
+            KeyOutcome.Unused,
+            middle.processKey(96, 32, Buttons.MIDDLE_BUTTON, tile),
+        )
+        assertEquals("a middle click adds no state", 1, middle.stateCount)
+        assertEquals("a middle click moves the cursor", "0,2", "${middleUi.r},${middleUi.c}")
+        assertTrue("a middle click hides the ring", !middleUi.cursorShow)
+        assertTrue(
+            "a middle click keeps the grid",
+            middleGrid.contentEquals((middle.state as Range.State).grid),
+        )
 
         // The click moved the cursor, so DOWN DOWN Enter paints (1,0).
         val chain = Midend.fromSave(Range, SgtpSave.parse(save))
@@ -382,6 +462,7 @@ class RangeInputParityTest {
 
     @Test
     fun `a letterboxed view keeps one geometry for every preset`() = OracleClient().use { oracle ->
+        var nonZeroOrigin = false
         for (params in listOf("9x6", "12x8", "13x9", "16x11")) {
             val start = oracle.newGame("range", params, SEED)
             val midend = Midend.fromSave(Range, SgtpSave.parse(start.state))
@@ -393,6 +474,7 @@ class RangeInputParityTest {
             assertEquals("$params board width", geometry.width, board.width)
             assertEquals("$params board height", geometry.height, board.height)
             assertEquals("$params tile", midend.largestTileFor(411, 702), tile)
+            if (geometry.originX != 0 || geometry.originY != 0) nonZeroOrigin = true
 
             // Click the first empty cell through the view origin.
             val state = midend.state as Range.State
@@ -405,6 +487,7 @@ class RangeInputParityTest {
                 411,
                 702,
             )
+            val gridBefore = (midend.state as Range.State).grid.copyOf()
             midend.processKey(
                 geometry.toGameX(viewX),
                 geometry.toGameY(viewY),
@@ -414,10 +497,15 @@ class RangeInputParityTest {
             assertEquals("$params letterbox click", expected.state.state,
                 midend.serialise().serialise())
             assertEquals("$params one move", 1, midend.stateCount - 1)
+            assertTrue(
+                "$params letterbox click changes the grid",
+                !gridBefore.contentEquals((midend.state as Range.State).grid),
+            )
 
             // A click outside the board is unused and changes nothing.
             val outside = Midend.fromSave(Range, SgtpSave.parse(start.state))
             val before = outside.serialise().serialise()
+            val outsideGrid = (outside.state as Range.State).grid.copyOf()
             assertEquals(
                 KeyOutcome.Unused,
                 outside.processKey(
@@ -428,7 +516,12 @@ class RangeInputParityTest {
                 ),
             )
             assertEquals("$params letterbox outside", before, outside.serialise().serialise())
+            assertTrue(
+                "$params letterbox outside keeps the grid",
+                outsideGrid.contentEquals((outside.state as Range.State).grid),
+            )
         }
+        assertTrue("at least one letterbox origin is nonzero", nonZeroOrigin)
     }
 
     /**

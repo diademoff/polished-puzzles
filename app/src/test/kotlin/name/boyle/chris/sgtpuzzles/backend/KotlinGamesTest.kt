@@ -8,6 +8,7 @@ import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Pegs
+import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
@@ -109,6 +110,12 @@ class KotlinGamesTest {
     fun `unruly is registered but the app still uses C`() {
         assertEquals(Unruly, KotlinGames.gameFor(UNRULY))
         assertFalse(KotlinGames.handles(UNRULY))
+    }
+
+    @Test
+    fun `range is registered but the app still uses C`() {
+        assertEquals(Range, KotlinGames.gameFor(RANGE))
+        assertFalse(KotlinGames.handles(RANGE))
     }
 
     @Test

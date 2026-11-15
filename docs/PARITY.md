@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, and `unruly` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, and `range` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -214,7 +214,7 @@ submenu entries when a game groups its presets.
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `C` |
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `C` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `dual-run` |
-| `range` | Range | 9x6 | 4 | yes | yes | no | no | `C` |
+| `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `C` |
@@ -571,6 +571,76 @@ Notes:
   open. `currentKeyLabel` is a tested helper because C has no Android
   call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `range` is `dual-run`. Its parameters and presets, the `signed char`
+  decode and the validation order, the run-length description, the two
+  shuffles per generator attempt with its retries, the four-technique
+  solver, state, the `sscanf("%c,%d,%d")` move grammar, completion,
+  the sticky status, the first-state solve, the hint, the empty status
+  text, the cursor, `requestKeys`, the save file, palette, drawing,
+  layout, and input pass the matrix in `RangeDescTest`,
+  `RangeGameTest`, `RangeSaveTest`, `RangeInputParityTest`,
+  `RangeTraceTest`, and the engine `RangeTest`. `RangeDescTest` pins
+  the `signed char` quirks (`300x6` is `44x6`, `+9x6` is `9x9`),
+  the accepted `64x64` boundary, the run alphabet, the golden ids,
+  and the retry seeds `3x3` seed 3 and `3x5` seed 2. `RangeGameTest`
+  pins the accepted and rejected move forms, a clue overwritten by a
+  move, the black-set-only win with and without dots, the sticky
+  status, undo and redo, every preset's `SOLVE`, the `S` answer of an
+  already solved board, and the hint. `RangeSaveTest` reads all five
+  corpus saves, rewrites them byte for byte, and compares id, status,
+  undo, redo, and text; it makes C load a Kotlin save for every preset
+  and round-trips a played click, an undone position with a live redo
+  branch, a `SOLVE`, a `RESTART`, and a `MOVE` that starts with `S`.
+  A hand-written `AUXINFO` record round-trips and the solve ignores
+  it. `PARAMS` and `CPARAMS` are always equal, and `default.sgtp` and
+  `9x6.sgtp` are the same file.
+
+  The solve reads the decoded initial grid, because `midend_solve`
+  passes `states[0]` and C never reads the current board.
+  `RangeGameTest` plays a click that contradicts the answer and pins
+  that the `SOLVE` record still matches C.
+
+  `RangeInputParityTest` sends real clicks at tiles 48, 63, 82, and
+  100 and at the 411x702 letterbox of every preset, where at least one
+  origin is nonzero (the `9x6` board has origin (0,207) at tile 41).
+  Every click of the left and right cycles changes the cell, adds one
+  `MOVE`, and adds one state. A clue click with each button, a border
+  or letterbox click, a lone drag, and a lone release return `Unused`
+  and change neither the grid nor the history. The test also covers
+  the press, drag, and release (one move at the press), the
+  click-then-cursor rule, the arrow ring, the shift paint, modified
+  cursor keys, and a keypad digit. `requestKeys` is arrow mode 3 with
+  no labels on every preset.
+
+  Two C undefined-behavior spots get defined port results, pinned by
+  `RangeTest`, and are not deviations. On an all-black board the
+  connectedness reasoning finds no DFS root and writes outside
+  `dfs_parent`/`dfs_depth` (`range.c:465-471`); the port treats "no
+  non-black cell" as "no moves". The recursion reasoning appends moves
+  from duplicated states to the caller's `n`-move buffer and can
+  overrun it on a board it cannot crack (`range.c:322`, `605-638`);
+  the port keeps the moves in a growable list and stops the outer pass
+  when the player's state did not change, which leaves every
+  C-defined answer unchanged. The shipped C build keeps assertions,
+  so the oracle cannot be asked about either path.
+  `validate_params` bounds `w + h` at 128, so the area is at most 4096
+  cells and no huge-area guard is needed.
+
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
+  C: the two-field configuration dialog, the preference-dialog skip,
+  the `Fifteen` casts in `KotlinGameEngine`, and the two-release wait
+  are open. The `Mouse button order` preference (`fill` or `dot`) has
+  no engine hook yet; the adapter must parse
+  `left-mouse-button=fill|dot` and set `Range.Ui.swapButtons` after
+  `newUi` and after `Midend.fromSave`, because there is no `decodeUi`
+  and a load recreates the UI. The oracle's `pointsSized` and
+  `traceWarm` have no `prefs` field, so the swapped click is pinned on
+  the engine side against `range.c:1368-1375`; a `prefs` field is
+  needed before that click can be compared with C. `currentKeyLabel`
+  is a tested helper because C has no Android call site for it. The
+  seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 ## 8. Goldens
