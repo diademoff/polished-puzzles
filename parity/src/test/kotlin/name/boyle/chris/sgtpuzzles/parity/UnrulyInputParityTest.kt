@@ -531,6 +531,61 @@ class UnrulyInputParityTest {
     }
 
     @Test
+    fun `unsupported keys leave the state and history unchanged`() =
+        OracleClient().use { oracle ->
+            val save = saveText("8x8dt", DESC_8X8)
+            val cases = listOf(
+                // TAB is the one key that keeps its modifiers; unruly
+                // does not use it.
+                listOf('\t'.code),
+                // A letter is not a game key either.
+                listOf('q'.code),
+                // A control character that is not a one-key shortcut.
+                listOf(0x01),
+                // The midend strips SHFT from a key that is not a cursor
+                // move, so this reaches the game as `q` and is unused.
+                listOf('q'.code or Buttons.MOD_SHFT),
+                // A visible ring must not turn an unsupported key into a
+                // placement.
+                listOf(Buttons.CURSOR_RIGHT, '\t'.code, 'q'.code),
+            )
+
+            for (sequence in cases) {
+                val expected = oracle.keys(save, sequence)
+                val midend = Midend.fromSave(Unruly, SgtpSave.parse(save))
+                for (button in sequence) {
+                    val outcome = midend.processKey(
+                        0,
+                        0,
+                        button,
+                        Unruly.preferredTileSize,
+                    )
+                    assertEquals(
+                        "outcome for $button in $sequence",
+                        if (button == Buttons.CURSOR_RIGHT) {
+                            KeyOutcome.SomeEffect
+                        } else {
+                            KeyOutcome.Unused
+                        },
+                        outcome,
+                    )
+                }
+                assertEquals("states for $sequence", 1, midend.stateCount)
+                assertEquals(
+                    "moves for $sequence",
+                    emptyList<String>(),
+                    midend.serialise().values("MOVE"),
+                )
+                assertEquals(
+                    "save for $sequence",
+                    expected.state,
+                    midend.serialise().serialise(),
+                )
+                assertEquals("status for $sequence", expected.status, midend.status())
+            }
+        }
+
+    @Test
     fun `a real placement changes the grid and a clue click does not`() {
         val midend = Midend.fromSave(Unruly, SgtpSave.parse(saveText("8x8dt", DESC_8X8)))
         val tile = 48

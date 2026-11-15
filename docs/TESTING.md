@@ -823,14 +823,16 @@ Engine tests:
 - `UnrulyDescTest` is semantic. It compares the seven presets with
   their verbatim `8x8dt` text, the decode quirks (`8`, `8x8x8`, `8X8`,
   a trailing space, `8x8dte`, `8u8`, `8x8tu`), the `u`/`d` order, the
-  five validation messages in C order, and `params + seed -> DESC` for
+  six validation messages in C order (odd, minimum size, area, too
+  tall, too long, unknown difficulty), and `params + seed -> DESC` for
   every preset with nine seed strings and a numeric sweep. It pins the
   golden ids, the generated run alphabet without `y`/`Y`, the accepted
   `46340x46340` and `8x34u` boundaries without generating them, and
   the invalid-difficulty encoder guard: an index outside `0..2`
   writes a plain `d` instead of reading past `unruly_diffchars`.
-  Generation runs under a two-minute timeout, because the retry loops
-  are unbounded.
+  The rejected `65536x65536` area is also compared with the C message,
+  because C validates before it allocates. Generation runs under a
+  two-minute timeout, because the retry loops are unbounded.
 - `UnrulyGameTest` is semantic. It compares new games, text, and
   status; the `sscanf` move grammar including junk, spaces, signs,
   leading zeros, and 32-bit wrap; every preset's `SOLVE` string; a
@@ -870,9 +872,12 @@ Engine tests:
   past it, a clue click with a visible ring, a press, drag, and
   release (one move at the press), a click then a cursor key and a
   select, and the keyboard including modified cursor keys and a keypad
-  digit. Every real placement changes the grid and adds one state; a
-  border or letterbox click, a clue click, a lone drag, and a lone
-  release change neither the grid nor the save.
+  digit. TAB, a control character, a letter, and a letter with SHFT are
+  unused, with and without a visible ring, and leave the state, the
+  move list, and the history unchanged, as C does. Every real placement
+  changes the grid and adds one state; a border or letterbox click, a
+  clue click, a lone drag, and a lone release change neither the grid
+  nor the save.
 - `UnrulyTest` is the engine test. It pins the parameter decode and
   encode, the validation order, `validateDesc`, the immutable mask and
   the initial grid, the three-way count result, the error bits, the
@@ -911,7 +916,8 @@ two enablement debts:
   allocate a 2,147,395,600-cell grid and mask, more than 10 GB in this
   port, and run the solver over it. No test calls `newDesc` or
   `newState` on a huge accepted area; `validateParams` pins the
-  accepted `46340x46340` side and the rejected `65536x65536` side.
+  accepted `46340x46340` side, and `UnrulyDescTest` compares the
+  rejected `65536x65536` message with C.
   The configuration dialog needs a guard before `UNRULY` is enabled.
   A guard rejects parameters that C accepts, so it needs a new
   deviation entry and a test, and it must not change any accepted

@@ -163,6 +163,9 @@ class UnrulyDescTest {
     fun `validation messages match the oracle in order`() = OracleClient().use { oracle ->
         val cases = listOf(
             "5x6", "7x7", "4x4", "8x47u", "8x46u", "46x8u", "8x8dq", "8x8d",
+            // C rejects the area before it generates anything, so this
+            // message is compared without allocating the board.
+            "65536x65536",
         )
         for (text in cases) {
             val expected = validationError(oracle, text)
