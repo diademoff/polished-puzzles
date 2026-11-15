@@ -224,6 +224,39 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-15
 
+### D-007: Palisade refuses an area above 2^20 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_params` accepts every area up to
+  `INT_MAX` cells, including `46340x46340` (2,147,395,600 cells).
+  `new_game_desc` then allocates the clue, rim, scratch, winnow-order,
+  and `4*wh` addable tables, which is tens of gigabytes, and the
+  generator does not finish. The Kotlin `validateParams` keeps the C
+  messages and still accepts `46340x46340`, the exact 2^20 boundary,
+  and every normal preset. The Kotlin `newDesc` rejects an area above
+  2^20 cells with `Width times height is too large for this build`
+  before any RNG draw or allocation. `newState` is unchanged, so a
+  hand-written game id with a huge area still allocates; only
+  generation is guarded.
+- **Why:** a hang or an out-of-memory crash in the generator is worse
+  than a deterministic rejection. The guard depends only on the
+  parameters and the message is fixed, so the same request always fails
+  the same way. No seed, `DESC`, `AUXINFO`, or `.sgtp` text of a valid
+  game changes, because no preset is near the limit.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../PalisadeTest.kt::the huge area is accepted by validation and guarded at generation`
+  pins the accepted boundary, the `2^20` and `1025x1024n8` cases, and
+  the message;
+  `parity/src/test/kotlin/.../PalisadeDescTest.kt::the huge area is accepted by validation but refused at generation`
+  pins that validation keeps the C behavior. No test calls the oracle
+  on `46340x46340`; that probe was killed by the OS.
+- **Review:** the owner should decide the final area limit before
+  `palisade` is enabled in the app.
+- **Scope:** `palisade`
+- **Upstream:** none known
+- **Date:** 2026-11-16
+
 ## Examples
 
 Allowed:
