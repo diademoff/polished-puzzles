@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, and `flip` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, and `twiddle` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -225,7 +225,7 @@ submenu entries when a game groups its presets.
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `C` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `C` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `C` |
-| `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `C` |
+| `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `dual-run` |
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `C` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `C` |
 | `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `C` |
@@ -288,6 +288,20 @@ Notes:
   text is `S` is Kotlin-only: the C debug oracle asserts in `game_redraw`
   when that whole board is replaced, which is an upstream animation bug
   in the test tooling, not a deviation. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`.
+- `twiddle` is `dual-run`. Its generator, state, rotations, orientation,
+  moves, status text, solver, save file, drawing, layout, and input pass
+  the matrix in `TwiddleDescTest`, `TwiddleGameTest`, `TwiddleSaveTest`,
+  `TwiddleTraceTest`, and `TwiddleInputParityTest`. The save test pins
+  the `full`-argument quirk: `m` and the `r`/`o` flags stay in the short
+  id and in both `PARAMS` and `CPARAMS`. A solve sets `completed = 1`
+  and status +1, as in C, but it never raises the completion event;
+  `changedState` decides that. The rotation animation and the
+  completion flash are not ported, which `PARITY.md` section 1 allows,
+  so strict traces come from loaded states or `traceNew`, never from a
+  move in a live midend. `KotlinGames.gameFor` knows the Kotlin game,
+  but the app still uses C: the configuration dialog and the
+  two-release wait are open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 
 

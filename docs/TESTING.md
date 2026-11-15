@@ -478,6 +478,42 @@ Engine tests:
 - `FlipTraceTest` is strict. It compares every preset with a fresh
   oracle trace and the frozen trace, plus moved, hinted, and completed
   states and a cursor that changes only the diagram colour of one cell.
+- `TwiddleDescTest` is semantic. It compares parameter decoding and
+  encoding, the validation messages, the eight presets, and
+  `params + seed -> DESC` for the presets, extra boards, and a numeric
+  seed sweep. The retry fixtures pin the generator loop: the grid is
+  kept between passes, the counters are zeroed, and the move count is
+  not drawn again.
+- `TwiddleGameTest` is semantic. It compares new games, text, the status
+  line including the target suffix, the move grammar, clicks, keyboard
+  sequences, the cursor rules, completion, undo/redo, and solve. A
+  sorted description stays open until a move, which is the upstream
+  quirk. The completion event fires on the last move and on the redo,
+  but not on a solve.
+- `TwiddleSaveTest` is strict for the save text. It reads every
+  `twiddle` save in the corpus, rewrites it byte for byte, and makes the
+  oracle load both versions. It also makes the oracle load a
+  Kotlin-written save for every preset and for a move target, and pins
+  the `full`-argument quirk: `m` and the `r`/`o` flags stay in the short
+  id and in both `PARAMS` and `CPARAMS`. A played move, an undone
+  position with a live redo branch, a solve, a completed state, and a
+  restart are built in memory, so the history records are covered while
+  the corpus stays frozen.
+- `TwiddleInputParityTest` is semantic. It compares the layout at ten
+  viewports, then sends real clicks on the band around every rotation
+  centre at tile sizes 48, 63, 82, and 100, including the 411x702 view
+  with a non-zero letterbox origin. Every accepted click must add one
+  move and change the board; a pixel outside a band, the letterbox, the
+  outer frame, a middle click, and a lone drag or release must change
+  neither the board nor the count. It also covers the right button, a
+  press-drag-release, the keyboard corners, the keypad edges on `4x4n2`
+  and their rejection on `3x3n2`, the cursor keys and select, and the
+  requested arrow mode for every preset.
+- `TwiddleTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus moved, completed, solved, and
+  target states, the cursor edges, and sized traces. The rotation
+  animation and the flash are not ported, so a trace after a move in a
+  live midend is out of scope; moved states are loaded from a save.
 
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in

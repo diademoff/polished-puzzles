@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
@@ -9,6 +10,7 @@ import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Size
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,6 +29,10 @@ import org.junit.Test
  * On `3x3n2` both `w - n` and `h - n` are odd, so every keypad edge and
  * the keypad centre is rejected. The edges are therefore tested on
  * `4x4n2`, and the rejection is pinned on `3x3n2`.
+ *
+ * Every accepted click must add one move and change the board; every
+ * inert click, drag, or release must change neither. The requested arrow
+ * mode and the empty key labels are compared for every preset.
  */
 class TwiddleInputParityTest {
 
@@ -77,6 +83,28 @@ class TwiddleInputParityTest {
         assertEquals(Size(3 * 63 + 62, 3 * 63 + 62), exact.game.computeSize(exact.params, 63))
         assertEquals(63, exact.largestTileFor(251, 251))
     }
+
+    @Test
+    fun `the requested keys match the oracle for every preset and a target`() =
+        OracleClient().use { oracle ->
+            // `game_request_keys` is NULL, so C reports the midend default
+            // `ANDROID_ARROWS_LEFT_RIGHT` and no labels for every preset.
+            val paramsList = Twiddle.presets().map { it.params } + "3x3n2m10"
+            for (params in paramsList) {
+                val state = oracle.newGame("twiddle", params, SEED).state
+                val expected = oracle.requestKeys(state)
+                val actual = Twiddle.requestKeys(Twiddle.decodeParams(params))
+
+                assertEquals("arrow mode $params", 3, expected.arrowMode)
+                assertEquals(
+                    "Kotlin arrow mode $params",
+                    ArrowMode.ARROWS_LEFT_RIGHT,
+                    actual.arrowMode,
+                )
+                assertTrue("no C labels for $params", expected.labels.isEmpty())
+                assertTrue("no Kotlin labels for $params", actual.labels.isEmpty())
+            }
+        }
 
     @Test
     fun `a real click at every band edge matches the oracle`() = OracleClient().use { oracle ->
@@ -201,11 +229,18 @@ class TwiddleInputParityTest {
         val save = saveText("3x3n2", threeDesc)
         for (button in listOf(Buttons.LEFT_DRAG, Buttons.LEFT_RELEASE)) {
             val midend = Midend.fromSave(Twiddle, SgtpSave.parse(save))
+            val before = midend.state as Twiddle.State
             assertEquals(
                 KeyOutcome.Unused,
                 midend.processKey(72, 72, button, 48),
             )
+            val after = midend.state as Twiddle.State
             assertEquals("a lone $button adds no move", save, midend.serialise().serialise())
+            assertEquals("a lone $button keeps the move count", 0, after.moveCount)
+            assertTrue(
+                "a lone $button keeps the board",
+                before.grid.contentEquals(after.grid),
+            )
 
             val expected = oracle.pointsSized(
                 save, listOf(point(72, 72, button)), 192, 192,
@@ -234,6 +269,7 @@ class TwiddleInputParityTest {
             )
 
             val midend = Midend.fromSave(Twiddle, SgtpSave.parse(save))
+            val before = midend.state as Twiddle.State
             for (point in sequence) {
                 midend.processKey(
                     geometry.toGameX(point.x),
@@ -242,11 +278,13 @@ class TwiddleInputParityTest {
                     48,
                 )
             }
+            val after = midend.state as Twiddle.State
             assertEquals("one move from the gesture", expected.state.state, midend.serialise().serialise())
             assertEquals(1, midend.serialise().values("MOVE").size)
-            assertEquals(1, (midend.state as Twiddle.State).moveCount)
-            assertEquals(0, (midend.state as Twiddle.State).lastX)
-            assertEquals(0, (midend.state as Twiddle.State).lastY)
+            assertEquals(1, after.moveCount)
+            assertFalse("the gesture changes the board", before.grid.contentEquals(after.grid))
+            assertEquals(0, after.lastX)
+            assertEquals(0, after.lastY)
 
             // A swipe that starts in the letterbox does nothing.
             val fromLetterbox = listOf(
@@ -257,6 +295,7 @@ class TwiddleInputParityTest {
             val expectedLetterbox = oracle.pointsSized(save, fromLetterbox, 192, 192)
             assertEquals(save, expectedLetterbox.state.state)
             val fromAndroid = Midend.fromSave(Twiddle, SgtpSave.parse(save))
+            val untouched = Midend.fromSave(Twiddle, SgtpSave.parse(save)).state as Twiddle.State
             for (point in fromLetterbox) {
                 fromAndroid.processKey(
                     geometry.toGameX(point.x),
@@ -265,7 +304,13 @@ class TwiddleInputParityTest {
                     48,
                 )
             }
+            val afterLetterbox = fromAndroid.state as Twiddle.State
             assertEquals(save, fromAndroid.serialise().serialise())
+            assertEquals("the letterbox swipe adds no move", 0, afterLetterbox.moveCount)
+            assertTrue(
+                "the letterbox swipe keeps the board",
+                untouched.grid.contentEquals(afterLetterbox.grid),
+            )
 
             // A swipe from a valid region into another region moves at the
             // press origin only.
@@ -325,12 +370,16 @@ class TwiddleInputParityTest {
         )
 
         val moveCounts = ArrayList<Int>()
+        val stateMoveCounts = ArrayList<Int>()
+        val gridChanges = ArrayList<Boolean>()
         for ((save, sequence) in sequences) {
             val expected = oracle.keys(save.state, sequence)
             val actual = Midend.fromSave(Twiddle, SgtpSave.parse(save.state))
+            val before = actual.state as Twiddle.State
             for (key in sequence) {
                 actual.processKey(0, 0, key, Twiddle.preferredTileSize)
             }
+            val after = actual.state as Twiddle.State
             val what = "${save.id} keys $sequence"
             assertEquals("save for $what", expected.state, actual.serialise().serialise())
             assertEquals("id for $what", expected.id, actual.id())
@@ -338,6 +387,22 @@ class TwiddleInputParityTest {
             assertEquals("canundo for $what", expected.canUndo, actual.canUndo)
             assertEquals("canredo for $what", expected.canRedo, actual.canRedo)
             moveCounts += actual.serialise().values("MOVE").size
+            stateMoveCounts += after.moveCount
+            gridChanges += !before.grid.contentEquals(after.grid)
+        }
+
+        // A sequence with one move must change the board and add exactly
+        // one to the count; a rejected sequence must do neither.
+        for (i in moveCounts.indices) {
+            val what = "sequence $i ${sequences[i].second}"
+            if (moveCounts[i] == 1) {
+                assertTrue("$what moves", gridChanges[i])
+                assertEquals("$what move count", 1, stateMoveCounts[i])
+            } else {
+                assertEquals("$what adds no move", 0, moveCounts[i])
+                assertFalse("$what keeps the board", gridChanges[i])
+                assertEquals("$what keeps the move count", 0, stateMoveCounts[i])
+            }
         }
 
         // On 3x3n2 every keypad edge and the centre is rejected; on 4x4n2
@@ -369,6 +434,7 @@ class TwiddleInputParityTest {
         assertEquals(listOf("M0,0,1"), SgtpSave.parse(expected.state.state).values("MOVE"))
 
         val midend = Midend.fromSave(Twiddle, SgtpSave.parse(save))
+        val before = midend.state as Twiddle.State
         for (point in sequence) {
             midend.processKey(
                 geometry.toGameX(point.x),
@@ -379,6 +445,10 @@ class TwiddleInputParityTest {
         }
         assertEquals(expected.state.state, midend.serialise().serialise())
         assertEquals(1, (midend.state as Twiddle.State).moveCount)
+        assertFalse(
+            "the select changes the board",
+            before.grid.contentEquals((midend.state as Twiddle.State).grid),
+        )
 
         // A valid click hides the cursor, so the following select only
         // shows it again.
@@ -393,6 +463,7 @@ class TwiddleInputParityTest {
             SgtpSave.parse(validExpected.state.state).values("MOVE"),
         )
         val validMidend = Midend.fromSave(Twiddle, SgtpSave.parse(save))
+        val validBefore = validMidend.state as Twiddle.State
         for (point in validThenSelect) {
             validMidend.processKey(
                 geometry.toGameX(point.x),
@@ -402,6 +473,11 @@ class TwiddleInputParityTest {
             )
         }
         assertEquals(validExpected.state.state, validMidend.serialise().serialise())
+        assertEquals(1, (validMidend.state as Twiddle.State).moveCount)
+        assertFalse(
+            "the click changes the board",
+            validBefore.grid.contentEquals((validMidend.state as Twiddle.State).grid),
+        )
     }
 
     private fun assertClick(
@@ -425,19 +501,23 @@ class TwiddleInputParityTest {
             viewHeight,
         )
         val midend = Midend.fromSave(Twiddle, SgtpSave.parse(save))
+        val before = midend.state as Twiddle.State
         val outcome = midend.processKey(
             geometry.toGameX(viewX),
             geometry.toGameY(viewY),
             button,
             tile,
         )
+        val after = midend.state as Twiddle.State
         val what = "($viewX,$viewY) button $button $where"
         assertEquals("outcome $what", KeyOutcome.SomeEffect, outcome)
         assertEquals("move record $what", listOf(move), SgtpSave.parse(expected.state.state).values("MOVE"))
         assertEquals("save $what", expected.state.state, midend.serialise().serialise())
         assertEquals("id $what", expected.state.id, midend.id())
         assertEquals("status $what", expected.state.status, midend.status())
-        assertEquals("move count $what", 1, (midend.state as Twiddle.State).moveCount)
+        assertEquals("move count $what", 1, after.moveCount)
+        assertEquals("one more move than the base $what", before.moveCount + 1, after.moveCount)
+        assertFalse("the click changes the board $what", before.grid.contentEquals(after.grid))
     }
 
     private fun assertInertClick(
@@ -459,16 +539,21 @@ class TwiddleInputParityTest {
             viewHeight,
         )
         val midend = Midend.fromSave(Twiddle, SgtpSave.parse(save))
+        val before = midend.state as Twiddle.State
         val outcome = midend.processKey(
             geometry.toGameX(viewX),
             geometry.toGameY(viewY),
             button,
             tile,
         )
+        val after = midend.state as Twiddle.State
         val what = "($viewX,$viewY) button $button $where"
         assertEquals("an inert click is unused $what", KeyOutcome.Unused, outcome)
         assertEquals("an inert click keeps the save $what", save, midend.serialise().serialise())
         assertEquals("C: an inert click keeps the save $what", save, expected.state.state)
+        assertEquals("an inert click adds no move $what", 0, after.moveCount)
+        assertEquals("an inert click keeps the move count $what", before.moveCount, after.moveCount)
+        assertTrue("an inert click keeps the board $what", before.grid.contentEquals(after.grid))
     }
 
     private fun saveText(params: String, desc: String): String {

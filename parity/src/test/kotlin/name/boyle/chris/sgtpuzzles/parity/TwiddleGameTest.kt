@@ -231,13 +231,17 @@ class TwiddleGameTest {
         assertEquals(1, expectedAfter.status)
 
         val midend = Midend.fromSave(Twiddle, SgtpSave.parse(before))
+        val oldState = midend.state as Twiddle.State
         assertEquals(0, midend.status())
         assertEquals(
             KeyOutcome.SomeEffect,
             midend.processKey(48, 120, Buttons.RIGHT_BUTTON, 48),
         )
+        val newState = midend.state as Twiddle.State
         assertEquals("the click is $lastMove", expectedAfter.state, midend.serialise().serialise())
         assertEquals(1, midend.status())
+        assertEquals(8, newState.moveCount)
+        assertFalse("the completing click changes the board", oldState.grid.contentEquals(newState.grid))
         assertTrue(midend.takeCompletedEvent())
         assertFalse(midend.takeCompletedEvent())
     }

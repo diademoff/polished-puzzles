@@ -6,6 +6,7 @@ import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
+import name.boyle.chris.sgtpuzzles.engine.Twiddle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -53,6 +54,12 @@ class KotlinGamesTest {
     fun `flip is registered but the app still uses C`() {
         assertEquals(Flip, KotlinGames.gameFor(FLIP))
         assertFalse(KotlinGames.handles(FLIP))
+    }
+
+    @Test
+    fun `twiddle is registered but the app still uses C`() {
+        assertEquals(Twiddle, KotlinGames.gameFor(TWIDDLE))
+        assertFalse(KotlinGames.handles(TWIDDLE))
     }
 
     @Test
