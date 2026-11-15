@@ -122,6 +122,53 @@ class CubeDescTest {
     }
 
     @Test
+    fun `the atoi overflow wraps through a long like the oracle`() =
+        OracleClient().use { oracle ->
+            // The C library parses with `strtol` and casts to `int`, so
+            // the low 32 bits survive. `atoi` must not clamp.
+            val accepted = listOf("c4294967300x4", "c4x4294967300")
+            for (text in accepted) {
+                assertEquals(
+                    "params for '$text'",
+                    Cube.Params(Cube.CUBE, 4, 4),
+                    Cube.decodeParams(text),
+                )
+                assertEquals(
+                    "id for '$text'",
+                    oracle.newGame("cube", text, SEED).id,
+                    Midend.newGame(Cube, text, SEED).id(),
+                )
+            }
+
+            val cases = listOf(
+                "c2147483648x4" to "Grid dimensions may not be negative",
+                "c4x2147483648" to "Grid dimensions may not be negative",
+                "c99999999999999999999999999x4" to
+                    "Grid dimensions may not be negative",
+                "c-4294967300x4" to "Grid dimensions may not be negative",
+                "c-2147483649x4" to "Grid area must not be unreasonably large",
+                "c9223372036854775808x4" to
+                    "Grid dimensions may not be negative",
+                "c-99999999999999999999999999x4" to
+                    "Both grid dimensions must be greater than one",
+            )
+            for ((text, message) in cases) {
+                assertEquals(
+                    "Kotlin message for '$text'",
+                    message,
+                    Cube.validateParams(Cube.decodeParams(text), true),
+                )
+                val oracleMessage = try {
+                    oracle.newGame("cube", text, SEED)
+                    null
+                } catch (e: OracleException) {
+                    e.message
+                }
+                assertEquals("oracle message for '$text'", message, oracleMessage)
+            }
+        }
+
+    @Test
     fun `validation messages and their order match the oracle`() =
         OracleClient().use { oracle ->
             val cases = listOf(

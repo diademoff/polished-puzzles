@@ -1373,26 +1373,41 @@ object Cube : Game {
         return squares
     }
 
-    /** C `atoi`: white space, an optional sign, digits; 0 without a digit. */
+    /**
+     * C `atoi`: white space, an optional sign, digits; 0 without a digit.
+     *
+     * The C library parses with `strtol` and casts the `long` to `int`.
+     * The digits therefore accumulate as a `long` that saturates at
+     * `LONG_MIN`/`LONG_MAX`, and the final cast keeps the low 32 bits.
+     * A value such as `4294967300` wraps to 4 and is accepted, and a
+     * value such as `2147483648` wraps to `Int.MIN_VALUE` and fails as
+     * negative. Do not clamp to `Int.MAX_VALUE`: that changes which
+     * validation message the oracle returns.
+     */
     private fun atoi(text: String, start: Int): Int {
         var i = start
         while (i < text.length && text[i].isWhitespace()) i++
-        var sign = 1
+        var negative = false
         if (i < text.length && (text[i] == '+' || text[i] == '-')) {
-            if (text[i] == '-') sign = -1
+            negative = text[i] == '-'
             i++
         }
         var value = 0L
         var overflow = false
         while (i < text.length && text[i] in '0'..'9') {
-            if (!overflow) {
-                value = value * 10 + (text[i] - '0')
-                if (value > Int.MAX_VALUE) overflow = true
+            val digit = text[i] - '0'
+            if (value > (Long.MAX_VALUE - digit) / 10) {
+                overflow = true
+            } else if (!overflow) {
+                value = value * 10 + digit
             }
             i++
         }
-        if (overflow) return if (sign < 0) Int.MIN_VALUE else Int.MAX_VALUE
-        return sign * value.toInt()
+        if (overflow) {
+            // `strtol` saturates; the `int` cast keeps the low 32 bits.
+            return (if (negative) Long.MIN_VALUE else Long.MAX_VALUE).toInt()
+        }
+        return (if (negative) -value else value).toInt()
     }
 
     /** The C string byte at [index], or NUL past the end. */

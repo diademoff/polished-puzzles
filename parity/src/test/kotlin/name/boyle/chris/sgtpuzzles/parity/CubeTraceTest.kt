@@ -277,6 +277,62 @@ class CubeTraceTest {
             }
         }
 
+    @Test
+    fun `sized triangle traces at 63, 82, and 100 match the oracle`() =
+        OracleClient().use { oracle ->
+            val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+            val params = Cube.decodeParams("t1x2") as Cube.Params
+
+            // The save is loaded, so the frame is settled. A live midend
+            // would record the first animation frame instead. The move
+            // changes the current square and one face colour, and the
+            // triangle geometry truncates differently at each size.
+            val movedSave = oracle.key(
+                oracle.newGame("cube", "t1x2", SEED).state,
+                0,
+                0,
+                Buttons.CURSOR_UP,
+            ).state
+            val midend = Midend.fromSave(Cube, SgtpSave.parse(movedSave))
+            assertEquals(2, midend.stateCount)
+
+            for (tile in listOf(63, 82, 100)) {
+                val view = Cube.computeSize(params, tile)
+                val layout = oracle.layout(movedSave, view.width, view.height)
+                assertEquals("layout width at tile $tile", view.width, layout.width)
+                assertEquals("layout height at tile $tile", view.height, layout.height)
+
+                // Sizing alone forces the first draw of a fresh drawstate,
+                // so no click is needed; an empty point list keeps the
+                // frame inert.
+                val expected = oracle.pointsSized(
+                    movedSave,
+                    emptyList(),
+                    view.width,
+                    view.height,
+                    recordTrace = true,
+                )
+                assertEquals(
+                    "the loaded save at tile $tile is unchanged",
+                    movedSave,
+                    expected.state.state,
+                )
+                val actual = TraceNormalizer.normalize(
+                    KotlinTraceSink.stateTrace(midend, tile),
+                    upstream,
+                )
+                val expectedTrace = TraceNormalizer.normalize(
+                    requireNotNull(expected.trace),
+                    upstream,
+                )
+                assertLines("t1x2 trace at tile $tile", expectedTrace, actual)
+                assertTrue(
+                    "the triangle trace at tile $tile has the move count",
+                    actual.contains("status \"Moves: 1\""),
+                )
+            }
+        }
+
     private data class Quad(
         val params: String,
         val ops: Int,

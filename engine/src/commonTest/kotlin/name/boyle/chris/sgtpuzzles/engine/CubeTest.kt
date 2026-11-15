@@ -66,6 +66,65 @@ class CubeTest {
     }
 
     @Test
+    fun `decode params wraps an overflowing atoi through a long`() {
+        // The C library parses with `strtol` and casts the `long` to
+        // `int`, so the low 32 bits survive. Clamping to `Int.MAX_VALUE`
+        // or `Int.MIN_VALUE` would report the wrong validation message.
+        assertEquals(Cube.Params(Cube.CUBE, 4, 4), Cube.decodeParams("c4294967300x4"))
+        assertEquals(Cube.Params(Cube.CUBE, 4, 4), Cube.decodeParams("c4x4294967300"))
+        assertEquals(
+            Cube.Params(Cube.CUBE, Int.MIN_VALUE, 4),
+            Cube.decodeParams("c2147483648x4"),
+        )
+        assertEquals(
+            Cube.Params(Cube.CUBE, 4, Int.MIN_VALUE),
+            Cube.decodeParams("c4x2147483648"),
+        )
+        // The digit cursor stops on the sign, so `d2` stays `d1` there.
+        assertEquals(
+            Cube.Params(Cube.CUBE, -4, -4),
+            Cube.decodeParams("c-4294967300x4"),
+        )
+        assertEquals(Cube.Params(Cube.CUBE, 4, -4), Cube.decodeParams("c4x-4294967300"))
+        assertEquals(
+            Cube.Params(Cube.CUBE, Int.MAX_VALUE, Int.MAX_VALUE),
+            Cube.decodeParams("c-2147483649x4"),
+        )
+        // A 64-bit overflow saturates as `strtol` does before the cast.
+        assertEquals(Cube.Params(Cube.CUBE, -1, 4), Cube.decodeParams(POSITIVE_OVERFLOW))
+        assertEquals(Cube.Params(Cube.CUBE, -1, 4), Cube.decodeParams("c9223372036854775808x4"))
+        assertEquals(Cube.Params(Cube.CUBE, 0, 0), Cube.decodeParams(NEGATIVE_OVERFLOW))
+
+        assertEquals(
+            "Grid dimensions may not be negative",
+            Cube.validateParams(Cube.decodeParams("c2147483648x4"), true),
+        )
+        assertEquals(
+            "Grid area must not be unreasonably large",
+            Cube.validateParams(Cube.decodeParams("c-2147483649x4"), true),
+        )
+        assertEquals(
+            "Both grid dimensions must be greater than one",
+            Cube.validateParams(Cube.decodeParams(NEGATIVE_OVERFLOW), true),
+        )
+    }
+
+    @Test
+    fun `the generator draws nfaces plus one values`() {
+        // For c4x4 there is one class of 16 squares. Six faces are drawn
+        // from the shrinking list, then the final non-blue pick from the
+        // ten squares that are left: seven draws for six faces. A replay
+        // of the same calls must leave the generator in the same state.
+        val limits = listOf(16L, 15L, 14L, 13L, 12L, 11L, 10L)
+        val used = RandomState.fromSeed("12345")
+        assertEquals("205E,4", Cube.newDesc(Cube.decodeParams("c4x4"), used).text)
+
+        val replay = RandomState.fromSeed("12345")
+        for (limit in limits) replay.upto(limit)
+        assertEquals(replay.encodeState(), used.encodeState())
+    }
+
+    @Test
     fun `validate params keeps the C messages and order`() {
         fun error(text: String): String? =
             Cube.validateParams(Cube.decodeParams(text), true)
@@ -388,6 +447,8 @@ class CubeTest {
     }
 
     private companion object {
+        const val POSITIVE_OVERFLOW = "c99999999999999999999999999x4"
+        const val NEGATIVE_OVERFLOW = "c-99999999999999999999999999x4"
         val WIN = listOf('U', 'R', 'R', 'D', 'D', 'R', 'L', 'D', 'L', 'L', 'R', 'U', 'D')
     }
 }
