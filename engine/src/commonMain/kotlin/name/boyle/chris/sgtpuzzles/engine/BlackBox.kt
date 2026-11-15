@@ -339,8 +339,8 @@ object BlackBox : Game {
      *
      * C never checks `maxBalls` against the grid, so `w3h3m1M100` is a
      * valid parameter set that cannot always be generated. [newDesc]
-     * rejects that range before it draws, which is D-003 in
-     * `docs/DEVIATIONS.md`; this validator keeps the C messages.
+     * rejects only a drawn count above the arena cells, which is D-003
+     * in `docs/DEVIATIONS.md`; this validator keeps the C messages.
      */
     override fun validateParams(params: Game.Params, full: Boolean): String? {
         val p = params as Params
@@ -364,24 +364,28 @@ object BlackBox : Game {
      * ball, with a whole-pair retry on a collision. The bytes are
      * obfuscated and hex encoded; there is no `AUXINFO`.
      *
-     * A maximum above the number of arena cells is impossible to place
-     * for some count draws, and C then loops forever. The guard rejects
-     * that request before the first draw. It changes no valid
-     * parameters, seed, `DESC`, or save text.
+     * A drawn count above the number of arena cells cannot be placed: C
+     * fills every cell and then retries forever for the next ball. The
+     * guard throws after the count draw and before any ball draw. A
+     * count that fits generates exactly as C does, including the `x`
+     * and `y` draws and the whole-pair retry. The guard changes no
+     * valid parameters, seed, `DESC`, or save text.
+     *
+     * `minBalls` above the cell count is the same failure: every count
+     * is too large, so the guard throws after the one count draw.
      */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         val cells = p.w * p.h
-        if (p.maxBalls > cells) {
-            throw IllegalArgumentException(
-                "Black Box cannot place up to ${p.maxBalls} balls on a " +
-                    "${p.w}x${p.h} grid",
-            )
-        }
 
         var nballs = p.minBalls
         if (p.maxBalls > p.minBalls) {
             nballs += random.upto((p.maxBalls - p.minBalls + 1).toLong()).toInt()
+        }
+        if (nballs > cells) {
+            throw IllegalArgumentException(
+                "Black Box cannot place $nballs balls on a ${p.w}x${p.h} grid",
+            )
         }
 
         val used = BooleanArray(cells)

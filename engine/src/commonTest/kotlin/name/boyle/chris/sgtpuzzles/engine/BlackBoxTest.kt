@@ -161,14 +161,38 @@ class BlackBoxTest {
     }
 
     @Test
-    fun `an impossible ball range is rejected before generation`() {
+    fun `a drawn count above the grid is rejected without a hang`() {
+        // C accepts this range, seed 12345 draws 76 balls for the nine
+        // cells, and C then retries forever for a free cell. The port
+        // throws after the count draw.
         val params = BlackBox.decodeParams("w3h3m1M100") as BlackBox.Params
         assertNull(BlackBox.validateParams(params, true))
         val error = assertFailsWith<IllegalArgumentException> {
             BlackBox.newDesc(params, RandomState.fromSeed("12345"))
         }
-        assertTrue(error.message!!.contains("cannot place up to 100 balls"))
+        assertTrue(error.message!!.contains("cannot place 76 balls"))
         assertTrue(error.message!!.contains("3x3"))
+
+        // A minimum above the grid makes every count too large, so the
+        // guard also throws on the first call.
+        val tooMany = BlackBox.decodeParams("w2h2m5M9") as BlackBox.Params
+        assertEquals(
+            "Too many balls to fit in grid",
+            BlackBox.validateParams(tooMany, true),
+        )
+        assertFailsWith<IllegalArgumentException> {
+            BlackBox.newDesc(tooMany, RandomState.fromSeed("12345"))
+        }
+    }
+
+    @Test
+    fun `an over-large maximum keeps the C description when the count fits`() {
+        // The maximum is above the nine cells, but this seed draws a
+        // count of eight, so nine balls fill the grid and C generates a
+        // normal description. The text is the oracle's.
+        val params = BlackBox.decodeParams("w3h3m1M100") as BlackBox.Params
+        val desc = BlackBox.newDesc(params, RandomState.fromSeed("2"))
+        assertEquals("c21e76630f56971df11b905abe5f6436b9e7205a", desc.text)
 
         // A full but feasible grid still generates.
         val full = BlackBox.decodeParams("w3h3m1M9") as BlackBox.Params

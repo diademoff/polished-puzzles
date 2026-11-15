@@ -20,7 +20,7 @@ import java.io.File
  * the C validation messages, `params + seed -> DESC`, the five frozen
  * descriptions, the exact RNG order (the count draw, x before y, and a
  * whole-pair retry), the permissive description validator, and the
- * generation guard for an impossible ball range.
+ * drawn-count guard for a ball range above the grid.
  */
 class BlackBoxDescTest {
 
@@ -367,29 +367,29 @@ class BlackBoxDescTest {
     }
 
     @Test(timeout = 5_000)
-    fun `an impossible ball range is rejected before generation`() =
+    fun `a drawn count inside the grid matches the oracle`() =
         OracleClient().use { oracle ->
-            // C validation accepts this, and its generator can then
-            // loop forever. The Kotlin validator keeps the C message...
-            val params = BlackBox.decodeParams("w3h3m1M100")
-            assertNull(BlackBox.validateParams(params, true))
-            assertNull(
-                BlackBox.validateParams(
-                    BlackBox.decodeParams("w3h3m1M100"),
-                    false,
+            // Both maxima are above the arena cell count. These seeds
+            // draw a count that fits, so C generates a normal
+            // description and the port must keep it byte for byte.
+            val cases = listOf(
+                // Eight drawn, one plus eight: nine balls fill 3x3.
+                Triple(
+                    "w3h3m1M100",
+                    "2",
+                    "w3h3m1M100:c21e76630f56971df11b905abe5f6436b9e7205a",
                 ),
+                // Zero drawn, one plus zero: one ball on 2x2.
+                Triple("w2h2m1M5", SEED, "w2h2m1M5:39733bf9"),
             )
-
-            // ...and generation refuses it with a clear error.
-            try {
-                Midend.newGame(BlackBox, "w3h3m1M100", SEED)
-                fail("generation accepted 100 balls on a 3x3 grid")
-            } catch (e: IllegalArgumentException) {
-                assertTrue(
-                    "guard message: ${e.message}",
-                    e.message!!.contains("cannot place up to 100 balls") &&
-                        e.message!!.contains("3x3"),
+            for ((params, seed, id) in cases) {
+                val actual = Midend.newGame(BlackBox, params, seed).id()
+                assertEquals(
+                    "oracle '$params' seed '$seed'",
+                    oracle.newGame("blackbox", params, seed).id,
+                    actual,
                 )
+                assertEquals("id '$params' seed '$seed'", id, actual)
             }
 
             // Feasible ranges are unchanged, including the full grid.
@@ -408,6 +408,33 @@ class BlackBoxDescTest {
                 Midend.newGame(BlackBox, "w3h3m1M9", SEED).desc,
             )
         }
+
+    @Test(timeout = 5_000)
+    fun `a drawn count above the grid is rejected instead of looping`() {
+        // C validation accepts this, seed 12345 draws 76 balls for the
+        // nine cells, and the C generator then retries forever. The
+        // Kotlin validator keeps the C message...
+        val params = BlackBox.decodeParams("w3h3m1M100")
+        assertNull(BlackBox.validateParams(params, true))
+        assertNull(
+            BlackBox.validateParams(
+                BlackBox.decodeParams("w3h3m1M100"),
+                false,
+            ),
+        )
+
+        // ...and generation throws after the count draw, not before it.
+        try {
+            Midend.newGame(BlackBox, "w3h3m1M100", SEED)
+            fail("generation accepted 76 balls on a 3x3 grid")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(
+                "guard message: ${e.message}",
+                e.message!!.contains("cannot place 76 balls") &&
+                    e.message!!.contains("3x3"),
+            )
+        }
+    }
 
     private data class Replay(val balls: List<Pair<Int, Int>>, val retries: Int)
 

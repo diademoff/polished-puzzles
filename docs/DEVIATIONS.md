@@ -83,7 +83,7 @@ Anything not listed here is a bug.
 - **Upstream:** none
 - **Date:** 2026-11-14
 
-### D-003: Black Box rejects an impossible ball range before generation
+### D-003: Black Box rejects a drawn ball count above the grid
 
 - **Area:** behavior
 - **Status:** active
@@ -91,20 +91,29 @@ Anything not listed here is a bug.
   against the grid, so `w3h3m1M100` is accepted. A count draw above the
   nine arena cells then leaves the collision retry without a free cell,
   and `new_game_desc` loops forever. The Kotlin validator keeps the C
-  messages and still accepts the parameter set, but `newDesc` throws a
-  clear `IllegalArgumentException` when `maxBalls > w*h`, before the
-  first random draw. The guard rejects the whole range, including a seed
-  whose count draw would have fit. For every parameter set that C can
-  always generate (`maxBalls <= w*h`), the seed, `DESC`, and save text
-  are unchanged.
-- **Why:** a range above the cell count can hang generation, and a hang
-  in the UI or the generator is worse than a deterministic rejection.
-  The guard is deterministic, so the same request always fails the same
-  way.
+  messages and still accepts the parameter set. `newDesc` draws the
+  count first, in the C order, and throws a clear
+  `IllegalArgumentException` only when that drawn count is greater than
+  `w*h`; the throw comes before any `x` or `y` draw. A drawn count that
+  fits generates exactly as C, including the `x`/`y` draws and the
+  whole-pair retry: seed `2` with `w3h3m1M100` draws eight, so nine
+  balls fill the grid, and the `DESC` is the C one. Every parameter set
+  whose drawn count fits keeps the C seed, `DESC`, and save text,
+  whatever `maxBalls` is. A parameter set with `minBalls > w*h` fails
+  after the single count draw, because every count is too large.
+- **Why:** a drawn count above the cell count can hang generation, and a
+  hang in the UI or the generator is worse than a deterministic
+  rejection. The guard depends only on the drawn count, so the same
+  request always fails the same way, and it keeps the C description for
+  every seed that C can generate.
 - **Test:**
-  `parity/src/test/kotlin/.../BlackBoxDescTest.kt::an impossible ball range is rejected before generation`
-  (a five-second timeout) and
-  `engine/src/commonTest/kotlin/.../BlackBoxTest.kt::an impossible ball range is rejected before generation`
+  `parity/src/test/kotlin/.../BlackBoxDescTest.kt::a drawn count inside the grid matches the oracle`
+  (a fitting seed compared with the oracle) and
+  `...::a drawn count above the grid is rejected instead of looping`
+  (a five-second timeout); the engine tests are
+  `engine/src/commonTest/kotlin/.../BlackBoxTest.kt::a drawn count above the grid is rejected without a hang`
+  and
+  `...::an over-large maximum keeps the C description when the count fits`.
 - **Scope:** `blackbox`
 - **Upstream:** none known
 - **Date:** 2026-11-15

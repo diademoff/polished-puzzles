@@ -693,13 +693,16 @@ state.
 
 `blackbox` has one deviation and one shared sink rule:
 
-- D-003 rejects a ball range whose maximum exceeds the arena cell count
-  in `newDesc`, before the first random draw, because C can then retry
-  forever for a free cell. The validator keeps the C messages; for
-  every parameter set that C can always generate (`maxBalls <= w*h`)
-  the seed, `DESC`, and save text are unchanged. The parity test runs
-  under a five-second timeout and compares feasible ranges with the
-  oracle, and the engine test pins the same guard.
+- D-003 draws the ball count first, as C does, and rejects only a drawn
+  count above the arena cell count in `newDesc`, because C can then
+  retry forever for a free cell. A drawn count that fits generates the C
+  description, so a maximum above the cell count does not change a seed
+  that C can generate. The validator keeps the C messages, and every
+  parameter set whose drawn count fits (`nballs <= w*h`) keeps the seed,
+  `DESC`, and save text. The parity tests run under a five-second
+  timeout: one compares a fitting `w3h3m1M100` seed and other ranges
+  with the oracle, and one pins the throw. The engine tests pin the same
+  two results.
 - Black Box is the first port with both a status bar and a warm trace.
   Upstream `drawing.c` records a status text only when it changed, so a
   warm frame repeats no status line. `KotlinTraceSink.status` keeps the

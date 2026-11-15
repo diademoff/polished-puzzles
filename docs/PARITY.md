@@ -362,9 +362,9 @@ Notes:
   and reveal clicks at tiles 48, 63, 82, and 100 and at the letterboxed
   origin (1,147), compares `requestKeys`, and checks that a UI-only
   flash and an unavailable reveal change neither the board nor the move
-  count. D-003 rejects a ball range above the cell count before
-  generation instead of hanging; for every range that C can always
-  generate, the seed, `DESC`, and save text are unchanged.
+  count. D-003 rejects a drawn ball count above the cell count after the
+  count draw instead of hanging; a count that fits keeps the C seed,
+  `DESC`, and save text, whatever `maxBalls` is.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C:
   the configuration schema, the preference-dialog skip, the `Fifteen`
   casts in `KotlinGameEngine`, and the two-release wait are open. The
