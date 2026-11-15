@@ -2,6 +2,7 @@ package name.boyle.chris.sgtpuzzles.engine
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -41,6 +42,33 @@ class DrawStateTest {
     }
 
     @Test
+    fun `a move keeps the drawstate and the trace has only redraw ops`() {
+        val midend = Midend.fromGameId(
+            BlitterGame(),
+            "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15",
+        )
+        val sink = EventSink()
+
+        val first = midend.ensureDrawState(48, sink)
+        midend.recordRedraw(sink)
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(96, 192, Buttons.LEFT_BUTTON, 48))
+        sink.events.clear()
+
+        midend.recordRedraw(sink)
+
+        assertSame(first, midend.drawState, "an ordinary move keeps the cache, as C does")
+        assertEquals(0, sink.events.count { it.startsWith("blitter_free") }, "no free after a move")
+        assertEquals(0, sink.events.count { it.startsWith("blitter_new") }, "no new after a move")
+        assertEquals("start_draw", sink.events.first())
+        assertEquals("end_draw", sink.events.last())
+        assertTrue(
+            sink.events.contains("blitter_save:1:0:0") &&
+                sink.events.contains("blitter_load:1:0:0"),
+            "the redraw reuses blitter 1: ${sink.events}",
+        )
+    }
+
+    @Test
     fun `a tile size change frees the old blitter and makes a new one`() {
         val midend = Midend.newGame(BlitterGame(), "4x4", "12345")
         val sink = EventSink()
@@ -60,6 +88,7 @@ class DrawStateTest {
             sink.events,
             "the old drawstate is freed before the new one is created",
         )
+        assertNotSame(first, second, "a tile size change replaces the cache")
         assertSame(second, midend.drawState)
     }
 
@@ -71,27 +100,25 @@ class DrawStateTest {
         )
         val sink = EventSink()
 
-        midend.ensureDrawState(48, sink)
+        val first = midend.ensureDrawState(48, sink)
         assertEquals(KeyOutcome.SomeEffect, midend.processKey(96, 192, Buttons.LEFT_BUTTON, 48))
         midend.recordRedraw(sink)
         assertEquals(
-            listOf("blitter_new:1:48:48", "blitter_free:1", "blitter_new:2:48:48"),
+            listOf("blitter_new:1:48:48"),
             sink.events.filter { it.startsWith("blitter_new") || it.startsWith("blitter_free") },
-            "a move marks the cache stale, as force_redraw does",
+            "a move keeps the cache",
         )
 
         assertTrue(midend.restart())
+        sink.events.clear()
         midend.recordRedraw(sink)
+
+        val second = midend.drawState
+        assertNotSame(first, second, "a restart replaces the cache")
         assertEquals(
-            listOf(
-                "blitter_new:1:48:48",
-                "blitter_free:1",
-                "blitter_new:2:48:48",
-                "blitter_free:2",
-                "blitter_new:3:48:48",
-            ),
+            listOf("blitter_free:1", "blitter_new:2:48:48"),
             sink.events.filter { it.startsWith("blitter_new") || it.startsWith("blitter_free") },
-            "a restart marks the cache stale",
+            "a restart frees the old cache and creates a new one",
         )
     }
 
