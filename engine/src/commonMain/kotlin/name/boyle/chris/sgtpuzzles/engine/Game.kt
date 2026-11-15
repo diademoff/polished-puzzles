@@ -70,6 +70,14 @@ interface Game {
      */
     fun statusText(state: State, ui: Ui): String
 
+    /**
+     * True when [textFormat] can describe the state, the counterpart of
+     * upstream `can_format_as_text_ever`. A game that sets it false has
+     * no `text_format` in C. [Midend.textFormat] then returns an empty
+     * string and does not call [textFormat].
+     */
+    val canFormatAsText: Boolean get() = true
+
     fun textFormat(state: State): String
 
     /**
@@ -216,7 +224,15 @@ data class Size(val width: Int, val height: Int)
  */
 data class KeyRequest(val labels: List<KeyLabel>, val arrowMode: ArrowMode)
 
-data class KeyLabel(val button: Int, val name: String)
+/**
+ * One extra key, the counterpart of upstream `key_label`.
+ *
+ * [needsArrows] mirrors `key_label.needs_arrows`: the shell shows the
+ * key only when it shows the arrow keys, so `android.c` puts such a key
+ * in the `keysIfArrows` string instead of `keys`. A game that does not
+ * use the flag keeps the default false.
+ */
+data class KeyLabel(val button: Int, val name: String, val needsArrows: Boolean = false)
 
 enum class ArrowMode { NONE, ARROWS_ONLY, ARROWS_LEFT_RIGHT, ARROWS_LEFT }
 

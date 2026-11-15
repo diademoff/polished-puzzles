@@ -273,3 +273,34 @@ game rule or a save file.
    `'\x11'`, and `UI_QUIT` return `Unused`. The shell performs those
    actions and must not rely on the engine for them. This is a seam
    limitation, not a game deviation, so `DEVIATIONS.md` has no entry.
+
+## Amendment: arrow-only key labels and games with no text form
+
+- **Date:** 2026-11-15
+
+`guess` needs two seam facts that the ported games do not use. Both are
+defaults, so no ported game changes. Porting `guess` itself is a later
+change.
+
+1. **`Game.KeyLabel.needsArrows`, default false,** mirrors
+   `key_label.needs_arrows` (`puzzles.h:233-241`).
+   `KotlinGameEngine.requestKeys` splits the requested labels the way
+   `android.c:784-794` does: a label with the flag false goes into
+   `KeysResult.keys`, and a label with the flag true goes into
+   `KeysResult.keysIfArrows`. Each group keeps the request order, and
+   each button becomes one character of its string, as C casts the
+   button to `char`. A game that does not use the flag returns the
+   labels and the arrow mode it returned before.
+
+2. **`Game.canFormatAsText`, default true,** mirrors
+   `can_format_as_text_ever`. `Midend.textFormat` calls the game only
+   when the flag is true. `midend_text_format` returns NULL for a game
+   without a text form (`midend.c:2087-2094`), and `guess.c:1574` is
+   the first game with `can_format_as_text_ever = false` and a NULL
+   `text_format`. The seam's `textFormat` returns a non-null `String`,
+   so it returns an empty string in that case. The app and the tests
+   then use the value without a null check or a crash. A caller that
+   must tell "no text form" from "an empty board" reads
+   `canFormatAsText` first. No parity test compares the text of a game
+   whose flag is false, so the empty string cannot hide an oracle
+   difference.

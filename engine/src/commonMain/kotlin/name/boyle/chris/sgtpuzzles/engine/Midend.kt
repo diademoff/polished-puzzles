@@ -152,7 +152,17 @@ class Midend private constructor(
 
     fun statusText(): String = game.statusText(state, ui)
 
-    fun textFormat(): String = game.textFormat(state)
+    /**
+     * `midend_text_format`: the state as text.
+     *
+     * C returns NULL for a game that cannot format as text
+     * (`can_format_as_text_ever` is false), so the seam uses the empty
+     * string for that case and does not call the game's `textFormat`.
+     * A caller that must tell "no text form" from "an empty board"
+     * checks [Game.canFormatAsText] before it calls this.
+     */
+    fun textFormat(): String =
+        if (game.canFormatAsText) game.textFormat(state) else ""
 
     /**
      * Consumes the "the last transition completed the game" event. The

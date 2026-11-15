@@ -17,7 +17,6 @@ import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
-import name.boyle.chris.sgtpuzzles.engine.KeyRequest
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.SameGame
@@ -42,6 +41,37 @@ import kotlin.math.min
  * for example `"Fifteen", "games.fifteen", "fifteen"`.
  */
 internal fun htmlHelpTopicFor(game: Game): String = game.backendName
+
+/**
+ * The `KeysResult` of a Kotlin game, the counterpart of
+ * `Java_..._requestKeys` in `android.c`.
+ *
+ * C splits the requested labels into two strings. A key whose
+ * `needs_arrows` is false always appears on the keyboard, and a key
+ * whose `needs_arrows` is true appears only while the shell shows the
+ * arrow keys. Both strings hold the button as a character and keep the
+ * request order. The result carries no label text, as in `android.c`;
+ * [Game.KeyLabel.name] stays in the engine for a front end that shows
+ * it.
+ */
+internal fun keysResultFor(game: Game, params: Game.Params): GameEngine.KeysResult {
+    val request = game.requestKeys(params)
+    val keys = request.labels
+        .filterNot { it.needsArrows }
+        .joinToString("") { it.button.toChar().toString() }
+    val keysIfArrows = request.labels
+        .filter { it.needsArrows }
+        .joinToString("") { it.button.toChar().toString() }
+    return GameEngine.KeysResult(keys, keysIfArrows, arrowsFor(request.arrowMode))
+}
+
+/** The Android arrow mode for an engine arrow mode, as `android.c` maps it. */
+private fun arrowsFor(mode: EngineArrowMode): ArrowMode = when (mode) {
+    EngineArrowMode.NONE -> ArrowMode.NO_ARROWS
+    EngineArrowMode.ARROWS_ONLY -> ArrowMode.ARROWS_ONLY
+    EngineArrowMode.ARROWS_LEFT -> ArrowMode.ARROWS_LEFT_CLICK
+    EngineArrowMode.ARROWS_LEFT_RIGHT -> ArrowMode.ARROWS_LEFT_RIGHT_CLICK
+}
 
 /**
  * Which games have a Kotlin backend. The flag is on by default for the
@@ -388,17 +418,7 @@ class KotlinGameEngine private constructor(
         backend: BackendName,
         params: String?,
         palisadeFullCursor: Boolean,
-    ): GameEngine.KeysResult {
-        val request: KeyRequest = game.requestKeys(midend.currentParams)
-        val keys = request.labels.joinToString("") { it.button.toChar().toString() }
-        val arrow = when (request.arrowMode) {
-            EngineArrowMode.NONE -> ArrowMode.NO_ARROWS
-            EngineArrowMode.ARROWS_ONLY -> ArrowMode.ARROWS_ONLY
-            EngineArrowMode.ARROWS_LEFT -> ArrowMode.ARROWS_LEFT_CLICK
-            EngineArrowMode.ARROWS_LEFT_RIGHT -> ArrowMode.ARROWS_LEFT_RIGHT_CLICK
-        }
-        return GameEngine.KeysResult(keys, "", arrow)
-    }
+    ): GameEngine.KeysResult = keysResultFor(game, midend.currentParams)
 
     override fun timerTick() {}
 
