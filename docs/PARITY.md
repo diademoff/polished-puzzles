@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, and `sixteen` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, and `flip` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -196,7 +196,7 @@ submenu entries when a game groups its presets.
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `C` |
-| `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `C` |
+| `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `dual-run` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `dual-run` |
 | `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `C` |
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `C` |

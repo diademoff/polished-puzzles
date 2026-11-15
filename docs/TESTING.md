@@ -409,6 +409,48 @@ Engine tests:
   oracle trace and the frozen trace, plus moved, solved, and target
   states, the four cursor arms, and sized traces at tiles 33, 63, and
   100.
+- `FlipDescTest` is semantic. It compares parameter decoding and
+  encoding, the validation messages, the six presets, and
+  `params + seed -> DESC` for the presets, extra shapes, and a numeric
+  seed sweep. The seed 1061 vector pins the all-zero grid retry, and the
+  Random ids pin the tree order and the duplicate-row retries.
+- `FlipGameTest` is semantic. It compares new games, text, status text,
+  the loose move grammar, real clicks at the phone viewport, completion,
+  and undo/redo across the completing move. The solver is compared
+  through its `S` hint mask and the clicks that finish the game: a solve
+  stays open at status 0, sets the hint bits, and never raises the
+  completion event, and a click after completion changes the board but
+  not the count.
+- `FlipSaveTest` is strict for the save text. It reads every `flip` save
+  in the corpus, rewrites it byte for byte, and makes the oracle load
+  both versions. It also makes the oracle load a Kotlin-written save for
+  every preset and pins the `PARAMS`/`CPARAMS` asymmetry: a seeded
+  Random game writes Crosses in `PARAMS` and Random in `CPARAMS`, while
+  the game id drops the shape. A played move, an undone position with a
+  live redo branch, a hint/solve state, a cheated completion, and a
+  restart are built in memory, so the history records are covered while
+  the corpus stays frozen.
+- `FlipInputParityTest` is semantic. It compares the layout for phone,
+  tablet, landscape, tiny, and one-pixel-short viewports, then sends
+  real clicks at tile sizes 48, 63, 82, and 100, including letterboxed
+  origins. Every move must add one record and one to the count and
+  change the board, while a border pixel in the same view must change
+  nothing. It also compares the requested arrow mode, the cursor keys
+  and their modifiers, and the swipe sequence, which flip ignores: only
+  the DOWN click is a move.
+- `FlipTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus moved, hinted, and completed
+  states and a cursor that changes only the diagram colour of one cell.
+
+The flip solver has one known seam gap. `Game.solve` has no error
+out-parameter, so an insoluble hand-written position returns `null` in
+Kotlin, while C reports `No solution exists for this position`. The
+current `null` behavior is pinned by
+`FlipGameTest.an insoluble hand-written position cannot be solved`, with
+no `DEVIATIONS.md` entry: generated games are always soluble, and the
+gap is enablement seam debt, recorded in `work/port-queue.md`. A fix
+belongs in the seam as a solver result type, not as a field on the game
+state.
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals
