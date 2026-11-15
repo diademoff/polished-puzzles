@@ -47,8 +47,12 @@ class KeyShortcutTest {
             'u'.code,
             'U'.code,
             '*'.code,
-            // CTRL+Z canonicalises to the control code 0x1A.
+            // CTRL+Z canonicalises to the control code 0x1A. The raw
+            // control codes 0x1A and 0x1F are aliases too.
+            0x1A,
+            0x1F,
             Buttons.MOD_CTRL or 'Z'.code,
+            Buttons.UI_UNDO,
         )
         for (alias in aliases) {
             val midend = movedFifteen()
@@ -72,6 +76,8 @@ class KeyShortcutTest {
             'r'.code,
             'R'.code,
             '#'.code,
+            0x12,
+            0x19,
             Buttons.UI_REDO,
         )
         for (alias in aliases) {

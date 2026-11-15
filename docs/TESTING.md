@@ -265,12 +265,13 @@ Engine tests:
   button that reaches `interpretMove`.
 - `KeyShortcutTest` pins the `midend_really_process_key` order: the
   game sees a key first, and the one-key shortcuts apply only to
-  `Unused`. `'u'`, `'U'`, `'*'`, and Ctrl+Z undo exactly one move;
-  `'r'`, `'R'`, `'#'`, and `UI_REDO` redo exactly one move; a game that
-  consumes `'u'` keeps it; `UI_SOLVE` and `'\x13'` solve a solvable game
-  and return `Unused` for a game without a solver; `UI_*` never reaches
-  `interpretMove`; and the new-game and quit aliases return `Unused`
-  because the shell owns those actions.
+  `Unused`. `'u'`, `'U'`, `'*'`, `0x1A`, `0x1F`, Ctrl+Z, and `UI_UNDO`
+  undo exactly one move; `'r'`, `'R'`, `'#'`, `0x12`, `0x19`, and
+  `UI_REDO` redo exactly one move; a game that consumes `'u'` keeps it;
+  `UI_SOLVE` and `'\x13'` solve a solvable game and return `Unused` for
+  a game without a solver; `UI_*` never reaches `interpretMove`; and the
+  new-game and quit aliases return `Unused` because the shell owns those
+  actions.
 - `BoardGeometryTest` checks that the one geometry value used for
   drawing, input, the cursor, and size negotiation fits and centers the
   board on phone, tablet, landscape, and tiny viewports.

@@ -273,4 +273,3 @@ game rule or a save file.
    `'\x11'`, and `UI_QUIT` return `Unused`. The shell performs those
    actions and must not rely on the engine for them. This is a seam
    limitation, not a game deviation, so `DEVIATIONS.md` has no entry.
-
