@@ -186,13 +186,12 @@ class KeyCanonicalisationTest {
             "the case of Z does not matter",
         )
 
-        // CTRL+Z is not redo. It canonicalises to the control code 0x1A,
-        // which fifteen does not use, so the redo branch stays.
+        // CTRL+Z canonicalises to the control code 0x1A, which is the
+        // undo alias for a game that does not use it.
         val ctrlZ = Midend.newGame(Fifteen, "4x4", SEED)
         assertTrue(ctrlZ.solve())
-        assertTrue(ctrlZ.undo())
         assertEquals(
-            KeyOutcome.Unused,
+            KeyOutcome.SomeEffect,
             ctrlZ.processKey(
                 0,
                 0,
@@ -200,8 +199,19 @@ class KeyCanonicalisationTest {
                 Fifteen.preferredTileSize,
             ),
         )
-        assertEquals(0, ctrlZ.status())
+        assertEquals(0, ctrlZ.status(), "undo leaves the solved state")
         assertTrue(ctrlZ.canRedo)
+        assertEquals(1, ctrlZ.statePos)
+        assertEquals(
+            KeyOutcome.NoEffect,
+            ctrlZ.processKey(
+                0,
+                0,
+                Buttons.MOD_CTRL or 'Z'.code,
+                Fifteen.preferredTileSize,
+            ),
+            "there is nothing left to undo",
+        )
     }
 
     @Test

@@ -258,11 +258,19 @@ Engine tests:
 - `KeyCanonicalisationTest` pins the `midend_process_key` rules that
   run before a game sees a key: Enter, Return, Ctrl+J, and Ctrl+M as
   `CURSOR_SELECT`; Space as `CURSOR_SELECT2`; DEL and Ctrl+H as
-  backspace; Ctrl+Shift+Z as redo; Ctrl on a click rejected; the keypad
-  flag kept only on a digit; and the held-button rules for a drag, a
-  release, a drag with no press, and an overlapping second press. Each
-  case asserts a real move, a UI change, or the button that reaches
-  `interpretMove`.
+  backspace; Ctrl+Shift+Z as redo and Ctrl+Z as undo; Ctrl on a click
+  rejected; the keypad flag kept only on a digit; and the held-button
+  rules for a drag, a release, a drag with no press, and an overlapping
+  second press. Each case asserts a real move, a UI change, or the
+  button that reaches `interpretMove`.
+- `KeyShortcutTest` pins the `midend_really_process_key` order: the
+  game sees a key first, and the one-key shortcuts apply only to
+  `Unused`. `'u'`, `'U'`, `'*'`, and Ctrl+Z undo exactly one move;
+  `'r'`, `'R'`, `'#'`, and `UI_REDO` redo exactly one move; a game that
+  consumes `'u'` keeps it; `UI_SOLVE` and `'\x13'` solve a solvable game
+  and return `Unused` for a game without a solver; `UI_*` never reaches
+  `interpretMove`; and the new-game and quit aliases return `Unused`
+  because the shell owns those actions.
 - `BoardGeometryTest` checks that the one geometry value used for
   drawing, input, the cursor, and size negotiation fits and centers the
   board on phone, tablet, landscape, and tiny viewports.
@@ -313,6 +321,11 @@ Engine tests:
   including a drag with no press and an overlapping second press. It
   compares the save, id, status, and history flags, and asserts the
   real move or the redo.
+- `KeyShortcutParityTest` is semantic. It replays one fifteen move and
+  then `u`, `r`, Ctrl+Z, and Ctrl+Shift+Z in one oracle `keys`
+  sequence, and the same sequence in Kotlin. It also covers `U`, `R`,
+  `*`, and `#`. The save, id, status, and history flags must match, and
+  the final state must keep exactly one move.
 - `FifteenTraceTest` is strict. It draws the Kotlin board through
   `KotlinTraceSink`, normalises it with the same `TraceNormalizer` as
   the oracle, and compares the result with a fresh oracle trace and
@@ -330,7 +343,10 @@ Engine tests:
   off, each against the oracle with the same key sequence or preference.
 - `SlantInputParityTest` compares layout and clicks at several
   viewports, including the letterbox margin, and a swipe that must
-  change only its start cell.
+  change only its start cell. It also sends Shift+Right and Ctrl+Right
+  before a select: C ignores both modified cursor keys, so the select
+  must reach the same cell as a plain Right, and the test asserts the
+  cursor position and the save.
 - `SameGameDescTest` is semantic. It compares parameters, validation,
   presets, and `params + seed -> DESC`, including non-soluble generation
   and a numeric seed sweep.
@@ -352,7 +368,9 @@ Engine tests:
   first tap must only select and leave the save unchanged; the second
   must remove the group. The state, ID, status, and a final redraw with
   its status line are compared at every viewport, including letterboxed
-  origins.
+  origins. A modified-key test sends Shift+Right and Ctrl+Right before
+  two selects: C ignores both modified cursor keys, so the removal must
+  match a plain Right, and the test asserts the cursor position.
 - `SameGameTraceTest` is strict. It compares every preset with a fresh
   oracle trace and the frozen trace, plus completed, impossible, and
   blank states and a selected group.
@@ -380,7 +398,10 @@ Engine tests:
   after every tap, including a letterboxed origin. A tap on the current
   colour and a tap in the letterbox must change nothing, and a tap that
   reaches the move limit must report the loss. The keyboard path
-  compares the arrow mode and the fill.
+  compares the arrow mode and the fill. A modified-key test sends
+  Shift+Right and Ctrl+Right before a select: C ignores both modified
+  cursor keys, so the fill must match a plain Right, and the test
+  asserts the cursor position.
 - `FloodTraceTest` is strict. It compares every preset with a fresh
   oracle trace and the frozen trace, plus moved, solved, and cheated
   states and a tile-15 trace where the separator is not drawn.

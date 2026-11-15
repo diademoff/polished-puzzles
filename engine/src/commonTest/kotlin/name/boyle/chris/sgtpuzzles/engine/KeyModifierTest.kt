@@ -10,9 +10,9 @@ import kotlin.test.assertTrue
  *
  * The midend canonicalises the button before the game sees it, as
  * `midend_process_key` does. `CTRL` and `SHFT` stay only on a cursor
- * move and on TAB; each game still drops the modifiers it does not use.
- * A modified button that the midend keeps must therefore behave exactly
- * like the plain one, and a rejected modifier must not reach the game.
+ * move and on TAB; each game decides what a kept modifier means. A
+ * modifier that the midend strips must behave exactly like the plain
+ * one, and a rejected modifier must not reach the game.
  */
 class KeyModifierTest {
 
@@ -281,7 +281,8 @@ class KeyModifierTest {
         assertEquals('h'.code, recorded.seen, "a hint key loses SHFT")
         assertEquals(2, recorded.calls)
 
-        // A UI action is dispatched before the game and never reaches it.
+        // A UI action is a menu key, not a game key, so the game never
+        // sees it.
         midend.processKey(0, 0, Buttons.UI_UNDO or Buttons.MOD_SHFT, tile)
         assertEquals(2, recorded.calls, "a UI key is not a game key")
 

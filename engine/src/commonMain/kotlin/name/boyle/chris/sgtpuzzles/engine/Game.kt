@@ -105,9 +105,11 @@ interface Game {
      *
      * [button] is canonical, as `midend_process_key` makes it: `CTRL`
      * and `SHFT` stay only on a cursor move and on TAB, and
-     * `MOD_NUM_KEYPAD` stays only on a digit. A game still calls
-     * [Buttons.stripModifiers] at its entry, because it does not use
-     * those modifiers; a second strip changes nothing.
+     * `MOD_NUM_KEYPAD` stays only on a digit. A game that reads a
+     * modifier compares the exact button; a game that does not use a
+     * modifier calls [Buttons.stripModifiers] at its entry. A modified
+     * cursor move is therefore a game rule: `fifteen` strips it, while
+     * `slant`, `samegame`, `flood`, and `flip` reject it as unused.
      */
     fun interpretMove(
         state: State,
@@ -195,11 +197,13 @@ object Buttons {
     const val CURSOR_RIGHT = 0x020C
     const val CURSOR_SELECT = 0x020D
     const val CURSOR_SELECT2 = 0x020E
+    const val UI_LOWER_BOUND = 0x020F
     const val UI_QUIT = 0x0210
     const val UI_NEWGAME = 0x0211
     const val UI_SOLVE = 0x0212
     const val UI_UNDO = 0x0213
     const val UI_REDO = 0x0214
+    const val UI_UPPER_BOUND = 0x0215
     const val MOD_CTRL = 0x1000
     const val MOD_SHFT = 0x2000
     const val MOD_NUM_KEYPAD = 0x4000
@@ -211,6 +215,10 @@ object Buttons {
     fun isCursorMove(button: Int): Boolean =
         button == CURSOR_UP || button == CURSOR_DOWN ||
             button == CURSOR_LEFT || button == CURSOR_RIGHT
+
+    /** `IS_UI_FAKE_KEY`: a menu action, never a game key. */
+    fun isUiFakeKey(button: Int): Boolean =
+        button > UI_LOWER_BOUND && button < UI_UPPER_BOUND
 
     /** `IS_MOUSE_DOWN`: one of the three button presses. */
     fun isMouseDown(button: Int): Boolean =

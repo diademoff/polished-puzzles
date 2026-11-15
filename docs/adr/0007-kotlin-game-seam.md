@@ -173,7 +173,8 @@ preference.
    `midend_really_process_key`. The first canonicalises the button, the
    second recognises `UI_UNDO`, `UI_REDO`, and `UI_SOLVE` and calls
    `game.interpretMove`. The history, the `MoveResult` handling, and
-   `changedState` are unchanged.
+   `changedState` are unchanged. The dispatch order is corrected in the
+   last amendment.
 
 3. **Each game still strips what it does not use.** A cursor move keeps
    `CTRL` and `SHFT`, and TAB keeps both; every other key reaches the
@@ -181,7 +182,8 @@ preference.
    call `Buttons.stripModifiers` at their entry, so a second strip
    changes nothing. `Sixteen` reads `MOD_CTRL`, `MOD_SHFT`, and
    `MOD_NUM_KEYPAD` before it strips them, so its shift-lock and pad
-   behavior remains a game rule.
+   behavior remains a game rule. The cursor rule of `Slant`, `SameGame`,
+   and `Flood` is corrected in the last amendment.
 
 4. **The C canonicalisation is ported in the C order.** `processKey`
    does this, before the game call:
@@ -223,6 +225,52 @@ preference.
 
 The undo and redo aliases that `midend_really_process_key` handles for
 control characters (`\x1A`, `\x1F`, `*`, `#`, `\x12`, `\x19`),
-`UI_QUIT`/`UI_NEWGAME`, and the one-key shortcuts are not ported. The
-Android shell sends the `UI_*` buttons for those actions, and the seam
-has no quit or new-game action to dispatch them to.
+`UI_QUIT`/`UI_NEWGAME`, and the one-key shortcuts are not part of this
+amendment. The next amendment ports them, except for new game and quit,
+which need the menu path that lives in the shell.
+
+## Amendment: modified cursor keys and one-key shortcuts
+
+- **Date:** 2026-11-15
+
+Two input differences from `midend.c` are fixed here. Neither changes a
+game rule or a save file.
+
+1. **A modified cursor key is not a cursor move in every game.**
+   `midend_process_key` keeps `CTRL` and `SHFT` on a cursor key
+   (`midend.c:1239-1246`) and lets the game decide:
+   `IS_CURSOR_MOVE` compares the exact button (`puzzles.h:71-72`).
+   `fifteen` and `sixteen` call `STRIP_BUTTON_MODIFIERS` at their entry.
+   `slant`, `samegame`, `flood`, and `flip` compare the exact button, so
+   a modified cursor move returns `MOVE_UNUSED`. The ports of `slant`,
+   `samegame`, and `flood` used to strip the modifiers at entry and moved
+   the cursor. They now use the exact button. A non-cursor key still
+   arrives canonicalised by the midend, so the distinction exists only
+   where C makes it. `Fifteen` and `Flip` keep their current behavior.
+
+2. **The game sees a key before the shortcuts do.** `reallyProcessKey`
+   now follows C:
+   - a UI fake key is not passed to `interpretMove`;
+   - every other button goes to `interpretMove` first;
+   - only `Unused` applies the shortcut chain, in C order: new game,
+     undo, redo, solve, quit;
+   - undo and redo return `NoEffect` when there is no history;
+   - a game with a solver returns `SomeEffect` for solve even when the
+     solver returns null, because C sets `PKR_SOME_EFFECT` before it
+     tries `midend_solve`; a game without a solver returns `Unused` for
+     `'\x13'` and `UI_SOLVE`;
+   - the aliases are `'n'`, `'N'`, `'\x0E'`, `UI_NEWGAME`; `'u'`,
+     `'U'`, `'*'`, `'\x1A'`, `'\x1F'`, `UI_UNDO`; `'r'`, `'R'`, `'#'`,
+     `'\x12'`, `'\x19'`, `UI_REDO`; `'\x13'`, `UI_SOLVE`; `'q'`, `'Q'`,
+     `'\x11'`, `UI_QUIT`.
+   `CTRL+Z` canonicalises to `'\x1A'`, so it undoes. `CTRL+SHFT+Z`
+   becomes `UI_REDO` in the midend, so it redoes. `one_key_shortcuts` is
+   always on, the C default; the seam has no preference store.
+
+3. **New game and quit stay in the shell.** This seam owns no new-game
+   or quit action, and `midend_new_game` needs the menu path that lives
+   in the shell. `'n'`, `'N'`, `'\x0E'`, `UI_NEWGAME`, `'q'`, `'Q'`,
+   `'\x11'`, and `UI_QUIT` return `Unused`. The shell performs those
+   actions and must not rely on the engine for them. This is a seam
+   limitation, not a game deviation, so `DEVIATIONS.md` has no entry.
+

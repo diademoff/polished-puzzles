@@ -287,34 +287,66 @@ class Midend private constructor(
     }
 
     /**
-     * The key body of `midend_really_process_key`: the UI actions and the
-     * game call, with the history and `changedState` effects. [processKey]
-     * canonicalises the button before this, and a fabricated button-up
-     * also goes through here.
+     * The key body of `midend_really_process_key`: the game call and the
+     * one-key shortcuts, with the history and `changedState` effects.
+     * [processKey] canonicalises the button before this, and a
+     * fabricated button-up also goes through here.
+     *
+     * The order follows C. A UI fake key is a menu action and never
+     * reaches the game. Every other button goes to `interpretMove`
+     * first, and only a `MOVE_UNUSED` result applies the shortcuts. A
+     * game that consumes a key keeps it, so `'u'` is not an undo when
+     * the game uses it.
      */
     private fun reallyProcessKey(x: Int, y: Int, button: Int, tileSize: Int): KeyOutcome {
-        val stripped = Buttons.stripModifiers(button)
-        when (stripped) {
-            Buttons.UI_UNDO -> return if (undo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
-            Buttons.UI_REDO -> return if (redo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
-            Buttons.UI_SOLVE -> return if (solve()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
-        }
+        if (!Buttons.isUiFakeKey(button)) {
+            when (val result = game.interpretMove(state, ui, x, y, button, tileSize)) {
+                is MoveResult.Move -> {
+                    val previous = state
+                    val next = game.executeMove(state, result.text)
+                        ?: return KeyOutcome.NoEffect
+                    purgeRedo()
+                    entries += Entry(next, result.text, MoveType.MOVE)
+                    statePos++
+                    if (game.changedState(ui, previous, next)) completedEvent = true
+                    return KeyOutcome.SomeEffect
+                }
 
-        return when (val result = game.interpretMove(state, ui, x, y, button, tileSize)) {
-            is MoveResult.Move -> {
-                val previous = state
-                val next = game.executeMove(state, result.text) ?: return KeyOutcome.NoEffect
-                purgeRedo()
-                entries += Entry(next, result.text, MoveType.MOVE)
-                statePos++
-                if (game.changedState(ui, previous, next)) completedEvent = true
+                MoveResult.UiUpdate -> return KeyOutcome.SomeEffect
+                MoveResult.NoEffect -> return KeyOutcome.NoEffect
+                MoveResult.Unused -> Unit
+            }
+        }
+        return applyShortcut(button)
+    }
+
+    /**
+     * The shortcut chain of `midend_really_process_key`, in C order:
+     * new game, undo, redo, solve, quit. `one_key_shortcuts` is not a
+     * seam preference and is always on, as the C default.
+     *
+     * The shell owns the new game and quit actions, so their keys have
+     * no engine action here. They return [KeyOutcome.Unused] instead of
+     * starting or quitting a game.
+     */
+    private fun applyShortcut(button: Int): KeyOutcome = when (button) {
+        'n'.code, 'N'.code, 0x0E, Buttons.UI_NEWGAME -> KeyOutcome.Unused
+        'u'.code, 'U'.code, '*'.code, 0x1A, 0x1F, Buttons.UI_UNDO ->
+            if (undo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
+
+        'r'.code, 'R'.code, '#'.code, 0x12, 0x19, Buttons.UI_REDO ->
+            if (redo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
+
+        // C sets SOME_EFFECT before it tries the solver, so a solvable
+        // game reports an effect even when the solver returns null.
+        0x13, Buttons.UI_SOLVE ->
+            if (!game.canSolve) KeyOutcome.Unused else {
+                solve()
                 KeyOutcome.SomeEffect
             }
 
-            MoveResult.UiUpdate -> KeyOutcome.SomeEffect
-            MoveResult.NoEffect -> KeyOutcome.NoEffect
-            MoveResult.Unused -> KeyOutcome.Unused
-        }
+        'q'.code, 'Q'.code, 0x11, Buttons.UI_QUIT -> KeyOutcome.Unused
+        else -> KeyOutcome.Unused
     }
 
     /**
