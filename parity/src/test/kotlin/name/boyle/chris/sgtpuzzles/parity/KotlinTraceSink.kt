@@ -197,12 +197,15 @@ class KotlinTraceSink : DrawSink {
          * Builds the trace object for the current state of [midend],
          * without the `changed_state` operation the oracle emits for a
          * new game. Use this after keys or preferences changed the UI.
+         *
+         * [statusAlreadyDrawn] primes the sink's status cache without
+         * recording the line. The oracle's `trace` op replays its key
+         * sequence with recording on, clears those operations, and keeps
+         * the drawing cache, so a game with a status bar does not emit
+         * the same text in the traced redraw. Pass true for that shape.
          */
-        fun stateTrace(midend: Midend): JsonValue.Obj {
-            val sink = KotlinTraceSink()
-            midend.recordRedraw(sink)
-            return objectFor(midend, sink)
-        }
+        fun stateTrace(midend: Midend): JsonValue.Obj =
+            stateTrace(midend, midend.tileSize, statusAlreadyDrawn = false)
 
         /**
          * The same redraw as [stateTrace], at an explicit [tileSize].
@@ -211,9 +214,18 @@ class KotlinTraceSink : DrawSink {
          * sequence follows [Midend.recordRedraw], and the trace header
          * reports the size the draw uses.
          */
-        fun stateTrace(midend: Midend, tileSize: Int): JsonValue.Obj {
+        fun stateTrace(
+            midend: Midend,
+            tileSize: Int,
+            statusAlreadyDrawn: Boolean = false,
+        ): JsonValue.Obj {
             val size = midend.game.computeSize(midend.params, tileSize)
             val sink = KotlinTraceSink()
+            if (statusAlreadyDrawn) {
+                sink.recording = false
+                sink.status(midend.statusText())
+                sink.recording = true
+            }
             val drawState = midend.ensureDrawState(tileSize, sink)
             // A new sink replaces the drawstate, so this is its first
             // draw. Keep the helper in step with `Midend.recordRedraw`.
