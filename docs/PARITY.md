@@ -199,7 +199,7 @@ submenu entries when a game groups its presets.
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `dual-run` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `dual-run` |
 | `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `C` |
-| `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `C` |
+| `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `dual-run` |
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `C` |
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `C` |
 | `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `C` |
@@ -323,6 +323,30 @@ Notes:
   `KotlinGameEngine`, the unconditional status text, the missing
   no-preferences path, and the two-release wait are open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
+- `guess` is `dual-run`. Its parameters, generator, loose move and UI
+  grammars, state, hints, drag, hold, clear and keyboard input, the
+  reveal, status, save file, palette, drawing, and layout pass the
+  matrix in `GuessDescTest`, `GuessGameTest`, `GuessSaveTest`,
+  `GuessTraceTest`, and `GuessInputParityTest`. `GuessSaveTest` pins
+  the `UI` record in both directions, the legacy record without holds,
+  and the character-stream decoder. `GuessTraceTest` covers the cold
+  traces, the labels preference, the cursor, the solved reveal, and the
+  warm drag, release, and post-move frames. `GuessInputParityTest`
+  sends real clicks and drags at tiles 48, 63, 82, and 100, two
+  letterboxed drags, the draft, hold, and clear keys, and a winning
+  submit. C reads and writes `curr_pegs->pegs[npegs]` on backspace at
+  the Submit slot, which is undefined behavior, and it aborts on the
+  unmarkable submit in a build with assertions. The port treats the
+  Submit slot as empty on backspace and lets the midend map the
+  rejected unmarkable move to `NoEffect`, which is C's release-build
+  behavior. `GuessTest` pins both results, so they are port
+  definitions, not game-rule deviations. The `show-labels`
+  preference lives on the engine UI with a false default until the app
+  adapter applies the stored value. `KotlinGames.gameFor` knows the
+  Kotlin game, but the app still uses C: the preference schema, the
+  configuration dialog, the app adapter, and the two-release wait are
+  open. The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 
 ## 8. Goldens

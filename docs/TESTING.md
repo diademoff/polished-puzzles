@@ -330,6 +330,12 @@ Engine tests:
   completion rule, the cursor scan order, and the generator's retry
   stream. The oracle cannot expose some of these, so they are
   engine-only pins.
+- `GuessTest` checks the guess parameter quirks, the description
+  vectors on both RNG paths, the UI character-stream parser, the
+  palette arithmetic, and the geometry. It also pins the two paths
+  that the C debug oracle cannot compare: backspace at the Submit slot,
+  which is out of bounds in C, and the unmarkable submit after a drag,
+  which aborts the assertion build.
 - `FifteenDescTest` is semantic. It compares `params + seed -> DESC`
   from the Kotlin generator with the frozen goldens and with fresh
   oracle games.
@@ -594,6 +600,32 @@ Engine tests:
   check that the press was accepted. It also covers the keyboard jump,
   the second select that cancels it, the obstacle-clamping cursor, and
   modified cursor keys.
+- `GuessDescTest` is semantic. It compares the two presets, the
+  decoding quirks, the validation messages, and `params + seed -> DESC`
+  for every preset, nine seeds, and a numeric sweep, including the
+  no-multiple retry fixtures.
+- `GuessGameTest` is semantic. It compares new games, text, status
+  text, the loose move grammar, hints, drafts and holds, drags,
+  backspace, labels, completion, undo and redo, and repeated solves.
+  It also compares the requested arrow mode and key labels, including
+  the `Clear` label and its `needsArrows` flag.
+- `GuessSaveTest` is strict for the save text. It reads every `guess`
+  save in the corpus, rewrites it byte for byte, and makes the oracle
+  load both versions. It pins the `UI` record in both directions, the
+  legacy record without holds, the character-stream decoder quirks, and
+  the rejected move after a solve or a win.
+- `GuessTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus the palette, labels-on, a
+  visible cursor, solved reveals, and, through the oracle's `traceWarm`,
+  the warm drag, release, and post-move frames with their blitter
+  sequence.
+- `GuessInputParityTest` is semantic. It compares the layout at four
+  exact board sizes and four letterboxed viewports, then sends real
+  colour clicks, a colour drag, and a winning submit at tiles 48, 63,
+  82, and 100, plus two letterboxed drags with origins (0,36) and
+  (0,195). A real guess must change the draft and add one state, while
+  a colour click and the draft, hold, and clear keys must change
+  neither the state nor the count.
 
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in
@@ -604,6 +636,26 @@ no `DEVIATIONS.md` entry: generated games are always soluble, and the
 gap is enablement seam debt, recorded in `work/port-queue.md`. A fix
 belongs in the seam as a solver result type, not as a field on the game
 state.
+
+`guess` has two enablement debts, both recorded in `work/port-queue.md`:
+
+- The `show-labels` preference lives on `Guess.Ui` with a false
+  default, because the seam has no preference hook. The app adapter
+  must apply the stored per-backend preference after `newUi` and after
+  `decodeUi`. C's order is `new_ui`, `set_prefs`, `decode_ui`
+  (`midend.c:2669-2673`); for guess the last two commute, because
+  `decode_ui` does not touch `show_labels`, so applying the preference
+  after `Midend.fromSave` is observationally identical. No preference
+  seam is added in this slice, and there is no `DEVIATIONS.md` entry.
+- Backspace at the Submit slot reads and writes
+  `curr_pegs->pegs[npegs]` in C (`guess.c:974-980`); the port treats the
+  slot as empty and never writes it. The unmarkable submit
+  (`guess.c:956-963`) reaches `midend.c:1052`, where a build with
+  assertions aborts on the rejected move. The C debug oracle aborts on
+  that path, so it cannot compare the result. Kotlin keeps C's move
+  text and lets the midend map the rejected move to `NoEffect`, which
+  is C's release-build behavior. `GuessTest` pins both results.
+  Neither is a game-rule deviation, so `DEVIATIONS.md` is unchanged.
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

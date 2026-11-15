@@ -615,14 +615,28 @@ class GuessTest {
     fun `an unmarkable submit is a rejected move, not a crash`() {
         val midend = Midend.newGame(Guess, "", "0")
         val ui = midend.ui as Guess.Ui
-        ui.pegCur = 4
+        // A full draft is markable, and the last digit moves the cursor
+        // to the Submit slot.
+        for (key in listOf(49, 50, 51, 52)) {
+            midend.processKey(0, 0, key, tile)
+        }
+        assertTrue(ui.markable)
+        assertEquals(4, ui.pegCur)
+
+        // Drag the first peg out of the row. This clears it and leaves
+        // the cursor at Submit, so the draft is no longer markable.
+        midend.processKey(96, 33, Buttons.LEFT_BUTTON, tile)
+        midend.processKey(10, 300, Buttons.LEFT_DRAG, tile)
+        midend.processKey(10, 300, Buttons.LEFT_RELEASE, tile)
         assertFalse(ui.markable)
+        assertEquals(4, ui.pegCur)
+        assertEquals("0,2,3,4", ui.currPegs.joinToString(","))
 
         // C builds the move anyway, and an assertion build aborts in
         // the midend. The port lets the midend map the rejected move to
         // NoEffect, which is C's release-build result.
         assertEquals(
-            MoveResult.Move("G0,0,0,0"),
+            MoveResult.Move("G0,2,3,4"),
             Guess.interpretMove(midend.state, ui, 0, 0, Buttons.CURSOR_SELECT, tile),
         )
         assertEquals(
