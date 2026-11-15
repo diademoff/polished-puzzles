@@ -404,15 +404,17 @@ Notes:
   `FillingTest`. The generator and the solver decide every `DESC`, so
   `FillingDescTest` compares every preset with four seeds and pins the
   decode quirks and the wide clue alphabet. `FillingGameTest` compares
-  the move grammar, the solver strings including a stalled board,
-  completion, undo, redo, and a real click plus digit. The four
-  `filling` saves in the corpus are read and rewritten by the generic
-  `SaveParityTest`, and the move-grammar test makes C load a
-  Kotlin-written save for every accepted move. The trace test covers
-  the three frozen traces, a selected cell, the cursor ring, a
-  completed `1x2` board, and sized traces at tiles 48, 63, 82, and 100,
-  plus the letterboxed 411x702 viewport at origin (2,206). A warm frame
-  after a click and after a click plus digit is exactly `start_draw`,
+  the move grammar, the solver strings including a stalled board and a
+  solve after a real fill, completion, undo, redo, and a real click plus
+  digit. `FillingSaveTest` reads the four `filling` saves in the corpus,
+  rewrites them byte for byte, makes C load a Kotlin-written save for
+  every preset, and round-trips a played fill, an undone position with a
+  live redo branch, a solve, and a restart in both directions. The trace
+  test covers the three frozen traces, a selected cell, the cursor ring,
+  a completed `1x2` board, a partially filled board with an overfull
+  region, and sized traces at tiles 48, 63, 82, and 100, plus the
+  letterboxed 411x702 viewport at origin (2,206). A warm frame after a
+  click and after a click plus digit is exactly `start_draw`,
   `end_draw`.
 
   The input test sends real clicks and a click plus digit at tiles 48,
@@ -425,20 +427,26 @@ Notes:
   preset: arrow mode 3 with `1`..`9`, `0`, and `Clear`, and no key needs
   arrows.
 
-  Four C defects are release-build behavior, so the port keeps them and
-  pins them in `FillingTest` instead of adding a deviation:
-  `current_key_label` reads `ui->sel` with no NULL test
+  Three C defects leave a defined result for the port instead of a
+  deviation: `current_key_label` reads `ui->sel` with no NULL test
   (`filling.c:1450`); an Android letterbox click leaves the cursor
   outside the grid and the cursor-select paths index the clue and
   selection arrays without a bounds test (`filling.c:1449`,
-  `1503-1508`, `1531-1532`, `1545-1546`); the solver asserts on an
-  overfull 1-region (`filling.c:796`); and a stalled solve returns a
+  `1503-1508`, `1531-1532`, `1545-1546`); and a stalled solve returns a
   partial board while C sets an error the midend ignores
   (`filling.c:1378-1390`). The port treats a null selection as "not
-  selected", an out-of-grid cursor as "no cell", skips the overfull
-  region, and returns the partial board. The C oracle cannot be asked
-  for the first three paths, so they are pinned in the engine test; the
-  partial solve is compared with the oracle.
+  selected", an out-of-grid cursor as "no cell", and returns the
+  partial board. The C oracle cannot be asked for the first two paths,
+  so they are pinned in the engine test; the partial solve is compared
+  with the oracle.
+
+  One C solver defect is deviation D-004. The solver asserts on an
+  overfull 1-region (`filling.c:796`), and the shipped C code keeps
+  assertions: `app/src/main/jni/cmake/setup.cmake:17-25` removes
+  `-DNDEBUG` from every release flag, so C aborts on a reachable board
+  such as `2x2:1a1a`. The port skips the region and returns the best
+  board, `s1212` with status 0 and `cheated` set. `FillingTest` pins the
+  result, because the oracle aborts on that board.
 
   `validate_params` accepts `46340x46340`, and generation then
   allocates about 8.6 GB of boards and hangs, as C does. That guard is

@@ -731,17 +731,28 @@ Engine tests:
 - `FillingGameTest` is semantic. It compares new games, text, and
   status; the `strtol` base-0 move grammar including octal, hex, 32-bit
   wrap, white space, and a sign; the solver strings for every preset, a
-  stalled `5x5:y` board, small deduction fixtures, and an `AUXINFO`
-  answer; completion, undo, and redo; a real click plus digit; and the
-  warm click and click-plus-digit frames. `requestKeys` is compared on
-  every preset, including the `1`..`9`, `0`, and `Clear` labels and
-  `needsArrows`.
+  stalled `5x5:y` board, small deduction fixtures, an `AUXINFO` answer,
+  and a solve after a real fill. The fill makes the clue board and the
+  current board differ, so a solver that reads the current board
+  returns a different answer. Completion, undo, and redo; a real click
+  plus digit; and the warm click and click-plus-digit frames are also
+  compared. `requestKeys` is compared on every preset, including the
+  `1`..`9`, `0`, and `Clear` labels and `needsArrows`.
+- `FillingSaveTest` is strict for the save text. It reads the four
+  `filling` saves in the corpus, rewrites them byte for byte, and makes
+  the oracle load both versions. It also makes the oracle load a
+  Kotlin-written save for every preset. A played fill, an undone
+  position with a live redo branch, a solve, and a restart are built in
+  memory and round-tripped in both directions, and a live click plus
+  digit, solve, and restart must write the same records. There is no
+  `AUXINFO` and no `UI` record, and `PARAMS` equals `CPARAMS`.
 - `FillingTraceTest` is strict. It compares every preset with a fresh
   oracle trace and the frozen trace, plus a selected cell, the cursor
-  ring, a completed `1x2` board, and sized traces at tiles 48, 63, 82,
-  and 100 and at the letterboxed 411x702 viewport (tile 29, origin
-  (2,206)). It also asserts that the cold trace of every preset carries
-  no status line.
+  ring, a completed `1x2` board, a partially filled board with an
+  overfull 1-region and a correct 2-region, and sized traces at tiles 48,
+  63, 82, and 100 and at the letterboxed 411x702 viewport (tile 29,
+  origin (2,206)). It also asserts that the cold trace of every preset
+  carries no status line.
 - `FillingInputParityTest` is semantic. It compares the layout for
   thirteen viewports, then sends real clicks and a click plus digit at
   tiles 48, 63, 82, and 100. A second set of the four tiles uses a
@@ -813,12 +824,12 @@ state.
   The parity and engine tests pin only the rejected side of the
   boundary. Any app path that validates user input, in particular the
   configuration dialog, needs a guard before `CUBE` is enabled. A guard
-  would reject parameters that C accepts, so it needs a D-004 entry and
+  would reject parameters that C accepts, so it needs a D-005 entry and
   a test, and it must not change any accepted normal parameter. Until
   then this is enablement debt, not a deviation.
 
-`filling` has three C undefined-behavior decisions, one C solver
-defect, and one enablement debt, and no deviation:
+`filling` has two C undefined-behavior decisions, one C solver crash,
+one C solver defect, one deviation, and one enablement debt:
 
 - `current_key_label` reads `ui->sel` with no NULL test
   (`filling.c:1450`). A fresh UI has `sel == NULL`, so a key label over
@@ -837,10 +848,13 @@ defect, and one enablement debt, and no deviation:
   click itself is compared, because it does not read the clue board.
 - The solver asserts on an overfull region of 1s
   (`assert(s->board[i] != 1)`, `filling.c:796`), which two adjacent 1
-  clues or two player-filled 1s can produce. The release build skips
-  the region. The port takes the release path and still returns a
-  board. `FillingTest` pins `2x2:1a1a` as `s1212`. A debug oracle
-  aborts on that fixture, so the case is not compared.
+  clues or two player-filled 1s can produce. The shipped C code keeps
+  assertions: `app/src/main/jni/cmake/setup.cmake:17-25` removes
+  `-DNDEBUG` from every release flag, so a release build aborts like
+  the oracle. The port does not abort; it skips the region and still
+  returns a board. `FillingTest` pins `2x2:1a1a` as `s1212` with status
+  0 and `cheated` set. This is deviation D-004. The oracle aborts on
+  that fixture, so the case is not compared.
 - A stalled solve still returns the best partial board while C sets
   `Sorry, I couldn't find a solution` and the midend ignores the error
   (`filling.c:1378-1390`, `midend.c:2113-2117`). C applies the partial
@@ -850,8 +864,8 @@ defect, and one enablement debt, and no deviation:
   `s` plus 25 zeros; a port that returned `null` would differ. This is
   C behavior, not a game-rule change.
 
-None of these four behavior decisions is a deviation, so
-`DEVIATIONS.md` is unchanged.
+The first, second, and fourth decisions are port definitions, so
+`DEVIATIONS.md` gains only D-004.
 
 `filling` has one enablement debt:
 
@@ -861,7 +875,7 @@ None of these four behavior decisions is a deviation, so
   or `newState` on a huge accepted area; only the rejected
   `46341x46341` boundary is pinned. The configuration dialog needs a
   guard before `FILLING` is enabled. A guard rejects parameters that C
-  accepts, so it needs a D-004 entry and a test, and it must not change
+  accepts, so it needs a D-005 entry and a test, and it must not change
   any accepted normal parameter. Until then this is enablement debt,
   not a deviation.
 

@@ -111,6 +111,39 @@ class FillingTraceTest {
     }
 
     @Test
+    fun `a partially filled board with an overfull region matches the oracle`() =
+        OracleClient().use { oracle ->
+            // The 2x2 block of 1s in the top-left corner is one region of
+            // four cells with the value 1. The player then fills the cell
+            // below it with another 1, so the region has five cells and
+            // every one of them draws ERROR_BG. The vertical pair of 2s
+            // at the right is a correct region and draws CORRECT_BG.
+            // Two cells stay empty, and the player-filled digit uses
+            // COL_USER. The C solver would assert on the 1s, but drawing
+            // never runs it.
+            val save = saveText("3x3", "112112aaa", listOf("6_1"))
+            val expected = oracle.trace(save)
+            val midend = Midend.fromSave(Filling, SgtpSave.parse(save))
+            val actual = KotlinTraceSink.stateTrace(midend, Filling.preferredTileSize)
+            assertTrace("overfull region frame", expected, actual)
+
+            val lines = TraceNormalizer.normalize(actual, upstream).lines()
+            for (line in listOf(
+                "rect 16 16 32 32 4",
+                "rect 48 16 32 32 4",
+                "rect 16 48 32 32 4",
+                "rect 48 48 32 32 4",
+                "rect 16 80 32 32 4",
+            )) {
+                assertTrue("the overfull region uses ERROR_BG: $line", lines.contains(line))
+            }
+            for (line in listOf("rect 80 16 32 32 3", "rect 80 48 32 32 3")) {
+                assertTrue("the correct region uses CORRECT_BG: $line", lines.contains(line))
+            }
+            assertTrue("a player value uses COL_USER", lines.contains("text 32 96 1 16 257 5 \"1\""))
+        }
+
+    @Test
     fun `sized traces match the oracle`() = OracleClient().use { oracle ->
         val save = saveText("13x9", DESC_13X9, emptyList())
 

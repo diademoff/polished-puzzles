@@ -122,6 +122,32 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-15
 
+### D-004: Filling skips an overfull 1-region instead of aborting
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** the C solver asserts `s->board[i] != 1` in
+  `learn_critical_square` (`filling.c:796`). A board with two adjacent
+  1 clues, for example `2x2:1a1a`, reaches the assert. The shipped C
+  code keeps assertions: `app/src/main/jni/cmake/setup.cmake:17-25`
+  removes `-DNDEBUG` from every release flag, so a release build aborts
+  just as the oracle does. The Kotlin solver does not abort. It takes
+  the path that the assert guards: no empty square is within a negative
+  slack, so the distance loop ends at the head and every square of the
+  region is skipped. With `2x2:1a1a` the solve returns `s1212`. The
+  game is then marked as cheated. The two 1s of `s1212` are adjacent, so
+  the completion check leaves the game open and the status stays 0.
+- **Why:** a crash is not acceptable in the app, and the skip path is
+  deterministic and keeps the best board. The board is reachable from a
+  hand-written description or from two adjacent player-filled 1s. A
+  generated description never puts two 1s into one 4-connected region,
+  so no seed, `DESC`, or save text changes.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../FillingTest.kt::a solve of an overfull one region skips it instead of aborting`
+- **Scope:** `filling`
+- **Upstream:** none known
+- **Date:** 2026-11-15
+
 ## Examples
 
 Allowed:

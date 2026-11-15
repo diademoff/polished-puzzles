@@ -588,12 +588,38 @@ class FillingTest {
         val stalled = Filling.newState(Filling.decodeParams("5x5"), "y")
         assertEquals("s" + "0".repeat(25), Filling.solve(stalled))
 
-        // Two adjacent 1 clues make an overfull region. C asserts here
-        // in a build with assertions, but the release-build behavior is
-        // to skip the region. The port skips it and fills the two empty
-        // cells as 2s.
+        // Two adjacent 1 clues make an overfull region. C asserts at
+        // `filling.c:796` and the shipped C code keeps assertions, so C
+        // aborts. The port skips the region and fills the two empty
+        // cells as 2s. This is deviation D-004.
         val overfull = Filling.newState(Filling.decodeParams("2x2"), "1a1a")
         assertEquals("s1212", Filling.solve(overfull))
+    }
+
+    @Test
+    fun `a solve of an overfull one region skips it instead of aborting`() {
+        // `2x2:1a1a` has two 1 clues on a diagonal, and the solver can
+        // still build an overfull region of 1s. C asserts
+        // `s->board[i] != 1` at `filling.c:796`. The shipped C code
+        // keeps assertions (`app/src/main/jni/cmake/setup.cmake`), so
+        // the oracle aborts and cannot be asked for this board. Kotlin
+        // takes the guarded path, skips the region, and returns the
+        // best board. This is deviation D-004.
+        val midend = Midend.fromGameId(Filling, "2x2:1a1a")
+        assertEquals("s1212", Filling.solve(midend.state))
+
+        assertTrue(midend.solve(), "the solve is applied")
+        assertEquals("s1212", midend.serialise().values("SOLVE").single())
+        assertTrue((midend.state as Filling.State).cheated)
+        // The two 1s of `s1212` are adjacent in the left column, so the
+        // region has two cells and the completion check leaves the game
+        // open. The solve still counts as a cheated solve.
+        assertFalse((midend.state as Filling.State).completed)
+        assertEquals(0, midend.status(), "status stays 0")
+        assertEquals(
+            "+---+---+\n| 1 | 2 |\n+---+---+\n| 1 | 2 |\n+---+---+\n",
+            midend.textFormat(),
+        )
     }
 
     @Test

@@ -551,12 +551,15 @@ internal object FillingSolver {
             /*
              * C asserts `s->board[i] != 1` here. An overfull region of
              * 1s (two adjacent 1 clues, or two 1s the player filled)
-             * makes `slack` negative, so the assert aborts a build with
-             * assertions. The C release-build behavior is to continue:
-             * no square is within a negative slack, so the distance
-             * loop below ends at the head and every square is skipped.
-             * The port takes that path and never throws, so the Solve
-             * menu cannot crash the app on such a board.
+             * makes `slack` negative. The shipped C code keeps
+             * assertions (`app/src/main/jni/cmake/setup.cmake` removes
+             * `-DNDEBUG` from every release flag), so C aborts and
+             * returns no board. The port takes the guarded path
+             * instead: no square is within a negative slack, so the
+             * distance loop below ends at the head and every square is
+             * skipped. The result is deterministic and the Solve menu
+             * cannot crash the app on such a board. This is deviation
+             * D-004.
              */
 
             for (j in 0 until sz) {

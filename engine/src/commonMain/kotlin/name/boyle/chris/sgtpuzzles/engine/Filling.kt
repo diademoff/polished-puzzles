@@ -207,7 +207,9 @@ object Filling : Game {
      * `validate_desc`: `a`..`z` are runs and `'0'..m` are one-cell
      * clues, where `m` is `'0' + max(max(w, h), 3)`. A wide board
      * therefore accepts clues above 9, as `:` is 10 for `13x9` and `A`
-     * is 17 for `17x13`. Upper-case `B`..`Z` are invalid.
+     * is 17 for `17x13`. On the three presets `m` stops at `'A'`, so
+     * the upper-case `B`..`Z` are rejected; a wider board raises the
+     * bound.
      */
     override fun validateDesc(params: Game.Params, desc: String): String? {
         val p = params as Params

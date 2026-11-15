@@ -270,6 +270,43 @@ class FillingGameTest {
     }
 
     @Test
+    fun `a solve reads the clue board after a real fill`() = OracleClient().use { oracle ->
+        // `midend_solve` passes `states[0].state`, the clue board, and
+        // `solve_game` reads `state->board` from it, so the current board
+        // is ignored. Fill cell 2 with 3 first, so the two boards differ:
+        // the clues solve to `s2211`, while the filled board `223a`
+        // solves to `s2233`. A port that read the current board would
+        // return the wrong answer here.
+        val midend = Midend.fromGameId(Filling, "2x2:22aa")
+        val tile = Filling.preferredTileSize
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(32, 64, Buttons.LEFT_BUTTON, tile),
+        )
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(32, 64, '3'.code, tile))
+        assertEquals(listOf("2_3"), midend.serialise().values("MOVE"))
+        assertEquals(
+            "the fill leaves a partially filled board",
+            listOf(2, 2, 3, 0),
+            (midend.state as Filling.State).board.toList(),
+        )
+
+        val filled = midend.serialise().serialise()
+        val expected = oracle.solve(filled)
+        assertEquals(
+            "C reads the clue board, not the current one",
+            "s2211",
+            SgtpSave.parse(expected.state).value("SOLVE"),
+        )
+
+        assertTrue(midend.solve())
+        assertEquals("solve save", expected.state, midend.serialise().serialise())
+        assertEquals("solve id", expected.id, midend.id())
+        assertEquals("solve status", expected.status, midend.status())
+        assertEquals("solve text", oracle.text(expected.state), midend.textFormat())
+    }
+
+    @Test
     fun `completion, undo, and redo match the oracle`() = OracleClient().use { oracle ->
         val save = saveText("1x2", "2a", listOf("1_2"))
         val expected = oracle.id(save)
