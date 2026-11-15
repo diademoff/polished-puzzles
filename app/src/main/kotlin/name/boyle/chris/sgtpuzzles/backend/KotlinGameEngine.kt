@@ -112,7 +112,6 @@ class KotlinGameEngine private constructor(
     private var viewWidth = 1
     private var viewHeight = 1
     private var sized = false
-    private var firstDraw = true
     private var invertCursor = false
 
     private var configMode: ConfigMode? = null
@@ -432,11 +431,11 @@ class KotlinGameEngine private constructor(
         viewHeight = availableHeight
         geometry = midend.geometryFor(availableWidth, availableHeight)
         sized = true
-        firstDraw = true
         // `midend_size` frees and recreates the drawstate on every call,
         // even when the tile size is unchanged. The view allocates its
         // blitter bitmaps from the zoom factor, so a zoom change must
-        // replace the cache too.
+        // replace the cache too. The replacement sets the midend's
+        // first-draw flag, so the next redraw clears the window.
         midend.forceRedraw()
         viewCallbacks.unClip(
             geometry.originX,
@@ -551,7 +550,11 @@ class KotlinGameEngine private constructor(
     private fun redraw() {
         val drawState = midend.ensureDrawState(geometry.tileSize, sink)
         viewCallbacks.startDraw()
-        if (firstDraw) {
+        // The midend owns the first-draw flag, as `midend_redraw` does.
+        // A resize, a zoom change, and a new game replace the drawstate
+        // and clear the window once; a move keeps it and draws only the
+        // game's operations.
+        if (midend.takeFirstDraw()) {
             viewCallbacks.fillRect(
                 geometry.originX,
                 geometry.originY,
@@ -559,7 +562,6 @@ class KotlinGameEngine private constructor(
                 geometry.height,
                 0,
             )
-            firstDraw = false
         }
         game.redraw(state, midend.ui, drawState, sink, geometry.tileSize)
         activityCallbacks.setStatus(midend.statusText())

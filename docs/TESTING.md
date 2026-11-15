@@ -266,6 +266,11 @@ Engine tests:
   change, a different sink, and `forceRedraw` free the old cache
   through the sink that created it and create a new one; `freeDrawState`
   frees exactly once and does nothing when no cache exists.
+- `FirstDrawTest` pins `midend_redraw`: a new game reports
+  `changed_state`, clears the window, draws the game, sets the status,
+  updates the whole area, and ends the draw. A move and a restart keep
+  the drawstate, so their trace has no whole-window clear and no
+  whole-area update. A forced redraw restores the clear.
 - `KeyCanonicalisationTest` pins the `midend_process_key` rules that
   run before a game sees a key: Enter, Return, Ctrl+J, and Ctrl+M as
   `CURSOR_SELECT`; Space as `CURSOR_SELECT2`; DEL and Ctrl+H as

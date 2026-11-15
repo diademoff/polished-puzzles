@@ -193,11 +193,14 @@ class KotlinTraceSink : DrawSink {
             val size = midend.game.computeSize(midend.params, tileSize)
             val sink = KotlinTraceSink()
             val drawState = midend.ensureDrawState(tileSize, sink)
+            // A new sink replaces the drawstate, so this is its first
+            // draw. Keep the helper in step with `Midend.recordRedraw`.
+            val first = midend.takeFirstDraw()
             sink.startDraw()
-            sink.rect(0, 0, size.width, size.height, 0)
+            if (first) sink.rect(0, 0, size.width, size.height, 0)
             midend.game.redraw(midend.state, midend.ui, drawState, sink, tileSize)
             if (midend.game.wantsStatusBar) sink.status(midend.statusText())
-            sink.update(0, 0, size.width, size.height)
+            if (first) sink.update(0, 0, size.width, size.height)
             sink.endDraw()
             return objectFor(midend, sink, size)
         }

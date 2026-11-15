@@ -122,7 +122,21 @@ the Kotlin seam and the midend lifecycle were missing.
     view callbacks recycle their blitter bitmaps before the game view
     goes away.
 
-11. **No deviation.** No game rule, RNG draw, seed, `DESC`, `.sgtp`,
+11. **The midend clears the window only on the first draw of a
+    drawstate.** C keeps `me->first_draw`: it is set when a drawstate is
+    created or replaced (`midend_new`, `midend_size`,
+    `midend_force_redraw`, `midend_new_game`, `midend_load`) and cleared
+    by the first `midend_redraw` that uses it. That redraw covers the
+    window with colour 0 before the game draws and calls a whole-window
+    `draw_update` after it, because the front end does not guarantee the
+    initial contents of the window. A move, undo, redo, solve, or
+    restart keeps the drawstate, so its redraw emits neither operation
+    and the trace contains only the game's own operations.
+    `Midend.takeFirstDraw` exposes the read-and-clear for
+    `KotlinGameEngine.redraw`, which draws the game itself; the app
+    clears on a resize and a forced redraw, not after every move.
+
+12. **No deviation.** No game rule, RNG draw, seed, `DESC`, `.sgtp`,
     `AUXINFO`, palette, or frozen golden changes. The games that use
     `NoDrawState` emit exactly the same trace as before, and the parity
     suite pins that byte for byte.

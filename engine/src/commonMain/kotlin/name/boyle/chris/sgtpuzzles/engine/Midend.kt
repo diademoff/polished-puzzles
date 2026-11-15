@@ -63,6 +63,15 @@ class Midend private constructor(
      */
     private var drawStateDirty = true
 
+    /**
+     * True when [drawState] has not been drawn yet, mirroring upstream
+     * `me->first_draw`. The first redraw of a drawstate clears the whole
+     * window and updates the whole window, because the front end does
+     * not guarantee the initial contents. Every later redraw of the same
+     * drawstate leaves both out and draws only the game's operations.
+     */
+    private var firstDraw = true
+
     /** Set when `changedState` reports a completion; cleared by a take. */
     private var completedEvent = false
 
@@ -397,16 +406,22 @@ class Midend private constructor(
 
     /**
      * Draws a complete board into [sink], including the operations the
-     * midend adds around a game redraw. This is the first redraw of a
-     * fresh drawstate: it clears the window and updates the whole area.
+     * midend adds around a game redraw, as `midend_redraw` does.
+     *
+     * The first redraw of a drawstate clears the window with colour 0
+     * before the game draws and updates the whole area afterwards. A
+     * redraw of a drawstate that was already drawn, after a move for
+     * example, emits neither: the front end keeps the window contents
+     * and the game reports its own changes with [DrawSink.update].
      */
     fun recordRedraw(sink: DrawSink) {
         val drawState = ensureDrawState(tileSize, sink)
+        val first = takeFirstDraw()
         sink.startDraw()
-        sink.rect(0, 0, size.width, size.height, 0)
+        if (first) sink.rect(0, 0, size.width, size.height, 0)
         game.redraw(state, ui, drawState, sink, tileSize)
         if (game.wantsStatusBar) sink.status(statusText())
-        sink.update(0, 0, size.width, size.height)
+        if (first) sink.update(0, 0, size.width, size.height)
         sink.endDraw()
     }
 
@@ -455,7 +470,22 @@ class Midend private constructor(
         drawStateSink = sink
         drawStateTileSize = tileSize
         drawStateDirty = false
+        // A fresh drawstate has never been drawn, so its first redraw
+        // clears the window, as `midend_size`, `midend_new_game`, and
+        // `midend_load` set `first_draw` after they create one.
+        firstDraw = true
         return created
+    }
+
+    /**
+     * Reports whether [drawState] still needs its first-draw clear, and
+     * marks it as drawn. This is the read-and-clear of `me->first_draw`
+     * in `midend_redraw`, for a shell that draws the game itself.
+     */
+    fun takeFirstDraw(): Boolean {
+        val first = firstDraw
+        firstDraw = false
+        return first
     }
 
     /**
@@ -472,6 +502,9 @@ class Midend private constructor(
      */
     fun forceRedraw() {
         drawStateDirty = true
+        // `midend_force_redraw` sets `first_draw` before it reaches
+        // `midend_redraw`, so the new drawstate clears the window.
+        firstDraw = true
     }
 
     /**
