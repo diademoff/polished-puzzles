@@ -304,3 +304,41 @@ change.
    `canFormatAsText` first. No parity test compares the text of a game
    whose flag is false, so the empty string cannot hide an oracle
    difference.
+
+## Amendment: the Android full-cursor key flag
+
+- **Date:** 2026-11-16
+
+`palisade` is the only upstream game whose key labels depend on the
+Android shell. `game_request_keys` (`palisade.c:742-771`) reads its
+`arrow_mode` argument as an input flag. `midend_request_keys_by_game`
+presets that argument to `ANDROID_ARROWS_ONLY` when the shell asks for
+a full-grid cursor (`midend.c:1290-1294`). In that mode the game returns
+four labels, `H`, `J`, `K`, and `L` with the text `Left`, `Bottom`,
+`Top`, and `Right`, and keeps `ANDROID_ARROWS_ONLY`. In every other mode
+it returns no labels and sets `ANDROID_ARROWS_LEFT_RIGHT`.
+
+1. **`Game.requestKeys(params, fullCursor): KeyRequest`** carries the
+   flag. The default calls `requestKeys(params)`, so no ported game
+   changes. The flag is an input value for the game, not a request that
+   the shell already resolved, because C lets the game read it and
+   overwrite the arrow mode in either direction.
+
+2. **The flag is the Android C hack, not UI state.** It mirrors the
+   `cursor-mode` preference of the Android shell, which has no upstream
+   counterpart. The engine does not store it in `Params`, `Ui`, the
+   seed, or the save file. It reaches the game only through this
+   argument, and `KotlinGameEngine.requestKeys` passes the
+   `palisadeFullCursor` value it receives from the shell. As in C, the
+   value is true only for `palisade`; `GamePlay.isPalisadeFullCursor`
+   checks the backend before it reads the preference.
+
+3. **The palisade port overrides the operation.** The port reads its own
+   parameters, so it will not need the shell to preset its arrow mode.
+   Until then `palisade` has no Kotlin backend, this amendment only
+   makes the seam able to express the C behavior, and nothing calls the
+   flag for a Kotlin game in the app.
+
+`keysResultFor` gains the flag as a required argument. A default would
+hide a dropped value: a call site that forgot it would compile and
+silently request the wrong keys, which is the bug this amendment fixes.

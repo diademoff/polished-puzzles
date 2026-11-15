@@ -90,6 +90,20 @@ interface Game {
 
     fun requestKeys(params: Params): KeyRequest
 
+    /**
+     * The requested keys with the Android full-cursor flag.
+     *
+     * [fullCursor] is not UI state and is not a game rule. It is the
+     * Android C hack: `midend_request_keys_by_game` presets the arrow
+     * mode of `game_request_keys` to `ANDROID_ARROWS_ONLY` to tell
+     * `palisade` that the shell uses a full-grid cursor, so the game can
+     * return four arrow labels instead of none (`midend.c:1294`,
+     * `palisade.c:742-771`). A game without that hack ignores the flag,
+     * so the default keeps the one-argument request. The palisade port
+     * overrides this operation and reads its own parameters instead.
+     */
+    fun requestKeys(params: Params, fullCursor: Boolean): KeyRequest = requestKeys(params)
+
     /** The physical size of the board for a tile size. */
     fun computeSize(params: Params, tileSize: Int): Size
 

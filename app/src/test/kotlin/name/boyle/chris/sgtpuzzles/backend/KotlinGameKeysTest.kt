@@ -19,7 +19,7 @@ class KotlinGameKeysTest {
 
     @Test
     fun `a key that needs arrows is not in the always-shown keys`() {
-        val result = keysResultFor(TwoKeyGame, TwoKeyGame.defaultParams())
+        val result = keysResultFor(TwoKeyGame, TwoKeyGame.defaultParams(), fullCursor = false)
 
         assertEquals("a", result.keys)
         assertEquals("b", result.keysIfArrows)
@@ -32,11 +32,37 @@ class KotlinGameKeysTest {
 
     @Test
     fun `a game that does not use the flag keeps its keys and arrow mode`() {
-        val result = keysResultFor(Fifteen, Fifteen.defaultParams())
+        val result = keysResultFor(Fifteen, Fifteen.defaultParams(), fullCursor = false)
 
         assertEquals("", result.keys)
         assertEquals("", result.keysIfArrows)
         assertEquals(ArrowMode.ARROWS_ONLY, result.arrowMode)
+    }
+
+    @Test
+    fun `the full-cursor flag reaches the game and changes its keys`() {
+        val plain = keysResultFor(CursorFlagGame, CursorFlagGame.defaultParams(), fullCursor = false)
+        val full = keysResultFor(CursorFlagGame, CursorFlagGame.defaultParams(), fullCursor = true)
+
+        assertEquals("", plain.keys)
+        assertEquals("", plain.keysIfArrows)
+        assertEquals(ArrowMode.ARROWS_LEFT_RIGHT_CLICK, plain.arrowMode)
+
+        assertEquals("", full.keys)
+        assertEquals("hjkl", full.keysIfArrows)
+        assertEquals(ArrowMode.ARROWS_ONLY, full.arrowMode)
+    }
+
+    @Test
+    fun `a game without the hack ignores the full-cursor flag`() {
+        val plain = keysResultFor(Fifteen, Fifteen.defaultParams(), fullCursor = false)
+        val full = keysResultFor(Fifteen, Fifteen.defaultParams(), fullCursor = true)
+
+        assertEquals(plain, full)
+        assertEquals(
+            Fifteen.requestKeys(Fifteen.defaultParams()),
+            Fifteen.requestKeys(Fifteen.defaultParams(), fullCursor = true),
+        )
     }
 
     /**
@@ -51,5 +77,34 @@ class KotlinGameKeysTest {
             ),
             EngineArrowMode.ARROWS_LEFT_RIGHT,
         )
+
+        // `Game by Fifteen` delegates the two-argument overload to
+        // Fifteen, so a delegating game overrides both to keep one answer.
+        override fun requestKeys(params: Game.Params, fullCursor: Boolean): KeyRequest =
+            requestKeys(params)
+    }
+
+    /**
+     * A test-only game that behaves like `palisade` in C: the Android
+     * full-cursor flag, not a parameter, selects four arrow labels and
+     * `ARROWS_ONLY`; without it the game asks for no labels and
+     * `ARROWS_LEFT_RIGHT`. Every other rule is [Fifteen]'s.
+     */
+    private object CursorFlagGame : Game by Fifteen {
+        private val cursorKeys = KeyRequest(
+            listOf(
+                KeyLabel('h'.code, "Left", needsArrows = true),
+                KeyLabel('j'.code, "Bottom", needsArrows = true),
+                KeyLabel('k'.code, "Top", needsArrows = true),
+                KeyLabel('l'.code, "Right", needsArrows = true),
+            ),
+            EngineArrowMode.ARROWS_ONLY,
+        )
+
+        override fun requestKeys(params: Game.Params): KeyRequest =
+            KeyRequest(emptyList(), EngineArrowMode.ARROWS_LEFT_RIGHT)
+
+        override fun requestKeys(params: Game.Params, fullCursor: Boolean): KeyRequest =
+            if (fullCursor) cursorKeys else requestKeys(params)
     }
 }

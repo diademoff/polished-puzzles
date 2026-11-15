@@ -62,9 +62,19 @@ internal fun htmlHelpTopicFor(game: Game): String = game.backendName
  * request order. The result carries no label text, as in `android.c`;
  * [Game.KeyLabel.name] stays in the engine for a front end that shows
  * it.
+ *
+ * [fullCursor] is the shell's Android full-cursor flag, the value that
+ * `android.c` passes to `midend_request_keys_by_game` as
+ * `palisade_full_cursor`. It goes to the game unchanged, because the C
+ * hack makes the game decide: `palisade` returns arrow labels in that
+ * mode and no labels otherwise. A game without the hack ignores it.
  */
-internal fun keysResultFor(game: Game, params: Game.Params): GameEngine.KeysResult {
-    val request = game.requestKeys(params)
+internal fun keysResultFor(
+    game: Game,
+    params: Game.Params,
+    fullCursor: Boolean,
+): GameEngine.KeysResult {
+    val request = game.requestKeys(params, fullCursor)
     val keys = request.labels
         .filterNot { it.needsArrows }
         .joinToString("") { it.button.toChar().toString() }
@@ -437,7 +447,7 @@ class KotlinGameEngine private constructor(
         backend: BackendName,
         params: String?,
         palisadeFullCursor: Boolean,
-    ): GameEngine.KeysResult = keysResultFor(game, midend.currentParams)
+    ): GameEngine.KeysResult = keysResultFor(game, midend.currentParams, palisadeFullCursor)
 
     override fun timerTick() {}
 
