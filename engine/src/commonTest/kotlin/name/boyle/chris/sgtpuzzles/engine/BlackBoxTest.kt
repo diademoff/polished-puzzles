@@ -173,8 +173,10 @@ class BlackBoxTest {
         assertTrue(error.message!!.contains("cannot place 76 balls"))
         assertTrue(error.message!!.contains("3x3"))
 
-        // A minimum above the grid makes every count too large, so the
-        // guard also throws on the first call.
+        // A minimum above the grid also throws. With `maxBalls >
+        // minBalls` the guard runs after the one count draw.
+        // `validateParams` rejects this parameter set first, so only a
+        // direct `newDesc` call reaches the guard.
         val tooMany = BlackBox.decodeParams("w2h2m5M9") as BlackBox.Params
         assertEquals(
             "Too many balls to fit in grid",
@@ -504,6 +506,76 @@ class BlackBoxTest {
         assertEquals(12, cagey.exits[9] and BlackBox.LASER_OMITTED.inv())
         assertEquals(9, cagey.exits[12] and BlackBox.LASER_OMITTED.inv())
         assertEquals(2, cagey.laserNo)
+    }
+
+    @Test
+    fun `the reveal generator seeds from little-endian grid bytes`() {
+        // C seeds the cagey pass with random_new over the raw bytes of
+        // the guess grid (blackbox.c:758-760). Rebuild that grid
+        // exactly: clear BALL_CORRECT and promote BALL_GUESS, as the
+        // first cagey loop does.
+        val base = blackBoxState("w5h5m3M3", "7f1b9a74d74b19f6")
+        val played = listOf("F0", "T1,1", "T2,1", "T3,1")
+            .fold(base) { state, move -> BlackBox.executeMove(state, move) as BlackBox.State }
+        val guesses = played.copy() as BlackBox.State
+        for (x in 1..guesses.w) {
+            for (y in 1..guesses.h) {
+                val index = y * (guesses.w + 2) + x
+                guesses.grid[index] =
+                    guesses.grid[index] and BlackBox.BALL_CORRECT.inv()
+                if (guesses.grid[index] and BlackBox.BALL_GUESS != 0) {
+                    guesses.grid[index] = guesses.grid[index] or BlackBox.BALL_CORRECT
+                }
+            }
+        }
+
+        var candidates = 0
+        for (i in 0 until guesses.nLasers) {
+            if (guesses.exits[i] == BlackBox.LASER_EMPTY &&
+                BlackBox.laserExit(played, i) != BlackBox.laserExit(guesses, i)
+            ) {
+                candidates++
+            }
+        }
+        assertEquals(16, candidates, "candidate count")
+
+        // The bytes of this grid as C writes them on every Android ABI
+        // and on the oracle host.
+        val little = ByteArray(guesses.grid.size * 4)
+        val big = ByteArray(guesses.grid.size * 4)
+        for (i in guesses.grid.indices) {
+            val value = guesses.grid[i]
+            little[i * 4] = value.toByte()
+            little[i * 4 + 1] = (value ushr 8).toByte()
+            little[i * 4 + 2] = (value ushr 16).toByte()
+            little[i * 4 + 3] = (value ushr 24).toByte()
+            big[i * 4] = (value ushr 24).toByte()
+            big[i * 4 + 1] = (value ushr 16).toByte()
+            big[i * 4 + 2] = (value ushr 8).toByte()
+            big[i * 4 + 3] = value.toByte()
+        }
+
+        // C evidence: the vendored `random.c` over the little-endian
+        // bytes returns 7 for limit 16, which selects laser 9 and its
+        // partner 12; the oracle marks exactly that pair. The
+        // big-endian bytes return 10, which selects laser 12 and the
+        // same partner 9, so the wrong-reveal state test alone cannot
+        // see the byte order. This test can.
+        assertEquals(
+            7L,
+            RandomState.fromSeed(little).upto(candidates.toLong()),
+            "C little endian",
+        )
+        assertEquals(
+            7,
+            BlackBox.gridRandomUpto(guesses, candidates),
+            "the port uses the same bytes",
+        )
+        assertEquals(
+            10L,
+            RandomState.fromSeed(big).upto(candidates.toLong()),
+            "big endian is a different value",
+        )
     }
 
     @Test

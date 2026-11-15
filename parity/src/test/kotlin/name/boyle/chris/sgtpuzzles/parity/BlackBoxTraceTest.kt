@@ -248,6 +248,11 @@ class BlackBoxTraceTest {
                 6,
             )
             val solved = historySave(desc, listOf("SOLVE" to "S"), 2)
+            val doubleSolved = historySave(
+                desc,
+                listOf("SOLVE" to "S", "SOLVE" to "S"),
+                3,
+            )
             val solvedWrong = historySave(
                 desc,
                 listOf(
@@ -263,6 +268,7 @@ class BlackBoxTraceTest {
                 "correct" to correct,
                 "wrong" to wrong,
                 "solve" to solved,
+                "double solve" to doubleSolved,
                 "solve with wrong guesses" to solvedWrong,
             )) {
                 val expected = TraceNormalizer.normalize(oracle.trace(text), upstream())
@@ -273,6 +279,25 @@ class BlackBoxTraceTest {
                 )
                 assertLines("$label reveal trace", expected, actual)
             }
+
+            // The second solve marks every fired laser wrong, so all 20
+            // range tiles carry the red ring. The oracle comparison
+            // above already pins the drawing; the count names the
+            // quirk. The inner ring of a range tile is radius 10, fill
+            // COL_BACKGROUND, outline COL_WRONG.
+            val doubleTrace = TraceNormalizer.normalize(
+                KotlinTraceSink.stateTrace(
+                    Midend.fromSave(BlackBox, SgtpSave.parse(doubleSolved)),
+                ),
+                upstream(),
+            )
+            assertEquals(
+                "20 red rings after a double solve",
+                20,
+                doubleTrace.lines().count {
+                    it.startsWith("circle ") && it.endsWith(" 10 0 10")
+                },
+            )
 
             // A correct guess is black, a missed ball is red, and a
             // wrong guess gets the two red cross strokes.

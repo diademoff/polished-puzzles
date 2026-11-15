@@ -358,13 +358,16 @@ Notes:
   warm frame. Black Box is the first game with both a status bar and a
   warm trace, so `KotlinTraceSink.status` de-duplicates an unchanged
   text as `drawing.c` does; a warm frame has no repeated status line.
-  `BlackBoxInputParityTest` sends real laser, ball-toggle, lock, clear,
-  and reveal clicks at tiles 48, 63, 82, and 100 and at the letterboxed
-  origin (1,147), compares `requestKeys`, and checks that a UI-only
-  flash and an unavailable reveal change neither the board nor the move
-  count. D-003 rejects a drawn ball count above the cell count after the
-  count draw instead of hanging; a count that fits keeps the C seed,
-  `DESC`, and save text, whatever `maxBalls` is.
+  `BlackBoxInputParityTest` sends real laser clicks at tiles 48, 63,
+  82, 100, and 51 (the letterboxed origin (1,147)); a ball toggle,
+  right-button lock, column lock and clear, row lock, and reveal at
+  tile 63; and vacuous letterbox, frame-band, grid-corner,
+  one-pixel-outside, drag, modified-cursor-key, and keypad-digit
+  events. It compares `requestKeys`, and checks that a UI-only flash,
+  an unavailable reveal, and every vacuous event change neither the
+  board nor the move count. D-003 rejects a drawn ball count above the
+  cell count after the count draw instead of hanging; a count that fits
+  keeps the C seed, `DESC`, and save text, whatever `maxBalls` is.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C:
   the configuration schema, the preference-dialog skip, the `Fifteen`
   casts in `KotlinGameEngine`, and the two-release wait are open. The

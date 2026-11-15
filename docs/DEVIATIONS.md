@@ -99,8 +99,12 @@ Anything not listed here is a bug.
   whole-pair retry: seed `2` with `w3h3m1M100` draws eight, so nine
   balls fill the grid, and the `DESC` is the C one. Every parameter set
   whose drawn count fits keeps the C seed, `DESC`, and save text,
-  whatever `maxBalls` is. A parameter set with `minBalls > w*h` fails
-  after the single count draw, because every count is too large.
+  whatever `maxBalls` is. A parameter set with `minBalls > w*h` is
+  rejected by `validate_params` first with
+  `Too many balls to fit in grid`, so it reaches the guard only through
+  a direct `newDesc` call. With `maxBalls > minBalls` that call performs
+  the one count draw and then throws; with `minBalls == maxBalls` no
+  count draw happens.
 - **Why:** a drawn count above the cell count can hang generation, and a
   hang in the UI or the generator is worse than a deterministic
   rejection. The guard depends only on the drawn count, so the same

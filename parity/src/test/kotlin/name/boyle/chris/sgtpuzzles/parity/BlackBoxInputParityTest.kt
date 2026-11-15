@@ -3,6 +3,7 @@ package name.boyle.chris.sgtpuzzles.parity
 import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
 import name.boyle.chris.sgtpuzzles.engine.Buttons
+import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SaveRecord
@@ -18,12 +19,14 @@ import org.junit.Test
  * The layout, real laser clicks at tiles 48, 63, 82, and 100, a
  * letterboxed laser click, a ball toggle, a right-button lock and its
  * clear path, a reveal, a UI-only flash, an unavailable reveal, the
- * cursor keys, and the requested keys. The cell centres come from the C
+ * cursor keys, the requested keys, and the vacuous letterbox,
+ * frame-band, grid-corner, one-pixel-outside, drag, modified-cursor-key,
+ * and keypad-digit cases. The cell centres come from the C
  * `game_compute_size` and `TODRAW` arithmetic in
  * `work/specs/blackbox.md`, not from the Kotlin geometry, so a geometry
  * mistake changes the hit test. Every real laser or toggle must change
- * the board and add one state; a UI-only flash or an unavailable reveal
- * must change neither.
+ * the board and add one state; a UI-only flash, an unavailable reveal,
+ * and every vacuous event must change neither.
  */
 class BlackBoxInputParityTest {
 
@@ -379,6 +382,218 @@ class BlackBoxInputParityTest {
         }
 
     @Test
+    fun `vacuous clicks change nothing and the adjacent real click acts`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("blackbox", PARAMS, SEED).state
+            // The letterboxed viewport, so the origin is not zero and a
+            // coordinate mistake cannot cancel out.
+            val view = View(411, 702, 51, 1, 147)
+
+            fun at(x: Int, y: Int, button: Int = Buttons.LEFT_BUTTON) =
+                OracleClient.Point(x, y, button)
+
+            // Viewport coordinates of a game point, for the positive
+            // control and for the corners.
+            fun game(x: Int, y: Int, button: Int = Buttons.LEFT_BUTTON) =
+                at(view.originX + x, view.originY + y, button)
+
+            val corners = listOf(
+                "corner (0,h+1)" to game(view.tile, view.tile * 7),
+                "corner (w+1,0)" to game(view.tile * 7, view.tile),
+                "corner (w+1,h+1)" to game(view.tile * 7, view.tile * 7),
+            )
+            val cases = listOf(
+                // Above the board origin: game y is -47 at this viewport.
+                "letterbox" to listOf(at(200, 100), at(200, 100, Buttons.LEFT_RELEASE)),
+                // Game x maps to w+2 = 7, the frame band outside the grid.
+                "frame band" to listOf(
+                    game(395, 200),
+                    game(395, 200, Buttons.LEFT_RELEASE),
+                ),
+                // The tap just left of tile 0: FROMDRAW(24) is -1.
+                "one pixel outside a tile" to listOf(
+                    game(24, 200),
+                    game(24, 200, Buttons.LEFT_RELEASE),
+                ),
+            ) + corners.map { (label, centre) ->
+                label to listOf(
+                    centre,
+                    at(centre.x, centre.y, Buttons.LEFT_RELEASE),
+                )
+            }
+
+            for ((label, points) in cases) {
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    width = view.viewWidth,
+                    height = view.viewHeight,
+                )
+                // C does nothing: the save, the moves, and the history
+                // are unchanged.
+                assertEquals(label, save, expected.state.state)
+                assertEquals(label, emptyList<String>(), movesOf(expected.state.state))
+
+                val midend = Midend.fromSave(BlackBox, SgtpSave.parse(save))
+                val before = midend.state
+                for (event in points) {
+                    midend.processKey(
+                        event.x - view.originX,
+                        event.y - view.originY,
+                        event.button,
+                        view.tile,
+                    )
+                }
+                assertEquals(label, 1, midend.stateCount)
+                assertEquals(label, before, midend.state)
+                assertSame(label, expected.state, midend)
+            }
+
+            // The positive control: the same harness on the arena cell
+            // next to the letterbox and frame cases does act.
+            val real = listOf(
+                game(2 * view.tile, 2 * view.tile),
+                game(2 * view.tile, 2 * view.tile, Buttons.LEFT_RELEASE),
+            )
+            val expected = oracle.pointsSized(
+                save,
+                real,
+                width = view.viewWidth,
+                height = view.viewHeight,
+            )
+            assertEquals("T1,1", movesOf(expected.state.state).single())
+            val midend = Midend.fromSave(BlackBox, SgtpSave.parse(save))
+            val before = midend.state
+            for (event in real) {
+                midend.processKey(
+                    event.x - view.originX,
+                    event.y - view.originY,
+                    event.button,
+                    view.tile,
+                )
+            }
+            assertEquals("the positive control acts", 2, midend.stateCount)
+            assertNotEquals("the positive control changes the board", before, midend.state)
+            assertSame("the positive control", expected.state, midend)
+        }
+
+    @Test
+    fun `a drag does nothing after the press acts`() = OracleClient().use { oracle ->
+        val save = oracle.newGame("blackbox", PARAMS, SEED).state
+        val view = View(504, 504, 63, 0, 0)
+        fun centre(gx: Int, gy: Int) = OracleClient.Point(
+            view.originX + view.tile * (gx + 1),
+            view.originY + view.tile * (gy + 1),
+            Buttons.LEFT_BUTTON,
+        )
+
+        val press = centre(1, 1)
+        val over = centre(2, 2)
+        val points = listOf(
+            press,
+            OracleClient.Point(over.x, over.y, Buttons.LEFT_DRAG),
+            OracleClient.Point(over.x, over.y, Buttons.LEFT_RELEASE),
+        )
+        val expected = oracle.pointsSized(
+            save,
+            points,
+            width = view.viewWidth,
+            height = view.viewHeight,
+        )
+        assertEquals(
+            "a drag adds no move of its own",
+            listOf("T1,1"),
+            movesOf(expected.state.state),
+        )
+
+        val midend = Midend.fromSave(BlackBox, SgtpSave.parse(save))
+        val before = midend.state
+        assertEquals(
+            "drag press",
+            KeyOutcome.SomeEffect,
+            midend.processKey(press.x, press.y, Buttons.LEFT_BUTTON, view.tile),
+        )
+        val afterPress = midend.state
+        assertEquals(
+            "drag",
+            KeyOutcome.Unused,
+            midend.processKey(over.x, over.y, Buttons.LEFT_DRAG, view.tile),
+        )
+        assertEquals("a drag adds no state", 2, midend.stateCount)
+        assertEquals("a drag keeps the board", afterPress, midend.state)
+        assertEquals(
+            "drag release",
+            KeyOutcome.SomeEffect,
+            midend.processKey(over.x, over.y, Buttons.LEFT_RELEASE, view.tile),
+        )
+        assertEquals("a drag and its release add no state", 2, midend.stateCount)
+        assertEquals("a drag to (2,2) leaves that cell alone", 0, guessAt(afterPress, 2, 2))
+        assertNotEquals("the press acts", before, midend.state)
+        assertSame("a drag", expected.state, midend)
+    }
+
+    @Test
+    fun `a modified cursor key and a keypad digit are unused`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("blackbox", PARAMS, SEED).state
+            val view = View(504, 504, 63, 0, 0)
+            val keys = listOf(
+                "SHFT+RIGHT" to (Buttons.CURSOR_RIGHT or Buttons.MOD_SHFT),
+                "CTRL+RIGHT" to (Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL),
+                "CTRL+SHFT+RIGHT" to
+                    (Buttons.CURSOR_RIGHT or Buttons.MOD_CTRL or Buttons.MOD_SHFT),
+                "keypad 1" to ('1'.code or Buttons.MOD_NUM_KEYPAD),
+            )
+
+            for ((label, key) in keys) {
+                val points = listOf(OracleClient.Point(0, 0, key))
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    width = view.viewWidth,
+                    height = view.viewHeight,
+                    recordTrace = true,
+                )
+                assertEquals(label, save, expected.state.state)
+
+                val midend = Midend.fromSave(BlackBox, SgtpSave.parse(save))
+                val before = midend.state
+                val cursorBefore = (midend.ui as BlackBox.Ui).curX
+                assertEquals(
+                    label,
+                    KeyOutcome.Unused,
+                    midend.processKey(0, 0, key, view.tile),
+                )
+                assertEquals("$label adds no state", 1, midend.stateCount)
+                assertEquals("$label keeps the board", before, midend.state)
+                assertEquals(
+                    "$label moves no cursor",
+                    cursorBefore,
+                    (midend.ui as BlackBox.Ui).curX,
+                )
+                assertSame(label, expected.state, midend)
+                assertTrace(
+                    "$label trace",
+                    requireNotNull(expected.trace),
+                    KotlinTraceSink.stateTrace(midend, view.tile),
+                )
+            }
+
+            // The positive control: an unmodified cursor key is a UI
+            // update, so the same harness can see the difference.
+            val midend = Midend.fromSave(BlackBox, SgtpSave.parse(save))
+            val before = midend.state
+            assertEquals(
+                "unmodified cursor key",
+                KeyOutcome.SomeEffect,
+                midend.processKey(0, 0, Buttons.CURSOR_RIGHT, view.tile),
+            )
+            assertEquals("a cursor move adds no state", 1, midend.stateCount)
+            assertEquals("a cursor move keeps the board", before, midend.state)
+            assertEquals(2, (midend.ui as BlackBox.Ui).curX)
+        }
+
+    @Test
     fun `the cursor keys and a keyboard toggle match the oracle`() =
         OracleClient().use { oracle ->
             val save = oracle.newGame("blackbox", PARAMS, SEED).state
@@ -536,6 +751,9 @@ class BlackBoxInputParityTest {
 
     private fun movesOf(state: String): List<String> =
         SgtpSave.parse(state).values("MOVE")
+
+    private fun guessAt(state: Game.State, x: Int, y: Int): Int =
+        (state as BlackBox.State).gridAt(x, y) and BlackBox.BALL_GUESS
 
     private fun uiOf(state: String): String =
         requireNotNull(SgtpSave.parse(state).value("UI")) { "save has no UI record" }

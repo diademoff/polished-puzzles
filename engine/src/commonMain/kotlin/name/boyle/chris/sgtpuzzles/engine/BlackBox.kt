@@ -371,8 +371,10 @@ object BlackBox : Game {
      * and `y` draws and the whole-pair retry. The guard changes no
      * valid parameters, seed, `DESC`, or save text.
      *
-     * `minBalls` above the cell count is the same failure: every count
-     * is too large, so the guard throws after the one count draw.
+     * `minBalls` above the cell count normally fails `validateParams`
+     * first. A direct call with such a minimum and `maxBalls >
+     * minBalls` still performs the one count draw before the guard
+     * throws; with `minBalls == maxBalls` there is no count draw.
      */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
@@ -1640,7 +1642,7 @@ object BlackBox : Game {
      * one `random_upto`. The grid is serialized as four little-endian
      * bytes per cell, which is the oracle's host byte order.
      */
-    private fun gridRandomUpto(state: State, limit: Int): Int {
+    internal fun gridRandomUpto(state: State, limit: Int): Int {
         val bytes = ByteArray(state.grid.size * 4)
         for (i in state.grid.indices) {
             val value = state.grid[i]
