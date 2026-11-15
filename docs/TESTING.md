@@ -1001,6 +1001,66 @@ Engine tests:
   sticky completion, the initial-state solve, the dirty cache, a
   preference change that dirties no tile while `forceRedraw` applies
   it, the preference outside the cached flags, and the palette.
+- `MosaicDescTest` is semantic. It compares the six presets and the
+  default 10x10 aggressive board, the `decode_params` quirks (`10`,
+  `10X10`, `+10x10`, a leading space, `010x010`, `h1`, `h0`, `h2`, a
+  bare `h`, and `10x`), the two validation messages in C order with the
+  accepted `100x100` and `3x3333` boundaries, and
+  `params + seed -> DESC` for the seven golden entries, nine seed
+  strings, and a numeric sweep. The retry fixtures `3x3` seed 12345,
+  `5x5` seed 2, and `10x10` seed 1 cover both retry counters, and the
+  aggressive `3x3h0` variant differs only when a needed clue is hidden.
+  `validate_desc` counts a letter as a run and rejects space, `{`,
+  uppercase, and `,`; no description writes `AUXINFO`.
+- `MosaicGameTest` is semantic. It compares new games, text, status,
+  the loose move grammar (trailing junk, a bare comma, leading zeros,
+  32-bit wrap, and an unknown or empty move accepted as a copy), the
+  left and right cycles, a clue click, the three drag shapes, the
+  fabricated release, completion and its sticky status, undo, redo,
+  restart, the solver string for every preset, and a failed solve. The
+  completion counter is derived from the per-clue `SOLVED` bits and is
+  rebuilt by a recount after each move; it is not a flag. A description
+  with no clues loads completed, and one that is already a full
+  solution loads open.
+- `MosaicSaveTest` is strict for the save text. It reads all seven
+  `mosaic` saves in the corpus, rewrites them byte for byte, and makes
+  C compare id, status, undo, redo, and text. A Kotlin save for every
+  preset loads in C. The `PARAMS 50x50` and `CPARAMS 50x50h0` split is
+  pinned with an id that has no `h`, and a played click, an undone
+  position with a live redo branch, a `SOLVE`, and a `RESTART` round
+  trip in both directions, including a raw `last_state` of 7 or -1. No
+  save has an `AUXINFO` or a `UI` record.
+- `MosaicTraceTest` is strict. It compares the six frozen traces and
+  the oracle `traceNew` for every preset, the margin column and row and
+  the corner, the cursor ring, a marked clue, the warm path, sized
+  traces at tiles 48, 63, 82, and 100, the 411x702 letterbox at tile 37
+  with origin (2,147), and a cell whose raw `last_state` is -1, which
+  the drawstate sentinel hides. No trace contains a blitter, a line, a
+  circle, or a polygon.
+- `MosaicInputParityTest` is semantic. It compares the layout at tiles
+  48, 63, 82, and 100 and the 411x702 letterbox at tile 37 with origin
+  (2,147), then sends real left and right press and release pairs at
+  all five views. Every press must change the board, cycle the expected
+  value, and add exactly one move and one state; every release adds
+  neither. A clue click cycles like any other cell and leaves the text
+  format unchanged. The top and left bands, the right and bottom
+  margins, a middle press, and a letterbox click are inert, and a
+  margin click hides a visible ring with an `Unused` result. The
+  horizontal, vertical, and diagonal drags and the press-without-
+  release `e` fill are compared with `pointsSized` and its final trace.
+  Unknown and empty moves copy the board and the status but still make
+  one history entry, as C does. The cursor keys, `SHFT` and `CTRL` on
+  an arrow, a keypad digit, Enter and Space selects, a hidden-cursor
+  select, and `u`/`r` are compared with `keys`. A real-click win is
+  compared click by click and freezes every non-arrow input, while an
+  arrow still reveals and moves. `requestKeys` is arrow mode 3 with no
+  labels on every preset.
+- `MosaicTest` is the engine test. It pins the presets, the decode and
+  encode of the aggressive flag, the validation order, the description
+  grammar, the initial flags, the encoder's 27-cell run, the overlong
+  description guard, the retry attempt counts, the shared clue board,
+  the `s` move, `changedState`, `currentKeyLabel`, the fresh UI and
+  drawstate values, and the palette.
 
 `lightup` has one deviation and two enablement debts:
 
@@ -1262,6 +1322,47 @@ The first, second, and fourth decisions are port definitions, so
   C accepts, so it needs a new deviation entry and a test, and it must
   not change any accepted normal parameter. Until then this is
   enablement debt, not a deviation.
+
+`mosaic` has no deviation. Three rules need care in the app, and the
+aggressive 100x100 latency is an enablement debt:
+
+- The completion state is derived, not stored. `game_status` is
+  `not_completed_clues == 0`, and that counter is the number of shown
+  clues without a `SOLVED` bit. Only the 3x3 block of the changed cell
+  is refreshed, so the flags are history, not a function of the board:
+  a `DESC` with no clues loads completed, a `DESC` that is already a
+  full solution loads open, and a `SOLVE` sets the counter to 0 without
+  touching the flags, so a later move reopens the status. The port
+  keeps the counter and the incremental flags. The app must use
+  `changedState` for the win and must not treat `status == 1` as the
+  event, because a solve and a loaded completed save also report 1.
+  `MosaicGameTest` and `MosaicInputParityTest` pin each case.
+- The move grammar is loose: an unknown move type or an empty move is
+  accepted as a copy of the state with one history entry, only the
+  commas between parameters are checked, the last parameter keeps
+  unparsed trailing text, and `last_state` is not validated (7 stores
+  7, and -1 collides with the drawstate sentinel). These are C
+  behavior, not deviations, and `MosaicGameTest`, `MosaicTraceTest`,
+  and `MosaicInputParityTest` pin them. A stricter parser would change
+  what a `.sgtp` may contain.
+- The encoder compares the hidden-run counter with `<=` before it
+  increments (`mosaic.c:809-816`), so a run of 27 hidden cells stores
+  123 (`{`), a run of 28 emits `{` and drops one cell, and a run of 29
+  emits `{a`. The port reproduces the arithmetic literally, and
+  `MosaicTest` pins `1{2` for runs 27 and 28 and `1{a2` for 29. A
+  generated board never reaches it: `validate_desc` rejects `{`, but
+  4400 sampled boards across the presets used only `0`-`9` and `a`-`z`,
+  and the longest run was 26. This is not a deviation, because it is
+  unreachable from generated boards and reproduces C exactly.
+- The aggressive `100x100` board takes 30-45 s in C, because
+  `hide_clues` calls the solver once per needed clue. The area is
+  capped at 10000 cells, so this is latency, not a hang. The app must
+  generate a board off the UI thread, or the owner must accept a guard
+  that C does not have (a deviation with a test). No test generates an
+  aggressive `100x100`; the accepted `100x100` and `3x3333` boundaries
+  are pinned in validation only. S8 and S9 are still open, and
+  `MOSAIC` is in `KotlinGames.gameFor` but not in `APP_GAMES`, so
+  `KotlinGames.handles(MOSAIC)` is false and the app still uses C.
 
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a

@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, and `lightup` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, and `mosaic` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -207,7 +207,7 @@ submenu entries when a game groups its presets.
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `C` |
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `C` |
 | `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `C` |
-| `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `C` |
+| `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `dual-run` |
 | `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `C` |
 | `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
 | `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `C` |
@@ -709,6 +709,58 @@ Notes:
   `Fifteen` casts in `KotlinGameEngine`, and the two-release wait are
   open. `currentKeyLabel` is a tested helper because C has no Android
   call site for it. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `mosaic` is `dual-run`. Its parameters and six presets, the decode
+  quirks and validation order, the run-length description, the
+  solver-gated generator with its two shuffles, state, the loose move
+  grammar, the completion counter, the solve bits, the text format, the
+  cursor, `requestKeys`, the save file, palette, drawing, layout, and
+  input pass the matrix in `MosaicDescTest`, `MosaicGameTest`,
+  `MosaicSaveTest`, `MosaicTraceTest`, `MosaicInputParityTest`, and the
+  engine `MosaicTest`. `MosaicDescTest` compares the seven golden
+  entries, nine seed strings, a numeric sweep, the three retry fixtures,
+  and the aggressive `h0` variant. `MosaicGameTest` compares the move
+  grammar, the left and right cycles, a clue click, the three drag
+  shapes, the fabricated release, completion, undo, redo, restart, and
+  every preset's `SOLVE` string. `MosaicSaveTest` reads all seven corpus
+  saves byte for byte and compares id, status, undo, redo, and text in
+  both directions; it pins the `PARAMS 50x50` and `CPARAMS 50x50h0`
+  split. `MosaicTraceTest` covers the six frozen traces, the margin
+  cells, the cursor ring, the warm path, tiles 48, 63, 82, and 100, the
+  letterboxed 411x702 view, and the invisible `last_state` of -1.
+
+  `MosaicInputParityTest` sends real left and right press and release
+  pairs at those four tiles and at the 411x702 letterbox (tile 37,
+  origin (2,147)), checks a clue cell, the border bands, both margins, a
+  middle press, and a letterbox click, and covers the horizontal,
+  vertical, and diagonal drags, the press-without-release `e` fill,
+  unknown and empty moves, the cursor keys, modified arrows, a keypad
+  digit, the selects, `u`/`r`, the completed freeze, and `requestKeys`.
+  Every real press or drag changes the board and adds one move and one
+  state; a release, an inert click, and a UI-only action change
+  neither.
+
+  The completion state is derived: `game_status` is
+  `not_completed_clues == 0`, and the counter is rebuilt from per-clue
+  `SOLVED` bits that are refreshed only in the 3x3 block of the changed
+  cell. The flags are history, so a `DESC` with no clues loads
+  completed, a full solution loads open, and a `SOLVE` sets the counter
+  to 0 without touching the flags. The move grammar is loose: an
+  unknown or empty move is an accepted copy, and a raw `last_state` is
+  stored unvalidated. Both are C behavior, not deviations. The
+  encoder's 27-hidden-cell run writes `{` because of `space_count <=
+  'z'` (`mosaic.c:809-816`); the port reproduces it literally and
+  `MosaicTest` pins it, but no generated board reaches it (4400 samples
+  stayed in `0`-`9a`-`z`, longest run 26), so no deviation entry is
+  needed. An aggressive `100x100` board takes 30-45 s in C; the app
+  must generate off the UI thread, or accept a guard that C does not
+  have. `KotlinGames.gameFor` knows the Kotlin game, but the app still
+  uses C: the configuration schema (Height, Width, Aggressive), the
+  preference-dialog skip, the `Fifteen` casts in `KotlinGameEngine`,
+  and the two-release wait are open. `currentKeyLabel` is a tested
+  helper because C has no Android call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 

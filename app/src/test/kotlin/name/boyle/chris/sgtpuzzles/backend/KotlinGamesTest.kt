@@ -7,6 +7,7 @@ import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Lightup
+import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
@@ -123,6 +124,12 @@ class KotlinGamesTest {
     fun `lightup is registered but the app still uses C`() {
         assertEquals(Lightup, KotlinGames.gameFor(LIGHTUP))
         assertFalse(KotlinGames.handles(LIGHTUP))
+    }
+
+    @Test
+    fun `mosaic is registered but the app still uses C`() {
+        assertEquals(Mosaic, KotlinGames.gameFor(MOSAIC))
+        assertFalse(KotlinGames.handles(MOSAIC))
     }
 
     @Test
