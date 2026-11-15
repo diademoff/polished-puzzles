@@ -1,6 +1,7 @@
 package name.boyle.chris.sgtpuzzles.backend
 
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
+import name.boyle.chris.sgtpuzzles.engine.Cube
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
@@ -81,6 +82,12 @@ class KotlinGamesTest {
     fun `blackbox is registered but the app still uses C`() {
         assertEquals(BlackBox, KotlinGames.gameFor(BLACKBOX))
         assertFalse(KotlinGames.handles(BLACKBOX))
+    }
+
+    @Test
+    fun `cube is registered but the app still uses C`() {
+        assertEquals(Cube, KotlinGames.gameFor(CUBE))
+        assertFalse(KotlinGames.handles(CUBE))
     }
 
     @Test

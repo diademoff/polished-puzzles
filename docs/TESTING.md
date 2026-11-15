@@ -669,6 +669,56 @@ Engine tests:
   click next to each vacuous case must act. Every case compares the
   save, id, status, status text, `UI` record, and the final
   `pointsSized` trace with the oracle.
+- `CubeDescTest` is semantic. It compares the parameter decode quirks
+  and the `atoi` paths, the validation messages and their order, the
+  four presets, and `params + seed -> DESC` for every preset, the extra
+  parameter vectors, fixed seeds, and a numeric sweep. It pins the
+  rejected side of the area boundary (`46341x46341` and the triangle
+  overflow pairs). It does not call the validator on the accepted side,
+  because that enumerates every square and hangs, as C does.
+- `CubeGameTest` is semantic. It compares new games, text, status, and
+  the loose move grammar; the cursor and keypad direction table on every
+  preset; the cube-only `UP` sign negation through the face permutation;
+  the 13-move win and its frozen count; undo and redo across completion
+  with one event; the palette, the requested keys, and `computeSize`
+  with the cursor rectangle at tiles 48, 63, 82, and 100. It also pins
+  the C roll rule: a real rotation moves the die and counts one move,
+  and a mixed die changes its face permutation while an all-one-colour
+  die keeps it; an exact-centre click changes neither the faces nor the
+  count.
+- `CubeSaveTest` is strict for the save text. It reads the five `cube`
+  saves in the corpus, rewrites them byte for byte, and makes the oracle
+  load both versions. It makes the oracle load a Kotlin save for every
+  preset and for the extra vectors, and pins the ignored `full`
+  argument: the solid letter and both dimensions stay in the short id
+  and in both `PARAMS` and `CPARAMS`. A played move, an undone position
+  with a live redo branch, the 13-move completion, a post-win move, and
+  a restart are built in memory and round-tripped in both directions.
+  It also pins the description quirks: an out-of-range index clamps to
+  zero, spare low bits are ignored, and the description text is
+  preserved. The solve operation is unavailable.
+- `CubeTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus moved, completed, and post-win
+  states loaded from saves, a rotation sweep on every preset, and sized
+  traces at tiles 48, 63, 82, and 100 with an inert centre click. The
+  trace counts are 27, 24, 36, and 72 operations. The animation is not
+  ported, so a trace after a move in a live midend is out of scope.
+- `CubeInputParityTest` is semantic. It compares the layout for five
+  viewports, then sends real clicks at tiles 48, 63, 82, and 100 and at
+  the letterboxed 411x702 viewport with origin (0,146). The exact centre
+  and the left border are no-ops. A press, drag, and release at all four
+  tiles and at the letterbox origin makes exactly one move at the press.
+  The 45-degree diagonals resolve to the vertical moves, and the cursor
+  and keypad directions match the oracle on every preset. `CTRL`,
+  `SHFT`, and `CTRL+SHFT` cursor keys move, and a plain digit does not.
+  The right and middle buttons, the select keys, Enter, Space, TAB, a
+  lone drag, and a lone release change nothing. The test drives the
+  13-move win through real cursor keys, then undo, redo, and a post-win
+  move, and compares the save, id, status, status text, and
+  `requestKeys` after every step. Every real rotation must move the die,
+  change the board, and add one move; every vacuous event must change
+  neither the board nor the count. `requestKeys` is arrow mode 1 with no
+  labels.
 
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in
@@ -718,6 +768,22 @@ state.
   last text for the same reason. A cold trace still has exactly one
   status line, and a warm frame emits a changed status exactly once;
   `BlackBoxTraceTest` pins both.
+
+`cube` has one enablement debt and no deviation:
+
+- `validate_params` accepts a grid area up to `INT_MAX` and then
+  enumerates every square to count the colour classes
+  (`cube.c:583-595`). `46341x46341` is rejected by the area check and is
+  fast, but the accepted `46340x46340` would enumerate 2,147,395,600
+  squares and hang, exactly as C does. The port keeps the C behavior, so
+  no test calls `validateParams` or `newState` on a huge accepted area.
+  The parity and engine tests pin only the rejected side of the
+  boundary. Any app path that validates user input, in particular the
+  configuration dialog, needs a guard before `CUBE` is enabled. A guard
+  would reject parameters that C accepts, so it needs a D-004 entry and
+  a test, and it must not change any accepted normal parameter. Until
+  then this is enablement debt, not a deviation.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

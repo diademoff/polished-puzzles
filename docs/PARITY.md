@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, and `blackbox` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, and `cube` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -192,7 +192,7 @@ submenu entries when a game groups its presets.
 |---|---|---|---:|---|---|---|---|---|
 | `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `dual-run` |
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `C` |
-| `cube` | Cube | 4x4 | 4 | no | no | no | no | `C` |
+| `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `C` |
@@ -373,7 +373,29 @@ Notes:
   casts in `KotlinGameEngine`, and the two-release wait are open. The
   seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
-
+- `cube` is `dual-run`. Its parameters, generator, state, roll, face
+  permutation, loose move grammar, completion, status text, save file,
+  palette, drawing, layout, input, and `requestKeys` pass the matrix in
+  `CubeDescTest`, `CubeGameTest`, `CubeSaveTest`, `CubeTraceTest`, and
+  `CubeInputParityTest`. The save test pins the ignored `full` argument
+  and the clamp of an out-of-range description index. The trace test
+  covers the four frozen traces, a moved, a completed, and a post-win
+  loaded state, a rotation sweep, and sized traces at tiles 48, 63, 82,
+  and 100. The input test sends real clicks and press-drag-release
+  gestures at those four tiles and at the letterboxed origin (0,146),
+  and checks the centre and left-edge no-ops, the 45-degree diagonals,
+  the cursor and keypad directions on every preset, `CTRL`/`SHFT` cursor
+  keys, the unused buttons, and the win with undo, redo, and
+  `requestKeys` after every step. A letterbox click is a move, because
+  C has no board-bounds test. The animation is not ported, which section
+  1 allows, so strict traces come from `traceNew` or a loaded save.
+  `validate_params` accepts a huge area and then enumerates every grid
+  square, as C does; that guard is enablement debt, not a deviation (see
+  `TESTING.md`). `KotlinGames.gameFor` knows the Kotlin game, but the
+  app still uses C: the configuration schema, the preference-dialog
+  skip, the `Fifteen` casts in `KotlinGameEngine`, the huge-area guard,
+  and the two-release wait are open. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`.
 
 ## 8. Goldens
 
