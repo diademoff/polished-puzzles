@@ -255,6 +255,13 @@ Engine tests:
 - `GameSeamTest` checks the seam operations that more than one game
   uses: the `canSolve` property, and that slant keeps its status text
   empty while `wantsStatusBar` is false.
+- `DrawStateTest` pins the drawstate lifecycle with a test-only game
+  that allocates one blitter. The first draw allocates it before
+  `start_draw`; a move, undo, redo, solve, and restart keep the same
+  instance and write no `blitter_free` or `blitter_new`; a tile size
+  change, a different sink, and `forceRedraw` free the old cache
+  through the sink that created it and create a new one; `freeDrawState`
+  frees exactly once and does nothing when no cache exists.
 - `KeyCanonicalisationTest` pins the `midend_process_key` rules that
   run before a game sees a key: Enter, Return, Ctrl+J, and Ctrl+M as
   `CURSOR_SELECT`; Space as `CURSOR_SELECT2`; DEL and Ctrl+H as

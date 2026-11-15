@@ -242,7 +242,12 @@ class KotlinGameEngine private constructor(
         Log.d(TAG, "using the Kotlin backend for ${game.backendName}")
     }
 
-    override fun onDestroy() {}
+    override fun onDestroy() {
+        // The C engine frees its midend and its drawstate here. The
+        // cache belongs to the view callbacks, so it must be released
+        // before the view goes away.
+        midend.freeDrawState()
+    }
 
     // ------------------------------------------------------------------
     // GameEngine
@@ -428,6 +433,11 @@ class KotlinGameEngine private constructor(
         geometry = midend.geometryFor(availableWidth, availableHeight)
         sized = true
         firstDraw = true
+        // `midend_size` frees and recreates the drawstate on every call,
+        // even when the tile size is unchanged. The view allocates its
+        // blitter bitmaps from the zoom factor, so a zoom change must
+        // replace the cache too.
+        midend.forceRedraw()
         viewCallbacks.unClip(
             geometry.originX,
             geometry.originY,

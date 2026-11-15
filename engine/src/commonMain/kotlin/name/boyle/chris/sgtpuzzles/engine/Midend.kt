@@ -41,12 +41,12 @@ class Midend private constructor(
      * The drawing cache, mirroring upstream `me->drawstate`. The midend
      * owns one at a time. It is not part of the save file.
      *
-     * The seam has no close method, so the shell owns process lifetime
-     * and this cache is never freed explicitly. A restart, a new game,
-     * or a tile size change frees the old one through its sink before
-     * the next one is created. An ordinary move, undo, redo, or solve
-     * keeps it, as C does: those paths call `midend_redraw` and do not
-     * touch `me->drawstate`.
+     * A new game, a forced redraw (a resize or a zoom change), a tile
+     * size change, or a different sink frees the old cache through its
+     * own sink before the next one is created. An ordinary move, undo,
+     * redo, solve, and restart keep it, as C does: those paths call
+     * `midend_redraw` and do not touch `me->drawstate`. The shell frees
+     * the last one with [freeDrawState] when the game view goes away.
      */
     var drawState: Game.DrawState? = null
         private set
@@ -58,8 +58,8 @@ class Midend private constructor(
     private var drawStateTileSize = 0
 
     /**
-     * True when a new game or a restart replaced the state, so the next
-     * draw must free the cache and create a new one.
+     * True when the next draw must free the cache and create a new one:
+     * after [forceRedraw] or after a new game.
      */
     private var drawStateDirty = true
 
@@ -178,6 +178,11 @@ class Midend private constructor(
      * At the first state upstream returns immediately: there is nothing
      * to restart, so no entry is appended, the redo branch is kept, and
      * the history flags do not change. This call then returns false.
+     *
+     * The cache is kept, as `midend_restart_game` keeps `me->drawstate`
+     * and reaches only `midend_redraw`. A caching game must refresh the
+     * cached parts that the new state invalidates in `redraw`, as the C
+     * games do.
      */
     fun restart(): Boolean {
         if (statePos == 1) return false
@@ -187,7 +192,6 @@ class Midend private constructor(
         entries += Entry(restarted, desc, MoveType.RESTART)
         statePos++
         if (game.changedState(ui, previous, restarted)) completedEvent = true
-        invalidateDrawState()
         return true
     }
 
@@ -412,30 +416,41 @@ class Midend private constructor(
         // allocates the first blitter, so a caching game emits
         // changed_state, then blitter_new, then start_draw. Recreate an
         // existing cache, as a new game also does.
-        invalidateDrawState()
+        forceRedraw()
         sink.changedState(false, false)
         recordRedraw(sink)
     }
 
     /**
-     * Ensures the drawstate matches [tileSize] before a draw starts.
+     * Ensures the drawstate matches [tileSize] and [sink] before a draw
+     * starts.
      *
      * The first call creates the cache, so a game's `blitter_new` is
-     * recorded before `start_draw`, as a fresh C drawstate is. A
-     * tile-size change or a cache marked for replacement by a restart
-     * or a new game frees the old one through the sink that created it,
-     * then creates a new one. The shell calls this before its own
-     * `startDraw`; [recordRedraw] calls it too.
+     * recorded before `start_draw`, as a fresh C drawstate is. A tile-size
+     * change, a [forceRedraw], or a different sink frees the old one
+     * through the sink that created it, then creates a new one. The shell
+     * calls this before its own `startDraw`; [recordRedraw] calls it too.
+     *
+     * The new drawstate is built from the first state, as `midend_size`
+     * and `midend_force_redraw` build it from `states[0].state` in C.
+     * A cache that depends on the state refreshes it in `redraw`.
      */
     fun ensureDrawState(tileSize: Int, sink: DrawSink): Game.DrawState {
         val existing = drawState
-        if (existing != null && !drawStateDirty && drawStateTileSize == tileSize) {
+        if (existing != null &&
+            !drawStateDirty &&
+            drawStateTileSize == tileSize &&
+            drawStateSink === sink
+        ) {
             return existing
         }
         if (existing != null) {
-            game.freeDrawState(existing, drawStateSink ?: sink)
+            // The cache and its sink are set together, so a cache always
+            // has the sink that allocated its blitters. A free therefore
+            // never reaches a trace that does not own the id.
+            game.freeDrawState(existing, checkNotNull(drawStateSink))
         }
-        val created = game.newDrawState(state, tileSize, sink)
+        val created = game.newDrawState(entries[0].state, tileSize, sink)
         drawState = created
         drawStateSink = sink
         drawStateTileSize = tileSize
@@ -444,13 +459,33 @@ class Midend private constructor(
     }
 
     /**
-     * Marks the cache for replacement after a restart or a new game, as
-     * `midend_force_redraw` replaces a drawstate. The next
-     * [ensureDrawState] frees it and creates one for the current state.
-     * An ordinary move, undo, redo, or solve does not call this, so the
-     * cache survives them as it does in C.
+     * Marks the cache for replacement, as `midend_force_redraw` replaces
+     * a drawstate. The next [ensureDrawState] frees the current cache
+     * through its own sink and creates a new one from the first state.
+     *
+     * The shell calls this on a resize, including a zoom change at an
+     * unchanged tile size. A C drawstate is built once for one bitmap
+     * size, so it cannot be resized in place.
+     *
+     * An ordinary move, undo, redo, solve, or restart does not call
+     * this, so the cache survives them as it does in C.
      */
-    private fun invalidateDrawState() {
+    fun forceRedraw() {
+        drawStateDirty = true
+    }
+
+    /**
+     * Frees the cache through the sink that created it, as
+     * `midend_free_game` frees `me->drawstate`. A midend that never drew
+     * has no cache, so this does nothing. The shell calls this when the
+     * game view goes away. A second call frees nothing.
+     */
+    fun freeDrawState() {
+        val existing = drawState ?: return
+        game.freeDrawState(existing, checkNotNull(drawStateSink))
+        drawState = null
+        drawStateSink = null
+        drawStateTileSize = 0
         drawStateDirty = true
     }
 

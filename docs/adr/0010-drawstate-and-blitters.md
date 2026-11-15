@@ -45,13 +45,16 @@ the Kotlin seam and the midend lifecycle were missing.
 3. **The midend owns one drawstate at a time.** `Midend.drawState` is
    the counterpart of `me->drawstate`. It is created lazily by
    `Midend.ensureDrawState(tileSize, sink)` immediately before the
-   first `start_draw` of that drawstate. A new C drawstate is also
-   created before `midend_redraw` in `midend_force_redraw`, so a game's
-   `blitter_new` comes before `start_draw` in the trace. In a new-game
-   trace the order is `changed_state`, `blitter_new`, `start_draw`:
-   `midend_new_game` calls `changed_state` when the tile size is still
-   0, and `midend_size` allocates the first blitter afterwards. Every
-   caching game allocates its blitters in `game_set_size`, not in
+   first `start_draw` of that drawstate. It is built from the first
+   state, as `midend_size` and `midend_force_redraw` build it from
+   `states[0].state` in C, and as `midend_new_game` does. A new C
+   drawstate is also created before `midend_redraw` in
+   `midend_force_redraw`, so a game's `blitter_new` comes before
+   `start_draw` in the trace. In a new-game trace the order is
+   `changed_state`, `blitter_new`, `start_draw`: `midend_new_game`
+   calls `changed_state` when the tile size is still 0, and
+   `midend_size` allocates the first blitter afterwards. Every caching
+   game allocates its blitters in `game_set_size`, not in
    `game_new_drawstate`. `recordNewGameTrace` follows that order.
 
 4. **A replacement frees the old drawstate first, through its own
@@ -66,23 +69,43 @@ the Kotlin seam and the midend lifecycle were missing.
    Kotlin midend does the same when the requested tile size differs from
    the size the cache was created for.
 
-6. **Ordinary moves keep the cache.** A move, `undo`, `redo`, and
-   `solve` call `midend_redraw` in C and do not touch `me->drawstate`,
-   so the Kotlin midend keeps the cache too. The next draw reuses the
-   same instance and its blitters. A post-move trace therefore contains
-   the redraw operations and no `blitter_free` or `blitter_new`, as
-   upstream records it.
+6. **A forced redraw recreates the drawstate at an unchanged tile
+   size.** `midend_size` frees and recreates the drawstate on every
+   call that has one, even when the tile size it computes is the same
+   as before. The shell calls the public `Midend.forceRedraw()` from
+   `KotlinGameEngine.resizeEvent`, and a pinch zoom reaches that method
+   through `gameViewResized`. The view allocates its blitter bitmaps
+   from the zoom factor, so a cache that survived a zoom change would
+   keep the old bitmap size. The tile-size check stays for the ordinary
+   call; a forced redraw skips it.
 
-   A restart, a new game, a load, and a tile-size change recreate the
-   cache. A restart enters a new state, so the Kotlin `restart`
-   recreates the cache in the same way `midend_force_redraw` does.
-   Upstream `midend_restart_game` itself reaches only `midend_redraw`;
-   the recreation is the conservative Kotlin choice until a caching
-   game declares that its cache is restart-safe. A new game and a load
-   recreate it in C (`midend_new_game`, `midend_load`), and a tile-size
-   change recreates it in `midend_size`.
+7. **A different sink recreates the drawstate.** A live midend that
+   gets a second `KotlinTraceSink` still holds a cache whose blitters
+   belong to the first sink. A `blitter_save` for that id would name
+   an id the new trace never allocated, and the normalizer rejects it.
+   `ensureDrawState` therefore compares the sink by identity and
+   recreates the cache when it changed. The free reaches the old sink,
+   so the new trace starts with `blitter_new`, exactly like the
+   oracle's `seq` path. In the app the sink is one instance for the
+   life of the engine, so the app never recreates on a sink change.
 
-7. **The blitter id is opaque outside the game.** The app's
+8. **Ordinary moves and a restart keep the cache.** A move, `undo`,
+   `redo`, `solve`, and `restart` call `midend_redraw` in C and do not
+   touch `me->drawstate`, so the Kotlin midend keeps the cache too. The
+   next draw reuses the same instance and its blitters, and the trace
+   contains the redraw operations and no `blitter_free` or
+   `blitter_new` from the midend. A restart is not a reason to
+   recreate: `midend_restart_game` keeps the drawstate and a caching
+   game refreshes the parts that the new state invalidates in
+   `game_redraw`. A new game and a load recreate the cache in C
+   (`midend_new_game`; `midend_load` builds it from the loaded current
+   state), and a tile-size change recreates it in `midend_size`.
+
+   A trace that reuses a live midend with a new sink is the exception:
+   the recreation in item 7 writes `blitter_new` before `start_draw`,
+   which is what the oracle records for its `seq` traces.
+
+9. **The blitter id is opaque outside the game.** The app's
    `ViewCallbacks.blitterAlloc` chooses its own id, the trace sink
    assigns ids 1, 2, ... in call order, and the oracle does the same per
    trace. The game stores the returned integer and never computes one.
@@ -90,17 +113,19 @@ the Kotlin seam and the midend lifecycle were missing.
    normalizer's contract. The Kotlin trace sink therefore starts each
    trace at 1, as `trace.blitters = 0` does in the oracle.
 
-8. **There is no close.** The engine has no `close` method, so
-   `freeDrawState` is not called when the midend becomes unreachable.
-   The Android shell owns process lifetime, and the view layer recycles
-   its blitter bitmaps when the game view goes away. A future close
-   method must call `freeDrawState` with the sink that created the
-   cache.
+10. **The shell frees the last cache on close.** `Midend.freeDrawState()`
+    frees the cache through the sink that created it, as
+    `midend_free_game` frees `me->drawstate` from `midend_free`, and
+    clears the reference. A second call frees nothing, and a midend
+    that never drew has no cache to free. `KotlinGameEngine.onDestroy`
+    calls it, as `GameEngineImpl.onDestroy` frees its midend, so the
+    view callbacks recycle their blitter bitmaps before the game view
+    goes away.
 
-9. **No deviation.** No game rule, RNG draw, seed, `DESC`, `.sgtp`,
-   `AUXINFO`, palette, or frozen golden changes. The games that use
-   `NoDrawState` emit exactly the same trace as before, and the parity
-   suite pins that byte for byte.
+11. **No deviation.** No game rule, RNG draw, seed, `DESC`, `.sgtp`,
+    `AUXINFO`, palette, or frozen golden changes. The games that use
+    `NoDrawState` emit exactly the same trace as before, and the parity
+    suite pins that byte for byte.
 
 ## Consequences
 
@@ -115,14 +140,16 @@ Positive:
 
 Negative:
 
-- a post-input trace must start from a fresh midend, because the trace
-  sink records only the operations of its own drawstate, and the
-  normalizer rejects a `blitter_save` for an id that the trace did not
-  allocate;
+- a trace must keep one sink for its whole sequence: a second sink on
+  the same midend recreates the cache, so its trace starts with
+  `blitter_new` and must not expect the previous blitters;
 - a game whose cache depends on the state must refresh the parts that a
   new state invalidates, as the C games do in `game_redraw`. The midend
-  keeps the cache across a move, so it does not hide a stale cache from
-  the game.
+  keeps the cache across a move and a restart, so it does not hide a
+  stale cache from the game;
+- the shell must call `forceRedraw` on a resize and `freeDrawState` on
+  close. A new entry point that draws while bypassing `resizeEvent`
+  would keep a zoom-sized bitmap.
 
 ## Alternatives
 
@@ -135,7 +162,13 @@ Negative:
    does not match the oracle and changes the strict trace.
 3. **Keep one drawstate forever.** Rejected: a C drawstate cannot be
    sized twice, so `midend_size` must recreate it; a size change without
-   recreation would draw with stale geometry.
+   recreation would draw with stale geometry. A zoom change changes the
+   blitter bitmap size while the tile size stays the same, so the forced
+   redraw has to recreate the cache too.
 4. **Recreate the drawstate after every state change.** Rejected: it
    allocates the blitter once per move where C allocates it only on a
    forced redraw, and it makes a post-move trace differ from C.
+5. **Free a stale cache through the trace sink that replaced it.**
+   Rejected: that trace did not allocate the id, so the free would name
+   an id the trace does not own and the normalizer rejects it. The free
+   goes to the sink that created the cache.

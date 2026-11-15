@@ -3,6 +3,7 @@ package name.boyle.chris.sgtpuzzles.engine
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotSame
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -93,7 +94,7 @@ class DrawStateTest {
     }
 
     @Test
-    fun `restart makes the next draw recreate the drawstate`() {
+    fun `a restart keeps the drawstate and the trace has no blitter ops`() {
         val midend = Midend.fromGameId(
             BlitterGame(),
             "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15",
@@ -113,13 +114,158 @@ class DrawStateTest {
         sink.events.clear()
         midend.recordRedraw(sink)
 
-        val second = midend.drawState
-        assertNotSame(first, second, "a restart replaces the cache")
-        assertEquals(
-            listOf("blitter_free:1", "blitter_new:2:48:48"),
-            sink.events.filter { it.startsWith("blitter_new") || it.startsWith("blitter_free") },
-            "a restart frees the old cache and creates a new one",
+        assertSame(
+            first,
+            midend.drawState,
+            "a restart keeps the cache, as midend_restart_game reaches only midend_redraw",
         )
+        assertEquals(
+            emptyList<String>(),
+            sink.events.filter { it.startsWith("blitter_new") || it.startsWith("blitter_free") },
+            "a restart frees nothing and allocates nothing",
+        )
+        assertEquals("start_draw", sink.events.first())
+        assertEquals("end_draw", sink.events.last())
+        assertTrue(
+            sink.events.contains("blitter_save:1:0:0") &&
+                sink.events.contains("blitter_load:1:0:0"),
+            "the redraw reuses blitter 1: ${sink.events}",
+        )
+    }
+
+    @Test
+    fun `undo and redo keep the drawstate`() {
+        val midend = Midend.fromGameId(
+            BlitterGame(),
+            "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15",
+        )
+        val sink = EventSink()
+
+        val first = midend.ensureDrawState(48, sink)
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(96, 192, Buttons.LEFT_BUTTON, 48))
+        midend.recordRedraw(sink)
+        sink.events.clear()
+
+        assertTrue(midend.undo())
+        midend.recordRedraw(sink)
+        assertSame(first, midend.drawState, "an undo keeps the cache, as C does")
+
+        assertTrue(midend.redo())
+        midend.recordRedraw(sink)
+        assertSame(first, midend.drawState, "a redo keeps the cache, as C does")
+
+        assertEquals(
+            emptyList<String>(),
+            sink.events.filter { it.startsWith("blitter_new") || it.startsWith("blitter_free") },
+            "undo and redo neither free nor allocate: ${sink.events}",
+        )
+        assertEquals(2, sink.events.count { it == "start_draw" })
+        assertTrue(sink.events.contains("blitter_load:1:0:0"))
+    }
+
+    @Test
+    fun `solve keeps the drawstate`() {
+        val midend = Midend.fromGameId(
+            BlitterGame(),
+            "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,0,15",
+        )
+        val sink = EventSink()
+
+        val first = midend.ensureDrawState(48, sink)
+        midend.recordRedraw(sink)
+        sink.events.clear()
+
+        assertTrue(midend.solve())
+        midend.recordRedraw(sink)
+
+        assertSame(first, midend.drawState, "a solve enters a state and keeps the cache, as C does")
+        assertEquals(
+            emptyList<String>(),
+            sink.events.filter { it.startsWith("blitter_new") || it.startsWith("blitter_free") },
+            "a solve neither frees nor allocates: ${sink.events}",
+        )
+        assertTrue(sink.events.contains("blitter_save:1:0:0"))
+    }
+
+    @Test
+    fun `a different sink recreates the drawstate`() {
+        val midend = Midend.newGame(BlitterGame(), "4x4", "12345")
+        val firstSink = EventSink()
+        val secondSink = EventSink()
+
+        val first = midend.ensureDrawState(48, firstSink)
+        assertEquals(listOf("blitter_new:1:48:48"), firstSink.events)
+
+        val second = midend.ensureDrawState(48, secondSink)
+
+        assertNotSame(first, second, "the cache belongs to the sink that allocated it")
+        assertSame(second, midend.drawState)
+        assertEquals(
+            listOf("blitter_free:1"),
+            firstSink.events.drop(1),
+            "the old cache is freed through the sink that created it",
+        )
+        assertEquals(
+            listOf("blitter_new:1:48:48"),
+            secondSink.events,
+            "a new trace starts with blitter_new and no stale free",
+        )
+    }
+
+    @Test
+    fun `forceRedraw recreates the drawstate at the same tile size`() {
+        val midend = Midend.newGame(BlitterGame(), "4x4", "12345")
+        val sink = EventSink()
+
+        val first = midend.ensureDrawState(48, sink)
+        assertEquals(listOf("blitter_new:1:48:48"), sink.events)
+
+        midend.forceRedraw()
+        val second = midend.ensureDrawState(48, sink)
+
+        assertNotSame(first, second, "a forced redraw replaces the cache even at the same size")
+        assertEquals(
+            listOf(
+                "blitter_new:1:48:48",
+                "blitter_free:1",
+                "blitter_new:2:48:48",
+            ),
+            sink.events,
+            "the zoom size changed, so the old blitter cannot be reused",
+        )
+    }
+
+    @Test
+    fun `freeDrawState frees the blitter exactly once`() {
+        val midend = Midend.newGame(BlitterGame(), "4x4", "12345")
+        val sink = EventSink()
+
+        midend.ensureDrawState(48, sink)
+        midend.freeDrawState()
+        midend.freeDrawState()
+
+        assertEquals(
+            listOf("blitter_new:1:48:48", "blitter_free:1"),
+            sink.events,
+            "the second free has no cache to release",
+        )
+        assertNull(midend.drawState)
+
+        // A draw after the free creates a new cache.
+        val again = midend.ensureDrawState(48, sink)
+        assertSame(again, midend.drawState)
+        assertEquals("blitter_new:2:48:48", sink.events.last())
+    }
+
+    @Test
+    fun `freeDrawState does nothing when no drawstate was created`() {
+        val midend = Midend.newGame(BlitterGame(), "4x4", "12345")
+        val sink = EventSink()
+
+        midend.freeDrawState()
+
+        assertNull(midend.drawState)
+        assertEquals(emptyList<String>(), sink.events)
     }
 
     @Test

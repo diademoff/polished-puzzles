@@ -164,6 +164,10 @@ interface Game {
      * [tileSize]. A game that uses blitters calls [DrawSink.blitterNew]
      * here, so the allocation happens before the first `start_draw` of
      * the drawstate, as a fresh C drawstate does.
+     *
+     * [state] is the first state of the history, as C's
+     * `states[0].state`: `midend_size` and `midend_force_redraw` create
+     * the drawstate that way. It is not necessarily the current state.
      */
     fun newDrawState(state: State, tileSize: Int, sink: DrawSink): DrawState = NoDrawState
 
