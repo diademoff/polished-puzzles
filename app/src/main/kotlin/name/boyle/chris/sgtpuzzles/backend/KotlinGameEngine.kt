@@ -33,6 +33,16 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
+ * The C `htmlhelp_topic` of a Kotlin game.
+ *
+ * `android.c` returns `thegame->htmlhelp_topic` verbatim. The field
+ * order is `name, winhelp_topic, htmlhelp_topic`, and every `thegame`
+ * table in the vendored tree sets the HTML topic to the backend name,
+ * for example `"Fifteen", "games.fifteen", "fifteen"`.
+ */
+internal fun htmlHelpTopicFor(game: Game): String = game.backendName
+
+/**
  * Which games have a Kotlin backend. The flag is on by default for the
  * games that pass the parity matrix; set it to false to fall back to C
  * without rebuilding the rest of the shell.
@@ -371,7 +381,7 @@ class KotlinGameEngine private constructor(
 
     override fun timerTick() {}
 
-    override fun htmlHelpTopic(): String = "games." + game.backendName
+    override fun htmlHelpTopic(): String = htmlHelpTopicFor(game)
 
     override fun keyEvent(x: Int, y: Int, k: Int) {
         if (!sized || k < 0) return
