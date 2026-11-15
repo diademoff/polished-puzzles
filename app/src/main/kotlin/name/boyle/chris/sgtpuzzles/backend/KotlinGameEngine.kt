@@ -19,6 +19,7 @@ import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.KeyRequest
 import name.boyle.chris.sgtpuzzles.engine.Midend
+import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
@@ -54,10 +55,10 @@ object KotlinGames {
 
     /**
      * Games whose Kotlin implementation is complete enough for the app.
-     * `slant`, `samegame`, `flood`, `sixteen`, `flip`, and `twiddle`
-     * are in dual-run: their engines pass the parity matrix, but the app
-     * still uses C until the configuration dialog and the two-release
-     * wait are done.
+     * `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, and
+     * `pegs` are in dual-run: their engines pass the parity matrix, but
+     * the app still uses C until the configuration dialog and the
+     * two-release wait are done.
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
@@ -69,6 +70,7 @@ object KotlinGames {
         SIXTEEN -> Sixteen
         FLIP -> Flip
         TWIDDLE -> Twiddle
+        PEGS -> Pegs
         else -> null
     }
 

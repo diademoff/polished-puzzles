@@ -31,6 +31,7 @@
  *   {"op":"trace","state":"..."}
  *   {"op":"trace","state":"...","seq":"524","prefs":"fade-grounded=true"}
  *   {"op":"traceNew","game":"fifteen","params":"4x4","seed":"12345"}
+ *   {"op":"traceWarm","state":"...","points":"48,48,512;64,64,515"}
  *   {"op":"randomBits","seed":"12345","bits":8,"count":10}
  *   {"op":"randomUpto","state":"...","limit":6,"count":10}
  *   {"op":"tree","ops":"a 5 1 f 5 t 7 i 0"}
@@ -343,6 +344,13 @@ typedef struct {
     int blitters;
     bool suppress_blitter_free;
     /*
+     * When set, the drawing callbacks still change the blitter and
+     * drawstate state but append nothing to `ops`. A warm trace uses it
+     * for the first draw and for the input sequence, then clears the
+     * buffer and records one redraw on the same drawstate.
+     */
+    bool discard;
+    /*
      * The drawing object seen by the callbacks. A sized pointer
      * sequence needs it to reset the status cache before the final
      * redraw.
@@ -359,6 +367,8 @@ static void tc_printf(trace_ctx *t, const char *fmt, ...)
     char *buf = stack;
     int n;
 
+    if (t->discard)
+        return;
     va_start(ap, fmt);
     n = vsnprintf(stack, sizeof(stack), fmt, ap);
     va_end(ap);
@@ -377,6 +387,8 @@ static void tc_printf(trace_ctx *t, const char *fmt, ...)
 
 static void tc_string(trace_ctx *t, const char *s)
 {
+    if (t->discard)
+        return;
     tc_printf(t, "\"");
     if (s) {
         for (; *s; s++) {
@@ -402,6 +414,8 @@ static void tc_string(trace_ctx *t, const char *s)
 
 static void tc_op_start(trace_ctx *t)
 {
+    if (t->discard)
+        return;
     if (t->nops++)
         sbuf_add(&t->ops, ",", 1);
     tc_printf(t, "{");
@@ -1089,8 +1103,9 @@ static void put_state(frontend *fe)
  * and an error message on failure. The drawing API and its handle are
  * chosen by the caller: the state operations use the no-op API, and a
  * trace uses the recording API. */
-static const char *open_state_with(frontend *fe, const char *save,
-                                   const drawing_api *api, void *handle)
+static const char *open_state_with_unsized(frontend *fe, const char *save,
+                                           const drawing_api *api, void *handle,
+                                           bool size_it)
 {
     rbuf rd;
     char *name = NULL;
@@ -1117,8 +1132,15 @@ static const char *open_state_with(frontend *fe, const char *save,
         free_frontend(fe);
         return error;
     }
-    size_frontend(fe);
+    if (size_it)
+        size_frontend(fe);
     return NULL;
+}
+
+static const char *open_state_with(frontend *fe, const char *save,
+                                   const drawing_api *api, void *handle)
+{
+    return open_state_with_unsized(fe, save, api, handle, true);
 }
 
 static const char *open_state(frontend *fe, const char *save)
@@ -2443,6 +2465,106 @@ static void do_points_sized(const jobject *req)
     put_error(error);
 }
 
+/*
+ * Records one redraw on a drawstate that the app would already have.
+ *
+ * Every other trace operation creates a fresh drawstate, so a caching
+ * game never records the warm path: the dirty-cell test, the `started`
+ * flag, or the `blitter_load` that restores the background under a
+ * dragged sprite. This operation opens the save, suppresses recording
+ * while it draws the first frame and applies a warm pointer sequence
+ * (`x,y,button` triples, with an optional `w`/`h` viewport and its
+ * letterbox origin), then keeps the drawstate and the blitter ids,
+ * clears the recorded operations, enables recording, and calls
+ * `midend_redraw` once.
+ *
+ * Suppression happens in the trace callbacks. Blitter allocation and
+ * free still change the id counter, and every drawing call still
+ * updates the game's drawstate, so the final redraw sees exactly the
+ * cache that the warm frames produced.
+ */
+static void do_trace_warm(const jobject *req)
+{
+    const char *save = field_string(req, "state");
+    const char *points = field_string(req, "points");
+    long view_width = 0, view_height = 0;
+    bool sized;
+    frontend fe = {0};
+    trace_ctx trace = {0};
+    const char *error;
+    int w, h, ox = 0, oy = 0;
+
+    if (!save || !points) {
+        put_error("traceWarm needs a state and points");
+        return;
+    }
+    sized = field_int(req, "w", &view_width) &&
+        field_int(req, "h", &view_height);
+    if (sized && (view_width < 1 || view_height < 1 ||
+                  view_width > 100000 || view_height > 100000)) {
+        put_error("traceWarm needs positive w and h");
+        return;
+    }
+
+    /*
+     * Do not size while opening: the drawstate must be created once,
+     * at the requested tile size, so the warm trace refers to blitter
+     * id 1 like the Kotlin sink. `midend_deserialise` creates the
+     * drawstate without allocating its blitter.
+     */
+    error = open_state_with_unsized(&fe, save, &recording_drawing, &trace, false);
+    if (error) {
+        put_error(error);
+        return;
+    }
+
+    if (sized) {
+        w = (int)view_width;
+        h = (int)view_height;
+        midend_size(fe.me, &w, &h, true, 1.0);
+        fe.width = w;
+        fe.height = h;
+        ox = ((int)view_width - w) / 2;
+        oy = ((int)view_height - h) / 2;
+    } else {
+        size_frontend(&fe);
+    }
+
+    trace.discard = true;
+    /* The first draw fills the cache and clears `first_draw`. */
+    midend_redraw(fe.me);
+
+    error = process_points(&fe, points, ox, oy);
+    if (error)
+        goto fail;
+
+    /* Drop the warm operations. Keep the drawstate and its blitter ids. */
+    trace.ops.len = 0;
+    if (trace.ops.buf)
+        trace.ops.buf[0] = '\0';
+    trace.nops = 0;
+    trace.discard = false;
+
+    midend_redraw(fe.me);
+
+    fputs("{\"ok\":true,", stdout);
+    put_state_fields(&fe);
+    fputs(",\"trace\":", stdout);
+    put_trace_body(&fe, &trace);
+    fputs("}\n", stdout);
+
+    free_frontend(&fe);
+    sfree(trace.ops.buf);
+    sfree(trace.last_status);
+    return;
+
+  fail:
+    free_frontend(&fe);
+    sfree(trace.ops.buf);
+    sfree(trace.last_status);
+    put_error(error);
+}
+
 static void do_state_op(const char *op, const jobject *req)
 {
     const char *save = field_string(req, "state");
@@ -2590,6 +2712,8 @@ int main(int argc, char **argv)
             do_gesture_sized(&req);
         } else if (!strcmp(op, "pointsSized")) {
             do_points_sized(&req);
+        } else if (!strcmp(op, "traceWarm")) {
+            do_trace_warm(&req);
         } else if (!strcmp(op, "keys")) {
             do_key_seq(field_string(&req, "state"),
                        field_string(&req, "seq"));

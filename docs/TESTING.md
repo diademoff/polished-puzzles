@@ -33,6 +33,7 @@ key(state, x, y, k)     -> state + flags
 keySized(state, w, h, x, y, k) -> state after resizing
 gestureSized(state, w, h, x0, y0, x1, y1, steps) -> state after a swipe
 pointsSized(state[, w, h], points[, trace]) -> state after several clicks
+traceWarm(state[, w, h], points) -> state + warm trace
 layout(state, w, h)     -> game size after midend_size
 keys(state, seq)        -> state + flags
 undo/redo(state)        -> state + flags
@@ -89,6 +90,23 @@ save format. The `trace` operation accepts an optional key sequence and
 preferences, so a trace can cover frontend state such as a visible
 cursor or a grounded fade. The contract is
 `docs/adr/0003-strict-draw-traces.md`.
+
+`traceWarm` records a redraw on a drawstate that is already warm. It
+opens the save, draws one full frame and applies its `x,y,button`
+points with a `discard` flag in the trace callbacks. The flag stops
+operation recording but does not stop blitter allocation, drawing, or
+the id counter, so the game's cache reaches the state a second frame
+would see. The tool then clears the recorded operations, keeps the
+drawstate and the blitter ids, enables recording, and calls
+`midend_redraw` once. The optional `w` and `h` size the midend and
+subtract the letterbox origin before the points, as `pointsSized`
+does. The result is the one trace that the cold operations cannot
+produce: a dirty-cell-only redraw with `blitter_load`, and no
+`blitter_new`. A warm trace therefore has no whole-window clear and no
+`changed_state`, and its blitter operations refer to an id allocated
+before recording started. A consumer must not feed it to
+`TraceNormalizer` without a live-blitter seed; `PegsTraceTest` injects
+the allocation for validation.
 
 One upstream bug affects the test tooling, not the port: `sixteen`'s
 `game_redraw` asserts when a whole board is replaced. The midend clears
@@ -307,6 +325,11 @@ Engine tests:
   permutation.
 - `Tree234ParityTest` compares add/find/delete/index results and the
   final sorted order.
+- `PegsTest` checks the pegs parameter quirks, the state ownership, the
+  text format, the key label, the loose move grammar, the lax
+  completion rule, the cursor scan order, and the generator's retry
+  stream. The oracle cannot expose some of these, so they are
+  engine-only pins.
 - `FifteenDescTest` is semantic. It compares `params + seed -> DESC`
   from the Kotlin generator with the frozen goldens and with fresh
   oracle games.
@@ -532,6 +555,45 @@ Engine tests:
   target states, the cursor edges, and sized traces. The rotation
   animation and the flash are not ported, so a trace after a move in a
   live midend is out of scope; moved states are loaded from a save.
+- `PegsDescTest` is semantic. It compares the nine presets, parameter
+  decoding and encoding, the validation messages in both modes, and
+  `params + seed -> DESC` for every preset over a seed sweep. Cross is
+  checked to ignore the seed while Random and Octagon use it. The
+  numeric and seed vectors pin the tree order, the retry stream, and
+  all three Octagon hole classes.
+- `PegsGameTest` is semantic. It compares new games, text, status, a
+  real drag, the move count, undo and redo, the lax completion rule,
+  the absent solver, the requested keys, and the absence of `AUXINFO`
+  and `UI` records.
+- `PegsSaveTest` is strict for the save text. It reads all nine
+  readable `pegs` saves, rewrites them byte for byte, and reloads them
+  in C with the same id, status, undo, redo, and text. A Kotlin save
+  for every preset loads in C, except `5x5random`: the test pins its
+  exact text, the `PARAMS 5x5cross` long-term form, and both
+  validation errors, because upstream cannot reload its own save. It
+  also pins the Cross and Octagon long-term forms. A drag move, an
+  undone position with a live redo branch, a completed board, and a
+  restart are built in memory and round-tripped in both directions,
+  and a live Kotlin drag, undo, redo, restart, and completion must
+  write the same records.
+- `PegsTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus a moved state, sized traces
+  at tiles 48, 63, 82, and 100, cursor and jumping tiles, and a drag
+  frame. The warm tests use the oracle's `traceWarm`: a first full
+  draw, a real press and drag, then one recorded redraw. They compare
+  the C and Kotlin operations, require no `blitter_new`, require the
+  `blitter_load` that restores the drag sprite, and check that the
+  warm trace is shorter than the first frame. A second drag frame is
+  compared the same way.
+- `PegsInputParityTest` is semantic. It compares the layout for seven
+  viewports and sends real press-drag-release gestures at tiles 48,
+  63, 82, and 100, plus the 292x390 and 383x511 viewports with non-zero
+  origins on both axes. Every real move must add one `MOVE` and one
+  state and change the board. A tap, one-cell, three-cell, diagonal,
+  and off-board drag must change neither, and each is paired with a
+  check that the press was accepted. It also covers the keyboard jump,
+  the second select that cancels it, the obstacle-clamping cursor, and
+  modified cursor keys.
 
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in

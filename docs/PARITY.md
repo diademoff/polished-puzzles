@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, and `twiddle` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, and `pegs` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -213,7 +213,7 @@ submenu entries when a game groups its presets.
 | `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `C` |
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `C` |
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `C` |
-| `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `C` |
+| `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `dual-run` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `C` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
@@ -303,6 +303,22 @@ Notes:
   but the app still uses C: the configuration dialog and the
   two-release wait are open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
+- `pegs` is `dual-run`. Its parameters, generator, state, moves, drag
+  and keyboard input, status, text, save file, drawing, layout, and the
+  warm redraw pass the matrix in `PegsDescTest`, `PegsGameTest`,
+  `PegsSaveTest`, `PegsTraceTest`, and `PegsInputParityTest`.
+  `PegsSaveTest` pins the `5x5random` hole: the writer emits
+  `PARAMS 5x5cross`, and upstream rejects its own save. It also pins
+  the Octagon `PARAMS`/`CPARAMS` split. `PegsTraceTest` compares the
+  cold traces and, through the oracle's `traceWarm` operation, the warm
+  path: the dirty-cell cache, the sprite `blitter_load`, and the
+  absence of `blitter_new` after the first draw. The completion flash
+  is not ported, which section 1 allows. `KotlinGames.gameFor` knows
+  the Kotlin game, but the app still uses C: the configuration dialog,
+  the `Fifteen` casts in `KotlinGameEngine`, the unconditional status
+  text, the missing no-preferences path, the Game ID validation
+  difference for a short `5x5` id, and the two-release wait are open.
+  The seam is `docs/adr/0007-kotlin-game-seam.md`.
 
 
 ## 8. Goldens

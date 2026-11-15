@@ -209,9 +209,38 @@ class OracleClient(
         )
     }
 
+    /**
+     * Applies [points] to one midend with recording off, then records
+     * one redraw on the same drawstate. This is the warm path: the
+     * first draw and the input update the cache and the blitter, and
+     * the returned trace contains only the final redraw. Optional
+     * [width] and [height] size the midend to a viewport and subtract
+     * its letterbox origin, as [pointsSized] does.
+     */
+    fun traceWarm(
+        state: String,
+        points: List<Point>,
+        width: Int? = null,
+        height: Int? = null,
+    ): PointResult {
+        val fields = linkedMapOf<String, Any>(
+            "op" to "traceWarm",
+            "state" to state,
+            "points" to points.joinToString(";") { "${it.x},${it.y},${it.button}" },
+        )
+        if (width != null && height != null) {
+            fields["w"] = width
+            fields["h"] = height
+        }
+        val response = request(fields)
+        return PointResult(
+            state = GameState.of(response),
+            trace = response.fields["trace"] as? JsonValue.Obj,
+        )
+    }
+
     /** Re-reads a save file. Fails when upstream rejects the save. */
     fun id(state: String): GameState = GameState.of(request(mapOf("op" to "id", "state" to state)))
-
     fun undo(state: String): GameState = GameState.of(request(mapOf("op" to "undo", "state" to state)))
 
     fun redo(state: String): GameState = GameState.of(request(mapOf("op" to "redo", "state" to state)))

@@ -120,8 +120,102 @@ class PegsInputParityTest {
                 listOf("2,1-2,3"),
                 midend.serialise().values("MOVE"),
             )
+            assertEquals("the move count at tile $tile", 2, midend.stateCount)
+            assertTrue(
+                "the board changed at tile $tile",
+                midend.textFormat() != oracle.text(start.state),
+            )
             assertEquals(
                 "the board changed at tile $tile",
+                oracle.text(expected.state),
+                midend.textFormat(),
+            )
+            assertEquals(
+                "the state at tile $tile",
+                expected.state,
+                midend.serialise().serialise(),
+            )
+        }
+    }
+
+    @Test
+    fun `a real drag at a letterboxed origin matches the oracle`() = OracleClient().use { oracle ->
+        val start = oracle.newGame("pegs", "5x7cross", SEED)
+        // The viewport is a few pixels larger than the board, so the
+        // tile is unchanged and both origins are non-zero.
+        val cases = listOf(
+            Triple(48, 292, 390),
+            Triple(63, 383, 511),
+        )
+        for ((tile, viewWidth, viewHeight) in cases) {
+            val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+            val geometry = midend.geometryFor(viewWidth, viewHeight)
+            assertEquals("tile for $viewWidth x $viewHeight", tile, geometry.tileSize)
+            assertTrue(
+                "a letterboxed x origin for $viewWidth x $viewHeight",
+                geometry.originX > 0,
+            )
+            assertTrue(
+                "a letterboxed y origin for $viewWidth x $viewHeight",
+                geometry.originY > 0,
+            )
+
+            val x0 = geometry.originX + viewX(2, tile)
+            val y0 = geometry.originY + viewY(1, tile)
+            val x1 = geometry.originX + viewX(2, tile)
+            val y1 = geometry.originY + viewY(3, tile)
+            val expected = oracle.gestureSized(
+                start.state,
+                x0,
+                y0,
+                x1,
+                y1,
+                STEPS,
+                viewWidth,
+                viewHeight,
+            )
+
+            assertEquals(
+                "the press at tile $tile origin ${geometry.originX},${geometry.originY}",
+                KeyOutcome.SomeEffect,
+                midend.processKey(
+                    x0 - geometry.originX,
+                    y0 - geometry.originY,
+                    Buttons.LEFT_BUTTON,
+                    tile,
+                ),
+            )
+            for (i in 1..STEPS) {
+                assertEquals(
+                    "the drag at tile $tile",
+                    KeyOutcome.SomeEffect,
+                    midend.processKey(
+                        x0 + (x1 - x0) * i / STEPS - geometry.originX,
+                        y0 + (y1 - y0) * i / STEPS - geometry.originY,
+                        Buttons.LEFT_DRAG,
+                        tile,
+                    ),
+                )
+            }
+            assertEquals(
+                "the release at tile $tile",
+                KeyOutcome.SomeEffect,
+                midend.processKey(
+                    x1 - geometry.originX,
+                    y1 - geometry.originY,
+                    Buttons.LEFT_RELEASE,
+                    tile,
+                ),
+            )
+
+            assertEquals(listOf("2,1-2,3"), midend.serialise().values("MOVE"))
+            assertEquals("the move count at tile $tile", 2, midend.stateCount)
+            assertTrue(
+                "the board changed at tile $tile",
+                midend.textFormat() != oracle.text(start.state),
+            )
+            assertEquals(
+                "the board at tile $tile",
                 oracle.text(expected.state),
                 midend.textFormat(),
             )

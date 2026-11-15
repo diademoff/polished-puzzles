@@ -1,6 +1,7 @@
 package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.DrawSink
+import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.Size
 import kotlin.math.roundToInt
@@ -14,8 +15,19 @@ class KotlinTraceSink : DrawSink {
 
     val ops = ArrayList<JsonValue.Obj>()
 
+    /**
+     * When false, drawing still reaches the game and the blitter ids
+     * still advance, but no operation is appended. [companion object]
+     * uses it for the first draw and the input of a warm trace.
+     */
+    var recording: Boolean = true
+
+    private fun record(vararg fields: Pair<String, JsonValue>) {
+        if (recording) ops += obj(*fields)
+    }
+
     override fun changedState(canUndo: Boolean, canRedo: Boolean) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("changed_state"),
             "canundo" to JsonValue.Bool(canUndo),
             "canredo" to JsonValue.Bool(canRedo),
@@ -23,15 +35,15 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun startDraw() {
-        ops += obj("op" to JsonValue.Str("start_draw"))
+        record("op" to JsonValue.Str("start_draw"))
     }
 
     override fun endDraw() {
-        ops += obj("op" to JsonValue.Str("end_draw"))
+        record("op" to JsonValue.Str("end_draw"))
     }
 
     override fun rect(x: Int, y: Int, width: Int, height: Int, colour: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("rect"),
             "x" to num(x),
             "y" to num(y),
@@ -42,7 +54,7 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("line"),
             "x1" to num(x1),
             "y1" to num(y1),
@@ -53,7 +65,7 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("circle"),
             "cx" to num(cx),
             "cy" to num(cy),
@@ -64,7 +76,7 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("poly"),
             "fill" to num(fillColour),
             "outline" to num(outlineColour),
@@ -81,7 +93,7 @@ class KotlinTraceSink : DrawSink {
         colour: Int,
         text: String,
     ) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("text"),
             "x" to num(x),
             "y" to num(y),
@@ -94,7 +106,7 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun clip(x: Int, y: Int, width: Int, height: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("clip"),
             "x" to num(x),
             "y" to num(y),
@@ -104,11 +116,11 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun unclip() {
-        ops += obj("op" to JsonValue.Str("unclip"))
+        record("op" to JsonValue.Str("unclip"))
     }
 
     override fun update(x: Int, y: Int, width: Int, height: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("update"),
             "x" to num(x),
             "y" to num(y),
@@ -118,7 +130,7 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun status(text: String) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("status"),
             "text" to JsonValue.Str(text),
         )
@@ -129,7 +141,7 @@ class KotlinTraceSink : DrawSink {
 
     override fun blitterNew(width: Int, height: Int): Int {
         val id = nextBlitterId++
-        ops += obj(
+        record(
             "op" to JsonValue.Str("blitter_new"),
             "id" to num(id),
             "w" to num(width),
@@ -139,14 +151,14 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun blitterFree(id: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("blitter_free"),
             "id" to num(id),
         )
     }
 
     override fun blitterSave(id: Int, x: Int, y: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("blitter_save"),
             "id" to num(id),
             "x" to num(x),
@@ -155,7 +167,7 @@ class KotlinTraceSink : DrawSink {
     }
 
     override fun blitterLoad(id: Int, x: Int, y: Int) {
-        ops += obj(
+        record(
             "op" to JsonValue.Str("blitter_load"),
             "id" to num(id),
             "x" to num(x),
@@ -203,6 +215,39 @@ class KotlinTraceSink : DrawSink {
             if (first) sink.update(0, 0, size.width, size.height)
             sink.endDraw()
             return objectFor(midend, sink, size)
+        }
+
+        /**
+         * The warm path: one sink and one drawstate. Recording is off for
+         * the first full draw and for the frames that [points] cause, so
+         * the cache and the blitter reach the state the app would have.
+         * It is then on for one [Midend.recordRedraw], which is the
+         * trace. The blitter id counter advanced while recording was
+         * off, so the trace has no `blitter_new` but its `blitter_load`
+         * and `blitter_save` name the live blitter.
+         */
+        fun warmTrace(
+            midend: Midend,
+            points: List<OracleClient.Point>,
+        ): JsonValue.Obj {
+            val sink = KotlinTraceSink()
+            sink.recording = false
+            midend.recordRedraw(sink)
+            for (point in points) {
+                val outcome = midend.processKey(
+                    point.x,
+                    point.y,
+                    point.button,
+                    midend.tileSize,
+                )
+                if (outcome == KeyOutcome.SomeEffect) {
+                    midend.recordRedraw(sink)
+                }
+            }
+            sink.ops.clear()
+            sink.recording = true
+            midend.recordRedraw(sink)
+            return objectFor(midend, sink)
         }
 
         private fun objectFor(midend: Midend, sink: KotlinTraceSink): JsonValue.Obj =

@@ -211,6 +211,91 @@ class PegsTraceTest {
     }
 
     @Test
+    fun `a warm drag frame matches the oracle`() = OracleClient().use { oracle ->
+        val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+        val save = oracle.newGame("pegs", "5x7cross", SEED).state
+        val points = listOf(
+            OracleClient.Point(98, 65, Buttons.LEFT_BUTTON),
+            OracleClient.Point(150, 120, Buttons.LEFT_DRAG),
+        )
+        // The press starts a drag at (2,1); the drag moves the sprite.
+        val expected = normalizedWarm(
+            oracle.traceWarm(save, points, width = 197, height = 263).trace!!,
+            upstream,
+        )
+
+        val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+        val actualTrace = KotlinTraceSink.warmTrace(midend, points)
+        val actualOps = (actualTrace.field("ops") as JsonValue.Arr).items.size
+        val actual = normalizedWarm(actualTrace, upstream)
+        assertLines("warm drag trace", expected, actual)
+
+        assertFalse(
+            "a warm trace allocates no blitter",
+            actual.lines().any { it.startsWith("blitter_new ") },
+        )
+        assertTrue(
+            "the previous drag sprite is restored",
+            actual.lines().contains("blitter_load 1 134 104"),
+        )
+        assertTrue(
+            "the drag sprite is saved at the pointer",
+            actual.lines().contains("blitter_save 1 134 104"),
+        )
+        val firstOps = (
+            KotlinTraceSink.trace(Midend.newGame(Pegs, "5x7cross", SEED))
+                .field("ops") as JsonValue.Arr
+            ).items.size
+        assertTrue(
+            "the warm trace is shorter than the first ($actualOps < $firstOps)",
+            actualOps < firstOps,
+        )
+    }
+
+    @Test
+    fun `a second warm drag frame matches the oracle`() = OracleClient().use { oracle ->
+        val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+        val save = oracle.newGame("pegs", "5x7cross", SEED).state
+        val firstPoints = listOf(
+            OracleClient.Point(98, 65, Buttons.LEFT_BUTTON),
+            OracleClient.Point(150, 120, Buttons.LEFT_DRAG),
+        )
+        val secondPoints = firstPoints + OracleClient.Point(160, 130, Buttons.LEFT_DRAG)
+
+        val first = normalizedWarm(
+            oracle.traceWarm(save, firstPoints, width = 197, height = 263).trace!!,
+            upstream,
+        )
+        val second = normalizedWarm(
+            oracle.traceWarm(save, secondPoints, width = 197, height = 263).trace!!,
+            upstream,
+        )
+        val kotlinFirst = normalizedWarm(
+            KotlinTraceSink.warmTrace(Midend.newGame(Pegs, "5x7cross", SEED), firstPoints),
+            upstream,
+        )
+        val kotlinSecond = normalizedWarm(
+            KotlinTraceSink.warmTrace(Midend.newGame(Pegs, "5x7cross", SEED), secondPoints),
+            upstream,
+        )
+        assertLines("first warm drag frame", first, kotlinFirst)
+        assertLines("second warm drag frame", second, kotlinSecond)
+
+        assertTrue(
+            "the first frame restores the sprite at the first drag",
+            kotlinFirst.lines().contains("blitter_load 1 134 104"),
+        )
+        assertTrue(
+            "the second frame restores the sprite after the second drag",
+            kotlinSecond.lines().contains("blitter_load 1 144 114"),
+        )
+        assertFalse(
+            "both frames are warm",
+            kotlinSecond.lines().any { it.startsWith("blitter_new ") },
+        )
+    }
+
+    @Test
     fun `a warm redraw after a move draws only the changed cells`() {
         val midend = Midend.newGame(Pegs, "5x7cross", SEED)
         val sink = OpSink()
@@ -412,8 +497,42 @@ class PegsTraceTest {
         return SgtpSave.of(records).serialise()
     }
 
-    private fun assertLines(what: String, expected: String, actual: String) {
-        val e = expected.lines()
+    /**
+     * Normalizes a warm trace, which has no `blitter_new` by design.
+     * Inject a dummy allocation for every blitter the trace uses, run
+     * the normalizer (so a dangling id or a bad primitive still fails),
+     * then drop the injected lines.
+     */
+    private fun normalizedWarm(trace: JsonValue.Obj, upstream: String): String {
+        val ops = (trace.field("ops") as JsonValue.Arr).items.toMutableList()
+        val ids = ops.asSequence()
+            .filterIsInstance<JsonValue.Obj>()
+            .mapNotNull { (it.fields["id"] as? JsonValue.Num)?.value }
+            .distinct()
+            .toList()
+        ops.addAll(
+            0,
+            ids.map { id ->
+                JsonValue.Obj(
+                    linkedMapOf(
+                        "op" to JsonValue.Str("blitter_new"),
+                        "id" to JsonValue.Num(id),
+                        "w" to JsonValue.Num(1),
+                        "h" to JsonValue.Num(1),
+                    ),
+                )
+            },
+        )
+        val patched = JsonValue.Obj(
+            LinkedHashMap(trace.fields).apply { put("ops", JsonValue.Arr(ops)) },
+        )
+        return TraceNormalizer.normalize(patched, upstream)
+            .lines()
+            .filterNot { it.startsWith("blitter_new ") }
+            .joinToString("\n", postfix = "\n")
+    }
+
+    private fun assertLines(what: String, expected: String, actual: String) {        val e = expected.lines()
         val a = actual.lines()
         for (i in 0 until minOf(e.size, a.size)) {
             if (e[i] != a[i]) {
