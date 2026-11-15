@@ -227,6 +227,52 @@ class NetslideTraceTest {
     }
 
     @Test
+    fun `a warm frame of a moved save redraws the last moved line`() =
+        OracleClient().use { oracle ->
+            val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+            // The last record is a MOVE, so the loaded state carries the
+            // last-moved row and the tile cache rule applies to it. No
+            // input follows the cold frame.
+            val save = saveText("3x3", "21c4d5963", listOf("R0,1"))
+            val points = emptyList<OracleClient.Point>()
+
+            val midend = Midend.fromSave(Netslide, SgtpSave.parse(save))
+            val actual = TraceNormalizer.normalize(
+                KotlinTraceSink.warmTrace(midend, points),
+                upstream,
+            )
+            val expected = oracle.traceWarm(save, points)
+            val expectedText = TraceNormalizer.normalize(
+                requireNotNull(expected.trace),
+                upstream,
+            )
+            assertLines("warm moved frame", expectedText, actual)
+
+            // Row 0 is the last-moved line, so every cell in it is drawn
+            // again although the cache holds its byte. The three 49x49
+            // border rects in colour 2 are the tile borders; no other
+            // tile is redrawn.
+            val tileBorders = expectedText.lines().filter { it.matches(TILE_BORDER_RECT) }
+            assertEquals(
+                listOf(
+                    "rect 48 48 49 49 2",
+                    "rect 96 48 49 49 2",
+                    "rect 144 48 49 49 2",
+                ),
+                tileBorders,
+            )
+            val ops = (requireNotNull(expected.trace).field("ops") as JsonValue.Arr).items
+            assertEquals("warm moved frame size", 136, ops.size)
+            assertEquals("the moved save has two states", 2, midend.stateCount)
+            assertFalse(
+                "no status in a warm frame",
+                expectedText.lines().any { it.startsWith("status ") },
+            )
+            assertFalse("no clear in a warm frame", expectedText.contains("rect 0 0 241 241 0"))
+            assertNoBlitter(actual)
+        }
+
+    @Test
     fun `sized cold traces match the oracle`() = OracleClient().use { oracle ->
         val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
         for (case in listOf(
@@ -350,5 +396,11 @@ class NetslideTraceTest {
 
     private companion object {
         const val SEED = "12345"
+
+        /**
+         * A tile border: `draw_tile` draws `rect(bx, by, T+TB, T+TB,
+         * COL_BORDER)`, which is 49x49 in colour 2 at tile 48.
+         */
+        val TILE_BORDER_RECT = Regex("rect \\d+ \\d+ 49 49 2")
     }
 }

@@ -197,6 +197,14 @@ class NetslideTest {
         assertEquals("Moves: 0 (target 5) Active: 9/9", statusText(targetState))
         val targetCompleted = Netslide.executeMove(targetState, "R0,2") as Netslide.State
         assertEquals("Moves: 1 (target 5) Active: 6/9", statusText(targetCompleted))
+        // The identity move completes the board, so the completed branch
+        // and the target suffix appear in one string.
+        val targetFinished = execute(targetState, "R0,3")
+        assertEquals(1, Netslide.status(targetFinished))
+        assertEquals(
+            "COMPLETED! Moves: 1 (target 5) Active: 9/9",
+            statusText(targetFinished),
+        )
 
         val solved = execute(state("3x3", "21c4d5963"), "S15c9d6234")
         assertEquals("Moves since auto-solve: 0 Active: 9/9", statusText(solved))

@@ -769,7 +769,7 @@ Engine tests:
   for `0.1`, `0.25`, and `0.9999`, and the `strtod` rescan that makes
   `3x3b1e-1m5` lose its move target. It compares the five validation
   messages in order, the nine presets with their verbatim `3x3b1` text,
-  and `params + seed -> DESC + AUXINFO` for 24 parameter strings and
+  and `params + seed -> DESC + AUXINFO` for 23 parameter strings and
   nine seeds. It pins the aux answer `S15c9d6234`, the generator draw
   state, and D-005: `3x3bnan` gets `Barrier probability must be a
   number`, while C accepts the rate and aborts at `netslide.c:629`.
@@ -797,8 +797,12 @@ Engine tests:
   oracle trace and the frozen trace, cold traces of loaded and moved
   states, the cursor traces with `RIGHT`, `SELECT`, and `SELECT2`, warm
   cursor and inert frames (97 operations, no tile, no status, no clear),
-  and sized traces at tiles 48, 63, 82, and 100 and at the letterboxed
-  411x702 viewport. No trace contains a blitter operation.
+  a warm frame of a save whose last record is a `MOVE` (136 operations:
+  the three cells of the last moved row are redrawn because the cache
+  keeps them dirty, and no other tile is), and sized traces at tiles 48,
+  39, 82, 68, 58, and 22: the 241x241 and 200x200 views, the 411x702
+  letterbox at tile 82 for 3x3, 68 for 4x4, and 58 for 5x5, and the
+  200x200 4x7 board at tile 22. No trace contains a blitter operation.
 - `NetslideInputParityTest` is semantic, with one strict warm frame. It
   compares the layout at tiles 48, 63, 82, and 100 and at the
   letterboxed 411x702 viewport with origin (0,145), then sends real row
