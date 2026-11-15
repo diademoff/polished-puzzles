@@ -173,7 +173,7 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, and `pegs` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, and `blackbox` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -190,7 +190,7 @@ submenu entries when a game groups its presets.
 
 | Game | Display name | Default params | Presets | Solver | Text format | Timed | Platform randomness | Status |
 |---|---|---|---:|---|---|---|---|---|
-| `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `C` |
+| `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `dual-run` |
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `C` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `C` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
@@ -346,6 +346,29 @@ Notes:
   Kotlin game, but the app still uses C: the preference schema, the
   configuration dialog, the app adapter, and the two-release wait are
   open. The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+- `blackbox` is `dual-run`. Its parameters, generator, loose move and
+  `UI` grammars, state, laser rules, grid-seeded reveal check, status
+  text, solver, save file, palette, drawing, layout, and input pass the
+  matrix in `BlackBoxDescTest`, `BlackBoxGameTest`, `BlackBoxSaveTest`,
+  `BlackBoxTraceTest`, and `BlackBoxInputParityTest`. The save test pins
+  the `E<int>` attempt counter in both directions. The trace test covers
+  the cold traces, the dirty-cell cache, the always-redrawn reveal
+  button, the flash, the cursor, and the warm path, including a sized
+  warm frame. Black Box is the first game with both a status bar and a
+  warm trace, so `KotlinTraceSink.status` de-duplicates an unchanged
+  text as `drawing.c` does; a warm frame has no repeated status line.
+  `BlackBoxInputParityTest` sends real laser, ball-toggle, lock, clear,
+  and reveal clicks at tiles 48, 63, 82, and 100 and at the letterboxed
+  origin (1,147), compares `requestKeys`, and checks that a UI-only
+  flash and an unavailable reveal change neither the board nor the move
+  count. D-003 rejects a ball range above the cell count before
+  generation instead of hanging; for every range that C can always
+  generate, the seed, `DESC`, and save text are unchanged.
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C:
+  the configuration schema, the preference-dialog skip, the `Fifteen`
+  casts in `KotlinGameEngine`, and the two-release wait are open. The
+  seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 

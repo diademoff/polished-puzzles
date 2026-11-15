@@ -369,6 +369,45 @@ class BlackBoxTraceTest {
         }
 
     @Test
+    fun `a sized warm trace uses the viewport tile size`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("blackbox", "w5h5m3M3", SEED).state
+            // The 504x504 viewport gives tile 63 and no letterbox. The
+            // arena cell (1,1) is at game (126,126), as in the oracle.
+            val width = 504
+            val height = 504
+            val tile = 63
+            val points = taps(2 * tile to 2 * tile)
+            val expected = normalizedWarm(
+                oracle.traceWarm(
+                    save,
+                    points,
+                    width = width,
+                    height = height,
+                ).trace!!,
+                upstream(),
+            )
+            val actualTrace = KotlinTraceSink.warmTrace(
+                Midend.fromSave(BlackBox, SgtpSave.parse(save)),
+                points,
+                tileSize = tile,
+            )
+            val actual = normalizedWarm(actualTrace, upstream())
+            assertLines("sized warm trace", expected, actual)
+            assertFalse("no frame", actual.lines().any { it.startsWith("line ") })
+            assertEquals(
+                "one warmed arena cell and one reveal button",
+                listOf(
+                    "start_draw",
+                    "rect 30 30 63 63 0",
+                    "update 31 31 63 63",
+                    "end_draw",
+                ),
+                opsOf(actualTrace),
+            )
+        }
+
+    @Test
     fun `a changed status appears once in a warm frame`() {
         val midend = Midend.newGame(BlackBox, "w5h5m3M3", SEED)
         val sink = KotlinTraceSink()

@@ -626,6 +626,40 @@ Engine tests:
   (0,195). A real guess must change the draft and add one state, while
   a colour click and the draft, hold, and clear keys must change
   neither the state nor the count.
+- `BlackBoxDescTest` is semantic. It compares the five presets, the
+  `w`/`h`/`m`/`M` decoding quirks, the saturating `atoi`, the
+  validation messages in both modes, and `params + seed -> DESC` for
+  every preset, a numeric seed sweep, the nonzero count draw, and the
+  collision retry. It pins the grid order and the little-endian
+  assumption of the reveal generator, and it pins D-003.
+- `BlackBoxGameTest` is semantic. It compares new games, the loose move
+  grammar, the laser exits, the cagey reveal and its grid-seeded
+  choice, the two solve quirks, the lock thresholds, every status text
+  branch including the `errors` suffix, the `E<int>` decoder, the
+  current key label, the requested keys, and the hidden-state guards.
+- `BlackBoxSaveTest` is strict for the save text. It reads every
+  `blackbox` save in the corpus, rewrites it byte for byte, and makes
+  the oracle load both versions. A Kotlin save for every preset loads
+  in C. It pins the `UI` record in both directions, every decoder
+  quirk, a save without a `UI` record, the history cases, and the
+  rejected move after a reveal. There is no `AUXINFO`.
+- `BlackBoxTraceTest` is strict. It compares every preset with a fresh
+  oracle trace and the frozen trace, plus the palette, the flash of a
+  hit and an exit, the reveal button, the cursor, and revealed states.
+  The warm tests use the oracle's `traceWarm`: a first full draw, then
+  the input frames, then one recorded redraw. A warm frame has no
+  frame, no blitter, no whole-window update, and no repeated status.
+  One warm case draws at tile 63, so the Kotlin warm helper is compared
+  at a viewport size, not only at the preferred tile.
+- `BlackBoxInputParityTest` is semantic. It compares the layout for
+  five viewports and sends real laser clicks at tiles 48, 63, 82, and
+  100 and at the letterboxed origin (1,147). It covers a ball toggle, a
+  right-button lock, a column lock and its clear path, a reveal, a
+  UI-only flash, an unavailable reveal, the cursor keys, a keyboard
+  toggle, and `requestKeys`. Every real laser or toggle must change the
+  board and add one state; a UI-only flash and an unavailable reveal
+  must change neither. Every case compares the save, id, status, status
+  text, `UI` record, and the final `pointsSized` trace with the oracle.
 
 The flip solver has one known seam gap. `Game.solve` has no error
 out-parameter, so an insoluble hand-written position returns `null` in
@@ -656,6 +690,22 @@ state.
   text and lets the midend map the rejected move to `NoEffect`, which
   is C's release-build behavior. `GuessTest` pins both results.
   Neither is a game-rule deviation, so `DEVIATIONS.md` is unchanged.
+
+`blackbox` has one deviation and one shared sink rule:
+
+- D-003 rejects a ball range whose maximum exceeds the arena cell count
+  in `newDesc`, before the first random draw, because C can then retry
+  forever for a free cell. The validator keeps the C messages; for
+  every parameter set that C can always generate (`maxBalls <= w*h`)
+  the seed, `DESC`, and save text are unchanged. The parity test runs
+  under a five-second timeout and compares feasible ranges with the
+  oracle, and the engine test pins the same guard.
+- Black Box is the first port with both a status bar and a warm trace.
+  Upstream `drawing.c` records a status text only when it changed, so a
+  warm frame repeats no status line. `KotlinTraceSink.status` keeps the
+  last text for the same reason. A cold trace still has exactly one
+  status line, and a warm frame emits a changed status exactly once;
+  `BlackBoxTraceTest` pins both.
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

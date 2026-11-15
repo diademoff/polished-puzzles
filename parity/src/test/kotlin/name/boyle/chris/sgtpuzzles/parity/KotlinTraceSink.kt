@@ -231,33 +231,64 @@ class KotlinTraceSink : DrawSink {
          * The warm path: one sink and one drawstate. Recording is off for
          * the first full draw and for the frames that [points] cause, so
          * the cache and the blitter reach the state the app would have.
-         * It is then on for one [Midend.recordRedraw], which is the
-         * trace. The blitter id counter advanced while recording was
-         * off, so the trace has no `blitter_new` but its `blitter_load`
-         * and `blitter_save` name the live blitter.
+         * It is then on for one redraw, which is the trace. The blitter
+         * id counter advanced while recording was off, so the trace has
+         * no `blitter_new` but its `blitter_load` and `blitter_save`
+         * name the live blitter.
+         *
+         * [tileSize] defaults to the preferred tile. A sized warm trace
+         * passes the tile size of the viewport, and [points] are then in
+         * game coordinates, as the oracle's `traceWarm` receives them
+         * after it subtracts the letterbox origin.
          */
         fun warmTrace(
             midend: Midend,
             points: List<OracleClient.Point>,
+            tileSize: Int = midend.tileSize,
         ): JsonValue.Obj {
             val sink = KotlinTraceSink()
             sink.recording = false
-            midend.recordRedraw(sink)
+            redrawSized(midend, sink, tileSize)
             for (point in points) {
                 val outcome = midend.processKey(
                     point.x,
                     point.y,
                     point.button,
-                    midend.tileSize,
+                    tileSize,
                 )
                 if (outcome == KeyOutcome.SomeEffect) {
-                    midend.recordRedraw(sink)
+                    redrawSized(midend, sink, tileSize)
                 }
             }
             sink.ops.clear()
             sink.recording = true
-            midend.recordRedraw(sink)
-            return objectFor(midend, sink)
+            redrawSized(midend, sink, tileSize)
+            return objectFor(
+                midend,
+                sink,
+                midend.game.computeSize(midend.params, tileSize),
+            )
+        }
+
+        /**
+         * One [Midend.recordRedraw] at an explicit [tileSize]. The
+         * sequence is the same as the midend's own redraw, so a sized
+         * warm frame sees the same first-draw clear and cache lifecycle.
+         */
+        private fun redrawSized(
+            midend: Midend,
+            sink: KotlinTraceSink,
+            tileSize: Int,
+        ) {
+            val size = midend.game.computeSize(midend.params, tileSize)
+            val drawState = midend.ensureDrawState(tileSize, sink)
+            val first = midend.takeFirstDraw()
+            sink.startDraw()
+            if (first) sink.rect(0, 0, size.width, size.height, 0)
+            midend.game.redraw(midend.state, midend.ui, drawState, sink, tileSize)
+            if (midend.game.wantsStatusBar) sink.status(midend.statusText())
+            if (first) sink.update(0, 0, size.width, size.height)
+            sink.endDraw()
         }
 
         private fun objectFor(midend: Midend, sink: KotlinTraceSink): JsonValue.Obj =
