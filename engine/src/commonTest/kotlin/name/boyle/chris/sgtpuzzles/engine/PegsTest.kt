@@ -440,6 +440,109 @@ class PegsTest {
         assertEquals(3 to 1, hole(12345))
     }
 
+    @Test
+    fun `a three-cell drag to a hole is cancelled by the length rule`() {
+        // On the 5x7 cross, (2,0) and the cell two cells away (2,2) are
+        // pegs, and the cell three cells away (2,3) is the centre hole.
+        // Every content check would pass, so only the drag length can
+        // cancel this release.
+        val board = Pegs.newState(
+            Pegs.decodeParams("5x7cross"),
+            "OPPPOOPPPOPPPPPPPHPPPPPPPOPPPOOPPPO",
+        )
+        val ui = Pegs.newUi(board) as Pegs.Ui
+        ui.dragging = true
+        ui.sx = 2
+        ui.sy = 0
+        val release = Pegs.interpretMove(
+            board,
+            ui,
+            cellCentre(2),
+            cellCentre(3),
+            Buttons.LEFT_RELEASE,
+            TILE,
+        )
+        assertEquals(MoveResult.UiUpdate, release, "a three-cell release is not a move")
+        assertFalse(ui.dragging)
+
+        // Through the midend the release is a UI update, and the save
+        // and the history do not change.
+        val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+        val before = midend.serialise().serialise()
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(cellCentre(2), cellCentre(0), Buttons.LEFT_BUTTON, TILE),
+        )
+        assertTrue((midend.ui as Pegs.Ui).dragging)
+        midend.processKey(cellCentre(2), cellCentre(3), Buttons.LEFT_DRAG, TILE)
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(cellCentre(2), cellCentre(3), Buttons.LEFT_RELEASE, TILE),
+            "a cancelled drag is a UI update",
+        )
+        assertFalse((midend.ui as Pegs.Ui).dragging)
+        assertEquals(before, midend.serialise().serialise(), "the drag changes no save")
+        assertEquals(emptyList<String>(), midend.serialise().values("MOVE"))
+        assertEquals(1, midend.stateCount)
+    }
+
+    @Test
+    fun `undo cancels a drag without changing the save or the history`() {
+        val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+        // One real move, so undo has somewhere to go.
+        midend.processKey(cellCentre(2), cellCentre(1), Buttons.LEFT_BUTTON, TILE)
+        midend.processKey(cellCentre(2), cellCentre(3), Buttons.LEFT_DRAG, TILE)
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(cellCentre(2), cellCentre(3), Buttons.LEFT_RELEASE, TILE),
+        )
+        assertEquals(listOf("2,1-2,3"), midend.serialise().values("MOVE"))
+        val afterMove = midend.serialise().serialise()
+
+        // A press starts a drag and adds no record. Undo must cancel the
+        // drag, because the drag source can stop being a peg.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(cellCentre(2), cellCentre(0), Buttons.LEFT_BUTTON, TILE),
+        )
+        assertTrue((midend.ui as Pegs.Ui).dragging, "the press starts a drag")
+        assertEquals(afterMove, midend.serialise().serialise())
+
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, 'u'.code, TILE))
+        assertFalse((midend.ui as Pegs.Ui).dragging, "undo cancels the drag")
+        // Undo moves the position only: the move text, the history
+        // length, and the redo branch are unchanged.
+        assertEquals(listOf("2,1-2,3"), midend.serialise().values("MOVE"))
+        assertEquals(2, midend.stateCount)
+        assertEquals("1", midend.serialise().value("STATEPOS"))
+        assertTrue(midend.canRedo)
+    }
+
+    @Test
+    fun `undo cancels a pending keyboard jump`() {
+        val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+        midend.processKey(cellCentre(2), cellCentre(1), Buttons.LEFT_BUTTON, TILE)
+        midend.processKey(cellCentre(2), cellCentre(3), Buttons.LEFT_DRAG, TILE)
+        midend.processKey(cellCentre(2), cellCentre(3), Buttons.LEFT_RELEASE, TILE)
+        val ui = midend.ui as Pegs.Ui
+
+        // Select twice: the first shows the cursor, the second arms the
+        // jump. The cursor starts on the peg at (0,2) and the move does
+        // not touch it.
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.CURSOR_SELECT, TILE))
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.CURSOR_SELECT, TILE))
+        assertTrue(ui.curJumping, "select arms a jump")
+
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, 'u'.code, TILE))
+        assertFalse(ui.curJumping, "undo cancels the pending jump")
+        assertEquals(listOf("2,1-2,3"), midend.serialise().values("MOVE"))
+        assertEquals(2, midend.stateCount)
+        assertEquals("1", midend.serialise().value("STATEPOS"))
+    }
+
+    /** The view coordinate of a cell centre, as the shell sends it. */
+    private fun cellCentre(cell: Int): Int = TILE / 2 + cell * TILE + TILE / 2
+
     private fun hole(seed: Int): Pair<Int, Int> {
         val params = Pegs.decodeParams("7x7octagon") as Pegs.Params
         val desc = PegsGeneration.generate(
@@ -454,4 +557,9 @@ class PegsTest {
 
     private fun countPegs(state: Pegs.State): Int =
         state.grid.count { it.toInt() == Pegs.GRID_PEG }
+
+    private companion object {
+        const val SEED = "12345"
+        const val TILE = 33
+    }
 }

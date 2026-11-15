@@ -48,7 +48,7 @@ class PegsSaveTest {
                 }
                 .sorted()
                 .toList()
-            assertEquals("nine readable preset saves", 9, files.size)
+            assertEquals("eight preset saves plus the default", 9, files.size)
 
             for (file in files) {
                 val text = file.readText()

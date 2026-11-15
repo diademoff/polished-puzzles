@@ -313,12 +313,16 @@ Notes:
   cold traces and, through the oracle's `traceWarm` operation, the warm
   path: the dirty-cell cache, the sprite `blitter_load`, and the
   absence of `blitter_new` after the first draw. The completion flash
-  is not ported, which section 1 allows. `KotlinGames.gameFor` knows
-  the Kotlin game, but the app still uses C: the configuration dialog,
-  the `Fifteen` casts in `KotlinGameEngine`, the unconditional status
-  text, the missing no-preferences path, the Game ID validation
-  difference for a short `5x5` id, and the two-release wait are open.
-  The seam is `docs/adr/0007-kotlin-game-seam.md`.
+  is not ported, which section 1 allows. The short `5x5` game-id
+  validation now matches C: `fromGameId` validates in short mode
+  (`e3e08f00`). One narrow difference remains: C decodes a descriptive
+  id over the previous parameters and Kotlin starts from the defaults,
+  so `currentParams.type` can differ; the description, the state, and
+  the id do not. `KotlinGames.gameFor` knows the Kotlin game, but the
+  app still uses C: the configuration dialog, the `Fifteen` casts in
+  `KotlinGameEngine`, the unconditional status text, the missing
+  no-preferences path, and the two-release wait are open. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`.
 
 
 ## 8. Goldens

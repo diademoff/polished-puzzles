@@ -349,6 +349,44 @@ class PegsInputParityTest {
     }
 
     @Test
+    fun `a three-cell drag to a hole is cancelled on both sides`() = OracleClient().use { oracle ->
+        // On the 5x7 cross, (2,0) and the cell two cells away (2,2) are
+        // pegs, and (2,3) is the centre hole. The destination is a hole
+        // on purpose: only the drag length can cancel this release.
+        val start = oracle.newGame("pegs", "5x7cross", SEED)
+        val tile = Pegs.preferredTileSize
+        val expected = oracle.gestureSized(
+            start.state,
+            viewX(2, tile),
+            viewY(0, tile),
+            viewX(2, tile),
+            viewY(3, tile),
+            STEPS,
+            197,
+            263,
+        )
+
+        val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+        val before = midend.serialise().serialise()
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(viewX(2, tile), viewY(0, tile), Buttons.LEFT_BUTTON, tile),
+        )
+        assertTrue("the press starts a drag", (midend.ui as Pegs.Ui).dragging)
+        midend.processKey(viewX(2, tile), viewY(3, tile), Buttons.LEFT_DRAG, tile)
+        assertEquals(
+            "a cancelled drag is a UI update",
+            KeyOutcome.SomeEffect,
+            midend.processKey(viewX(2, tile), viewY(3, tile), Buttons.LEFT_RELEASE, tile),
+        )
+        assertFalse("the release cancels the drag", (midend.ui as Pegs.Ui).dragging)
+        assertEquals("the drag changes no save", before, midend.serialise().serialise())
+        assertEquals(emptyList<String>(), midend.serialise().values("MOVE"))
+        assertEquals(1, midend.stateCount)
+        assertEquals("the oracle cancels it too", start.state, expected.state)
+    }
+
+    @Test
     fun `the keyboard jump matches the oracle`() = OracleClient().use { oracle ->
         val start = oracle.newGame("pegs", "5x7cross", SEED)
         val sequence = listOf(
@@ -401,6 +439,96 @@ class PegsInputParityTest {
         assertEquals(start.state, midend.serialise().serialise())
         assertEquals(expected.state, midend.serialise().serialise())
     }
+
+    @Test
+    fun `undo cancels a drag and matches the oracle`() = OracleClient().use { oracle ->
+        val start = oracle.newGame("pegs", "5x7cross", SEED)
+        val tile = Pegs.preferredTileSize
+        val moved = oracle.gestureSized(
+            start.state,
+            viewX(2, tile),
+            viewY(1, tile),
+            viewX(2, tile),
+            viewY(3, tile),
+            STEPS,
+            197,
+            263,
+        )
+        val undone = oracle.undo(moved.state)
+
+        val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+        drag(midend, 2, 1, 2, 3)
+        assertEquals(listOf("2,1-2,3"), midend.serialise().values("MOVE"))
+        assertEquals(2, midend.stateCount)
+
+        // A press starts a drag and adds no record.
+        val afterMove = midend.serialise().serialise()
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(viewX(2, tile), viewY(0, tile), Buttons.LEFT_BUTTON, tile),
+        )
+        assertTrue("the press starts a drag", (midend.ui as Pegs.Ui).dragging)
+        assertEquals(afterMove, midend.serialise().serialise())
+
+        // The oracle has no operation that reports the game UI, so the
+        // `dragging` flag is pinned directly. The save after undo is the
+        // oracle's.
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, 'u'.code, tile))
+        assertFalse("undo cancels the drag", (midend.ui as Pegs.Ui).dragging)
+        assertEquals("the undo matches the oracle", undone.state, midend.serialise().serialise())
+        assertEquals(listOf("2,1-2,3"), midend.serialise().values("MOVE"))
+        assertEquals(2, midend.stateCount)
+        assertEquals("1", midend.serialise().value("STATEPOS"))
+        assertTrue(midend.canRedo)
+    }
+
+    @Test
+    fun `undo cancels a pending keyboard jump and matches the oracle`() =
+        OracleClient().use { oracle ->
+            val start = oracle.newGame("pegs", "5x7cross", SEED)
+            val tile = Pegs.preferredTileSize
+            val moved = oracle.gestureSized(
+                start.state,
+                viewX(2, tile),
+                viewY(1, tile),
+                viewX(2, tile),
+                viewY(3, tile),
+                STEPS,
+                197,
+                263,
+            )
+            val undone = oracle.undo(moved.state)
+
+            val midend = Midend.newGame(Pegs, "5x7cross", SEED)
+            drag(midend, 2, 1, 2, 3)
+            val ui = midend.ui as Pegs.Ui
+
+            // Select twice: the first shows the cursor, the second arms
+            // the jump. The cursor starts on the peg at (0,2) and the
+            // move does not touch it.
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                midend.processKey(0, 0, Buttons.CURSOR_SELECT, tile),
+            )
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                midend.processKey(0, 0, Buttons.CURSOR_SELECT, tile),
+            )
+            assertTrue("select arms a jump", ui.curJumping)
+
+            // The oracle has no operation that reports the game UI, so
+            // the `curJumping` flag is pinned directly. The save after
+            // undo is the oracle's.
+            assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, 'u'.code, tile))
+            assertFalse("undo cancels the pending jump", ui.curJumping)
+            assertEquals(
+                "the undo matches the oracle",
+                undone.state,
+                midend.serialise().serialise(),
+            )
+            assertEquals(listOf("2,1-2,3"), midend.serialise().values("MOVE"))
+            assertEquals(2, midend.stateCount)
+        }
 
     @Test
     fun `a modified cursor key is unused`() = OracleClient().use { oracle ->
@@ -458,6 +586,33 @@ class PegsInputParityTest {
         // The left edge clamps.
         midend.processKey(0, 0, Buttons.CURSOR_LEFT, tile)
         assertEquals(0, ui.curX)
+    }
+
+    /** Drags from one cell centre to another at the default tile size. */
+    private fun drag(midend: Midend, fromX: Int, fromY: Int, toX: Int, toY: Int) {
+        val tile = Pegs.preferredTileSize
+        val x0 = viewX(fromX, tile)
+        val y0 = viewY(fromY, tile)
+        val x1 = viewX(toX, tile)
+        val y1 = viewY(toY, tile)
+        assertEquals(
+            "the press must start a drag",
+            KeyOutcome.SomeEffect,
+            midend.processKey(x0, y0, Buttons.LEFT_BUTTON, tile),
+        )
+        for (i in 1..STEPS) {
+            midend.processKey(
+                x0 + (x1 - x0) * i / STEPS,
+                y0 + (y1 - y0) * i / STEPS,
+                Buttons.LEFT_DRAG,
+                tile,
+            )
+        }
+        assertEquals(
+            "the release must move",
+            KeyOutcome.SomeEffect,
+            midend.processKey(x1, y1, Buttons.LEFT_RELEASE, tile),
+        )
     }
 
     private fun exactFits(): List<Pair<Int, Pair<Int, Int>>> = listOf(
