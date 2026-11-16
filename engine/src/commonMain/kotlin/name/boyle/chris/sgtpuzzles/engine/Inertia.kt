@@ -1030,6 +1030,18 @@ object Inertia : Game {
     // ------------------------------------------------------------------
 
     /**
+     * The D-008 guard: rejects an area above [MAX_AREA] before any RNG
+     * draw or allocation. [generate] calls it first, and it is internal
+     * so a test can pin both sides of the boundary without generating a
+     * board of that size.
+     */
+    internal fun requireGeneratableArea(w: Int, h: Int) {
+        require(w.toLong() * h <= MAX_AREA) {
+            "Width times height is too large for this build"
+        }
+    }
+
+    /**
      * `gengrid`. One shuffle per attempt of the flat wall/stop/mine/
      * start/blank fill, the direction-aware candidate search, the
      * Chebyshev distance gate, and one shuffle of the candidates on
@@ -1038,9 +1050,7 @@ object Inertia : Game {
     private fun generate(params: Params, random: RandomState): Generation {
         val w = params.w
         val h = params.h
-        require(w.toLong() * h <= MAX_AREA) {
-            "Width times height is too large for this build"
-        }
+        requireGeneratableArea(w, h)
         val wh = w * h
         val grid = CharArray(wh)
         val reachableFrom = BooleanArray(wh * DIRECTIONS)

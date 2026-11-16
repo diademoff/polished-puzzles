@@ -1203,7 +1203,9 @@ Engine tests:
   solve-follow select makes the tour move and reaches `Auto-solved.`
 - `InertiaTest` is the engine test. It pins the parameters and presets,
   the decode quirks, the validation order and the D-008 guard, the
-  description grammar, the initial state, the text format, the status
+  untouched `RandomState` across a refused generation, the exact 2^20
+  generation boundary, the description grammar, the initial state, the
+  text format, the status
   strings, the move grammar and the movement loop, the death and
   completion transitions, the click octants and `FROMCOORD` bands, the
   `S` payload and the revive, `encodeUi`/`decodeUi`, `currentKeyLabel`,

@@ -283,8 +283,15 @@ Anything not listed here is a bug.
   game changes, because no preset is near the limit.
 - **Test:**
   `engine/src/commonTest/kotlin/.../InertiaTest.kt::generation refuses a huge area before any RNG draw`
-  pins the accepted `46340x46340` boundary, the accepted `1024x1024`
-  boundary, the rejected `1025x1024` area, and the message;
+  pins the accepted `46340x46340` and `1024x1024` boundaries in
+  validation, the rejected `1025x1024` area, and the message;
+  `InertiaTest.kt::the area guard leaves the RNG state untouched`
+  pins that the encoded `RandomState` is byte-identical before and
+  after a refused `newDesc`; `InertiaTest.kt::the generation boundary
+  is exactly 2^20 cells` pins `MAX_AREA == 1 shl 20` and the
+  generation guard on both sides of the limit. That test calls the
+  guard directly, because a full `1024x1024` generation is too large
+  for a unit test.
   `parity/src/test/kotlin/.../InertiaDescTest.kt::the huge area is accepted by validation but refused at generation`
   pins that validation keeps the C boundary and that `Midend.newGame`
   throws the message. No test calls the oracle on `46340x46340`; that

@@ -157,6 +157,46 @@ class InertiaTest {
     }
 
     @Test
+    fun `the area guard leaves the RNG state untouched`() {
+        // The guard must run before the first draw. A draw would change
+        // the encoded state, so byte equality proves the order.
+        val random = RandomState.fromSeed("guard")
+        val before = random.encodeState()
+        val error = assertFailsWith<IllegalArgumentException> {
+            Inertia.newDesc(Inertia.Params(46340, 46340), random)
+        }
+        assertEquals("Width times height is too large for this build", error.message)
+        assertEquals(before, random.encodeState())
+
+        // The same applies just above the boundary.
+        val near = RandomState.fromSeed("guard")
+        val nearBefore = near.encodeState()
+        assertFailsWith<IllegalArgumentException> {
+            Inertia.newDesc(Inertia.Params(1025, 1024), near)
+        }
+        assertEquals(nearBefore, near.encodeState())
+    }
+
+    @Test
+    fun `the generation boundary is exactly 2^20 cells`() {
+        assertEquals(1 shl 20, Inertia.MAX_AREA)
+
+        // The guard itself is pinned at the boundary: a full 1024x1024
+        // generation would allocate and shuffle about 51 MB per attempt,
+        // so the test calls the guard directly instead of newDesc.
+        Inertia.requireGeneratableArea(1024, 1024)
+        assertEquals(
+            "Width times height is too large for this build",
+            assertFailsWith<IllegalArgumentException> {
+                Inertia.requireGeneratableArea(1025, 1024)
+            }.message,
+        )
+        assertFailsWith<IllegalArgumentException> {
+            Inertia.requireGeneratableArea(1024, 1025)
+        }
+    }
+
+    @Test
     fun `generated fixtures and attempt counts match the C probe`() {
         assertEquals(
             "10x8:$GOLDEN_10X8",
@@ -563,7 +603,7 @@ class InertiaTest {
     }
 
     @Test
-    fun `the empty move and direction moves go through the midend`() {
+    fun `direction moves go through the midend`() {
         val midend = Midend.fromGameId(Inertia, "5x5:$OPEN_5X5")
         assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, keypad('8'), TILE))
         assertEquals(listOf("0"), midend.serialise().values("MOVE"))
@@ -869,7 +909,7 @@ class InertiaTest {
     }
 
     @Test
-    fun `the palette matches the frozen trace`() {
+    fun `the palette matches the frozen colour table`() {
         val colours = Inertia.colours()
         val expected = listOf(
             intArrayOf(800, 800, 800),
