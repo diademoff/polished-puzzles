@@ -2035,7 +2035,7 @@ aggressive 100x100 latency is an enablement debt:
   `num_total <= 4`, the ratio bounds, a path over `max_length`, a
   missing monster type, a Tricky singleton, and an Easy depth over 3.
   The `Float` ratio and the stable `num_monsters` sort are guarded by
-  the goldens and the sweep, and `UndeadTest` pins the retry counts.
+  the goldens and the sweep, and `UndeadDescTest` pins the retry counts.
   A `4x4` board whose longest ray is 22 cells, longer than `w*h = 16`,
   loads and solves like the oracle.
 - `UndeadGameTest` is semantic. It compares the new game, text,
@@ -2077,24 +2077,35 @@ aggressive 100x100 latency is an enablement debt:
   highlight, the Android same-cell toggle, a done clue, a clue error,
   a count error, a `cell_errors`-only redraw, ascii mode, a solved
   state, a cheated solve, a fixed board, and the warm path are
-  compared. No trace has a flash or a status line. The thick-line
-  trace unit is fixed: `thick_line t x1 y1 x2 y2 c`, where `t` is the
-  thickness in thousandths and both endpoints are in thousandths (the
-  oracle uses `tc_milli`), so a mirror at tile 64 is
-  `thick_line 4000 ...`.
+  compared. The `cell_errors` case draws a first frame, selects a
+  floor cell, presses the ghost count icon, and records that input's
+  own frame on the same drawstate. The frame has the guessed cell, two
+  cells whose guess and pencils did not change (one is a mirror), one
+  hint error, and no other cell. The oracle cannot record an input's
+  frame, so the test pins the operations. No trace has a flash or a
+  status line. The thick-line trace unit is fixed:
+  `thick_line t x1 y1 x2 y2 c`, where `t` is the thickness in
+  thousandths and both endpoints are in thousandths (the oracle uses
+  `tc_milli`), so a mirror at tile 64 is `thick_line 4000 ...`.
 - `UndeadInputParityTest` is semantic and `ui`. It compares the layout
   at 411x702 (tiles 63, 55, and 43 with the measured origins), the
   exact sizes at tiles 48, 63, 82, and 100, real cell selects at all
   four tiles and at the 411x702 letterbox, and the count row at all
-  four tiles and at the letterbox. A cell change at the count row
-  alters the guess, adds one move and one state, and leaves the status
-  at 0; a clue click adds one `D` move and toggles the mark without
-  touching the guess or the status; a second click on the same clue
-  removes it. The pencil select pair, a right press that enters pencil
-  mode, and a second right press that hides the highlight change
-  neither the board nor the history at every tile and at the letterbox. A mirror, a letterbox point, the
-  middle button, the one-pixel bands of the cell rect and of the count
-  row, a lone drag and release, and a press-plus-drag are inert. The
+  four tiles and at the letterbox. A separate case derives the ghost,
+  vampire, and zombie hit boxes from the oracle trace and clicks every
+  exact box edge, one pixel outside, and one pixel inside at tiles 64
+  and 63; only the inside clicks make a move. A cell change at the
+  count row alters the guess, adds one move and one state, and leaves
+  the status at 0; a clue click adds one `D` move and toggles the mark
+  without touching the guess or the status; a second click on the same
+  clue removes it. The pencil select pair, a right press that enters
+  pencil mode, and a second right press that hides the highlight change
+  neither the board nor the history at every tile and at the letterbox.
+  A mirror click and a fixed-cell click also keep a visible pencil
+  highlight, and the final frame is compared with the oracle. A
+  mirror, a letterbox point, the middle button, the one-pixel bands of
+  the cell rect and of the count row, a lone drag and release, and a
+  press-plus-drag are inert. The
   final frame is compared with `pointsSized` for a select at every
   tile and the letterbox, a clue toggle, a pencil pair, both right
   presses, and a real count-row move, so the highlight and the pencil
@@ -2120,7 +2131,11 @@ aggressive 100x100 latency is an enablement debt:
   direction states) and caps a walk at `4*wh` steps. This changes no
   accepted description, and the oracle is not asked to compare a
   corrupted path; `UndeadTest` pins the `4*wh` length and a 22-cell
-  ray on a 16-cell board. In `solve_iterative` and
+  ray on a 16-cell board. No test reaches the walk cap, and none can:
+  the ray map is injective, a cycle has no border entry, so a walk
+  never repeats a `(cell, direction)` state and is shorter than
+  `4*w*h`, below the `4*wh` cap. The allocation test is the pin.
+  In `solve_iterative` and
   `solve_bruteforce` a mask of 0 leaves `loop.guess` uninitialised in
   C; the port defines it as "no allowed type" and stops the
   enumeration. `UndeadTest` and the solve error cases pin the result.

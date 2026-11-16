@@ -1206,7 +1206,8 @@ Notes:
   still-unfilled monster. The nine golden descriptions, the nine seed
   strings, the numeric sweep, and a pinned seed for every retry gate
   guard the stream; the `Float` ratio and the stable path sort are
-  part of it. `UndeadTest` pins the retry counts and the decode table.
+  part of it. `UndeadDescTest` pins the retry counts, and `UndeadTest`
+  pins the decode table.
 
   `UndeadSaveTest` reads all nine corpus saves, rewrites them byte for
   byte, and reloads them in C with the same id, status, undo, redo, and
@@ -1222,9 +1223,14 @@ Notes:
   `UndeadInputParityTest` sends real cell selects and count-row ghost,
   vampire, and zombie presses at tiles 48, 63, 82, and 100, plus clue
   presses at the same tiles and a real cell change and a clue press at
-  the 411x702 letterbox with the measured (1,115) origin. The pencil
-  select pair and both right-button presses are UI-only at every tile
-  and at the letterbox; the count row and the clue each add one move. Every pointer frame is compared with
+  the 411x702 letterbox with the measured (1,115) origin. It also
+  derives the three count boxes from the oracle trace and clicks each
+  exact edge, one pixel outside, and one pixel inside at tiles 64 and
+  63; the state and the move count agree on both sides. A mirror and a
+  fixed cell keep a visible pencil highlight, compared with the
+  oracle's final frame. The pencil select pair and both right-button
+  presses are UI-only at every tile and at the letterbox; the count row
+  and the clue each add one move. Every pointer frame is compared with
   `pointsSized`, so the highlight and the pencil triangle are checked;
   a count-row change alters the guess and the status stays 0, a clue
   click toggles its mark, and an inert click changes neither.
@@ -1235,14 +1241,18 @@ Notes:
   deviations. The C path arrays hold `wh` entries but a ray can revisit
   a cell through both mirror channels, so the port sizes them `4*wh`
   entries (the number of cell and direction states) and caps a walk at
-  `4*wh` steps; this changes no accepted description. In the solver a
-  mask of 0 leaves `loop.guess` uninitialised in C, so the port defines
-  it as "no allowed type" and stops the enumeration. The oracle is
-  never asked to compare a corrupted path, and a generated board never
-  reaches either case. The thick line is `draw_thick_line` with integer
-  endpoints and `T/16` as a float; the trace records `t` in
-  thousandths and both endpoints in thousandths, so a mirror at tile 64
-  is `thick_line 4000 ...`. `undead` is the first game-level consumer
+  `4*wh` steps; this changes no accepted description. The cap is not
+  reachable from a border entry: the ray map is injective and an orbit
+  from an entry state cannot enter a cycle, so no path repeats a
+  `(cell, direction)` state and every walk is shorter than `4*w*h`.
+  `UndeadTest` pins the allocation and the longest known ray. In the
+  solver a mask of 0 leaves `loop.guess` uninitialised in C, so the
+  port defines it as "no allowed type" and stops the enumeration. The
+  oracle is never asked to compare a corrupted path, and a generated
+  board never reaches either case. The thick line is `draw_thick_line`
+  with integer endpoints and `T/16` as a float; the trace records `t`
+  in thousandths and both endpoints in thousandths, so a mirror at
+  tile 64 is `thick_line 4000 ...`. `undead` is the first game-level consumer
   of the primitive.
 
   Enablement debt. Generation runs on the calling thread; the presets

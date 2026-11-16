@@ -316,6 +316,49 @@ class KotlinTraceSink : DrawSink {
         }
 
         /**
+         * Records the frame that the last input draws on a warm
+         * drawstate. The first frame and every earlier input redraw with
+         * recording off, as a frontend does after each key. The last
+         * input is applied without a redraw, so the recorded frame is
+         * the one that shows its cache change. [warmTrace] instead
+         * redraws after every input and records a later, settled frame.
+         *
+         * The oracle cannot express this frame: its `traceWarm` drops
+         * every input redraw and records one more redraw, and
+         * `midend_process_key` has already updated the cache. A test
+         * that needs the input's own frame pins the operations.
+         */
+        fun warmFrame(
+            midend: Midend,
+            points: List<OracleClient.Point>,
+            tileSize: Int = midend.tileSize,
+        ): JsonValue.Obj {
+            require(points.isNotEmpty()) { "a warm frame needs an input" }
+            val sink = KotlinTraceSink()
+            sink.recording = false
+            redrawSized(midend, sink, tileSize)
+            for ((index, point) in points.withIndex()) {
+                val outcome = midend.processKey(
+                    point.x,
+                    point.y,
+                    point.button,
+                    tileSize,
+                )
+                if (index < points.lastIndex && outcome == KeyOutcome.SomeEffect) {
+                    redrawSized(midend, sink, tileSize)
+                }
+            }
+            sink.ops.clear()
+            sink.recording = true
+            redrawSized(midend, sink, tileSize)
+            return objectFor(
+                midend,
+                sink,
+                midend.game.computeSize(midend.params, tileSize),
+            )
+        }
+
+        /**
          * One [Midend.recordRedraw] at an explicit [tileSize]. The
          * sequence is the same as the midend's own redraw, so a sized
          * warm frame sees the same first-draw clear and cache lifecycle.

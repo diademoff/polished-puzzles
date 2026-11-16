@@ -63,6 +63,34 @@ class UndeadInputParityTest {
         error("the board has no editable cell")
     }
 
+    private fun firstMirror(state: Undead.State): Pair<Int, Int> {
+        val w = state.common.params.w
+        for (y in 1..state.common.params.h) {
+            for (x in 1..w) {
+                if (state.common.xinfo[x + y * (w + 2)] == -1) return x to y
+            }
+        }
+        error("the board has no mirror")
+    }
+
+    private fun saveWithDesc(params: String, desc: String): String {
+        val out = StringBuilder()
+        fun record(key: String, value: String) {
+            out.append(key.padEnd(8)).append(':').append(value.length).append(':')
+                .append(value).append('\n')
+        }
+        record("SAVEFILE", "Simon Tatham's Portable Puzzle Collection")
+        record("VERSION", "1")
+        record("GAME", "Undead")
+        record("PARAMS", "4x4dn")
+        record("CPARAMS", params)
+        record("SEED", SEED)
+        record("DESC", desc)
+        record("NSTATES", "1")
+        record("STATEPOS", "1")
+        return out.toString()
+    }
+
     private fun cellPoint(x: Int, y: Int, tile: Int, originX: Int = 0, originY: Int = 0) =
         OracleClient.Point(
             originX + tile / 4 + x * tile + tile / 2,
@@ -505,6 +533,72 @@ class UndeadInputParityTest {
         }
 
     @Test
+    fun `a mirror and a fixed cell keep a pencil highlight`() =
+        OracleClient().use { oracle ->
+            fun check(
+                what: String,
+                save: String,
+                floor: Pair<Int, Int>,
+                target: Pair<Int, Int>,
+            ) {
+                val points = listOf(
+                    cellPoint(floor.first, floor.second, TILE),
+                    cellPoint(floor.first, floor.second, TILE),
+                    cellPoint(target.first, target.second, TILE),
+                )
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    416,
+                    480,
+                    recordTrace = true,
+                )
+                val actual = midend(save)
+                for (point in points) {
+                    actual.processKey(point.x, point.y, point.button, TILE)
+                }
+                assertSame("$what highlight", expected.state, actual)
+                assertTrace(
+                    "$what highlight",
+                    requireNotNull(expected.trace),
+                    KotlinTraceSink.stateTrace(actual),
+                )
+                val ui = actual.ui as Undead.Ui
+                assertTrue("$what keeps the highlight", ui.hshow)
+                assertTrue("$what keeps pencil mode", ui.hpencil)
+                assertEquals("$what hx", floor.first, ui.hx)
+                assertEquals("$what hy", floor.second, ui.hy)
+                assertEquals("$what no move", 0, actual.serialise().values("MOVE").size)
+
+                // The cold final frame still draws the pencil triangle,
+                // because the second select entered pencil mode and the
+                // inert click did not hide it.
+                val lines = TraceNormalizer.normalize(
+                    KotlinTraceSink.stateTrace(actual),
+                    UpstreamLock.commit(
+                        java.io.File(System.getProperty("testdata")!!)
+                            .parentFile.resolve("UPSTREAM.lock"),
+                    ),
+                ).lines()
+                assertTrue(
+                    "$what draws the pencil triangle",
+                    lines.any { it.startsWith("poly 4 4 ") },
+                )
+            }
+
+            val save = oracle.newGame("undead", "4x4dn", SEED).state
+            val state = midend(save).state as Undead.State
+            check("mirror", save, firstFloor(state), firstMirror(state))
+
+            val fixedSave = saveWithDesc(
+                "4x4dn",
+                "2,2,12,GVZaaaaaaaaaaaaa,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+            )
+            val fixedState = midend(fixedSave).state as Undead.State
+            check("fixed", fixedSave, firstFloor(fixedState), 1 to 1)
+        }
+
+    @Test
     fun `the one-pixel bands match the oracle`() = OracleClient().use { oracle ->
         val save = oracle.newGame("undead", "4x4dn", SEED).state
         // The drawn rect of cell (1,1) is 81..143 x 145..207; the hit
@@ -666,6 +760,151 @@ class UndeadInputParityTest {
                 actual.serialise().values("MOVE").single().take(1),
             )
             assertEquals("letterbox status", 0, actual.status())
+        }
+
+    @Test
+    fun `the count row is strict at every box edge`() =
+        OracleClient().use { oracle ->
+            data class Box(val y1: Int, val y2: Int, val x1: Int, val x2: Int)
+            val save = oracle.newGame("undead", "4x4dn", SEED).state
+            val cell = firstFloor(midend(save).state as Undead.State)
+
+            for (tile in listOf(64, 63)) {
+                val size = Undead.computeSize(Undead.decodeParams("4x4dn"), tile)
+                val lines = TraceNormalizer.normalize(
+                    requireNotNull(
+                        oracle.pointsSized(
+                            save,
+                            emptyList(),
+                            size.width,
+                            size.height,
+                            recordTrace = true,
+                        ).trace,
+                    ),
+                    UpstreamLock.commit(
+                        java.io.File(System.getProperty("testdata")!!)
+                            .parentFile.resolve("UPSTREAM.lock"),
+                    ),
+                ).lines()
+
+                // The count texts are the only vertical-centred left
+                // aligned texts in the row at 3*T/4. Their x position is
+                // the `dx` of `draw_monster_count`; the hit boxes are
+                // derived from that and the C constants, not from
+                // `Undead.countsGeometry`.
+                val countY = tile / 4 + tile / 2
+                val texts = lines.mapNotNull { line ->
+                    val parts = line.split(' ')
+                    if (parts.size == 8 && parts[0] == "text" &&
+                        parts[2].toInt() == countY && parts[5] == "256"
+                    ) {
+                        parts[1].toInt() to
+                            line.substringAfter(" 2 \"").substringBefore('"')
+                    } else {
+                        null
+                    }
+                }.sortedBy { it.first }
+                assertEquals(
+                    "tile $tile count texts",
+                    listOf("1", "5", "6"),
+                    texts.map { it.second },
+                )
+
+                val half = 2 * tile / 5
+                val width = 4 * tile / 5
+                val y1 = 3 * tile / 4 - half
+                val y2 = 3 * tile / 4 + half
+                fun box(index: Int): Box {
+                    val dx = texts[index].first
+                    return when (index) {
+                        0 -> {
+                            val x1 = dx - tile / 3 - half
+                            Box(y1, y2, x1, x1 + width)
+                        }
+
+                        1 -> Box(y1, y2, dx - width, dx)
+
+                        else -> {
+                            val x1 = dx - tile / 3 - half
+                            Box(y1, y2, x1, x1 + width)
+                        }
+                    }
+                }
+
+                // The independent derivation equals the shared geometry.
+                val geometry = Undead.countsGeometry(tile, 4)
+                val ghost = box(0)
+                val vampire = box(1)
+                val zombie = box(2)
+                assertEquals("tile $tile y1", y1, geometry.y1)
+                assertEquals("tile $tile y2", y2, geometry.y2)
+                assertEquals("tile $tile ghost x1", ghost.x1, geometry.ghostX1)
+                assertEquals("tile $tile ghost x2", ghost.x2, geometry.ghostX2)
+                assertEquals("tile $tile vampire x1", vampire.x1, geometry.vampireX1)
+                assertEquals("tile $tile vampire x2", vampire.x2, geometry.vampireX2)
+                assertEquals("tile $tile zombie x1", zombie.x1, geometry.zombieX1)
+                assertEquals("tile $tile zombie x2", zombie.x2, geometry.zombieX2)
+
+                for ((letter, b) in listOf(
+                    "G" to ghost,
+                    "V" to vampire,
+                    "Z" to zombie,
+                )) {
+                    val cx = (b.x1 + b.x2) / 2
+                    val cy = (b.y1 + b.y2) / 2
+                    val checks = listOf(
+                        Triple(b.x1, cy, false),
+                        Triple(b.x2, cy, false),
+                        Triple(cx, b.y1, false),
+                        Triple(cx, b.y2, false),
+                        Triple(b.x1 - 1, cy, false),
+                        Triple(b.x2 + 1, cy, false),
+                        Triple(cx, b.y1 - 1, false),
+                        Triple(cx, b.y2 + 1, false),
+                        Triple(b.x1 + 1, cy, true),
+                        Triple(b.x2 - 1, cy, true),
+                        Triple(cx, b.y1 + 1, true),
+                        Triple(cx, b.y2 - 1, true),
+                    )
+                    for ((x, y, moves) in checks) {
+                        val point = OracleClient.Point(x, y, Buttons.LEFT_BUTTON)
+                        val expected = oracle.pointsSized(
+                            save,
+                            listOf(cellPoint(cell.first, cell.second, tile), point),
+                            size.width,
+                            size.height,
+                        ).state
+                        val actual = midend(save)
+                        for (start in listOf(
+                            cellPoint(cell.first, cell.second, tile),
+                            point,
+                        )) {
+                            actual.processKey(start.x, start.y, start.button, tile)
+                        }
+                        val what = "tile $tile $letter $x,$y"
+                        if (moves) {
+                            assertEquals(
+                                "$what one move",
+                                1,
+                                actual.serialise().values("MOVE").size,
+                            )
+                            assertEquals(
+                                "$what payload",
+                                letter,
+                                actual.serialise().values("MOVE").single().take(1),
+                            )
+                        } else {
+                            assertEquals(
+                                "$what no move",
+                                0,
+                                actual.serialise().values("MOVE").size,
+                            )
+                            assertEquals("$what oracle state", save, expected.state)
+                        }
+                        assertSame(what, expected, actual)
+                    }
+                }
+            }
         }
 
     @Test

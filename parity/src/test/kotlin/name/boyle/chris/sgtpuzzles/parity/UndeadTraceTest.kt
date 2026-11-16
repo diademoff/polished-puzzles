@@ -401,6 +401,131 @@ class UndeadTraceTest {
     }
 
     @Test
+    fun `a warm frame redraws only the cells whose error flag changed`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("undead", "4x4dn", SEED).state
+            val midend = midend(save)
+            val before = midend.state as Undead.State
+            val w = before.common.params.w
+            val h = before.common.params.h
+            var floor: Pair<Int, Int>? = null
+            outer@ for (y in 1..h) {
+                for (x in 1..w) {
+                    val xi = before.common.xinfo[x + y * (w + 2)]
+                    if (xi >= 0 && !before.common.fixed[xi]) {
+                        floor = x to y
+                        break@outer
+                    }
+                }
+            }
+            val cell = floor!!
+            val geometry = Undead.countsGeometry(64, w)
+            val points = listOf(
+                OracleClient.Point(
+                    16 + cell.first * 64 + 32,
+                    16 + cell.second * 64 + 96,
+                    Buttons.LEFT_BUTTON,
+                ),
+                OracleClient.Point(
+                    (geometry.ghostX1 + geometry.ghostX2) / 2,
+                    (geometry.y1 + geometry.y2) / 2,
+                    Buttons.LEFT_BUTTON,
+                ),
+            )
+
+            // The oracle agrees on the state: one wrong `G0` move.
+            val expected = oracle.pointsSized(save, points, 416, 480).state
+            val frame = KotlinTraceSink.warmFrame(midend, points)
+            val after = midend.state as Undead.State
+            assertEquals("one move", 1, midend.serialise().values("MOVE").size)
+            assertEquals("G0", midend.serialise().values("MOVE").single())
+            assertEquals("status", 0, midend.status())
+            assertEquals("id", expected.id, midend.id())
+            assertEquals("state", expected.state, midend.serialise().serialise())
+
+            // (1,1) changes its guess. (2,1) and (3,1) keep their guess
+            // and pencils, so only the cell_errors cache can make them
+            // stale. (3,1) is a mirror: the cache is the only reason a
+            // mirror is redrawn here.
+            val errorOnly = ArrayList<Pair<Int, Int>>()
+            val affected = ArrayList<Pair<Int, Int>>()
+            for (x in 1..w) {
+                for (y in 1..h) {
+                    val xy = x + y * (w + 2)
+                    val xi = before.common.xinfo[xy]
+                    val errorChanged = before.cellErrors[xy] != after.cellErrors[xy]
+                    val guessChanged =
+                        xi >= 0 && before.guess[xi] != after.guess[xi]
+                    val pencilChanged =
+                        xi >= 0 && before.pencils[xi] != after.pencils[xi]
+                    if (errorChanged && !guessChanged && !pencilChanged) {
+                        errorOnly += x to y
+                    }
+                    if (errorChanged || guessChanged || pencilChanged) {
+                        affected += x to y
+                    }
+                }
+            }
+            assertEquals(listOf(2 to 1, 3 to 1), errorOnly)
+            assertEquals(listOf(1 to 1, 2 to 1, 3 to 1), affected)
+
+            val lines = TraceNormalizer.normalize(frame, upstream()).lines()
+            // Every cell background is a `T-1` square. The frame has one
+            // for each affected cell and none for any other cell.
+            val backgrounds = lines.mapNotNull { line ->
+                val parts = line.split(' ')
+                if (parts.size == 6 && parts[0] == "rect" &&
+                    parts[3] == "63" && parts[4] == "63"
+                ) {
+                    parts[1].toInt() to parts[2].toInt()
+                } else {
+                    null
+                }
+            }
+            assertEquals(
+                affected.map { (x, y) ->
+                    16 + x * 64 + 1 to 16 + y * 64 + 64 + 1
+                },
+                backgrounds,
+            )
+
+            // The oracle has no operation that records an input's own
+            // redraw: `traceWarm` drops it and records a later settled
+            // frame, which is empty. Pin the exact operations instead.
+            assertEquals(
+                listOf(
+                    "start_draw",
+                    "rect 18 146 61 61 0",
+                    "text 48 176 1 32 257 3 \"2\"",
+                    "update 18 146 61 61",
+                    "rect 81 145 63 63 4",
+                    "update 81 145 63 63",
+                    "clip 90 154 45 25",
+                    "circle 112 176 19 8 6",
+                    "unclip",
+                    "clip 90 176 45 23",
+                    "poly 8 6 9 93 174 93 195 99 189 105 195 111 189 118 " +
+                        "195 124 189 131 195 131 174",
+                    "unclip",
+                    "circle 104 172 4 7 6",
+                    "circle 120 172 4 7 6",
+                    "circle 106 172 1 6 6",
+                    "circle 122 172 1 6 6",
+                    "update 90 154 45 45",
+                    "rect 145 145 63 63 0",
+                    "update 145 145 63 63",
+                    "update 146 146 29 29",
+                    "rect 209 145 63 63 0",
+                    "update 209 145 63 63",
+                    "thick_line 4000 224000 192000 256000 160000 2",
+                    "update 209 145 63 63",
+                    "end_draw",
+                ),
+                lines.drop(7).filter { it.isNotBlank() },
+            )
+        }
+
+    @Test
     fun `the thick line thickness follows the tile`() = OracleClient().use { oracle ->
         val save = oracle.newGame("undead", "4x4dn", SEED).state
         for (tile in listOf(48, 63, 82, 100)) {
