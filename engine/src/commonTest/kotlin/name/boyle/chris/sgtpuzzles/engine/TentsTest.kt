@@ -751,6 +751,8 @@ class TentsTest {
             ops += "line"
         }
 
+        override fun thickLine(x1: Int, y1: Int, x2: Int, y2: Int, thickness: Float, colour: Int) {}
+
         override fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int) {
             ops += "circle"
         }

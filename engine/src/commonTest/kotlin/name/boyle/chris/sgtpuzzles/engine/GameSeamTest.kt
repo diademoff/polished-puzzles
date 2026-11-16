@@ -72,6 +72,7 @@ class GameSeamTest {
             drew = true
         }
         override fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int) {}
+        override fun thickLine(x1: Int, y1: Int, x2: Int, y2: Int, thickness: Float, colour: Int) {}
         override fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int) {}
         override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {}
         override fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String) {}

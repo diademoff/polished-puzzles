@@ -199,3 +199,14 @@ changes the drawstate, allocates no blitter, and does not affect the
 first-draw clear. The lifecycle in the decision above is unchanged. The
 seam and the shell behavior are defined in
 `docs/adr/0007-kotlin-game-seam.md`.
+
+## Amendment: the thick line primitive
+
+- **Date:** 2026-11-16
+
+`DrawSink.thickLine(...)` is a drawing primitive, not a drawstate or
+blitter operation. It neither reads nor changes the drawstate, allocates
+no blitter, and does not affect the first-draw clear. A game may call it
+inside any draw between `start_draw` and `end_draw`, and the cache rules
+in the decision above apply unchanged. The seam definition and the trace
+format are in `docs/adr/0007-kotlin-game-seam.md`.

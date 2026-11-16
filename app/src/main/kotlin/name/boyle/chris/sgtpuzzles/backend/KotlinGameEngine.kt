@@ -223,6 +223,24 @@ class KotlinGameEngine private constructor(
             )
         }
 
+        override fun thickLine(
+            x1: Int,
+            y1: Int,
+            x2: Int,
+            y2: Int,
+            thickness: Float,
+            colour: Int,
+        ) {
+            viewCallbacks.drawLine(
+                thickness,
+                x1 + geometry.originX.toFloat(),
+                y1 + geometry.originY.toFloat(),
+                x2 + geometry.originX.toFloat(),
+                y2 + geometry.originY.toFloat(),
+                colour,
+            )
+        }
+
         override fun circle(
             cx: Int,
             cy: Int,

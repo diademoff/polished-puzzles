@@ -341,6 +341,15 @@ interface DrawSink {
     fun endDraw()
     fun rect(x: Int, y: Int, width: Int, height: Int, colour: Int)
     fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int)
+
+    /**
+     * `draw_thick_line`: a line with [thickness] pixels. The endpoints
+     * keep the order of [line]; the upstream `drawing_api` and the
+     * Android `ViewCallbacks.drawLine` callback take the thickness
+     * first.
+     */
+    fun thickLine(x1: Int, y1: Int, x2: Int, y2: Int, thickness: Float, colour: Int)
+
     fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int)
     fun poly(points: IntArray, fillColour: Int, outlineColour: Int)
     fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String)

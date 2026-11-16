@@ -381,3 +381,40 @@ palette, so it has no parity entry and no deviation.
 This change does not port `inertia`. It adds the callback that the port
 will call, and the port remains a separate change with its own parity
 matrix.
+
+## Amendment: the thick line primitive
+
+- **Date:** 2026-11-16
+
+`undead` draws its mirrors with `draw_thick_line` (`undead.c:2633`).
+The oracle already records the primitive, `TraceNormalizer` already
+accepts `thick_line`, and the Android `drawing_api` already has the
+callback. This change adds the seam operation, not the game.
+
+1. **`DrawSink.thickLine(x1, y1, x2, y2, thickness, colour)`** keeps
+   the endpoint order and the integer coordinates of
+   `DrawSink.line`, so a game that has both primitives reads them the
+   same way. The thickness follows the coordinates in the seam; the
+   oracle and the Android callback take it first, so each sink places
+   it there.
+
+2. **The trace sink copies `tr_draw_thick_line`**
+   (`oracle.c:695-706`) field for field:
+   `{"op":"thick_line","t":round(thickness*1000),"x1":..,"y1":..,
+   "x2":..,"y2":..,"c":..}`. The thickness and both endpoints are in
+   thousandths, as `tc_milli` produces. The seam coordinates are
+   already integers, so their milli fields are exact, and the thickness
+   rounds to the nearest thousandth as `lroundf` does. The field order
+   and the names are the oracle's; `TraceNormalizer` maps them to
+   `thick_line t x1 y1 x2 y2 c`.
+
+3. **The engine forwards the primitive unchanged.** It adds the board
+   origin to both endpoints and calls
+   `viewCallbacks.drawLine(thickness, x1+originX, y1+originY,
+   x2+originX, y2+originY, colour)`, which is the call that
+   `android.c:187-191` makes through JNI. The thickness is not scaled
+   by the origin or by the zoom.
+
+4. **No ported game calls it.** Every frozen trace stays byte for byte
+   the same, and the parity suite pins that. The `undead` port remains a
+   separate change with its own parity matrix.
