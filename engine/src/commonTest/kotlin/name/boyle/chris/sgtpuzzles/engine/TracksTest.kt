@@ -30,11 +30,11 @@ class TracksTest {
         assertFalse(Tracks.wantsStatusBar)
         assertFalse(Tracks.isTimed)
         assertEquals(0, Tracks.flags)
-        // The task keeps the shell text flag off. The C game has a text
-        // form and `textFormat` still matches it.
-        assertFalse(Tracks.canFormatAsText)
-        assertTrue(Tracks.textFormat(Midend.newGame(Tracks, "", SEED).state).isNotEmpty())
-        assertEquals("", Midend.newGame(Tracks, "", SEED).textFormat())
+        assertTrue(Tracks.canFormatAsText)
+        val midend = Midend.newGame(Tracks, "", SEED)
+        assertTrue(Tracks.textFormat(midend.state).isNotEmpty())
+        assertEquals(Tracks.textFormat(midend.state), midend.textFormat())
+        assertTrue(midend.textFormat().endsWith("\n"))
     }
 
     @Test
@@ -512,7 +512,16 @@ class TracksTest {
         val state = Tracks.executeMove(midend.state, "S;TU0,0") as Tracks.State
         assertEquals(2, (state.sflags[0] ushr 16) and 15)
         val attempt = Tracks.solveAttempt(state)
-        assertTrue(attempt.move != null || attempt.error == "Unable to find solution")
+        assertNull(attempt.error)
+        val move = attempt.move!!
+        // D-012: C asserts that an outer track edge is on a clue and
+        // aborts. The port ignores the border rule and returns the normal
+        // solve, which clears the stray outer edge first.
+        assertTrue(move.startsWith("S;NR0,0;tU0,0;"))
+        val after = Tracks.executeMove(state, move) as Tracks.State
+        assertTrue(after.completed)
+        assertTrue(after.usedSolve)
+        assertEquals(1, Tracks.status(after))
         // The same board is a valid C save: the edge is inside the
         // board, so validation accepts the description.
         assertEquals(3, state.numbers.rowS)

@@ -289,10 +289,10 @@ object Tracks : Game {
 
     /**
      * The C game has a text form (`can_format_as_text_ever` is true),
-     * but this port keeps the shell flag off as requested. [textFormat]
-     * is still the exact C text form; only [Midend.textFormat] hides it.
+     * and [textFormat] is the exact C text form. The text ends with a
+     * newline after the final `B` line, as `game_text_format` does.
      */
-    override val canFormatAsText: Boolean = false
+    override val canFormatAsText: Boolean = true
 
     // ------------------------------------------------------------------
     // Parameters.

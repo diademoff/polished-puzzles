@@ -36,9 +36,8 @@ class TracksGameTest {
         assertFalse(Tracks.wantsStatusBar)
         assertFalse(Tracks.isTimed)
         assertEquals(0, Tracks.flags)
-        // The task keeps the shell text flag off even though C has a
-        // text form. `textFormat` below still matches the oracle.
-        assertFalse(Tracks.canFormatAsText)
+        assertTrue(Tracks.canFormatAsText)
+        assertTrue(Tracks.textFormat(Midend.newGame(Tracks, "8x8dt", SEED).state).isNotEmpty())
     }
 
     @Test
@@ -339,6 +338,11 @@ class TracksGameTest {
                     oracle.text(save),
                     Tracks.textFormat(midend.state),
                 )
+                assertEquals(
+                    "midend text for '$params'",
+                    oracle.text(save),
+                    midend.textFormat(),
+                )
                 assertTrue(
                     "the text ends with the B line",
                     Tracks.textFormat(midend.state).endsWith("\n"),
@@ -352,22 +356,39 @@ class TracksGameTest {
             val save = withMove(blank.serialise().serialise(), "NS3,3")
             assertEquals("x mark text", oracle.text(save), Tracks.textFormat(marked))
             assertTrue("the x mark is shown", Tracks.textFormat(marked).contains("x"))
+
+            // One moved state, with the same trailing newline as C.
+            val moved = Midend.newGame(Tracks, "8x8dt", SEED)
+            val movedState = Tracks.executeMove(moved.state, "TS2,2") as Tracks.State
+            val movedSave = withMove(moved.serialise().serialise(), "TS2,2")
+            assertEquals("moved text", oracle.text(movedSave), Tracks.textFormat(movedState))
+            assertTrue("the moved text ends with a newline", Tracks.textFormat(movedState).endsWith("\n"))
+            assertEquals(1, movedState.sflags[2 * 8 + 2] and 1)
         }
 
-    @Test
-    fun `an outer track edge is accepted by the solver`() {
+    @Test(timeout = 120_000)
+    fun `an outer track edge is accepted by the solver`() = OracleClient().use { oracle ->
         // C asserts that an outer track edge is on a clue square. A
-        // save can set one with the S latch. Release builds accept it
-        // and return; the port does the same and pins the result.
+        // save can set one with the S latch. C aborts at tracks.c:1423;
+        // the port ignores the border rule and returns the normal solve,
+        // which clears the stray outer edge first (D-012).
         val midend = Midend.newGame(Tracks, "8x8dt", SEED)
         val state = midend.state as Tracks.State
         val next = Tracks.executeMove(state, "S;TU0,0") as Tracks.State
-        // The outer U edge of (0,0) is set and the solver does not
-        // throw. A later solve either solves the board or reports the
-        // normal error, never a crash.
         assertEquals(2, (next.sflags[0] ushr 16) and 2)
         val attempt = Tracks.solveAttempt(next)
-        assertTrue(attempt.move != null || attempt.error == "Unable to find solution")
+        assertNull(attempt.error)
+        val move = attempt.move!!
+        assertTrue(move.startsWith("S;NR0,0;tU0,0;"))
+        val after = Tracks.executeMove(next, move) as Tracks.State
+        assertTrue(after.completed)
+        assertTrue(after.usedSolve)
+        assertEquals(1, Tracks.status(after))
+
+        // The save itself loads in C without a solve; the abort is in
+        // the solve path only.
+        val save = withMove(midend.serialise().serialise(), "S;TU0,0")
+        assertEquals(0, oracle.id(save).status)
         assertNull(
             Tracks.validateDesc(
                 Tracks.decodeParams("8x8dt"),

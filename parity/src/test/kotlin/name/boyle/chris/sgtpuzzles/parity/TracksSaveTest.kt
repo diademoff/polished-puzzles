@@ -81,7 +81,9 @@ class TracksSaveTest {
             val seeds = listOf(
                 "1", "2", "3", "12345", "seed", "another seed", "0", "-7", "",
             )
-            for (params in Tracks.presets().map { it.params } + listOf("4x4dt", "8x8dto")) {
+            for (params in Tracks.presets().map { it.params } +
+                listOf("4x4dt", "4x4dh", "8x8dto")
+            ) {
                 for (seed in seeds) {
                     val midend = Midend.newGame(Tracks, params, seed)
                     val text = midend.serialise().serialise()
@@ -231,6 +233,24 @@ class TracksSaveTest {
             assertEquals(oracle.text(markedSave(loaded, marked)), Tracks.textFormat(reloadedState))
         }
 
+    @Test(timeout = 120_000)
+    fun `an error-marked board round-trips with the same C text`() =
+        OracleClient().use { oracle ->
+            val solved = Midend.newGame(Tracks, "8x8dt", SEED)
+            assertTrue(solved.solve())
+            val desc = fullPathDesc(solved.state as Tracks.State, rowDelta = 1, rowIndex = 2)
+            val base = Midend.fromGameId(Tracks, "8x8:$desc")
+            val text = withMove(base.serialise().serialise(), "")
+            val loaded = Midend.fromSave(Tracks, SgtpSave.parse(text))
+            val state = loaded.state as Tracks.State
+            assertEquals("only row 2 is wrong", 1, state.numErrors[8 + 2])
+            assertEquals(1, state.numErrors.count { it != 0 })
+            assertFalse(state.completed)
+            assertEquals(0, loaded.status())
+            assertTrue("the empty move is in the history", loaded.canUndo)
+            assertRoundTrip(oracle, loaded)
+        }
+
     private fun markedSave(base: Midend, marked: Tracks.State): String =
         withMove(base.serialise().serialise(), "")
 
@@ -269,7 +289,11 @@ class TracksSaveTest {
         midend.processKey(cellX(x, geom), cellY(y, geom), Buttons.LEFT_RELEASE, geom.tileSize)
     }
 
-    private fun fullPathDesc(state: Tracks.State): String {
+    private fun fullPathDesc(
+        state: Tracks.State,
+        rowDelta: Int = 0,
+        rowIndex: Int = -1,
+    ): String {
         val w = state.width
         val h = state.height
         val out = StringBuilder()
@@ -289,7 +313,9 @@ class TracksSaveTest {
         for (y in 0 until h) {
             out.append(',')
             if (y == state.numbers.rowS) out.append('S')
-            out.append(state.numbers.values[w + y])
+            val value = state.numbers.values[w + y] +
+                if (y == rowIndex) rowDelta else 0
+            out.append(value)
         }
         return out.toString()
     }

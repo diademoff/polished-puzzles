@@ -215,90 +215,96 @@ class TracksInputParityTest {
     }
 
     @Test(timeout = 300_000)
-    fun `real drags match the oracle`() = OracleClient().use { oracle ->
+    fun `real drags match the oracle at every tile size`() = OracleClient().use { oracle ->
         val save = oracle.newGame("tracks", "8x8dt", SEED).state
-        val geom = geometry(48)
-        val cases = listOf(
-            "horizontal" to listOf(
-                cell(1, 4, geom, Buttons.LEFT_BUTTON),
-                cell(3, 4, geom, Buttons.LEFT_DRAG),
-                cell(5, 4, geom, Buttons.LEFT_DRAG),
-                cell(5, 4, geom, Buttons.LEFT_RELEASE),
-            ),
-            "vertical" to listOf(
-                cell(2, 1, geom, Buttons.LEFT_BUTTON),
-                cell(2, 2, geom, Buttons.LEFT_DRAG),
-                cell(2, 4, geom, Buttons.LEFT_DRAG),
-                cell(2, 4, geom, Buttons.LEFT_RELEASE),
-            ),
-            "one cell" to listOf(
-                cell(2, 2, geom, Buttons.LEFT_BUTTON),
-                cell(2, 2, geom, Buttons.LEFT_RELEASE),
-            ),
-            "clue" to listOf(
-                cell(1, 1, geom, Buttons.LEFT_BUTTON),
-                cell(1, 1, geom, Buttons.LEFT_RELEASE),
-            ),
-            "diagonal" to listOf(
-                cell(1, 3, geom, Buttons.LEFT_BUTTON),
-                cell(2, 4, geom, Buttons.LEFT_DRAG),
-                cell(3, 5, geom, Buttons.LEFT_RELEASE),
-            ),
-            "right drag" to listOf(
-                cell(1, 5, geom, Buttons.RIGHT_BUTTON),
-                cell(3, 5, geom, Buttons.RIGHT_DRAG),
-                cell(5, 5, geom, Buttons.RIGHT_DRAG),
-                cell(5, 5, geom, Buttons.RIGHT_RELEASE),
-            ),
-            "middle drag" to listOf(
-                cell(1, 6, geom, Buttons.MIDDLE_BUTTON),
-                cell(3, 6, geom, Buttons.MIDDLE_DRAG),
-                cell(5, 6, geom, Buttons.MIDDLE_RELEASE),
-            ),
-        )
-        for ((name, points) in cases) {
-            val expected = oracle.pointsSized(
-                save,
-                points,
-                width = geom.size,
-                height = geom.size,
-                recordTrace = true,
-            )
-            val midend = Midend.fromSave(Tracks, SgtpSave.parse(save))
-            apply(midend, points, geom.tileSize)
-            assertEquals("$name id", expected.state.id, midend.id())
-            assertEquals(
-                "$name canonical",
-                expected.state.state,
-                midend.serialise().serialise(),
-            )
-            assertEquals("$name status", expected.state.status, midend.status())
-            assertLines(
-                "$name trace",
-                TraceNormalizer.normalize(
-                    expected.trace!!,
-                    UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+        for (tileSize in listOf(48, 63, 82, 100)) {
+            val geom = geometry(tileSize)
+            val cases = listOf(
+                "horizontal" to listOf(
+                    cell(1, 4, geom, Buttons.LEFT_BUTTON),
+                    cell(3, 4, geom, Buttons.LEFT_DRAG),
+                    cell(5, 4, geom, Buttons.LEFT_DRAG),
+                    cell(5, 4, geom, Buttons.LEFT_RELEASE),
                 ),
-                TraceNormalizer.normalize(
-                    KotlinTraceSink.stateTrace(midend, geom.tileSize),
-                    UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+                "vertical" to listOf(
+                    cell(2, 1, geom, Buttons.LEFT_BUTTON),
+                    cell(2, 2, geom, Buttons.LEFT_DRAG),
+                    cell(2, 4, geom, Buttons.LEFT_DRAG),
+                    cell(2, 4, geom, Buttons.LEFT_RELEASE),
+                ),
+                "one cell" to listOf(
+                    cell(2, 2, geom, Buttons.LEFT_BUTTON),
+                    cell(2, 2, geom, Buttons.LEFT_RELEASE),
+                ),
+                "clue" to listOf(
+                    cell(1, 1, geom, Buttons.LEFT_BUTTON),
+                    cell(1, 1, geom, Buttons.LEFT_RELEASE),
+                ),
+                "diagonal" to listOf(
+                    cell(1, 3, geom, Buttons.LEFT_BUTTON),
+                    cell(2, 4, geom, Buttons.LEFT_DRAG),
+                    cell(3, 5, geom, Buttons.LEFT_RELEASE),
+                ),
+                "right drag" to listOf(
+                    cell(1, 5, geom, Buttons.RIGHT_BUTTON),
+                    cell(3, 5, geom, Buttons.RIGHT_DRAG),
+                    cell(5, 5, geom, Buttons.RIGHT_DRAG),
+                    cell(5, 5, geom, Buttons.RIGHT_RELEASE),
+                ),
+                "middle drag" to listOf(
+                    cell(1, 6, geom, Buttons.MIDDLE_BUTTON),
+                    cell(3, 6, geom, Buttons.MIDDLE_DRAG),
+                    cell(5, 6, geom, Buttons.MIDDLE_RELEASE),
                 ),
             )
+            for ((name, points) in cases) {
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    width = geom.size,
+                    height = geom.size,
+                    recordTrace = true,
+                )
+                val midend = Midend.fromSave(Tracks, SgtpSave.parse(save))
+                apply(midend, points, geom.tileSize)
+                assertEquals("$name tile $tileSize id", expected.state.id, midend.id())
+                assertEquals(
+                    "$name tile $tileSize canonical",
+                    expected.state.state,
+                    midend.serialise().serialise(),
+                )
+                assertEquals(
+                    "$name tile $tileSize status",
+                    expected.state.status,
+                    midend.status(),
+                )
+                assertLines(
+                    "$name tile $tileSize trace",
+                    TraceNormalizer.normalize(
+                        expected.trace!!,
+                        UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+                    ),
+                    TraceNormalizer.normalize(
+                        KotlinTraceSink.stateTrace(midend, geom.tileSize),
+                        UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+                    ),
+                )
+            }
+
+            // The diagonal drag collapses to the press cell, so the
+            // release takes the click path and its cell does not match
+            // the press: the event is inert.
+            val diagonal = Midend.fromSave(Tracks, SgtpSave.parse(save))
+            apply(diagonal, cases[4].second, geom.tileSize)
+            assertEquals("diagonal tile $tileSize", 1, diagonal.stateCount)
+            assertEquals("", moveOf(diagonal))
+
+            // A multi-cell drag produces one multi-item move.
+            val horizontal = Midend.fromSave(Tracks, SgtpSave.parse(save))
+            apply(horizontal, cases[0].second, geom.tileSize)
+            assertTrue(moveOf(horizontal).contains(";"))
+            assertEquals("horizontal tile $tileSize", 2, horizontal.stateCount)
         }
-
-        // The diagonal drag collapses to the press cell, so the release
-        // takes the click path and its cell does not match the press:
-        // the event is inert.
-        val diagonal = Midend.fromSave(Tracks, SgtpSave.parse(save))
-        apply(diagonal, cases[4].second, geom.tileSize)
-        assertEquals(1, diagonal.stateCount)
-        assertEquals("", moveOf(diagonal))
-
-        // A multi-cell drag produces one multi-item move.
-        val horizontal = Midend.fromSave(Tracks, SgtpSave.parse(save))
-        apply(horizontal, cases[0].second, geom.tileSize)
-        assertTrue(moveOf(horizontal).contains(";"))
-        assertEquals(2, horizontal.stateCount)
     }
 
     @Test(timeout = 120_000)
@@ -332,29 +338,52 @@ class TracksInputParityTest {
 
         }
 
-    @Test(timeout = 120_000)
+    @Test(timeout = 300_000)
     fun `right and middle clicks follow the C rules`() = OracleClient().use { oracle ->
         val save = oracle.newGame("tracks", "8x8dt", SEED).state
-        val geom = geometry(48)
-        for ((button, move) in listOf(
-            Buttons.RIGHT_BUTTON to "NS2,3",
-            Buttons.MIDDLE_BUTTON to "TS2,3",
-        )) {
-            val release = button + (Buttons.LEFT_RELEASE - Buttons.LEFT_BUTTON)
-            val points = listOf(
-                OracleClient.Point(geom.cx(2), geom.cy(3), button),
-                OracleClient.Point(geom.cx(2), geom.cy(3), release),
-            )
-            val midend = Midend.fromSave(Tracks, SgtpSave.parse(save))
-            apply(midend, points, geom.tileSize)
-            assertEquals("move for button $button", move, moveOf(midend))
-            assertEquals(
-                expectedState(oracle, save, points, geom),
-                midend.serialise().serialise(),
-            )
+        for (tileSize in listOf(48, 63, 82, 100)) {
+            val geom = geometry(tileSize)
+            for ((button, move) in listOf(
+                Buttons.RIGHT_BUTTON to "NS2,3",
+                Buttons.MIDDLE_BUTTON to "TS2,3",
+            )) {
+                val release = button + (Buttons.LEFT_RELEASE - Buttons.LEFT_BUTTON)
+                val points = listOf(
+                    OracleClient.Point(geom.cx(2), geom.cy(3), button),
+                    OracleClient.Point(geom.cx(2), geom.cy(3), release),
+                )
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    width = geom.size,
+                    height = geom.size,
+                    recordTrace = true,
+                )
+                val midend = Midend.fromSave(Tracks, SgtpSave.parse(save))
+                apply(midend, points, geom.tileSize)
+                assertEquals("move for button $button tile $tileSize", move, moveOf(midend))
+                assertEquals(
+                    "button $button tile $tileSize state",
+                    expected.state.state,
+                    midend.serialise().serialise(),
+                )
+                assertEquals("button $button tile $tileSize status", expected.state.status, midend.status())
+                assertLines(
+                    "button $button tile $tileSize trace",
+                    TraceNormalizer.normalize(
+                        expected.trace!!,
+                        UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+                    ),
+                    TraceNormalizer.normalize(
+                        KotlinTraceSink.stateTrace(midend, geom.tileSize),
+                        UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+                    ),
+                )
+            }
         }
 
         // A right click on an edge that carries E_TRACK is refused.
+        val geom = geometry(48)
         val trackThenRight = Midend.fromSave(Tracks, SgtpSave.parse(save))
         apply(
             trackThenRight,
@@ -553,6 +582,63 @@ class TracksInputParityTest {
         assertEquals("the inert click keeps the status", status, midend.status())
     }
 
+    @Test(timeout = 120_000)
+    fun `a real click on an error-marked board matches the oracle`() =
+        OracleClient().use { oracle ->
+            val solved = Midend.newGame(Tracks, "8x8dt", SEED)
+            assertTrue(solved.solve())
+            val desc = fullPathDesc(
+                solved.state as Tracks.State,
+                rowDelta = 1,
+                rowIndex = 2,
+            )
+            val base = Midend.fromGameId(Tracks, "8x8:$desc")
+            val save = withMove(base.serialise().serialise(), "")
+            val full = base.state as Tracks.State
+            val blank = (0 until 64).first {
+                full.sflags[it] and 1 == 0 && (full.sflags[it] ushr 16) and 15 == 0
+            }
+            val x = blank % 8
+            val y = blank / 8
+            val geom = geometry(48)
+            val points = listOf(
+                OracleClient.Point(geom.cx(x), geom.cy(y), Buttons.RIGHT_BUTTON),
+                OracleClient.Point(geom.cx(x), geom.cy(y), Buttons.RIGHT_RELEASE),
+            )
+
+            val expected = oracle.pointsSized(
+                save,
+                points,
+                width = geom.size,
+                height = geom.size,
+                recordTrace = true,
+            )
+            val midend = Midend.fromSave(Tracks, SgtpSave.parse(save))
+            val before = midend.state as Tracks.State
+            assertEquals("the load rebuilds the wrong row", 1, before.numErrors[8 + 2])
+            apply(midend, points, geom.tileSize)
+            val after = midend.state as Tracks.State
+            assertEquals("the row stays marked", 1, after.numErrors[8 + 2])
+            assertEquals("the new no-track square", 2, after.sflags[blank] and 2)
+            assertFalse(after.completed)
+            assertEquals("status after the error click", 0, midend.status())
+
+            assertEquals("error id", expected.state.id, midend.id())
+            assertEquals("error canonical", expected.state.state, midend.serialise().serialise())
+            assertEquals("error status", expected.state.status, midend.status())
+            assertLines(
+                "error trace",
+                TraceNormalizer.normalize(
+                    expected.trace!!,
+                    UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+                ),
+                TraceNormalizer.normalize(
+                    KotlinTraceSink.stateTrace(midend, geom.tileSize),
+                    UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock")),
+                ),
+            )
+        }
+
     private fun click(x: Int, y: Int): List<OracleClient.Point> = listOf(
         OracleClient.Point(x, y, Buttons.LEFT_BUTTON),
         OracleClient.Point(x, y, Buttons.LEFT_RELEASE),
@@ -570,14 +656,6 @@ class TracksInputParityTest {
     private fun moveOf(midend: Midend): String =
         SgtpSave.parse(midend.serialise().serialise()).values("MOVE").lastOrNull() ?: ""
 
-    private fun expectedState(
-        oracle: OracleClient,
-        save: String,
-        points: List<OracleClient.Point>,
-        geom: Geom,
-    ): String = oracle.pointsSized(save, points, width = geom.size, height = geom.size)
-        .state.state
-
     private data class Geom(
         val tileSize: Int,
         val tile: Int,
@@ -594,6 +672,45 @@ class TracksInputParityTest {
         var border = maxBorder
         if (border <= 5) border = minOf(tileSize % 6, maxBorder)
         return Geom(tileSize, tile, border, (8 + 2) * tile + 2 * border)
+    }
+
+    private fun fullPathDesc(
+        state: Tracks.State,
+        rowDelta: Int = 0,
+        rowIndex: Int = -1,
+    ): String {
+        val w = state.width
+        val h = state.height
+        val out = StringBuilder()
+        for (i in 0 until w * h) {
+            val f = (state.sflags[i] ushr 16) and 15
+            if (f != 0) {
+                out.append(if (f < 10) '0' + f else 'A' + (f - 10))
+            } else {
+                out.append('a')
+            }
+        }
+        for (x in 0 until w) {
+            out.append(',')
+            if (x == state.numbers.colS) out.append('S')
+            out.append(state.numbers.values[x])
+        }
+        for (y in 0 until h) {
+            out.append(',')
+            if (y == state.numbers.rowS) out.append('S')
+            val value = state.numbers.values[w + y] +
+                if (y == rowIndex) rowDelta else 0
+            out.append(value)
+        }
+        return out.toString()
+    }
+
+    private fun withMove(save: String, move: String): String {
+        val states = SgtpSave.parse(save).value("NSTATES")!!.toInt()
+        return save
+            .replace("NSTATES :1:$states", "NSTATES :1:${states + 1}")
+            .replace("STATEPOS:1:$states", "STATEPOS:1:${states + 1}") +
+            "MOVE    :${move.length}:$move\n"
     }
 
     private fun assertLines(what: String, expected: String, actual: String) {

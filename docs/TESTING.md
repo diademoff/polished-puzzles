@@ -2564,6 +2564,65 @@ aggressive 100x100 latency is an enablement debt:
   wait. `MINES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(MINES)` is false.
 
+- `TracksDescTest` is semantic. It compares the twelve presets, the
+  short and full encodings, the `PARAMS ...dt` / `CPARAMS ...dN` split,
+  the decode quirks, the validation order, the 4x4 downgrade, the two
+  retry paths, and the run-length encoder against the goldens and fresh
+  oracle games.
+- `TracksGameTest` is semantic. It compares the solve payloads and the
+  fallback to the captured initial board, the loose move grammar,
+  completion and error marking, the text form for every preset and a
+  moved state, undo and redo, and the completion event. The text form
+  ends with the C newline after the final `B` line, and the tests pin
+  that byte. D-012 is pinned here: the save with
+  `MOVE    :7:S;TU0,0` aborts the C solver, while Kotlin returns
+  `S;NR0,0;tU0,0;...` and completes the board.
+- `TracksSaveTest` is strict for the save text and semantic for the
+  state. It reads all thirteen corpus saves, rewrites them byte for
+  byte, and compares id, status, undo, redo, and text with C. It also
+  makes C load a Kotlin save for every preset, `4x4dt`, `4x4dh`, and
+  `8x8dto`, and pins that no save has `AUXINFO` or `UI` and that
+  `PARAMS` is always `...dt` while `CPARAMS` keeps the difficulty. An
+  in-memory history covers a real click, a real drag, an error-marked
+  board, an undone position with a live redo branch, a `SOLVE`, and a
+  `RESTART`, and every shape reloads in both engines.
+- `TracksTraceTest` is strict. It compares the twelve frozen traces and
+  `traceNew` for every preset, the first-frame order, the cursor, the
+  letterbox, the warm empty frame at tiles 33, 48, 63, 82, and 100, and
+  the sized frames after a click. Tracks is the first on-screen consumer
+  of the float thick line and `draw_thick_circle`: the test pins the 70
+  `thick_line` and 6 `thick_circle` operations of `8x8dt`, the curved
+  sleeper `thick_line 3750 63000 73000 59250 73000 5`, the two thick
+  circles of a curved tile, and the fractional sleeper centers at tiles
+  63 and 82, where `TILE/8` is 7.5 and 9.75.
+- `TracksInputParityTest` is semantic. It compares the layout at five
+  viewports, real square and edge clicks and real drags at tiles 48,
+  63, 82, and 100, the 411x702 letterbox with origin (21,167), right and
+  middle clicks and drags, and a click on an error-marked board. State,
+  id, status, and the final frame with `pointsSized` are compared for
+  every real gesture, including a multi-item drag move. Every real track
+  change alters the board and adds one move; an inert letterbox, border,
+  clue, diagonal, off-grid press/release, or modified-arrow event
+  changes neither, each with a positive control. The keyboard test
+  covers the corner skip, the clamp, a clue centre, both selects, and
+  `requestKeys` (arrow mode 3 without the full-cursor hint, 1 with it).
+- `TracksTest` is the engine test. It pins the RNG state after
+  generation, both retry paths, the shared clue block, the description
+  grammar, the move grammar and flip strings, the solver attempts, the
+  exact text form, the palette, the float geometry, the cursor, the key
+  labels, and the two C undefined-behavior definitions: the off-grid
+  press leaves the click origin at 0, and `atoi` and the move `%d` scan
+  saturate. C `check_completion` indices are unreachable from a
+  validated description. D-012 is the one deviation for this game.
+  Enablement debt: S8 is the four-field configuration schema (Width,
+  Height, `:Easy:Tricky:Hard`, `Disallow consecutive 1 clues`), the
+  status-text gate, the solve message, generation off the UI thread, an
+  owner size bound and a retry guard for the accepted `INT_MAX` area,
+  and the two-release wait. Tracks has no preferences and no `UI`
+  record. S9 is a tested `currentKeyLabel` helper with no Android call
+  site. `TRACKS` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(TRACKS)` is false.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

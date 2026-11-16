@@ -226,7 +226,7 @@ submenu entries when a game groups its presets.
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `C` |
-| `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `C` |
+| `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `dual-run` |
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `dual-run` |
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `dual-run` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `C` |

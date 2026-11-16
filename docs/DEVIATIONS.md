@@ -444,6 +444,50 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-16
 
+### D-012: Tracks defines an outer track edge that aborts the C solver
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** a hand-written save can set a track edge on the
+  outer border of a non-clue cell. On `8x8dt` seed `12345`, the save
+  with `NSTATES :1:2`, `STATEPOS:1:2`, and `MOVE    :7:S;TU0,0` sets
+  the upper outer edge of cell `(0,0)`, which is not a clue. C
+  `solve_discount_edge` (`tracks.c:1420-1427`) sees
+  `S_E_DIRS(state, x, y, E_TRACK) & d` and runs
+  `assert(state->sflags[y*state->p.w + x] & S_CLUE)` at
+  `tracks.c:1423`. The shipped build keeps assertions
+  (`app/src/main/jni/cmake/setup.cmake:17-25` removes `-DNDEBUG`), so
+  the oracle aborts with
+  `solve_discount_edge: Assertion 'state->sflags[y*state->p.w + x] & S_CLUE' failed.`
+  (SIGABRT, exit 134). The Kotlin solver ignores the border rule for
+  that edge and continues. For the save above `solveAttempt` returns no
+  error and a solve move that starts `S;NR0,0;tU0,0;`; applying the move
+  clears the stray outer edge, completes the board, and sets status
+  `+1` with `used_solve` true.
+- **Why:** an abort is not acceptable in the app. The input rule
+  already keeps an outer edge on a non-clue cell out of normal play,
+  and the C assertion is a debug check, not a game rule. The defined
+  result is deterministic: the same save always produces the same
+  solve move and the same completed board.
+- **Scope note:** the save is reachable only through the `MOVE`
+  record. `new_game` and `validate_desc` accept the same `DESC`, and a
+  generated board sets an outer `E_TRACK` edge only on the entrance and
+  exit clue cells. Every generated description, preset save, real move,
+  and `.sgtp` file produced by the app is therefore unchanged.
+- **Test:**
+  `parity/src/test/kotlin/.../TracksGameTest.kt::an outer track edge is accepted by the solver`
+  pins the exact move prefix, the completed result, and that C loads
+  the save without a solve. The engine test
+  `engine/src/commonTest/kotlin/.../TracksTest.kt::an outer track edge reaches the solver safely`
+  pins the same result directly. The tests do not call the oracle
+  solve, because it would kill the oracle process; the one-off oracle
+  run above is the abort evidence.
+- **Review:** the owner should review this entry before `tracks` is
+  enabled in the app.
+- **Scope:** `tracks`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:
