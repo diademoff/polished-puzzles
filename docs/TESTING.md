@@ -101,6 +101,14 @@ preferences, so a trace can cover frontend state such as a visible
 cursor or a grounded fade. The contract is
 `docs/adr/0003-strict-draw-traces.md`.
 
+`inertia_follow <bool>` is an Android-only drawing callback inside a
+trace. `inertia` emits it from `game_redraw` after the cells and before
+the status line, so the shell can hide the primary controls while the
+auto-solver steers the player. The value is
+`cheated && soln != null && solnpos < len`. `KotlinTraceSink` records
+the same operation at the same position, and the app forwards it to
+`ActivityCallbacks.inertiaFollow`.
+
 `traceWarm` records a redraw on a drawstate that is already warm. It
 opens the save, draws one full frame and applies its `x,y,button`
 points with a `discard` flag in the trace callbacks. The flag stops
@@ -1140,6 +1148,100 @@ Engine tests:
   modes, `computeSize`, the palette, the solver and `isSolved`, the
   solve with and without `AUXINFO`, the text format, the `changedState`
   rules, undo/redo/restart events, and a divvy retry.
+- `InertiaDescTest` is semantic. It compares the four golden
+  descriptions, the three presets at nine seed strings, a numeric seed
+  sweep over `2x3`, `2x4`, `3x3`, `4x4`, and `5x5` and the presets, the
+  five decode quirks, the validation order and messages, the accepted
+  `46340x46340` boundary that D-008 refuses only at generation, and the
+  generator attempt counts from a C counter probe. No test generates a
+  huge accepted area.
+- `InertiaGameTest` is semantic. It compares new games, text, and
+  status for every preset, all eight direction digits on the open 5x5
+  board, a real move against an inert keypad 5, a death with its gem
+  count and `D1`, a gem before a mine and a mine before a gem, a real
+  win with the completion event across undo and redo, the letterbox
+  click, a click on the player's tile, a click into a wall, the empty
+  `MOVE` record as direction 0, the solver and its `SOLVE` record, a
+  followed tour to `Auto-solved.`, the two failed-solve messages, the
+  unvalidated `S` payload as a defined `NoEffect`, the `dup_game` revive
+  save, a dead state with `UI D2`, and both `requestKeys` modes.
+- `InertiaSaveTest` is strict for the save text and semantic for the
+  state. It reads the four corpus saves, rewrites them byte for byte,
+  and reloads them in C; a Kotlin save for every preset loads in C with
+  the same id and text. A played move, a live redo branch, a `SOLVE`, a
+  `RESTART`, and the real `icons/inertia.sav` with 20 `MOVE` records and
+  `STATEPOS 5` round-trip in both directions. The `UI` record is
+  `D<deaths>` (`inertia.c:1515-1523`), is always written including
+  `D0`, and follows the prefix `sscanf("D%d")` table: `D 7` is `D7`,
+  `D-3` stays `D-3`, `X9` and ` D4` become `D0`, and `D12junk` becomes
+  `D12`.
+- `InertiaTraceTest` is strict. It compares the three frozen traces and
+  `traceNew` for every preset, cold traces from the initial, dead,
+  completed, solved, mid-follow, deaths, and restarted saves, the dead
+  star and the status strings, sized cold traces at 411x702 and the four
+  exact-fit viewports, and the warm frame with no input and with an
+  inert click. `inertia_follow` must be after the cells and before the
+  status. A warm frame after a real move is Kotlin-only, because the
+  oracle records the animation frame at `anim_pos == 0`.
+- `InertiaInputParityTest` is semantic. It compares the layout at tiles
+  48, 63, 82, and 100 and the 411x702 letterbox (tile 39 with origin
+  (1,185), and the 15x12 board at tile 26 with origin (4,188)). All
+  eight nearest-octant clicks are real moves at each exact tile and in
+  the letterbox, and each one changes the player and adds one state and
+  one move. One pixel on the `COORD(5)` boundary moves right; the pixel
+  before it is the player's cell and is inert. A click in the letterbox
+  is a real move with no bounds test. The arrow keys, all eight keypad
+  digits, and the four diagonal digits make the matching move; a plain
+  `8`, keypad 5, a control or shift cursor key, space, and a select
+  without a tour change neither the player, the gems, nor the count.
+  Inert clicks, a middle press, a lone drag, and a lone release at each
+  tile keep the state and match the settled `pointsSized` trace. A death
+  adds `D1`, a loaded `D2` keeps `DEAD!   Deaths: 2`, and a won `D2`
+  keeps `COMPLETED!   Deaths: 2`. A gem on the path is collected and
+  the move stops; the loaded empty `MOVE` goes up and traces like the
+  oracle. The settled cursor rectangle is the player's cell, and a
+  solve-follow select makes the tour move and reaches `Auto-solved.`
+- `InertiaTest` is the engine test. It pins the parameters and presets,
+  the decode quirks, the validation order and the D-008 guard, the
+  description grammar, the initial state, the text format, the status
+  strings, the move grammar and the movement loop, the death and
+  completion transitions, the click octants and `FROMCOORD` bands, the
+  `S` payload and the revive, `encodeUi`/`decodeUi`, `currentKeyLabel`,
+  the solver strings, `computeSize`, the palette, `requestKeys`, the
+  cursor rectangle, and the follow/status draw order.
+
+`inertia` has one deviation and three open items:
+
+- D-008: C `validate_params` accepts an area up to `INT_MAX` cells,
+  including `46340x46340`, because the only upper test is
+  `w > INT_MAX / h`. `new_game_desc` then allocates a grid and three
+  `wh*8` scratch arrays: two byte arrays of about 17 GB each and an
+  int array of about 69 GB, plus the grid. The unbounded attempt loop
+  does not finish. The port rejects an area above 2^20 cells at
+  `newDesc` before any RNG draw with
+  `Width times height is too large for this build`, keeps the C
+  messages and the accepted `46340x46340` and `1024x1024` boundaries in
+  validation, and changes no valid game. `InertiaTest` and
+  `InertiaDescTest` pin both sides. Validation is unchanged; only
+  generation is guarded. The app's configuration dialog must surface
+  the guard.
+- Solve failure: `inertia` returns no move when the board is already
+  solved or dead, so `Midend.solve` returns false and the app's
+  `KotlinGameEngine.solveEvent` throws
+  `IllegalArgumentException("This game does not support Solve")`. Both
+  cases are normal for inertia. The adapter must replace the throw with
+  a user-visible message, or clear the Solve bit when `status() == 1`,
+  before enablement. This is the shared `flip`/`unruly` seam debt, not a
+  game rule.
+- The app still uses C. S8 must build the two-field configuration
+  dialog (Width, Height), remove the `Fifteen` casts in
+  `KotlinGameEngine`, surface the D-008 guard, and skip the
+  preferences dialog because `get_prefs`/`set_prefs` are `NULL`. The
+  `inertiaFollow` DrawSink operation restores `hidePrimary`. S9 is a
+  tested public helper with no Android call site. `INERTIA` is in
+  `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(INERTIA)` is false and the app keeps the C
+  backend. The two-release wait also applies.
 
 `lightup` has one deviation and two enablement debts:
 

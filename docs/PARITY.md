@@ -174,7 +174,7 @@ C wins.
 | `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, and `palisade` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, and `inertia` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -201,7 +201,7 @@ submenu entries when a game groups its presets.
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `dual-run` |
 | `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `C` |
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `dual-run` |
-| `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `C` |
+| `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `C` |
 | `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `dual-run` |
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
@@ -843,6 +843,47 @@ Notes:
   the two-preference schema and its application, the `Fifteen` casts in
   `KotlinGameEngine`, and the two-release wait are open. S9 is not
   needed, because `current_key_label` is `NULL`. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `inertia` is `dual-run`. Its parameters and three presets, the
+  generator, the slide and stop movement, the mine and gem rules, the
+  solver, the text format, the death counter, the save file, the
+  palette, drawing, layout, and input pass the matrix in
+  `InertiaDescTest`, `InertiaGameTest`, `InertiaSaveTest`,
+  `InertiaTraceTest`, `InertiaInputParityTest`, and the engine
+  `InertiaTest`. `InertiaDescTest` compares the four golden
+  descriptions, the presets at nine seed strings, a numeric sweep, the
+  decode quirks, the validation order, and the generator attempt
+  counts. `InertiaGameTest` compares real moves in all eight
+  directions, the letterbox click, the death and gem order, the empty
+  `MOVE`, the `SOLVE` text and hints, the failed solves, the `S`
+  payload and its revive quirk, and the `UI D<deaths>` record.
+  `InertiaSaveTest` reads the four corpus saves byte for byte, and
+  `InertiaTraceTest` compares the three frozen traces, cold loaded
+  states, and the warm path with inert input.
+
+  A warm frame after a real move is not compared: the oracle has no
+  timer and records the animation frame at `anim_pos == 0`, while the
+  port has no animation. The strict traces use `traceNew`, a loaded
+  state, or inert input, and the animation frame is pinned Kotlin-only.
+  `inertia_follow` is emitted after the cells and before the status, as
+  `inertia.c` does from `game_redraw`.
+
+  D-008 covers generation: C accepts an area up to `INT_MAX`, then
+  `gengrid` allocates two byte arrays of about 17 GB each and an int
+  array of about 69 GB for `46340x46340`, plus the grid, and does not
+  finish. The port rejects an area above 2^20 cells at `newDesc` before
+  any RNG draw. Validation keeps the C messages and the accepted
+  `46340x46340` boundary; only generation is guarded.
+
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
+  C: the two-field configuration dialog (Width, Height), the
+  preference-dialog skip, the `Fifteen` casts in `KotlinGameEngine`,
+  the D-008 guard message, and the two-release wait are open. The app
+  `solveEvent` must show a message instead of throwing when the board
+  is already solved or dead. `currentKeyLabel` is a tested helper
+  because the Android shell has no call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 

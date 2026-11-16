@@ -6,6 +6,7 @@ import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Netslide
@@ -137,6 +138,12 @@ class KotlinGamesTest {
     fun `palisade is registered but the app still uses C`() {
         assertEquals(Palisade, KotlinGames.gameFor(PALISADE))
         assertFalse(KotlinGames.handles(PALISADE))
+    }
+
+    @Test
+    fun `inertia is registered but the app still uses C`() {
+        assertEquals(Inertia, KotlinGames.gameFor(INERTIA))
+        assertFalse(KotlinGames.handles(INERTIA))
     }
 
     @Test

@@ -28,7 +28,7 @@ import kotlin.math.atan2
  *   where C aborts at its assert.
  *
  * D-008: upstream `validate_params` accepts an area up to `INT_MAX`
- * cells, and generation of `46340x46340` allocates about 86 GB and
+ * cells, and generation of `46340x46340` allocates over 100 GB and
  * never finishes. [newDesc] refuses an area above [MAX_AREA] cells with
  * a fixed message before the first RNG draw. No preset is near the
  * limit, so every real description is unchanged.

@@ -257,6 +257,44 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-16
 
+### D-008: Inertia refuses an area above 2^20 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_params` (`inertia.c:199-223`) accepts
+  every area up to `INT_MAX` cells, including `46340x46340`
+  (2,147,395,600 cells), because the only upper test is
+  `w > INT_MAX / h`. `new_game_desc` then calls `gengrid`, which
+  allocates a `w*h` grid and three `w*h*8` scratch arrays
+  (`inertia.c:234-243`): two byte arrays of about 17 GB each and an
+  int array of about 69 GB, plus the grid. The unbounded `while (1)`
+  attempt loop does not finish. The Kotlin `validateParams`
+  keeps the C messages and still accepts `46340x46340`, the exact 2^20
+  boundary (`1024x1024`), and every preset. The Kotlin `newDesc`
+  rejects an area above 2^20 cells with
+  `Width times height is too large for this build` before any RNG draw
+  or allocation. `newState` is unchanged, so a hand-written game id
+  with a huge area still follows the C allocation; only generation is
+  guarded.
+- **Why:** a hang or an out-of-memory crash in the generator is worse
+  than a deterministic rejection. The guard depends only on the
+  parameters and the message is fixed, so the same request always fails
+  the same way. No seed, `DESC`, `AUXINFO`, or `.sgtp` text of a valid
+  game changes, because no preset is near the limit.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../InertiaTest.kt::generation refuses a huge area before any RNG draw`
+  pins the accepted `46340x46340` boundary, the accepted `1024x1024`
+  boundary, the rejected `1025x1024` area, and the message;
+  `parity/src/test/kotlin/.../InertiaDescTest.kt::the huge area is accepted by validation but refused at generation`
+  pins that validation keeps the C boundary and that `Midend.newGame`
+  throws the message. No test calls the oracle on `46340x46340`; that
+  probe does not terminate.
+- **Review:** the owner should decide the final area limit before
+  `inertia` is enabled in the app.
+- **Scope:** `inertia`
+- **Upstream:** none known
+- **Date:** 2026-11-16
+
 ## Examples
 
 Allowed:
