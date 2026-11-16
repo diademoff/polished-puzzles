@@ -488,6 +488,56 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-013: Dominosa defines a description whose highest domino has no placement
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** the validated description
+  `00222301130313132021` for `3dt` (`w = 5`, `h = 4`) holds five
+  3s with no two adjacent. The decoder and `validate_desc` accept
+  the board, and the dominoes `0-0` through `2-3` all have a
+  placement, but the domino `3-3` has none. A solve without
+  `AUXINFO` calls `run_solver(sc, DIFFCOUNT)`. The first
+  forcing-chain pass finds no duplicate chain, so the second pass
+  builds the per-domino start table at `dominosa.c:1540-1545`.
+  The sorted placement list ends at domino `2-3` (index 8), so
+  `di` stops at 9 while `sc->dc` is 10, and the shipped build
+  aborts with
+  `dominosa.c:1546: deduce_forcing_chain: Assertion 'di == sc->dc' failed.`
+  (SIGABRT, exit 134). The Kotlin port gives the missing highest
+  domino the start `pc` (`engine/Dominosa.kt:1463`), which
+  the lookup reads as an empty list. `analyse` returns `0` and
+  `solve` returns
+  `S;E0,5;E1,6;E2,7;E4,9;E6,11;E7,12;E8,13;E9,14;E10,15;E11,16;E12,17;E13,18;E1,2;E2,3;E3,4;E5,6;E7,8;E8,9;E10,11;E12,13;E13,14;E16,17;E18,19;D3,8;D5,10;D14,19;D0,1;D6,7;D11,12;D15,16;D17,18`
+  instead of aborting.
+- **Why:** a crash is not acceptable in the app, and the result is
+  deterministic: the same description always produces the same
+  analyse result and the same solve text. No generated board
+  reaches the path. The final generation gate accepts a board only
+  when `run_solver(sc, diff)` returns 1, which means every domino
+  has exactly one placement; the Ambiguous allocator places every
+  domino once as well. Every seed, `DESC`, `AUXINFO`, golden, and
+  `.sgtp` file of a generated game is therefore unchanged.
+- **Scope note:** the path is reachable through a hand-written
+  `DESC` in a `.sgtp` file or a hand-written game id. C loads the
+  save and reports the same id before the solve; only the solve
+  aborts. A generated save cannot contain the description, but the
+  app can load such a hand-written save and write it back unchanged.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../DominosaTest.kt::a validated description with no placement for a domino still solves`
+  pins the description, the accepted validation, `analyse` returning
+  `0`, and the exact solve text. The parity test
+  `parity/src/test/kotlin/.../DominosaGameTest.kt::a validated description with no placement is reachable and solves`
+  pins that C loads the crafted save with the same id and status and
+  that Kotlin returns the same solve text. The tests do not call the
+  C solve, because it would kill the oracle process; the one-off
+  oracle run above is the abort evidence.
+- **Review:** the owner should review this entry before `dominosa`
+  is enabled in the app.
+- **Scope:** `dominosa`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

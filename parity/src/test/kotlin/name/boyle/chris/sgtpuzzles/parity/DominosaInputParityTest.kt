@@ -103,6 +103,153 @@ class DominosaInputParityTest {
         }
     }
 
+    @Test(timeout = 600_000)
+    fun `a placement and a removal match the oracle at every tile size`() =
+        OracleClient().use { oracle ->
+            val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+            val save = oracle.newGame("dominosa", "3dt", SEED).state
+            for (tileSize in listOf(48, 63, 82, 100)) {
+                val board = Dominosa.computeSize(Dominosa.decodeParams("3dt"), tileSize)
+                val point = halfPoint(1, 1, tileSize, 'R')
+                val press = OracleClient.Point(point.first, point.second, Buttons.LEFT_BUTTON)
+                val release = OracleClient.Point(point.first, point.second, Buttons.LEFT_RELEASE)
+                val placed = oracle.pointsSized(
+                    save,
+                    listOf(press, release),
+                    width = board.width,
+                    height = board.height,
+                )
+                val expected = oracle.pointsSized(
+                    save,
+                    listOf(press, release, press, release),
+                    width = board.width,
+                    height = board.height,
+                    recordTrace = true,
+                )
+
+                val midend = Midend.fromSave(Dominosa, SgtpSave.parse(save))
+                val start = (midend.state as Dominosa.State).grid.copyOf()
+                val count = midend.stateCount
+
+                apply(midend, listOf(press, release), tileSize)
+                val placedState = midend.state as Dominosa.State
+                assertEquals("tile $tileSize placement move", "D6,7", moveOf(midend))
+                assertFalse(
+                    "tile $tileSize placement changes the board",
+                    placedState.grid.contentEquals(start),
+                )
+                assertEquals("tile $tileSize placement count", count + 1, midend.stateCount)
+                assertEquals("tile $tileSize placement id", placed.state.id, midend.id())
+                assertEquals(
+                    "tile $tileSize placement canonical",
+                    placed.state.state,
+                    midend.serialise().serialise(),
+                )
+                assertEquals("tile $tileSize placement status", placed.state.status, midend.status())
+
+                apply(midend, listOf(press, release), tileSize)
+                val removedState = midend.state as Dominosa.State
+                assertEquals("tile $tileSize removal move", "D6,7", moveOf(midend))
+                assertTrue(
+                    "tile $tileSize removal restores the board",
+                    removedState.grid.contentEquals(start),
+                )
+                assertEquals("tile $tileSize removal count", count + 2, midend.stateCount)
+                assertEquals("tile $tileSize removal id", expected.state.id, midend.id())
+                assertEquals(
+                    "tile $tileSize removal canonical",
+                    expected.state.state,
+                    midend.serialise().serialise(),
+                )
+                assertEquals("tile $tileSize removal status", expected.state.status, midend.status())
+                assertLines(
+                    "tile $tileSize removal trace",
+                    TraceNormalizer.normalize(expected.trace!!, upstream),
+                    TraceNormalizer.normalize(
+                        KotlinTraceSink.stateTrace(midend, tileSize),
+                        upstream,
+                    ),
+                )
+            }
+        }
+
+    @Test(timeout = 600_000)
+    fun `a real edge placement and removal match the oracle at every tile size`() =
+        OracleClient().use { oracle ->
+            val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+            val save = oracle.newGame("dominosa", "3dt", SEED).state
+            for (tileSize in listOf(48, 63, 82, 100)) {
+                val board = Dominosa.computeSize(Dominosa.decodeParams("3dt"), tileSize)
+                val point = halfPoint(1, 1, tileSize, 'R')
+                val press = OracleClient.Point(point.first, point.second, Buttons.RIGHT_BUTTON)
+                val release = OracleClient.Point(point.first, point.second, Buttons.RIGHT_RELEASE)
+                val lined = oracle.pointsSized(
+                    save,
+                    listOf(press, release),
+                    width = board.width,
+                    height = board.height,
+                )
+                val expected = oracle.pointsSized(
+                    save,
+                    listOf(press, release, press, release),
+                    width = board.width,
+                    height = board.height,
+                    recordTrace = true,
+                )
+
+                val midend = Midend.fromSave(Dominosa, SgtpSave.parse(save))
+                val state = midend.state as Dominosa.State
+                assertEquals("tile $tileSize starts empty", 6, state.grid[6])
+                assertEquals(7, state.grid[7])
+
+                apply(midend, listOf(press, release), tileSize)
+                assertEquals("tile $tileSize edge move", "E6,7", moveOf(midend))
+                assertEquals(
+                    "tile $tileSize edge echo",
+                    0x200,
+                    (midend.state as Dominosa.State).edges[6] and 0x200,
+                )
+                assertEquals(
+                    "tile $tileSize edge echo pair",
+                    0x100,
+                    (midend.state as Dominosa.State).edges[7] and 0x100,
+                )
+                assertEquals("tile $tileSize edge id", lined.state.id, midend.id())
+                assertEquals(
+                    "tile $tileSize edge canonical",
+                    lined.state.state,
+                    midend.serialise().serialise(),
+                )
+
+                apply(midend, listOf(press, release), tileSize)
+                assertEquals("tile $tileSize edge removal move", "E6,7", moveOf(midend))
+                assertEquals(
+                    "tile $tileSize edge removal clears the pair",
+                    0,
+                    (midend.state as Dominosa.State).edges[6],
+                )
+                assertEquals(
+                    "tile $tileSize edge removal clears the echo",
+                    0,
+                    (midend.state as Dominosa.State).edges[7],
+                )
+                assertEquals("tile $tileSize edge removal id", expected.state.id, midend.id())
+                assertEquals(
+                    "tile $tileSize edge removal canonical",
+                    expected.state.state,
+                    midend.serialise().serialise(),
+                )
+                assertLines(
+                    "tile $tileSize edge removal trace",
+                    TraceNormalizer.normalize(expected.trace!!, upstream),
+                    TraceNormalizer.normalize(
+                        KotlinTraceSink.stateTrace(midend, tileSize),
+                        upstream,
+                    ),
+                )
+            }
+        }
+
     @Test(timeout = 120_000)
     fun `the measured boundary table at 208x176`() = OracleClient().use { oracle ->
         val save = oracle.newGame("dominosa", "3dt", SEED).state
@@ -217,42 +364,97 @@ class DominosaInputParityTest {
         assertEquals(count + 1, midend.stateCount)
     }
 
-    @Test(timeout = 120_000)
+    @Test(timeout = 240_000)
     fun `a drag and a lone release are not a move`() {
+        for (tileSize in listOf(32, 48, 63, 82, 100)) {
+            val midend = Midend.newGame(Dominosa, "3dt", SEED)
+            val point = halfPoint(1, 1, tileSize, 'R')
+            val other = halfPoint(2, 2, tileSize, 'R')
+
+            // A lone release has no held button.
+            assertEquals(
+                KeyOutcome.Unused,
+                midend.processKey(other.first, other.second, Buttons.LEFT_RELEASE, tileSize),
+            )
+            assertEquals(1, midend.stateCount)
+
+            // A press makes the move; the drag and release add nothing.
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                midend.processKey(point.first, point.second, Buttons.LEFT_BUTTON, tileSize),
+            )
+            assertEquals(2, midend.stateCount)
+            assertEquals(
+                KeyOutcome.Unused,
+                midend.processKey(other.first, other.second, Buttons.LEFT_DRAG, tileSize),
+            )
+            assertEquals(
+                KeyOutcome.Unused,
+                midend.processKey(other.first, other.second, Buttons.LEFT_RELEASE, tileSize),
+            )
+            assertEquals(2, midend.stateCount)
+            assertEquals("D6,7", moveOf(midend))
+
+            // A middle press is unused.
+            assertEquals(
+                KeyOutcome.Unused,
+                midend.processKey(point.first, point.second, Buttons.MIDDLE_BUTTON, tileSize),
+            )
+            assertEquals(2, midend.stateCount)
+        }
+    }
+
+    @Test(timeout = 120_000)
+    fun `a drag in the letterbox matches the oracle`() = OracleClient().use { oracle ->
+        val save = oracle.newGame("dominosa", "3dt", SEED).state
         val midend = Midend.newGame(Dominosa, "3dt", SEED)
-        val point = halfPoint(1, 1, 32, 'R')
-        val other = halfPoint(2, 2, 32, 'R')
+        val geom = midend.geometryFor(411, 702)
+        assertEquals(63, geom.tileSize)
+        assertEquals(1, geom.originX)
+        assertEquals(178, geom.originY)
 
-        // A lone release has no held button.
-        assertEquals(
-            KeyOutcome.Unused,
-            midend.processKey(other.first, other.second, Buttons.LEFT_RELEASE, 32),
+        val point = halfPoint(1, 1, geom.tileSize, 'R')
+        val other = halfPoint(2, 2, geom.tileSize, 'R')
+        val view = listOf(
+            OracleClient.Point(
+                point.first + geom.originX,
+                point.second + geom.originY,
+                Buttons.LEFT_BUTTON,
+            ),
+            OracleClient.Point(
+                other.first + geom.originX,
+                other.second + geom.originY,
+                Buttons.LEFT_DRAG,
+            ),
+            OracleClient.Point(
+                other.first + geom.originX,
+                other.second + geom.originY,
+                Buttons.LEFT_RELEASE,
+            ),
         )
-        assertEquals(1, midend.stateCount)
+        val expected = oracle.pointsSized(
+            save,
+            view,
+            width = 411,
+            height = 702,
+        )
 
-        // A press makes the move; the drag and release add nothing.
         assertEquals(
             KeyOutcome.SomeEffect,
-            midend.processKey(point.first, point.second, Buttons.LEFT_BUTTON, 32),
-        )
-        assertEquals(2, midend.stateCount)
-        assertEquals(
-            KeyOutcome.Unused,
-            midend.processKey(other.first, other.second, Buttons.LEFT_DRAG, 32),
+            midend.processKey(point.first, point.second, Buttons.LEFT_BUTTON, geom.tileSize),
         )
         assertEquals(
             KeyOutcome.Unused,
-            midend.processKey(other.first, other.second, Buttons.LEFT_RELEASE, 32),
+            midend.processKey(other.first, other.second, Buttons.LEFT_DRAG, geom.tileSize),
         )
-        assertEquals(2, midend.stateCount)
+        assertEquals(
+            KeyOutcome.Unused,
+            midend.processKey(other.first, other.second, Buttons.LEFT_RELEASE, geom.tileSize),
+        )
         assertEquals("D6,7", moveOf(midend))
-
-        // A middle press is unused.
-        assertEquals(
-            KeyOutcome.Unused,
-            midend.processKey(point.first, point.second, Buttons.MIDDLE_BUTTON, 32),
-        )
         assertEquals(2, midend.stateCount)
+        assertEquals(expected.state.id, midend.id())
+        assertEquals(expected.state.state, midend.serialise().serialise())
     }
 
     @Test(timeout = 180_000)

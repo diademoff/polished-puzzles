@@ -181,6 +181,37 @@ class DominosaGameTest {
         }
 
     @Test(timeout = 120_000)
+    fun `a validated description with no placement is reachable and solves`() =
+        OracleClient().use { oracle ->
+            // Five 3s with no two adjacent: the C decoder accepts the
+            // description, but the domino 3-3 has no placement. C aborts
+            // in the forcing-chain table at `dominosa.c:1546` when the
+            // solve runs; the port reads the missing domino as an empty
+            // list and returns the measured solve text.
+            val base = Midend.newGame(Dominosa, "3dt", SEED).serialise().serialise()
+            val text = stripAux(base).replace(
+                "DESC    :20:01012311032222033310",
+                "DESC    :20:00222301130313132021",
+            )
+            val loaded = oracle.id(text)
+            assertEquals("3:00222301130313132021", loaded.id)
+            assertEquals(0, loaded.status)
+
+            val midend = Midend.fromSave(Dominosa, SgtpSave.parse(text))
+            assertNull(midend.auxInfo)
+            assertEquals(loaded.id, midend.id())
+            assertEquals(loaded.state, midend.serialise().serialise())
+            assertEquals(
+                "S;E0,5;E1,6;E2,7;E4,9;E6,11;E7,12;E8,13;E9,14;E10,15;" +
+                    "E11,16;E12,17;E13,18;E1,2;E2,3;E3,4;E5,6;E7,8;E8,9;" +
+                    "E10,11;E12,13;E13,14;E16,17;E18,19;D3,8;D5,10;D14,19;" +
+                    "D0,1;D6,7;D11,12;D15,16;D17,18",
+                Dominosa.solve(midend.state),
+            )
+            assertTrue(midend.solve())
+        }
+
+    @Test(timeout = 120_000)
     fun `the text form matches the oracle for every preset`() =
         OracleClient().use { oracle ->
             for (params in Dominosa.presets().map { it.params } + "") {

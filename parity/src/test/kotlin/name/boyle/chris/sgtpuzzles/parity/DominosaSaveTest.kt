@@ -101,15 +101,29 @@ class DominosaSaveTest {
         }
 
     @Test(timeout = 120_000)
-    fun `a real click and a real edge round-trip in both directions`() =
+    fun `a real click, a removal, and a real edge round-trip in both directions`() =
         OracleClient().use { oracle ->
             val midend = Midend.newGame(Dominosa, "3dt", SEED)
+            val before = (midend.state as Dominosa.State).grid.copyOf()
             click(midend, 0, 0, place = true)
             assertEquals("D0,1", lastMove(midend))
             assertEquals(2, midend.stateCount)
+            val placed = (midend.state as Dominosa.State).grid
+            assertFalse("the placement changes the board", placed.contentEquals(before))
+
+            // The same click removes the domino, and the board returns
+            // to the start.
+            click(midend, 0, 0, place = true)
+            assertEquals("D0,1", lastMove(midend))
+            assertEquals(3, midend.stateCount)
+            assertTrue(
+                "the removal restores the board",
+                (midend.state as Dominosa.State).grid.contentEquals(before),
+            )
+
             click(midend, 0, 1, place = false)
             assertEquals("E5,6", lastMove(midend))
-            assertEquals(3, midend.stateCount)
+            assertEquals(4, midend.stateCount)
             assertRoundTrip(oracle, midend)
         }
 
@@ -190,16 +204,22 @@ class DominosaSaveTest {
     fun `a hand-written short AUXINFO is defined as dot beyond the text`() =
         OracleClient().use { oracle ->
             val base = Midend.newGame(Dominosa, "3dt", SEED).serialise().serialise()
+            val baseId = Midend.fromSave(Dominosa, SgtpSave.parse(base)).id()
             for (aux in listOf("00", "41", "4c", "54", "ff")) {
                 val text = replaceAux(base, aux)
-                val expected = SgtpSave.parse(oracle.solve(text).state).value("SOLVE")
-                assertEquals("oracle solve for aux $aux", "S", expected)
+                // C loads the save and keeps the one-byte answer. Its
+                // solve reads past the decoded string, which is
+                // undefined behavior: the same save returned `S` in one
+                // oracle process and `S;D2,7;D4,9` in another. The port
+                // defines the missing character as '.'.
+                val loadedSave = oracle.id(text)
+                assertEquals("id for aux $aux", baseId, loadedSave.id)
 
                 val loaded = Midend.fromSave(Dominosa, SgtpSave.parse(text))
                 assertEquals("aux text for $aux", 1, loaded.auxInfo!!.length)
                 assertEquals(
                     "Kotlin solve for aux $aux",
-                    expected,
+                    "S",
                     Dominosa.solve(loaded.state, loaded.auxInfo),
                 )
             }

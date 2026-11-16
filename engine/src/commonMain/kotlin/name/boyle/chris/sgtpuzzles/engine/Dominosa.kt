@@ -1458,7 +1458,8 @@ object Dominosa : Game {
         // leave the highest-valued dominoes with no adjacent pair; C
         // aborts on its `di == dc` assert here. The port marks such a
         // domino with a start of `pc`, which the lookup below reads as
-        // an empty list. No generated board reaches this path.
+        // an empty list. No generated board reaches this path. This is
+        // D-013 in `docs/DEVIATIONS.md`.
         while (di < sc.dc) sc.dcScratch[di++] = sc.pc
 
         for (si in 0 until sc.wh) {

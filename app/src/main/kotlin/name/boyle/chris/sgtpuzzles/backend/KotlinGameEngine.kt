@@ -14,6 +14,7 @@ import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
 import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.Cube
+import name.boyle.chris.sgtpuzzles.engine.Dominosa
 import name.boyle.chris.sgtpuzzles.engine.DrawSink
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
 import name.boyle.chris.sgtpuzzles.engine.Filling
@@ -137,9 +138,10 @@ object KotlinGames {
      * `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`,
      * `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`,
      * `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`,
-     * `bridges`, `net`, `mines`, and `tracks` are in dual-run: their
-     * engines pass the parity matrix, but the app still uses C until the
-     * configuration dialog and the two-release wait are done.
+     * `bridges`, `net`, `mines`, `tracks`, and `dominosa` are in
+     * dual-run: their engines pass the parity matrix, but the app still
+     * uses C until the configuration dialog and the two-release wait are
+     * done.
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
@@ -173,6 +175,7 @@ object KotlinGames {
         UNDEAD -> Undead
         UNTANGLE -> Untangle
         TRACKS -> Tracks
+        DOMINOSA -> Dominosa
         else -> null
     }
 

@@ -2627,6 +2627,87 @@ aggressive 100x100 latency is an enablement debt:
   site. `TRACKS` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(TRACKS)` is false.
 
+- `DominosaDescTest` is semantic. It compares the twelve presets and the
+  default, the decode quirks (`6`, `6dh`, `6dth`, `6da`, `+6`, ` 6`,
+  `6x`), the parameter validation order and its rejected messages, the
+  `46339` accepted / `46340` rejected boundary, the `1dt`/`1db`/`1de`
+  and `2db`/`2dh` difficulty caps, the `PARAMS ...db` / `CPARAMS ...dt`
+  split for `3dt`, `1de`, `2dh`, and `6de`, and `params + seed -> DESC`
+  for the thirteen goldens, nine seed strings, and a numeric sweep. The
+  retry fixtures cover the Trivial and Basic allocators, the Hard
+  `run_solver(DIFF_BASIC)` gate, and an Extreme board that needs the
+  forcing chain. The auxiliary answer is compared with the oracle
+  `SOLVE` for every preset. The description tests pin the RNG order:
+  the laydomino shuffle and repairs, the allocator shuffles, the
+  per-placement `random_upto(2)`, and the two solver gates.
+- `DominosaGameTest` is semantic. It pins the identity and flags, the
+  `requestKeys` payload (arrow mode 3, the labels `0..n`, unchanged by
+  the full-cursor hint) against the oracle for every preset, the
+  payloads with and without `AUXINFO`, and the 651-character `6db`
+  solver string that pins the `rule_out_placement` swap-with-last
+  compaction and the vertical-before-horizontal placement order. It
+  also pins the move acceptance table, the text form, the completion
+  event, undo/redo/restart, the key labels `Place`/`Remove`/`Line`, and
+  D-013.
+- `DominosaSaveTest` is strict for the save text and semantic for the
+  state. It reads all thirteen corpus saves, rewrites them byte for
+  byte, and compares id, status, undo, redo, and text with C. It makes
+  C load a Kotlin save for every preset, `1dt`, `1da`, `2dh`, `2da`,
+  and nine seeds, and pins the `PARAMS ...db` / `CPARAMS ...dt` split,
+  the `AUXINFO` length, and the absence of `UI`, `TIME`, and
+  `PRIVDESC`. In-memory history covers a real placement, a real
+  removal, a real edge, an undone position with a live redo branch, a
+  `SOLVE`, a `RESTART`, and an `S` move, and every shape reloads in
+  both engines. A hand-written short `AUXINFO` is defined as `.`
+  beyond the text, and a bad `DESC` and a bad `PARAMS` report the C
+  generic messages.
+- `DominosaTraceTest` is strict. It compares the twelve frozen traces
+  and sized traces after a real click at tiles 48, 63, 82, and 100,
+  the 411x702 letterbox, the warm empty frame after real input, the
+  two-tile redraw after a domino and after an edge, the cursor at each
+  parity and the useful second ring, and the two highlight colours. No
+  trace contains a flash frame, a blitter, or a thick primitive.
+- `DominosaInputParityTest` is semantic and ui. It compares the layout
+  at five viewports, then sends real placements and removals, real
+  edges, and drags at tiles 48, 63, 82, and 100, and the 411x702
+  letterbox with origin (1,178) with the origin subtracted on both
+  sides. It pins the measured `208x176` boundary table, the same edge
+  twice as a toggle, the refusal of an edge on a covered square, the
+  keyboard cursor and both selects, the digit highlights with and
+  without the keypad flag, a modified arrow, a third highlight, undo
+  and redo with no history, a solve on a solved board, and a real
+  click completion. State, id, status, and the final frame with
+  `pointsSized` are compared for every real placement, removal, and
+  edge. Every real placement and removal changes the board and adds
+  one move; every inert click, drag, release, middle press, digit
+  above `n`, letter, `TAB`, letterbox click, and out-of-board click
+  changes neither, each with a positive control.
+- `DominosaTest` is the engine test. It pins the decode and validation
+  tables, the six description messages, the `atoi` saturation, the
+  out-of-range difficulty encoded as `d?`, the short-`AUXINFO`
+  definition, the text form and its empty
+  result above the C `n < 1000` bound, the solver reach for the Hard
+  and Extreme techniques, the allocator retry counters, the move
+  grammar and the edge echo pair, the completion counter, the cursor,
+  the palette, and the geometry. D-013 is pinned here: the description
+  `00222301130313132021` has no `3-3` placement; C aborts at
+  `dominosa.c:1546` with `Assertion 'di == sc->dc' failed`, while
+  Kotlin returns the measured `S;E...;D...` text. The other C
+  undefined-behavior spots are port definitions without a deviation
+  entry: `atoi` saturates, an unknown difficulty encodes as `d?`, a
+  missing auxiliary character reads as `.`, the set mask is 64 bits
+  wide, and `isdigit` is defined after the keypad mask. Enablement
+  debt: `can_format_as_text_now` is params-dependent (`n < 1000`) and
+  the seam has no such hook, so `textFormat` returns `""` for
+  `n >= 1000`; S8 is the two-field configuration schema (`Maximum
+  number on dominoes`, `:Trivial:Basic:Hard:Extreme:Ambiguous`), the
+  twelve presets, the solve message, generation off the UI thread, an
+  owner size bound for the accepted `46339` order, and the
+  two-release wait. Dominosa has no preferences and no `UI` record.
+  S9 is a tested `currentKeyLabel` helper with no Android call site.
+  `DOMINOSA` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(DOMINOSA)` is false and the app uses C.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

@@ -3,6 +3,7 @@ package name.boyle.chris.sgtpuzzles.backend
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
 import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.Cube
+import name.boyle.chris.sgtpuzzles.engine.Dominosa
 import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
@@ -214,6 +215,12 @@ class KotlinGamesTest {
     fun `tracks is registered but the app still uses C`() {
         assertEquals(Tracks, KotlinGames.gameFor(TRACKS))
         assertFalse(KotlinGames.handles(TRACKS))
+    }
+
+    @Test
+    fun `dominosa is registered but the app still uses C`() {
+        assertEquals(Dominosa, KotlinGames.gameFor(DOMINOSA))
+        assertFalse(KotlinGames.handles(DOMINOSA))
     }
 
     @Test

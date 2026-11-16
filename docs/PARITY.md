@@ -195,7 +195,7 @@ submenu entries when a game groups its presets.
 | `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `dual-run` |
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `dual-run` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
-| `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
+| `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `dual-run` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `dual-run` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `dual-run` |

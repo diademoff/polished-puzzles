@@ -917,20 +917,40 @@ class DominosaTest {
 
     @Test(timeout = 120_000)
     fun `a validated description with no placement for a domino still solves`() {
-        // Four uniform rows: 0 is never next to 3, so `validate_desc`
-        // accepts the board but the domino 0-3 has no placement. C
-        // aborts in the forcing-chain table for such a state; the port
-        // treats the missing domino as an empty list.
+        // Five 3s with no two adjacent: `validate_desc` accepts the board,
+        // but the domino 3-3 has no placement.  The other numbers fill the
+        // remaining fifteen squares five times each.  C aborts in the
+        // forcing-chain lookup table with
+        // `dominosa.c:1546: deduce_forcing_chain: Assertion 'di == sc->dc'
+        // failed.` (SIGABRT, exit 134).  The port gives the missing highest
+        // domino the start `pc`, which the lookup reads as an empty list.
         val params = Dominosa.decodeParams("3dt")
-        val board = "0".repeat(5) + "1".repeat(5) + "2".repeat(5) + "3".repeat(5)
+        val board = "00222301130313132021"
         assertNull(Dominosa.validateDesc(params, board))
+
+        // The 3s are at squares 5, 9, 11, 13, and 15.
+        val cells = board.map { it - '0' }
+        assertEquals(5, cells.count { it == 3 })
+        for (y in 0 until 4) {
+            for (x in 0 until 5) {
+                val i = y * 5 + x
+                if (cells[i] != 3) continue
+                if (x + 1 < 5) assertNotEquals(3, cells[i + 1])
+                if (y + 1 < 4) assertNotEquals(3, cells[i + 5])
+            }
+        }
 
         val state = Dominosa.newState(params, board)
         val report = Dominosa.analyse(state)
-        assertTrue(report.ret in 0..2)
+        assertEquals(0, report.ret)
         val move = Dominosa.solve(state)
-        assertTrue(move != null)
-        assertTrue(move!!.startsWith("S"))
+        assertEquals(
+            "S;E0,5;E1,6;E2,7;E4,9;E6,11;E7,12;E8,13;E9,14;E10,15;" +
+                "E11,16;E12,17;E13,18;E1,2;E2,3;E3,4;E5,6;E7,8;E8,9;" +
+                "E10,11;E12,13;E13,14;E16,17;E18,19;D3,8;D5,10;D14,19;" +
+                "D0,1;D6,7;D11,12;D15,16;D17,18",
+            move,
+        )
     }
 
     /** The D list from the auxiliary layout text, as `solve_game` builds it. */
