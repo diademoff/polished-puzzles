@@ -1286,11 +1286,11 @@ Engine tests:
   messages, the `46340x46340` boundary and the `65536x65536` rejection,
   the `"" -> 6x5de` downgrade, and the `PARAMS`/`CPARAMS` split. It
   compares the generated `AUXINFO` with the oracle save, so the solver
-  inside the retry gate is pinned, and it reads the attempt counts from
-  `newDescWithAttempts`. The generator stream is `LayDomino.layout`,
-  one shuffle in `lay_dominoes`, the strip-clues shuffle, and the
-  retry gate; a reordering changes every description, so the goldens
-  and the sweep are the guard.
+  inside the retry gate is pinned, and it pins the `6x5de` and `6x5dt`
+  attempt counts (1 and 37) from `newDescWithAttempts`. The generator
+  stream is `LayDomino.layout`, one shuffle in `lay_dominoes`, the
+  strip-clues shuffle, and the retry gate; a reordering changes every
+  description, so the goldens and the sweep are the guard.
 - `MagnetsGameTest` is semantic. It compares new games, text, and
   status, the move grammar and the measured acceptance table, the left
   and right cycles, the four clue bands, the `D` clue move, the
@@ -1314,12 +1314,17 @@ Engine tests:
   without `AUXINFO` through the initial-state fallback.
   `default.sgtp` and `6x5de.sgtp` are the same file.
 - `MagnetsTraceTest` is strict. It compares the eight frozen traces,
-  a cold loaded state, the cursor on and off, a `COL_DONE` clue after
-  a `D` toggle, a `COL_ERROR` clue after an overfull row, sized traces
-  at tiles 48, 63, 82, and 100, the 411x702 letterbox, the first-draw
-  corner symbols and the two whole-window updates, and a Kotlin-only
-  warm frame with the changed tile and clue. No trace contains a
-  blitter, a line, a circle, a polygon, a clip, or a flash color.
+  a cold loaded state, a visible cursor over a magnet (`DS_CURSOR`,
+  `COL_CURSOR`, `COL_TEXT`), a set neutral and a not-neutral cell (the
+  background-colored `line` cross and the `COL_NOT` question mark), a
+  `COL_DONE` clue after a `D` toggle, a `COL_ERROR` clue after an
+  overfull row, sized traces at tiles 48, 63, 82, and 100, the 411x702
+  letterbox, the first-draw corner symbols and the two whole-window
+  updates, and a Kotlin-only warm frame with the changed tile and
+  clue. Every frozen trace contains the `circle` operations of the
+  rounded domino halves. No trace contains a blitter, a polygon, a
+  clip, or a flash color; only the neutral trace adds `line`
+  operations.
 - `MagnetsInputParityTest` is semantic. It compares the layout at
   tiles 48, 63, 82, and 100 and the 411x702 letterbox, the `FROMCOORD`
   cell and clue bands, and real left and right clicks at all five
@@ -1340,8 +1345,9 @@ Engine tests:
   the singleton no-ops, the deep state copy with shared counts, the
   solver with and without `AUXINFO`, the initial-state fallback, a
   completion that hides the cursor and reports once, the key-label
-  table, `requestKeys`, `computeSize`, the attempt counts, and a strip
-  board that keeps the missing clues and solves.
+  table, `requestKeys`, `computeSize`, the eight pinned attempt counts,
+  the saturated `atoi` and move scanner, and a strip board that keeps
+  the missing clues and solves.
 - `LayDominoTest` pins three measured vectors. The 6x5 seed `12345`
   grid is `1,0,3,2,5,4,...` and needs two repair passes; the odd-area
   3x3 has one singleton at index 6 and one pass; the one-row 1x5 board

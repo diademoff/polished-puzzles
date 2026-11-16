@@ -279,28 +279,21 @@ class MagnetsDescTest {
         }
 
     @Test
-    fun `the attempt counts are exposed`() {
-        // The counts have no C counterpart. The preset topics generate
-        // in one or two outer attempts; the value is pinned as a range
-        // and as a positive total so a retry-condition change shows.
-        for (params in presets) {
+    fun `the attempt counts are the measured values`() {
+        // The counters have no C counterpart, so the measured values are
+        // the fixture. The engine test pins all eight presets; these two
+        // sit next to the oracle sweep.
+        for ((params, attempts) in listOf("6x5de" to 1, "6x5dt" to 37)) {
             val generation = Magnets.newDescWithAttempts(
                 Magnets.decodeParams(params),
                 RandomState.fromSeed("12345"),
             )
-            assertTrue("'$params' attempts", generation.attempts >= 1)
-            assertTrue("'$params' retries", generation.layDominoRetries >= 0)
+            assertEquals("'$params' attempts", attempts, generation.attempts)
+            assertEquals("'$params' retries", 0, generation.layDominoRetries)
             assertTrue("'$params' desc", generation.desc.isNotEmpty())
             val decoded = Magnets.decodeParams(params) as Magnets.Params
             assertEquals("'$params' aux", decoded.w * decoded.h, generation.auxInfo.length)
         }
-        val total = presets.sumOf {
-            Magnets.newDescWithAttempts(
-                Magnets.decodeParams(it),
-                RandomState.fromSeed("12345"),
-            ).attempts
-        }
-        assertTrue("the preset set has retries", total >= presets.size)
     }
 
     private fun full(oracle: OracleClient, params: String): String =

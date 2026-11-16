@@ -19,7 +19,10 @@ import java.io.File
  * tiles 48, 63, 82, and 100 and in a letterboxed 411x702 viewport. The
  * warm path is compared after a real click and a clue toggle, and a
  * Kotlin-only settled frame pins the exact changed tiles and the one
- * shaded clue.
+ * shaded clue. Cursor sentences compare a visible cursor over a magnet,
+ * a set neutral, and a not-neutral cell, so `DS_CURSOR`, `COL_CURSOR`,
+ * `COL_TEXT`, the set-neutral `line` cross, and the `COL_NOT` question
+ * mark are all in a trace.
  */
 class MagnetsTraceTest {
 
@@ -199,6 +202,90 @@ class MagnetsTraceTest {
             clueActual.lines().drop(7).filter { it.isNotEmpty() },
         )
     }
+
+    @Test
+    fun `a visible cursor on a magnet matches the oracle`() = OracleClient().use { oracle ->
+        val save = oracle.newGame("magnets", "6x5dt", SEED).state
+        val upstream = upstream()
+
+        // The first key reveals the hidden cursor and also moves it to
+        // (1,0), as `move_cursor` does. The select then places a
+        // positive magnet there and keeps the cursor visible, so the
+        // tile carries DS_SET and DS_CURSOR.
+        val sequence = listOf(Buttons.CURSOR_RIGHT, Buttons.CURSOR_SELECT)
+        val expected = TraceNormalizer.normalize(
+            oracle.trace(save, sequence = sequence),
+            upstream,
+        )
+        val midend = Midend.fromSave(Magnets, SgtpSave.parse(save))
+        for (button in sequence) {
+            midend.processKey(0, 0, button, TILE)
+        }
+        val actual = TraceNormalizer.normalize(
+            KotlinTraceSink.stateTrace(midend, TILE),
+            upstream,
+        )
+        assertLines("visible cursor on a magnet", expected, actual)
+
+        // DS_CURSOR fills the cursor half of the domino with
+        // COL_CURSOR, and the plus over the cursor cell is COL_TEXT
+        // instead of the background color.
+        assertEquals(
+            "the cursor half is COL_CURSOR",
+            2,
+            actual.lines().count { it.startsWith("circle ") && it.endsWith(" 5 5") },
+        )
+        assertTrue("the cursor plus is COL_TEXT", actual.lines().contains("rect 76 50 17 5 3"))
+        assertTrue("the cursor plus is COL_TEXT", actual.lines().contains("rect 82 44 5 17 3"))
+    }
+
+    @Test
+    fun `a set neutral and a not-neutral cell match the oracle`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("magnets", "6x5dt", SEED).state
+            val upstream = upstream()
+
+            // The first key moves the revealed cursor to (1,0), which
+            // becomes a set neutral with (0,0). The cursor then moves to
+            // (3,0), which becomes not-neutral with (2,0). The final
+            // frame has the background-colored cross of the neutral
+            // domino and the COL_NOT question marks of the other one.
+            val sequence = listOf(
+                Buttons.CURSOR_RIGHT,
+                Buttons.CURSOR_SELECT2,
+                Buttons.CURSOR_RIGHT,
+                Buttons.CURSOR_RIGHT,
+                Buttons.CURSOR_SELECT2,
+                Buttons.CURSOR_SELECT2,
+            )
+            val expected = TraceNormalizer.normalize(
+                oracle.trace(save, sequence = sequence),
+                upstream,
+            )
+            val midend = Midend.fromSave(Magnets, SgtpSave.parse(save))
+            for (button in sequence) {
+                midend.processKey(0, 0, button, TILE)
+            }
+            val actual = TraceNormalizer.normalize(
+                KotlinTraceSink.stateTrace(midend, TILE),
+                upstream,
+            )
+            assertLines("set neutral and not-neutral", expected, actual)
+
+            assertTrue(
+                "the set neutral is a cross in the background color",
+                actual.lines().contains("line 44 44 60 60 0") &&
+                    actual.lines().contains("line 60 44 44 60 0"),
+            )
+            assertTrue(
+                "the partner is a COL_NOT question mark",
+                actual.lines().contains("text 116 52 1 22 257 10 \"?\""),
+            )
+            assertTrue(
+                "the cursor cell is a COL_NOT question mark",
+                actual.lines().contains("text 148 52 1 22 257 10 \"?\""),
+            )
+        }
 
     @Test
     fun `a settled frame draws only the changed cells and the shaded clue`() {

@@ -1031,21 +1031,28 @@ Notes:
   and pins the `PARAMS`/`CPARAMS` split (`PARAMS 6x5de`,
   `CPARAMS 6x5dtS`), the absent `UI` record, and the `AUXINFO` round
   trip. `MagnetsTraceTest` compares the eight frozen traces, a cold
-  loaded state, the cursor, a `COL_DONE` clue after `D`, a `COL_ERROR`
-  clue, sized traces at tiles 48, 63, 82, and 100, the letterbox, the
-  first-draw corner symbols and two whole-window updates, and a
-  Kotlin-only warm frame with the changed tile and clue. The
-  completion flash is not ported; section 1 allows animations to
-  differ and the oracle never emits one.
+  loaded state, a visible cursor over a magnet (`DS_CURSOR`,
+  `COL_CURSOR`, `COL_TEXT`), a set neutral and a not-neutral cell (the
+  background-colored `line` cross and the `COL_NOT` question mark), a
+  `COL_DONE` clue after `D`, a `COL_ERROR` clue, sized traces at tiles
+  48, 63, 82, and 100, the letterbox, the first-draw corner symbols and
+  two whole-window updates, and a Kotlin-only warm frame with the
+  changed tile and clue. The completion flash is not ported; section 1
+  allows animations to differ and the oracle never emits one.
 
   Enablement debt. Generation runs on the calling thread today:
   `16x14de` takes about 5.9 s and `20x20` does not finish in 90 s,
   while the eight presets are under 20 ms. The app must generate off
   the UI thread. `validate_params` accepts an area up to `INT_MAX`, so
   a size bound would reject parameters that C accepts; that is an owner
-  decision that needs a deviation entry and a test, and no bound is
-  added in this slice. `KotlinGames.gameFor` knows the Kotlin game, but
-  the app still uses C: the S8 configuration schema (Width, Height,
+  decision that needs a deviation entry and a test, and no params bound
+  is added in this slice. `LayDomino.checkedArea` is the only area
+  guard on the path: it rejects an area above `INT_MAX / 2` with
+  `laydomino area is too large`, because the C candidate list count
+  `2*w*h` must fit an `int`. That guard rejects only areas the presets
+  and tests never generate, and it runs before the first RNG draw.
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
+  C: the S8 configuration schema (Width, Height,
   Difficulty with `":Easy:Tricky"`, Strip clues), the
   preference-dialog skip (`get_prefs` is `NULL`), the `Fifteen` casts
   in `KotlinGameEngine`, the generation off the UI thread, and the

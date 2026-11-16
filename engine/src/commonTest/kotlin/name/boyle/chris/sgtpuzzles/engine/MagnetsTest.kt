@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  * The strip-clues `ret != -1` assertion has no reachable fixture here,
  * so the class comment in [Magnets] records the release rule the port
  * implements. The generation attempt counts are exposed through
- * [Magnets.newDescWithAttempts] and are covered by the parity sweep.
+ * [Magnets.newDescWithAttempts] and pinned at seed `12345`.
  */
 class MagnetsTest {
 
@@ -432,15 +432,52 @@ class MagnetsTest {
     }
 
     @Test
-    fun `every preset generates and exposes the attempt counts`() {
-        for (preset in Magnets.presets()) {
+    fun `the preset attempt counts are pinned at the shared seed`() {
+        // The counters have no C counterpart, so the measured value is
+        // the fixture: a changed retry condition moves it even when the
+        // first accepted description happens to match.
+        val expected = mapOf(
+            "6x5de" to 1,
+            "6x5dt" to 37,
+            "6x5dtS" to 37,
+            "8x7de" to 1,
+            "8x7dt" to 22,
+            "8x7dtS" to 22,
+            "10x9dt" to 16,
+            "10x9dtS" to 16,
+        )
+        assertEquals(expected.keys, Magnets.presets().map { it.params }.toSet())
+        for ((paramsText, attempts) in expected) {
             val generation = Magnets.newDescWithAttempts(
-                params(preset.params),
+                params(paramsText),
                 RandomState.fromSeed(SEED),
             )
-            assertTrue(generation.attempts >= 1, "${preset.params} attempts")
-            assertTrue(generation.desc.isNotEmpty(), "${preset.params} desc")
+            assertEquals(attempts, generation.attempts, "$paramsText attempts")
+            assertEquals(0, generation.layDominoRetries, "$paramsText retries")
+            assertTrue(generation.desc.isNotEmpty(), "$paramsText desc")
         }
+    }
+
+    @Test
+    fun `the params and move scanners saturate`() {
+        // atoi saturates at INT_MAX, so the area check then rejects it.
+        val huge = "99999999999999999999"
+        val decoded = params("${huge}x5")
+        assertEquals(Int.MAX_VALUE, decoded.w)
+        assertEquals(5, decoded.h)
+        assertEquals(
+            "Width times height must not be unreasonably large",
+            Magnets.validateParams(decoded, true),
+        )
+
+        // The move scanner keeps the C convention: a value outside the
+        // long range saturates there, and the assignment to int keeps
+        // the low 32 bits. The positive limit is -1, a valid clue
+        // column, and the negative limit is 0, which is not a clue.
+        val state = stateOf("6x5dt", GOLDEN_6X5DT)
+        val toggled = Magnets.executeMove(state, "D$huge,0") as Magnets.State
+        assertTrue(toggled.countsDone[21])
+        assertNull(Magnets.executeMove(state, "D-$huge,0"))
     }
 
     @Test
