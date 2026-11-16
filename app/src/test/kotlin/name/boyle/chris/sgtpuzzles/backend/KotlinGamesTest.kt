@@ -11,6 +11,7 @@ import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Magnets
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
+import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Palisade
 import name.boyle.chris.sgtpuzzles.engine.Pattern
@@ -121,6 +122,12 @@ class KotlinGamesTest {
     fun `netslide is registered but the app still uses C`() {
         assertEquals(Netslide, KotlinGames.gameFor(NETSLIDE))
         assertFalse(KotlinGames.handles(NETSLIDE))
+    }
+
+    @Test
+    fun `net is registered but the app still uses C`() {
+        assertEquals(Net, KotlinGames.gameFor(NET))
+        assertFalse(KotlinGames.handles(NET))
     }
 
     @Test

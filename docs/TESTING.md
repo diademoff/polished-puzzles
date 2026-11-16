@@ -2348,6 +2348,124 @@ aggressive 100x100 latency is an enablement debt:
     `APP_GAMES`, so `KotlinGames.handles(BRIDGES)` is false and the
     app keeps the C backend. The two-release wait also applies.
 
+- `net` has two deviations (D-010 and D-011):
+
+  - `NetDescTest` is semantic. It compares the eight presets and the
+    default with the oracle, the nine golden descriptions, every preset
+    at nine seed strings, a numeric sweep over `3x3`, `3x3w`, `4x4`,
+    `5x5`, and `4x3w`, and the named `perturb`, `begin_generation`, and
+    full-reshuffle retry fixtures. The decode quirks cover `5`, `+5x5`,
+    `5x5x5`, `5x5w`, `5x5a`, `5x5b.5`, `5x5b0.5`, `5x5b1`,
+    `5x5b1e-3`, `5x5b`, `5x5ba`, `5x5garbage`, and the rejected
+    `-5x5`, `0x5`, `5x5b-0.5`, `5x5b0x10`, `5x5b2`, `1x1`, `0x0`,
+    `2x2w`, and `-5x5b2`. The validation order, the full-only `2x2w`
+    rule, the accepted `46340x46340` boundary without generation, the
+    `%g` text for nine rates, and the generated `AUXINFO` are compared
+    with the oracle. `PARAMS` is the short form and `CPARAMS` the full
+    form, so `5x5b0.5a` writes `PARAMS:5x5` and `CPARAMS:5x5b0.5a`;
+    they are equal for every preset. The test
+    `a NaN barrier rate is rejected instead of aborting` pins D-010.
+  - `NetGameTest` is semantic. It compares new games, text, status, the
+    release-committed left click, the middle lock and unlock, the four
+    drag quadrants with the `d0`, `dF`, `dA`, `dC` tie order, the
+    start-quadrant drag with no move, the circular drag that emits one
+    move per quarter turn, the keyboard `a`, `s`, `d`, `f`, and `j`,
+    the origin and source keys on both wrapping and non-wrapping
+    boards, the status text after a source move, and `requestKeys`. The
+    solve is compared from the initial state and after a real move,
+    because C solves `states[0]` and diffs the current state. Undo and
+    redo are compared across a rotation, a lock, and a Jumble, and a
+    new move after an undo truncates the redo branch.
+  - `NetSaveTest` is strict for the save text and semantic for the
+    state. It reads all nine corpus saves, rewrites them byte for byte,
+    and compares id, status, undo, redo, text, `AUXINFO`, and `UI` with
+    C. A Kotlin save for every preset loads in C. The `UI` record
+    round-trips in both directions, including `O 1, 1;C 3, 2junk` and
+    an out-of-range pair that leaves the base UI at the centre. The
+    `AUXINFO` round-trips, the fallback solver without `AUXINFO`
+    matches the oracle from the initial board and after a move, and the
+    `PARAMS:5x5` / `CPARAMS:5x5b0.5a` split is pinned. In-memory
+    history covers a rotation, a lock, a Jumble at the oracle's NUL
+    platform seed, an undone position with a live redo branch, a
+    `SOLVE`, and a `RESTART`. A save without a `UI` record keeps the
+    base UI and its Jumble continues from the platform seed.
+  - `NetTraceTest` is strict. It compares the eight frozen traces and
+    the oracle `traceNew` for every preset, the eight-role palette,
+    the clipped edge tiles, a zero-size `rect 4 4 0 0 2`, the float
+    endpoint box, sized cold traces at tiles 48, 63, 82, and 100, the
+    411x702 letterbox at tile 80 with origin (1,146), the
+    `unlocked-loops` preference, and the warm lock frame that emits no
+    unchanged status. A warm drag and release is compared from the
+    reloaded moved save, because the oracle's own frame after a
+    rotation is the animation-start frame. No trace contains a
+    blitter, a thick primitive, or a text operation.
+  - `NetInputParityTest` is semantic. It compares the layout at tiles
+    48, 63, 82, and 100 and the 411x702 letterbox, then sends real
+    release-committed rotations and real middle locks at all five
+    views, the four drag quadrants at the four tiles, a circular drag
+    at tiles 32, 48, and 100, and the keyboard `a`, `s`, `d`, `f`, and
+    `j` at the four tiles. It compares the cursor keys, the select
+    pair, the locked-tile ring, and the origin and source keys with the
+    oracle. State, id, status, and `UI` are compared for every pointer
+    gesture; the final frame is compared with `pointsSized` for the
+    release click, the middle lock, the drag quadrants, and the circular
+    drag. A rotation frame is compared from the reloaded moved save.
+    Every real rotation, lock, and Jumble
+    changes the board and adds one move and one state; an inert press,
+    input-band click, letterbox click, and modified non-cursor key
+    change neither, with a real click as the positive control in the
+    same test.
+  - `NetTest` is the engine test. It pins the presets, the state
+    decoder, wrapping re-derived from the barriers, the move grammar
+    including a trailing `;`, the sticky completion, the completion
+    event, undo and redo, the status patterns, the solve with and
+    without `AUXINFO`, every preset and a real move, the unsolvable
+    board, `requestKeys`, `currentKeyLabel`, the `UI` record on the
+    base object, `newUi`, the platform seed, the empty text form, the
+    origin and source moves, the real-input invariants, the no-op
+    Jumble, and the geometry and palette.
+  - The solver order is part of the description contract. `net_solver`
+    is both the uniqueness gate and the fallback solve, and its to-do
+    list is a FIFO ring with a `deadendmax` array indexed by direction.
+    The generator is gated on a solver result of `+1`, so a stack, a
+    different re-add order, or a different direction iteration changes
+    the `LOCKED` marks and every `DESC`. The nine goldens, the nine
+    seed strings, the numeric sweep, and the retry fixtures pin it;
+    `AUXINFO` is the unshuffled grid and pins the generator before the
+    shuffle.
+  - The initial-state solve is a seam rule. C `solve_game` reads
+    `states[0]` for the answer and the current state for the diff; the
+    Kotlin seam passes only the current state, so `Net.Shared` keeps
+    the decoded initial board. A solve after real moves therefore
+    matches C, and `NetGameTest` and `NetSaveTest` pin both shapes.
+  - The base UI is preserved on a load. C creates the `UI` with
+    `new_ui` and then decodes `org` and `cx`/`cy` on top; the record
+    does not contain the cursor, `cur_visible`, the drag state, the
+    frontend random state, or `unlocked-loops`. The Kotlin `decodeUi`
+    copies the base object, so the platform seed and the cursor
+    survive. A save without a `UI` record keeps the `newUi` centre and
+    the platform seed.
+  - D-010: `5x5bNaN` passes C `validate_params` and aborts on the
+    `(int)` cast at `net.c:1533`; Kotlin returns
+    `Barrier probability must be a number` before allocation or
+    generation. D-011: the description `123456789` with the auxiliary
+    text `000000000` trips `assert(tt == ft)` at `net.c:1862`; Kotlin
+    returns no move and
+    `The auxiliary answer is not a rotation of the description`.
+    Neither test sends the aborting input to the oracle. Valid
+    parameters and auxiliary answers are unchanged.
+  - Enablement debt. S8 needs the five-field configuration dialog
+    (Width, Height, `Walls wrap around`, `Barrier probability`,
+    `Ensure unique solution`), the `unlocked-loops` boolean applied
+    after `newUi` and after `Midend.fromSave` with a forced redraw, a
+    solve message instead of the `solveEvent` throw, and the removal of
+    the `Fifteen` casts. Generation must move off the UI thread, and
+    the accepted `46340x46340` area and the unbounded retry loops need
+    an owner guard. S9 is a tested `currentKeyLabel` helper with no
+    Android call site. `NET` is in `KotlinGames.gameFor` and not in
+    `APP_GAMES`, so `KotlinGames.handles(NET)` is false and the app
+    keeps the C backend. The two-release wait also applies.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

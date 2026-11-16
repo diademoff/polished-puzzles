@@ -175,7 +175,7 @@ C wins.
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, and `bridges` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, and `net` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -210,7 +210,7 @@ submenu entries when a game groups its presets.
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `C` |
 | `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `C` |
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `dual-run` |
-| `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `C` |
+| `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `dual-run` |
 | `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
 | `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `dual-run` |
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `dual-run` |
@@ -1339,6 +1339,76 @@ Notes:
   `NULL`. `UNTANGLE` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(UNTANGLE)` is false and the two-release
   wait still applies.
+
+- `net` is `dual-run`. Its parameters and eight presets, the decode and
+  validation quirks, the generator and its solver gate, the
+  description and move grammars, the state, the FIFO solver and its
+  fallback solve, the Jumble and the platform seed, the UI record, the
+  palette, drawing, layout, input, and `requestKeys` pass the matrix in
+  `NetDescTest`, `NetGameTest`, `NetSaveTest`, `NetTraceTest`,
+  `NetInputParityTest`, and the engine `NetTest`.
+
+  The generator is gated on `net_solver`, because every preset asks for
+  a unique solution. The solver work list is a FIFO ring with a
+  `deadendmax` array indexed by direction, so a different order changes
+  which orientations survive, the `LOCKED` marks, and every `DESC`. The
+  nine golden descriptions, nine seed strings, a numeric sweep, and the
+  named `perturb`, `begin_generation`, and full-reshuffle retry
+  fixtures pin that order. `AUXINFO` is the unshuffled grid, so the
+  generated auxiliary answer pins the generator before the shuffle,
+  even when only the barrier rate changes.
+
+  `solve_game` reads the first state in C and diffs the current one.
+  The seam passes only the current state, so `Net.Shared` keeps the
+  decoded initial board and `Net.solveAttempt` runs `AUXINFO` or the
+  solver on that board; `NetGameTest` and `NetSaveTest` pin a solve
+  from the initial state and after real moves.
+
+  `NetSaveTest` reads all nine corpus saves, rewrites them byte for
+  byte, and compares id, status, undo, redo, text, `AUXINFO`, and `UI`
+  with C. A Kotlin save for every preset loads in C. The `PARAMS:5x5` /
+  `CPARAMS:5x5b0.5a` split is pinned for a non-preset board; for a
+  preset the two are equal. In-memory history covers a rotation, a
+  lock, a Jumble, an undone position with a live redo branch, a
+  `SOLVE`, and a `RESTART`, and the `UI` record round-trips in both
+  directions. A load decodes onto the `newUi` object, so the
+  frontend random state, the cursor, and `unlocked-loops` survive; a
+  save without a `UI` record keeps the base UI.
+
+  `NetInputParityTest` sends real release-committed rotations and real
+  middle locks at tiles 48, 63, 82, and 100 and at the 411x702
+  letterbox, the four drag quadrants and a circular drag, the keyboard
+  keys, a real Jumble, the cursor and select pair, and the origin and
+  source keys. Every real rotation, lock, or Jumble changes the board
+  and adds one move and one state; an inert press, band click,
+  letterbox click, or modified non-cursor key changes neither. State,
+  id, status, and `UI` are compared for every pointer gesture. The
+  final frame is compared with `pointsSized` for the release click, the
+  middle lock, the drag quadrants, and the circular drag. A rotation
+  frame is compared from the reloaded moved save, because the oracle's
+  own frame after a rotation is the animation-start frame.
+
+  `NetTraceTest` compares the eight frozen traces and `traceNew` for
+  every preset, sized cold traces at tiles 48, 63, 82, and 100, the
+  411x702 letterbox at tile 80 with origin (1,146), the warm lock, the
+  warm drag and release, the `unlocked-loops` preference, and the
+  zero-size grid rectangles. No trace contains a blitter, a thick
+  primitive, or a text operation.
+
+  D-010 rejects a NaN barrier rate instead of aborting at the C `int`
+  cast, and D-011 returns a solve error instead of tripping the C
+  `AUXINFO` assertion. Valid parameters, descriptions, and
+  auxiliary answers are unchanged. Enablement debt. S8 needs the
+  five-field configuration dialog (Width, Height, `Walls wrap around`,
+  `Barrier probability`, `Ensure unique solution`), the
+  `unlocked-loops` boolean applied after `newUi` and after
+  `Midend.fromSave` with a forced redraw, a solve message instead of
+  the `solveEvent` throw, and the removal of the `Fifteen` casts. The
+  accepted `46340x46340` area and the unbounded retry loops need an
+  owner guard, and generation must move off the UI thread. S9 is a
+  tested `currentKeyLabel` helper with no Android call site.
+  `NET` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `handles(NET)` is false and the two-release wait still applies.
 
 ## 8. Goldens
 

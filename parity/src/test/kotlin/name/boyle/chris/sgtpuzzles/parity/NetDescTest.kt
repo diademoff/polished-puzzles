@@ -189,10 +189,37 @@ class NetDescTest {
 
         // `bNaN` is C undefined behavior: C accepts it and then aborts
         // on the `(int)` cast. The port rejects it before any
-        // generation. This is pinned in the engine test.
+        // generation. This is pinned by the dedicated test below.
         val nan = Net.decodeParams("5x5bNaN") as Net.Params
         assertTrue(nan.barrierProbability.isNaN())
         assertEquals("Barrier probability must be a number", Net.validateParams(nan, true))
+    }
+
+    /**
+     * The intentional deviation D-010: C accepts a NaN barrier rate in
+     * `validate_params` (`net.c:328-331`) and then aborts on the
+     * `(int)` cast at `net.c:1533`. The port returns a clear error
+     * instead, before any allocation or generation.
+     */
+    @Test
+    fun `a NaN barrier rate is rejected instead of aborting`() {
+        val params = Net.decodeParams("5x5bNaN") as Net.Params
+        assertEquals(5, params.width)
+        assertEquals(5, params.height)
+        assertTrue(params.barrierProbability.isNaN())
+        assertEquals("Barrier probability must be a number", Net.validateParams(params, true))
+        val error = try {
+            Midend.newGame(Net, "5x5bNaN", SEED)
+            null
+        } catch (e: IllegalArgumentException) {
+            e.message
+        }
+        assertEquals("Barrier probability must be a number", error)
+
+        // Valid barrier rates are unchanged.
+        for (text in listOf("5x5b0", "5x5b0.5", "5x5b1")) {
+            assertEquals("'$text'", null, Net.validateParams(Net.decodeParams(text), true))
+        }
     }
 
     @Test

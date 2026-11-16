@@ -346,6 +346,73 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-16
 
+### D-010: Net rejects a NaN barrier probability
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** the parameter string `5x5bNaN` decodes to
+  `width = 5`, `height = 5`, `wrapping = false`, `unique = true`, and
+  `barrier_probability = NaN`. C `validate_params` (`net.c:328-331`)
+  accepts it, because both range tests compare false: `NaN < 0` and
+  `NaN > 1`. `new_game_desc` then evaluates
+  `nbarriers = (int)(params->barrier_probability * count234(barriertree))`
+  at `net.c:1533`. The cast of NaN to `int` is undefined behavior; on
+  the shipped build the assertion at `net.c:1534` fails and the process
+  aborts with
+  `new_game_desc: Assertion 'nbarriers >= 0 && nbarriers <= count234(barriertree)' failed.`
+  (SIGABRT, exit 134). The Kotlin `validateParams` returns
+  `Barrier probability must be a number` before any allocation or
+  generation. C `decode_params` reads the rate with `strtod`
+  (`net.c:241-244`) and `custom_params` with `atof` (`net.c:311-315`),
+  so a save, a game ID, or the configuration dialog can reach the path.
+- **Why:** an abort is not acceptable in the app, and the check is
+  deterministic: the same parameter text always gets the same error.
+  No valid parameter set changes its seed, `DESC`, `AUXINFO`, or save
+  text, because every finite rate is untouched and the presets have a
+  zero rate.
+- **Test:**
+  `parity/src/test/kotlin/.../NetDescTest.kt::a NaN barrier rate is rejected instead of aborting`
+  pins the NaN field, the message, the `Midend.newGame` rejection, and
+  the unchanged valid rates. The test does not run the C abort, because
+  it would kill the oracle process; a separate one-off oracle process
+  aborts with the assertion above.
+- **Review:** the owner should review this entry before `net` is
+  enabled in the app.
+- **Scope:** `net`
+- **Upstream:** none known
+- **Date:** 2026-11-16
+
+### D-011: Net returns a solve error for a non-rotation AUXINFO
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `solve_game` reads `AUXINFO` with no check that a
+  cell is a rotation of the `DESC` cell. For the description
+  `123456789` with the auxiliary text `000000000`, the first cell is
+  `1` in the description and `0` in the answer, so the C code reaches
+  `assert(tt == ft)` at `net.c:1862` and the shipped build aborts with
+  `solve_game: Assertion 'tt == ft' failed.` (SIGABRT). The Kotlin
+  `solveAttempt`
+  returns no move and
+  `The auxiliary answer is not a rotation of the description`; `solve`
+  returns null and `Midend.solve` returns false. The
+  game-id and save paths keep the C validation, so every generated
+  board and every real hint is unchanged.
+- **Why:** a crash is not acceptable in the app, and the error is
+  deterministic and keeps the C message style. The assertion is a
+  debug check, not a game rule: a description and an `AUXINFO` that C
+  considers valid produce the same `SOLVE` string as C.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../NetTest.kt::a non-rotation AUXINFO is defined, not an abort`
+  pins the exact text, the null move, and the short-`AUXINFO` read. The
+  test does not run the C abort; a separate one-off oracle process
+  aborts with the assertion above.
+- **Review:** the owner should review this entry before `net` is
+  enabled in the app.
+- **Scope:** `net`
+- **Upstream:** none known
+- **Date:** 2026-11-16
+
 ## Examples
 
 Allowed:

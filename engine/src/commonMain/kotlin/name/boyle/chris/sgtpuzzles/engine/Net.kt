@@ -26,12 +26,11 @@ import kotlin.math.round
  * state while it restores the saved origin and source.
  *
  * C defines three undefined behaviours here. A NaN barrier rate reaches
- * an `int` cast (`net.c:1533`); the port rejects it in [validateParams].
- * An `AUXINFO` that is not a rotation of the description trips an
- * assertion (`net.c:1862`); the port returns [SolveAttempt.move] null
- * with an error. A short `AUXINFO` is read past its end; the port treats
- * a missing character as zero. The first two need an owner decision and
- * a deviation entry before the game is enabled.
+ * an `int` cast (`net.c:1533`); the port rejects it in [validateParams]
+ * (D-010). An `AUXINFO` that is not a rotation of the description trips
+ * an assertion (`net.c:1862`); the port returns [SolveAttempt.move]
+ * null with an error (D-011). A short `AUXINFO` is read past its end;
+ * the port treats a missing character as zero.
  */
 object Net : Game {
 

@@ -214,6 +214,10 @@ class NetSaveTest {
             val save = midend.serialise()
             assertEquals("5x5", save.value("PARAMS"))
             assertEquals("5x5b0.5a", save.value("CPARAMS"))
+            // C writes the same split for the same request.
+            val oracleSave = SgtpSave.parse(oracle.newGame("net", "5x5b0.5a", SEED).state)
+            assertEquals("5x5", oracleSave.value("PARAMS"))
+            assertEquals("5x5b0.5a", oracleSave.value("CPARAMS"))
             assertTrue(midend.id().startsWith("5x5:"))
             assertEquals("5x5", midend.id().substringBefore(':'))
             assertTrue(save.value("DESC")!!.contains("v") || save.value("DESC")!!.contains("h"))
