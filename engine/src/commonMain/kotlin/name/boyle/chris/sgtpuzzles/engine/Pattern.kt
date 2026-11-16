@@ -83,7 +83,9 @@ object Pattern : Game {
      * `rowdata` holds the clue lists back to back, `rowsize` entries
      * each: the `w` columns first, then the `h` rows. `rowlen[i]` is the
      * clue count of entry `i`. `immutable` marks a cell filled in by the
-     * description suffix.
+     * description suffix. `initialGrid` is the grid that `new_game`
+     * decoded, before any move: C solves `states[0]`, so the solver
+     * reads the immutable cells from it and not from the played state.
      */
     class Common internal constructor(
         val w: Int,
@@ -94,6 +96,11 @@ object Pattern : Game {
         val immutable: BooleanArray,
         /** `FS_SMALL` or `FS_LARGE`, derived from the clues at load. */
         val fontSize: Int,
+        /**
+         * The decoded initial grid, including the immutable clue cells
+         * of the description suffix.
+         */
+        val initialGrid: IntArray,
     )
 
     /**
@@ -515,7 +522,7 @@ object Pattern : Game {
             }
         }
 
-        val common = Common(w, h, rowsize, rowdata, rowlen, immutable, fontSize)
+        val common = Common(w, h, rowsize, rowdata, rowlen, immutable, fontSize, grid.copyOf())
         return State(common, grid, false, false)
     }
 
@@ -822,15 +829,14 @@ object Pattern : Game {
     /**
      * `solve_game`. An `AUXINFO` answer is returned verbatim; otherwise
      * the line solver runs on the clue data and the immutable marks of
-     * [state]. C passes `states[0]` and this port passes the current
-     * state; the difference is only visible after an `S` move, which
-     * replaces the immutable cells as well. A board the solver cannot
-     * finish returns null.
+     * the decoded initial grid, which is C's `states[0]`. The played
+     * grid does not change the answer. A board the solver cannot finish
+     * returns null.
      */
     override fun solve(state: Game.State, auxInfo: String?): String? {
         if (auxInfo != null) return auxInfo
         val s = state as State
-        val matrix = LineSolver(s.width, s.height).solveFromState(s) ?: return null
+        val matrix = LineSolver(s.width, s.height).solveFromCommon(s.common) ?: return null
         val out = StringBuilder(s.grid.size + 1)
         out.append('S')
         for (value in matrix) out.append(if (value == BLOCK) '1' else '0')
@@ -994,24 +1000,24 @@ object Pattern : Game {
         }
 
         /** `solve_puzzle(state, NULL, ...)`: the answer, or null. */
-        fun solveFromState(state: State): IntArray? {
+        fun solveFromCommon(common: Common): IntArray? {
             matrix.fill(UNKNOWN)
             for (i in 0 until wh) {
-                if (state.common.immutable[i]) matrix[i] = state.grid[i]
+                if (common.immutable[i]) matrix[i] = common.initialGrid[i]
             }
-            return if (solvePuzzle(state, null)) matrix else null
+            return if (solvePuzzle(common, null)) matrix else null
         }
 
-        private fun solvePuzzle(state: State?, grid: IntArray?): Boolean {
+        private fun solvePuzzle(common: Common?, grid: IntArray?): Boolean {
             var maxH = 0
             var maxW = 0
 
             // The initial change counts choose which line to examine first.
             for (i in 0 until h) {
                 val rowlen: Int
-                if (state != null) {
-                    copyClues(state.common, w + i)
-                    rowlen = state.common.rowlen[w + i]
+                if (common != null) {
+                    copyClues(common, w + i)
+                    rowlen = common.rowlen[w + i]
                 } else {
                     rowlen = Pattern.computeRowdata(clueScratch, grid!!, i * w, w, 1)
                 }
@@ -1036,9 +1042,9 @@ object Pattern : Game {
 
             for (i in 0 until w) {
                 val rowlen: Int
-                if (state != null) {
-                    copyClues(state.common, i)
-                    rowlen = state.common.rowlen[i]
+                if (common != null) {
+                    copyClues(common, i)
+                    rowlen = common.rowlen[i]
                 } else {
                     rowlen = Pattern.computeRowdata(clueScratch, grid!!, i, h, w)
                 }
@@ -1065,9 +1071,9 @@ object Pattern : Game {
                 while (maxH != 0 && maxH >= maxW) {
                     for (i in 0 until h) {
                         if (changedH[i] >= maxH) {
-                            if (state != null) {
-                                copyClues(state.common, w + i)
-                                clueScratch[state.common.rowlen[w + i]] = 0
+                            if (common != null) {
+                                copyClues(common, w + i)
+                                clueScratch[common.rowlen[w + i]] = 0
                             } else {
                                 clueScratch[Pattern.computeRowdata(clueScratch, grid!!, i * w, w, 1)] = 0
                             }
@@ -1084,9 +1090,9 @@ object Pattern : Game {
                 while (maxW != 0 && maxW >= maxH) {
                     for (i in 0 until w) {
                         if (changedW[i] >= maxW) {
-                            if (state != null) {
-                                copyClues(state.common, i)
-                                clueScratch[state.common.rowlen[i]] = 0
+                            if (common != null) {
+                                copyClues(common, i)
+                                clueScratch[common.rowlen[i]] = 0
                             } else {
                                 clueScratch[Pattern.computeRowdata(clueScratch, grid!!, i, h, w)] = 0
                             }
@@ -1594,7 +1600,7 @@ object Pattern : Game {
             }
         } else {
             val text = StringBuilder()
-            val spaces = if (rowlen > tlborder(state.width)) "   " else "  "
+            val spaces = if (rowlen > tlborder(state.width)) " " else "  "
             for (j in 0 until rowlen) {
                 if (j > 0) text.append(spaces)
                 text.append(state.common.rowdata[base + j])

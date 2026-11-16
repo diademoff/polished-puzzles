@@ -1081,7 +1081,9 @@ Notes:
 
   `PatternGameTest` compares the move grammar, the left and right
   cycles, the drag rules, the cursor keys, the immutable select, the
-  no-op win, the real win, undo, redo, restart, and the solve.
+  no-op win, the real win, undo, redo, restart, and the solve. A solve
+  after an `S` move comes from the decoded initial grid, as C reads
+  `states[0]`, and the crafted `MOVE S1100` save pins that.
   `PatternInputParityTest` sends real left and right cycles at tiles
   24, 48, 63, 82, and 100 and at the 781x781 and 411x702 letterboxes,
   plus the snapped and clamped drags, the middle rectangle, an inert
@@ -1094,7 +1096,8 @@ Notes:
 
   `PatternSaveTest` reads the six corpus saves byte for byte and
   reloads them in C with the same id, status, undo, redo, and text.
-  `PatternTraceTest` compares the five frozen traces, a cold loaded
+  `PatternTraceTest` compares the five frozen traces, a dense row with
+  the one-space separator, a cold loaded
   state, the cursor ring and guided clues, a `COL_ERROR` clue, a
   completed frame, the warm path, sized traces at tiles 48, 63, 82,
   and 100, and the 411x702 letterbox. No trace has a blitter, a status

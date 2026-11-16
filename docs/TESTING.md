@@ -1467,7 +1467,9 @@ items:
   right cycles, the drag snap and the clamp, the middle rectangle, the
   immutable select, the no-op win, the real win, the sticky completion,
   undo, redo, restart, the solve with and without `AUXINFO`, the
-  reachable solver failure, `currentKeyLabel`, and `requestKeys`.
+  reachable solver failure, the solve of a crafted `MOVE S1100` save
+  that must come from the decoded initial grid and not the played grid,
+  `currentKeyLabel`, and `requestKeys`.
 - `PatternSaveTest` is strict for the save text. It reads the six
   corpus saves, rewrites them byte for byte, and reloads them in C with
   the same id, status, undo, redo, and text. `PARAMS` and `CPARAMS` are
@@ -1477,7 +1479,8 @@ items:
   suffix description with all cells immutable. No save has a `UI`
   record. `default.sgtp` and `15x15.sgtp` are the same file.
 - `PatternTraceTest` is strict. It compares the five frozen traces and
-  the oracle `traceNew` for every preset, a cold loaded state, a
+  the oracle `traceNew` for every preset, a dense row whose five clues
+  use the one-space separator, a cold loaded state, a
   visible cursor with the two `COL_CURSOR` polygons and the two guided
   clue colours, a `COL_ERROR` clue, the completed `2x2` frame, the warm
   path after a press, a release, a cursor key, and a win, sized traces

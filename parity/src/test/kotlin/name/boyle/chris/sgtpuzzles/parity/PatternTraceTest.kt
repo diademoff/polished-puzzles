@@ -4,6 +4,7 @@ import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.Pattern
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.Text
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -117,6 +118,30 @@ class PatternTraceTest {
                 )
             }
         }
+
+    @Test
+    fun `a dense row uses the single-space separator`() = OracleClient().use { oracle ->
+        // `TLBORDER(10)` is 4. The row with five clues at seed "" is
+        // dense, so C shortens the separator from two spaces to one.
+        val expected = clueTextOps(
+            TraceNormalizer.normalize(oracle.traceNew("pattern", "10x10", ""), upstream()),
+        )
+        val actual = clueTextOps(
+            TraceNormalizer.normalize(
+                KotlinTraceSink.trace(Midend.newGame(Pattern, "10x10", "")),
+                upstream(),
+            ),
+        )
+        assertEquals(expected, actual)
+        assertTrue(
+            "the dense row is drawn with one space between clues",
+            actual.contains("text 114 330 1 13 258 3 \"1 1 1 1 1\""),
+        )
+        assertFalse(
+            "the dense row is not drawn with two spaces",
+            actual.contains("text 114 330 1 13 258 3 \"1  1  1  1  1\""),
+        )
+    }
 
     @Test
     fun `sized cold traces match at four tiles`() = OracleClient().use { oracle ->
@@ -450,6 +475,14 @@ class PatternTraceTest {
 
     private fun toCoord(p: Pattern.Params, cell: Int): Int =
         3 * TILE / 4 + TILE / 2 + TILE * (p.w / 5 + 2 + cell)
+
+    /** The clue `text` operations: the column clues and the row strings. */
+    private fun clueTextOps(trace: String): List<String> = trace.lines().filter { line ->
+        val align = line.split(' ').getOrNull(5)?.toIntOrNull()
+        line.startsWith("text ") &&
+            (align == (Text.ALIGN_HCENTRE or Text.ALIGN_VCENTRE) ||
+                align == (Text.ALIGN_HRIGHT or Text.ALIGN_VCENTRE))
+    }
 
     /** The centre of cell 0 of a 10x10 board at [tile]. */
     private fun coord(tile: Int, cell: Int): Int =

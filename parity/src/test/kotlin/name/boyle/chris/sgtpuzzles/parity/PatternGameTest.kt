@@ -411,6 +411,31 @@ class PatternGameTest {
     }
 
     @Test
+    fun `a solve uses the decoded initial grid, not the played one`() =
+        OracleClient().use { oracle ->
+            // `S1100` replaces the grid of the loaded state. C solves
+            // `states[0]`, the decoded suffix board, so the answer is
+            // the suffix answer; the played grid would give `S1100`.
+            val save = saveText("2x2", "1/1//2,aaAA", listOf("MOVE" to "S1100"))
+            val expected = oracle.solve(save)
+            assertEquals(1, expected.status)
+            assertEquals(
+                listOf("S0011"),
+                SgtpSave.parse(expected.state).values("SOLVE"),
+            )
+
+            val actual = midend(save)
+            assertTrue("the crafted save solves", actual.solve())
+            assertEquals(1, actual.status())
+            assertEquals(
+                listOf("S0011"),
+                actual.serialise().values("SOLVE"),
+            )
+            assertEquals(expected.id, actual.id())
+            assertEquals(expected.state, actual.serialise().serialise())
+        }
+
+    @Test
     fun `requestKeys is arrow mode 3 with no labels`() = OracleClient().use { oracle ->
         for (params in Pattern.presets().map { it.params }) {
             val state = oracle.newGame("pattern", params, SEED).state
