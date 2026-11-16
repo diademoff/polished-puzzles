@@ -317,7 +317,17 @@ object Divvy {
      * The palisade generator uses the same helper for its winnow order.
      */
     internal fun shuffle(array: IntArray, random: RandomState) {
-        var i = array.size
+        shuffle(array, array.size, random)
+    }
+
+    /**
+     * The same `shuffle`, but over the first [count] entries only. The C
+     * caller passes the element count separately when the array is
+     * larger than the list it shuffles, as `laydomino.c` does.
+     */
+    internal fun shuffle(array: IntArray, count: Int, random: RandomState) {
+        require(count in 0..array.size) { "shuffle count is out of range: $count" }
+        var i = count
         while (i-- > 1) {
             val j = random.upto((i + 1).toLong()).toInt()
             if (j != i) {

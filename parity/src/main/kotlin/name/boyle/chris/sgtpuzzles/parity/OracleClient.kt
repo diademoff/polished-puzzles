@@ -379,6 +379,39 @@ class OracleClient(
         )
     }
 
+    data class LayDominoState(
+        val grid: List<Int>,
+        val preallocGrid: List<Int>,
+        val attempts: Int,
+        val state: String,
+        val preallocState: String,
+    )
+
+    /**
+     * Runs `domino_layout` and, from the same seed, `domino_layout_prealloc`.
+     * The response carries both grids, the attempt count (always one,
+     * because laydomino never retries), and the encoded state after each
+     * call.
+     */
+    fun layDomino(
+        w: Int,
+        h: Int,
+        seed: String? = null,
+        state: String? = null,
+    ): LayDominoState {
+        val fields = linkedMapOf<String, Any>("op" to "laydomino", "w" to w, "h" to h)
+        if (seed != null) fields["seed"] = seed
+        if (state != null) fields["state"] = state
+        val response = request(fields)
+        return LayDominoState(
+            grid = response.numberList("grid").map { it.toInt() },
+            preallocGrid = response.numberList("preallocGrid").map { it.toInt() },
+            attempts = response.number("attempts").toInt(),
+            state = response.string("state"),
+            preallocState = response.string("preallocState"),
+        )
+    }
+
     /** Runs a `tdq.c` script and returns every removal, including -1. */
     fun tdq(n: Int, ops: String): List<Int> =
         request(mapOf("op" to "tdq", "n" to n, "ops" to ops))

@@ -41,6 +41,7 @@
  *   {"op":"findloop","n":6,"edges":"0-1 1-2 2-0 3-4"}
  *   {"op":"dsf","kind":"normal","n":10,"ops":"m 0 1 m 2 3"}
  *   {"op":"divvy","w":5,"h":5,"k":5,"seed":"12345"}
+ *   {"op":"laydomino","w":6,"h":5,"seed":"12345"}
  *   {"op":"tdq","n":10,"ops":"a 3 a 1 r f"}
  *   {"op":"sort","values":"5 3 9 1","mode":"asc"}
  *   {"op":"combi","r":2,"n":5}
@@ -1702,6 +1703,94 @@ static void do_divvy(const jobject *req)
     random_free(rs);
 }
 
+/*
+ * domino_layout from laydomino.c. A request carries w, h and either a
+ * seed or an encoded state. The response carries the layout, the same
+ * layout from domino_layout_prealloc with a fresh state from the same
+ * seed, the number of layout attempts, and the encoded state after each
+ * call.
+ *
+ * laydomino has no retry and no acceptance test: one call always
+ * returns a grid, so the attempt count is always one. The field exists
+ * so the parity test compares the same response shape as divvy, and so
+ * a future caller that does retry cannot silently reuse this shape.
+ */
+#define LAYDOMINO_MAX_CELLS 1000000
+#define LAYDOMINO_ATTEMPTS 1
+
+static void do_laydomino(const jobject *req)
+{
+    const char *seed = field_string(req, "seed");
+    const char *state = field_string(req, "state");
+    long w = 0, h = 0;
+    random_state *rs;
+    int *grid = NULL, *grid2 = NULL, *list = NULL, *prealloc = NULL;
+    char *encoded = NULL, *prealloc_encoded = NULL;
+    int wh, i;
+
+    if (!field_int(req, "w", &w) || !field_int(req, "h", &h)) {
+        put_error("laydomino needs w and h");
+        return;
+    }
+    if (w < 1 || h < 1) {
+        put_error("laydomino needs positive w and h");
+        return;
+    }
+    if (w > LAYDOMINO_MAX_CELLS / h) {
+        put_error("laydomino needs w*h <= 1000000");
+        return;
+    }
+    if (!state && !seed) {
+        put_error("laydomino needs a seed or a state");
+        return;
+    }
+
+    wh = (int)(w * h);
+
+    if (state)
+        rs = random_state_decode(state);
+    else
+        rs = random_new(seed, (int)strlen(seed));
+    grid = domino_layout((int)w, (int)h, rs);
+    encoded = random_state_encode(rs);
+    random_free(rs);
+
+    /*
+     * The prealloc entry point must agree with the allocating one. A
+     * second call from the same seed also proves that both paths draw
+     * the same stream.
+     */
+    if (state)
+        rs = random_state_decode(state);
+    else
+        rs = random_new(seed, (int)strlen(seed));
+    prealloc = snewn(wh, int);
+    grid2 = snewn(wh, int);
+    list = snewn(2 * wh, int);
+    domino_layout_prealloc((int)w, (int)h, rs, prealloc, grid2, list);
+    prealloc_encoded = random_state_encode(rs);
+    random_free(rs);
+
+    printf("{\"ok\":true,\"attempts\":%d,\"grid\":[", LAYDOMINO_ATTEMPTS);
+    for (i = 0; i < wh; i++)
+        printf("%s%d", i ? "," : "", grid[i]);
+    fputs("],\"preallocGrid\":[", stdout);
+    for (i = 0; i < wh; i++)
+        printf("%s%d", i ? "," : "", prealloc[i]);
+    fputs("],\"state\":", stdout);
+    put_json_string(encoded);
+    fputs(",\"preallocState\":", stdout);
+    put_json_string(prealloc_encoded);
+    fputs("}\n", stdout);
+
+    sfree(grid);
+    sfree(grid2);
+    sfree(list);
+    sfree(prealloc);
+    sfree(encoded);
+    sfree(prealloc_encoded);
+}
+
 static void do_tdq(const jobject *req)
 {
     const char *ops = field_string(req, "ops");
@@ -2839,6 +2928,8 @@ int main(int argc, char **argv)
             do_dsf(&req);
         } else if (!strcmp(op, "divvy")) {
             do_divvy(&req);
+        } else if (!strcmp(op, "laydomino")) {
+            do_laydomino(&req);
         } else if (!strcmp(op, "tdq")) {
             do_tdq(&req);
         } else if (!strcmp(op, "sort")) {

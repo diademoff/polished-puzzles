@@ -348,6 +348,11 @@ Engine tests:
   `divvy_rectangle` over rectangles, paths, `k = 1`, `k = 2`, `k = w*h`,
   and seeds that need a retry. `DivvyTest` pins fixed vectors and checks
   that every region is a connected k-omino.
+- `LayDominoParityTest` compares the laid grid, the attempt count, and
+  the encoded generator state of the direct `laydomino` oracle op for
+  even and odd areas, one-row boards, and seeds that need several
+  repair passes. `LayDominoTest` pins fixed vectors, the valid-tiling
+  invariant over a sweep, and the invalid input guards.
 - `PegsTest` checks the pegs parameter quirks, the state ownership, the
   text format, the key label, the loose move grammar, the lax
   completion rule, the cursor scan order, and the generator's retry
@@ -1138,6 +1143,11 @@ Engine tests:
   for the palisade presets, path rectangles, `k = 1`, `k = 2`, and a
   retry seed; `DivvyTest` pins the fixed vectors, the invalid input
   guards, and the connected-k-omino invariant.
+- `LayDominoParityTest` compares the grid, attempt count, and encoded
+  generator state of the direct `laydomino` oracle op for even and odd
+  areas, one-row boards, and seeds that need several repair passes;
+  `LayDominoTest` pins the fixed vectors, the invalid input guards, the
+  repair-pass counts, and the valid-tiling invariant.
 - `PalisadeTest` is the engine test. It pins the parameters and
   presets, the decode quirks, the validation order and the D-007 area
   guard, the frozen description vectors, the run encoder, the
