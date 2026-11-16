@@ -52,13 +52,7 @@ internal object AuxInfo {
         }
         val bytes = ByteArray(size)
         for (i in 0 until size * 2) {
-            val c = text[i]
-            val value = when (c) {
-                in '0'..'9' -> c - '0'
-                in 'a'..'f' -> c - 'a' + 10
-                in 'A'..'F' -> c - 'A' + 10
-                else -> 0
-            }
+            val value = hexNibble(text[i])
             bytes[i / 2] = (bytes[i / 2].toInt() or
                 (value shl (4 * (1 - (i % 2))))).toByte()
         }
@@ -66,22 +60,90 @@ internal object AuxInfo {
         return bytes
     }
 
+    /**
+     * `obfuscate_bitmap` plus the nibble encoding of `describe_layout`:
+     * a bitmap of exactly [bits] bits, written as `(bits + 3) / 4` hex
+     * digits. The low nibble of the last partial byte is dropped, as
+     * the C encoder works to nibble granularity because the mask keeps
+     * the bit count. The bytes are obfuscated in place, as C does, so
+     * the caller must pass an array it owns.
+     *
+     * When [bits] is a multiple of eight the output is the same string
+     * as [encodeBytes] for the same bytes.
+     */
+    fun encodeMask(bytes: ByteArray, bits: Int): String {
+        require(bits >= 0) { "bit count is negative: $bits" }
+        require(bytes.size * 8 >= bits) {
+            "bitmap has ${bytes.size * 8} bits, need $bits"
+        }
+        obfuscate(bytes, bits, false)
+        return buildString((bits + 3) / 4) {
+            for (i in 0 until (bits + 3) / 4) {
+                val value = bytes[i / 2].toInt() and 0xFF
+                append(HEX[if (i % 2 == 0) value ushr 4 else value and 0xF])
+            }
+        }
+    }
+
+    /**
+     * The decode direction of [encodeMask]: `hex2bin` at nibble
+     * granularity plus the decode of `obfuscate_bitmap`, for exactly
+     * [bits] bits. The result is `(bits + 7) / 8` bytes. A non-hex
+     * character is a zero nibble, as C reads it.
+     */
+    fun decodeMask(text: String, bits: Int): ByteArray {
+        require(bits >= 0) { "bit count is negative: $bits" }
+        val nibbles = (bits + 3) / 4
+        require(text.length >= nibbles) {
+            "hex mask is too short for $bits bits: '${text}'"
+        }
+        val bytes = ByteArray((bits + 7) / 8)
+        for (i in 0 until nibbles) {
+            val value = hexNibble(text[i])
+            bytes[i / 2] = (bytes[i / 2].toInt() or
+                (value shl (4 * (1 - (i % 2))))).toByte()
+        }
+        obfuscate(bytes, bits, true)
+        return bytes
+    }
+
+    /** One hex digit as 0..15. A non-hex character is zero, as `hex2bin` reads it. */
+    private fun hexNibble(c: Char): Int = when (c) {
+        in '0'..'9' -> c - '0'
+        in 'a'..'f' -> c - 'a' + 10
+        in 'A'..'F' -> c - 'A' + 10
+        else -> 0
+    }
+
     private fun obfuscate(bitmap: ByteArray, bits: Int, decode: Boolean) {
         val bytes = (bits + 7) / 8
         val firstHalf = bytes / 2
         val secondHalf = bytes - firstHalf
 
-        if (!decode) {
-            mask(bitmap, firstHalf, secondHalf, 0, firstHalf)
-            mask(bitmap, 0, firstHalf, firstHalf, secondHalf)
-        } else {
-            mask(bitmap, 0, firstHalf, firstHalf, secondHalf)
-            mask(bitmap, firstHalf, secondHalf, 0, firstHalf)
+        /*
+         * C masks the pad bits of the last byte after each step, so the
+         * second step reads the cleared byte as its seed. The clear is
+         * a no-op for a whole number of bytes, and it is required for a
+         * bitmap such as the mines layout, whose bit count is the board
+         * area.
+         */
+        fun clearPad() {
+            if (bits % 8 != 0) {
+                bitmap[bits / 8] = (bitmap[bits / 8].toInt() and
+                    (0xFF and (0xFF00 ushr (bits % 8)))).toByte()
+            }
         }
 
-        if (bits % 8 != 0) {
-            bitmap[bits / 8] = (bitmap[bits / 8].toInt() and
-                (0xFF and (0xFF00 ushr (bits % 8)))).toByte()
+        if (!decode) {
+            mask(bitmap, firstHalf, secondHalf, 0, firstHalf)
+            clearPad()
+            mask(bitmap, 0, firstHalf, firstHalf, secondHalf)
+            clearPad()
+        } else {
+            mask(bitmap, 0, firstHalf, firstHalf, secondHalf)
+            clearPad()
+            mask(bitmap, firstHalf, secondHalf, 0, firstHalf)
+            clearPad()
         }
     }
 

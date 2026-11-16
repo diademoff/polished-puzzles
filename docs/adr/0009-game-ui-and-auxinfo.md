@@ -149,3 +149,42 @@ and `NSTATES`. The save order is therefore `AUXINFO`, `UI`, `TIME`,
 fixed and not an ordering preference, because the record stream is
 compared byte for byte against C. `Midend.fromSave` reads `TIME` into
 `Midend.elapsed`; a save without the record loads at 0.
+
+## Amendment: the nibble mask of a bitmap description (S6)
+
+- **Date:** 2026-11-16
+
+`mines` stores its layout as a bitmap of exactly the board area, not as
+a whole number of bytes. `describe_layout` obfuscates the bitmap and
+hex-encodes it at nibble granularity (`mines.c:1976-2023`); `new_game`
+reads the same form. `AuxInfo` could only encode whole bytes, so the
+seam had no way to produce or read such a description.
+
+1. **`AuxInfo.encodeMask(bytes, bits)`** obfuscates a bitmap of exactly
+   [bits] bits and writes `(bits + 3) / 4` hex digits, taking the high
+   nibble first. **`AuxInfo.decodeMask(text, bits)`** allocates
+   `(bits + 7) / 8` bytes, reads the same nibbles, and de-obfuscates
+   them. A non-hex character is a zero nibble, as `hex2bin` reads it.
+   The bytes are obfuscated in place, as C does, so the caller owns the
+   array. When [bits] is a multiple of eight the text is identical to
+   `encodeBytes`, and the two decoders agree.
+
+2. **`obfuscate` clears the pad bits after each step, as C does.**
+   `obfuscate_bitmap` masks the pad bits of the last byte after each of
+   its two steps (`misc.c:137-139`), so the second step reads the
+   cleared byte as its seed. The port cleared them once after both
+   steps. That is the same result for a whole number of bytes, which is
+   why no `AUXINFO` value changed, and it is wrong for a partial last
+   byte: a 9-bit bitmap decoded to the wrong first byte. The fix
+   clears the pad bits in both places, so a mines layout round-trips.
+
+3. **The description form is a game rule, not a save rule.** The seam
+   supplies the encoding only; the `m`,`u`, and `x,y` parts of the
+   text, the layout generator, and the bit order belong to the `mines`
+   port. `AuxInfoTest` pins the round trip at 1, 7, 8, 9, 63, 64, 65,
+   and 81 bits, the byte-for-byte agreement at 8, 16, and 64 bits, and
+   the zero value of a non-hex nibble.
+
+The save record that carries a description is `DESC`; the private
+counterpart is `PRIVDESC`, which ADR 0007 places directly after it.
+This amendment changes no `AUXINFO` value for an existing game.

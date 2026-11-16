@@ -525,3 +525,77 @@ so the time spent in the background does not enter the game time.
 `TimerTest` pins the two transitions, the accumulated time, the three
 prefix strings, both save directions, the position of `TIME`, and the
 untimed game.
+
+## Amendment: the public and private description (S6)
+
+- **Date:** 2026-11-16
+
+`mines` is the first game whose description is only a promise of a
+board until the first click. `open_square` generates the mine layout
+inside `execute_move` and calls `midend_supersede_game_desc`
+(`mines.c:2163`). The midend then replaces `DESC`, writes the masked
+layout as `PRIVDESC`, and a load rebuilds state 0 from `PRIVDESC`
+before it applies the public text with `set_public_desc`. The seam had
+none of this, and no game could keep its own description across a save.
+
+1. **A game describes a state.** `Game.publicDesc(state)` returns the
+   new public text, or null when the description does not change.
+   `Game.privateDesc(state)` returns the `PRIVDESC` value, or null.
+   `Game.setPublicDesc(state, text)` applies the public text to a state
+   that was rebuilt from `PRIVDESC` and returns the result. All three
+   default to no change, so every ported game keeps its current save
+   text and every `.sgtp` file without `PRIVDESC` loads as before.
+
+2. **The midend supersedes after the move is appended.** The C game
+   calls the midend from inside `execute_move`; the seam keeps a game
+   pure and asks it after the move. `processKey` reads
+   `game.publicDesc(newState)` after it appends the `MOVE` entry and
+   calls the game's `changedState`. A null text, or the text the midend
+   already holds, changes nothing. Otherwise the midend replaces
+   `desc` and `privDesc` together, as `midend_supersede_game_desc`
+   replaces both strings. `desc` and `privDesc` have private setters,
+   so only the midend changes them. `id()` and `restart()` keep using
+   the public `desc`.
+
+3. **The record order is `DESC`, `PRIVDESC`, `AUXINFO`.** `serialise`
+   writes `PRIVDESC` directly after `DESC`, and only when it is
+   non-null, which is the C order (`midend.c:2297-2298`). The `UI` and
+   `TIME` records keep their positions after `AUXINFO` (ADR 0009), so a
+   game that writes all of them has the order `DESC`, `PRIVDESC`,
+   `AUXINFO`, `UI`, `TIME`, `NSTATES`.
+
+4. **A load rebuilds state 0 from the private description.**
+   `fromSave` validates `PRIVDESC` with `validateDesc` when the record
+   is present, then builds state 0 with
+   `Game.newState(currentParams, privDesc)` and applies the public
+   `DESC` with `Game.setPublicDesc`. Without the record it builds state
+   0 from `DESC`, as before. The `MOVE`, `SOLVE`, and `RESTART` records
+   replay on the rebuilt state, and the stored `DESC` and `PRIVDESC`
+   are written back unchanged. The private text is not validated
+   against the public one: `mines` masks the layout, so the two texts
+   describe the same board in different forms.
+
+5. **The `flags` word is a game property.** `Game.flags` mirrors
+   `thegame.flags` and defaults to 0. The seam defines
+   `SOLVE_ANIMATES` (bit 9), `REQUIRE_RBUTTON` (bit 10), and
+   `REQUIRE_NUMPAD` (bit 11), and `Game.buttonBeatsBit(x, y)` is the
+   `BUTTON_BEATS` macro. `Game.buttonBeats(x, y)` is the priority
+   query, `(flags & BUTTON_BEATS(x, y)) != 0`. `Midend.buttonBeats`
+   reads the game's `flags` word directly, so a test game that
+   implements `Game` by delegation cannot hide the flags of its own
+   declaration; `mines` declares
+   `BUTTON_BEATS(LEFT_BUTTON, RIGHT_BUTTON) | REQUIRE_RBUTTON`, and an
+   overlapping right press is ignored while the left button is held.
+   The input canonicalisation amendment above recorded the hook when no
+   game used it; this closes that item. The seam reads no other flag
+   bit, because `SOLVE_ANIMATES`, `REQUIRE_RBUTTON`, and
+   `REQUIRE_NUMPAD` change only shell behavior and the Android shell
+   has no use for them yet.
+
+`SupersedeDescTest` pins the supersede, the two records and their
+order, the changed `id()`, the restart from the public text, the
+state-0 rebuild with the public overlay, the unchanged save without
+`PRIVDESC`, and the button priority against a flagless game. The test
+game delegates to `fifteen`, so the seam is checked without a mines
+port. `mines` still needs its own generator, layout decoder, drawing,
+and parity matrix.

@@ -56,4 +56,64 @@ class AuxInfoTest {
         val reparsed = Midend.fromSave(Fifteen, SgtpSave.parse(text))
         assertEquals(highHex, reparsed.serialise().value("AUXINFO"))
     }
+
+    /**
+     * A mask that covers [bits] bits. The unused low bits of the last
+     * byte are zero, as a game writes them before it obfuscates.
+     */
+    private fun bitmap(bits: Int): ByteArray {
+        val bytes = ByteArray((bits + 7) / 8) { i -> ((i * 37 + 11) and 0xFF).toByte() }
+        if (bits % 8 != 0) {
+            bytes[bits / 8] = (bytes[bits / 8].toInt() and
+                (0xFF and (0xFF00 ushr (bits % 8)))).toByte()
+        }
+        return bytes
+    }
+
+    @Test
+    fun `a mask round-trips at every byte and nibble boundary`() {
+        for (bits in listOf(1, 7, 8, 9, 63, 64, 65, 81)) {
+            val source = bitmap(bits)
+            val text = AuxInfo.encodeMask(source.copyOf(), bits)
+
+            assertEquals(
+                (bits + 3) / 4,
+                text.length,
+                "a $bits-bit mask is nibble-encoded, not byte-encoded",
+            )
+            assertContentEquals(
+                source,
+                AuxInfo.decodeMask(text, bits),
+                "the $bits-bit mask must round-trip",
+            )
+            assertEquals(
+                (bits + 7) / 8,
+                AuxInfo.decodeMask(text, bits).size,
+                "a $bits-bit mask decodes into (bits + 7) / 8 bytes",
+            )
+        }
+    }
+
+    @Test
+    fun `a mask of whole bytes matches the byte encoding`() {
+        for (bits in listOf(8, 16, 64)) {
+            val source = bitmap(bits)
+            val text = AuxInfo.encodeMask(source.copyOf(), bits)
+
+            assertEquals(AuxInfo.encodeBytes(source.copyOf()), text)
+            assertContentEquals(source, AuxInfo.decodeBytes(text, bits / 8))
+            assertContentEquals(
+                AuxInfo.decodeBytes(text, bits / 8),
+                AuxInfo.decodeMask(text, bits),
+            )
+        }
+    }
+
+    @Test
+    fun `a non-hex nibble decodes as zero`() {
+        assertContentEquals(
+            AuxInfo.decodeMask("00000000", 32),
+            AuxInfo.decodeMask("zzZZz!z?", 32),
+        )
+    }
 }

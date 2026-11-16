@@ -39,6 +39,44 @@ interface Game {
      */
     val isTimed: Boolean get() = false
 
+    /**
+     * The upstream `flags` word: the `BUTTON_BEATS` priority bits and
+     * the `SOLVE_ANIMATES`, `REQUIRE_RBUTTON`, and `REQUIRE_NUMPAD`
+     * bits. The seam reads only the button priority; the other bits
+     * describe shell features and have no engine behavior yet. Every
+     * ported game keeps the default.
+     */
+    val flags: Int get() = 0
+
+    /**
+     * `me->ourgame->flags & BUTTON_BEATS(x, y)`: true when this game
+     * gives button [x] priority over button [y], so an overlapping
+     * press of [y] is ignored while [x] is held. A game that declares
+     * the priority sets [buttonBeatsBit] in [flags]; `mines` is the
+     * first such game, with `BUTTON_BEATS(LEFT_BUTTON, RIGHT_BUTTON)`.
+     * A game with no priority returns false for every pair.
+     */
+    fun buttonBeats(x: Int, y: Int): Boolean =
+        (flags and buttonBeatsBit(x, y)) != 0
+
+    companion object {
+        /** `SOLVE_ANIMATES`: the shell animates a solve. */
+        const val SOLVE_ANIMATES = 1 shl 9
+
+        /** `REQUIRE_RBUTTON`: the game needs a right-button emulation. */
+        const val REQUIRE_RBUTTON = 1 shl 10
+
+        /** `REQUIRE_NUMPAD`: the game needs numeric input. */
+        const val REQUIRE_NUMPAD = 1 shl 11
+
+        /**
+         * The `BUTTON_BEATS(x, y)` bit for [flags], as the C macro
+         * computes it: `1 << ((x - LEFT_BUTTON) * 3 + (y - LEFT_BUTTON))`.
+         */
+        fun buttonBeatsBit(x: Int, y: Int): Int =
+            1 shl ((x - Buttons.LEFT_BUTTON) * 3 + (y - Buttons.LEFT_BUTTON))
+    }
+
     fun defaultParams(): Params
 
     /** The presets in menu order. The title is the menu label. */
@@ -67,6 +105,42 @@ interface Game {
 
     /** Applies one move, or returns null when the move is invalid. */
     fun executeMove(state: State, move: String): State?
+
+    /**
+     * The public description of [state], or null when the game does not
+     * replace its description. It is the game half of
+     * `midend_supersede_game_desc`: a move can resolve a pending
+     * description, and the midend then stores the new public text in
+     * `DESC` and the private text from [privateDesc] in `PRIVDESC`.
+     * `mines` is the first consumer: the first click generates the mine
+     * layout, and the layout becomes the public description.
+     *
+     * The default null leaves the description from the generation or
+     * the save file unchanged, so every existing game is unaffected.
+     * The text must be printable ASCII, as the save writer requires.
+     */
+    fun publicDesc(state: State): String? = null
+
+    /**
+     * The private description that belongs to [state], or null when the
+     * game has none. It is written as `PRIVDESC` next to the public
+     * description, and a load rebuilds state 0 from it before it applies
+     * [setPublicDesc]. Only a game whose [publicDesc] resolves a pending
+     * description returns a value here.
+     */
+    fun privateDesc(state: State): String? = null
+
+    /**
+     * `set_public_desc`: applies the public description [text] to a
+     * state that was rebuilt from `PRIVDESC`. The load path calls it
+     * after `newState`, so the game can restore the part of the
+     * description that the private text omits, such as the first-click
+     * coordinate of `mines`.
+     *
+     * The default returns [state] unchanged, so a game without a
+     * private description never needs it.
+     */
+    fun setPublicDesc(state: State, text: String): State = state
 
     /** `midend_status`: 1 win, -1 lose, 0 open. */
     fun status(state: State): Int

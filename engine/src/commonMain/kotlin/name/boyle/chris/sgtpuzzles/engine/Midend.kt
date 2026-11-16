@@ -21,7 +21,8 @@ class Midend private constructor(
     val params: Game.Params,
     val currentParams: Game.Params,
     val seed: String?,
-    val desc: String,
+    initialDesc: String,
+    initialPrivDesc: String? = null,
     val auxInfo: String?,
     private val entries: MutableList<Entry>,
     var statePos: Int,
@@ -35,6 +36,26 @@ class Midend private constructor(
     data class Entry(val state: Game.State, val move: String?, val type: MoveType)
 
     val state: Game.State get() = entries[statePos - 1].state
+
+    /**
+     * The current public description, the `DESC` save record and the
+     * description in [id]. A move can replace it through
+     * `midend_supersede_game_desc`: [processKey] reads
+     * [Game.publicDesc] after it appends the move, and a game that
+     * resolves a pending description returns a new one. The getter is
+     * public and the setter is private, so only the midend changes it.
+     */
+    var desc: String = initialDesc
+        private set
+
+    /**
+     * The private description, the `PRIVDESC` save record, or null when
+     * the game has none. It is set together with [desc] from
+     * [Game.privateDesc]. A load rebuilds state 0 from it and then
+     * applies the public [desc] with [Game.setPublicDesc].
+     */
+    var privDesc: String? = initialPrivDesc
+        private set
 
     /**
      * The frontend state, mirroring upstream `game_ui`. It is not in
@@ -458,6 +479,7 @@ class Midend private constructor(
                     entries += Entry(next, result.text, MoveType.MOVE)
                     statePos++
                     if (game.changedState(ui, previous, next)) completedEvent = true
+                    supersedeDesc(next)
                     return KeyOutcome.SomeEffect
                 }
 
@@ -499,15 +521,32 @@ class Midend private constructor(
     }
 
     /**
-     * The `BUTTON_BEATS` priority of `game.flags`. A game may declare
-     * that one held button beats another, so an overlapping press of the
-     * weaker button is ignored instead of released. No ported game
-     * declares the flag yet; `mines` will be the first, with
-     * `BUTTON_BEATS(x, y) = 1 << ((x - LEFT_BUTTON) * 3 + (y - LEFT_BUTTON))`.
-     * The future flag check belongs here, not in [processKey].
+     * `midend_supersede_game_desc` for a move: a game can resolve a
+     * pending description, and the midend then replaces `DESC` and
+     * `PRIVDESC`. The C game calls the midend from inside
+     * `execute_move`; the seam keeps the game pure and asks it for the
+     * new text after the move is appended. A null public text, or the
+     * text the midend already holds, changes nothing. The save writer
+     * rejects non-printable text, as the C assertion does.
      */
-    @Suppress("UNUSED_PARAMETER")
-    private fun buttonBeats(pressed: Int, button: Int): Boolean = false
+    private fun supersedeDesc(newState: Game.State) {
+        val public = game.publicDesc(newState) ?: return
+        if (public == desc) return
+        desc = public
+        privDesc = game.privateDesc(newState)
+    }
+
+    /**
+     * The `BUTTON_BEATS` priority of `game.flags`: `flags &
+     * BUTTON_BEATS(pressed, button)`. A game may declare that one held
+     * button beats another, so an overlapping press of the weaker
+     * button is ignored instead of released. The midend reads the flags
+     * word itself rather than [Game.buttonBeats], so a test game that
+     * implements `Game` by delegation cannot hide the flags of its own
+     * declaration. `mines` is the first game that sets the bit.
+     */
+    private fun buttonBeats(pressed: Int, button: Int): Boolean =
+        (game.flags and Game.buttonBeatsBit(pressed, button)) != 0
 
     /** `min(ret, ret2)`: the outcome that shows the most effect. */
     private fun minOutcome(a: KeyOutcome, b: KeyOutcome): KeyOutcome =
@@ -641,6 +680,9 @@ class Midend private constructor(
         records += SaveRecord("CPARAMS", game.encodeParams(currentParams, true))
         seed?.let { records += seedRecord(it) }
         records += SaveRecord("DESC", desc)
+        // `midend_supersede_game_desc` writes the private description
+        // directly after the public one and before `AUXINFO`.
+        privDesc?.let { records += SaveRecord("PRIVDESC", it) }
         auxInfo?.let { records += SaveRecord("AUXINFO", AuxInfo.encode(it)) }
         // `encode_ui` writes its record only when it has one, between
         // `AUXINFO` and `NSTATES`, as `midend_serialise` does.
@@ -719,7 +761,7 @@ class Midend private constructor(
                 params = params,
                 currentParams = currentParams,
                 seed = seed,
-                desc = generated.text,
+                initialDesc = generated.text,
                 auxInfo = generated.auxInfo,
                 entries = mutableListOf(Entry(state, null, MoveType.NEWGAME)),
                 statePos = 1,
@@ -750,7 +792,7 @@ class Midend private constructor(
                 params = params,
                 currentParams = currentParams,
                 seed = null,
-                desc = desc,
+                initialDesc = desc,
                 auxInfo = null,
                 entries = mutableListOf(
                     Entry(game.newState(currentParams, desc), null, MoveType.NEWGAME),
@@ -788,14 +830,33 @@ class Midend private constructor(
                 "game description in save file is missing"
             }
             game.validateDesc(currentParams, desc)?.let { error("game description: $it") }
+            val privDesc = save.value("PRIVDESC")
+            if (privDesc != null) {
+                game.validateDesc(currentParams, privDesc)?.let {
+                    error("game private description: $it")
+                }
+            }
 
             val stateCount = requireNotNull(save.value("NSTATES")).toInt()
             require(stateCount > 0) { "state count is not positive" }
             val statePos = requireNotNull(save.value("STATEPOS")).toInt()
             require(statePos in 1..stateCount) { "state position is out of range" }
 
+            // C builds state 0 from `PRIVDESC` when the record is
+            // present, then applies the public description to it with
+            // `set_public_desc`. Without the record it builds the state
+            // from `DESC`, as a save from before S6 does.
+            val first = if (privDesc != null) {
+                game.setPublicDesc(
+                    game.newState(currentParams, privDesc),
+                    desc,
+                )
+            } else {
+                game.newState(currentParams, desc)
+            }
+
             val entries = ArrayList<Entry>(stateCount)
-            entries += Entry(game.newState(currentParams, desc), null, MoveType.NEWGAME)
+            entries += Entry(first, null, MoveType.NEWGAME)
 
             val history = save.records.filter {
                 it.key == "MOVE" || it.key == "SOLVE" || it.key == "RESTART"
@@ -832,7 +893,8 @@ class Midend private constructor(
                 params = params,
                 currentParams = currentParams,
                 seed = seed,
-                desc = desc,
+                initialDesc = desc,
+                initialPrivDesc = privDesc,
                 auxInfo = save.value("AUXINFO")?.let { AuxInfo.decode(it) },
                 entries = entries,
                 statePos = statePos,
