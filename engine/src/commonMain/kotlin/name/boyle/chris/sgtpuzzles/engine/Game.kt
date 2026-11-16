@@ -469,6 +469,22 @@ interface DrawSink {
     fun thickLine(x1: Int, y1: Int, x2: Int, y2: Int, thickness: Float, colour: Int)
 
     fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int)
+
+    /**
+     * `draw_thick_circle`: a circle with a [thickness] pixel outline.
+     * The centre, the radius, and the two colours keep the order of
+     * [circle]; the upstream `drawing_api` and the Android
+     * `ViewCallbacks.drawCircle` callback take the thickness first.
+     */
+    fun thickCircle(
+        cx: Int,
+        cy: Int,
+        radius: Int,
+        thickness: Float,
+        fillColour: Int,
+        outlineColour: Int,
+    )
+
     fun poly(points: IntArray, fillColour: Int, outlineColour: Int)
     fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String)
     fun clip(x: Int, y: Int, width: Int, height: Int)

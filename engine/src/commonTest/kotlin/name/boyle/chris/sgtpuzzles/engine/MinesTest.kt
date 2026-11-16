@@ -863,6 +863,14 @@ class MinesTest {
             colour: Int,
         ) {}
         override fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int) {}
+        override fun thickCircle(
+            cx: Int,
+            cy: Int,
+            radius: Int,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {}
         override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {}
         override fun text(
             x: Int,

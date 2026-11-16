@@ -442,6 +442,14 @@ class RangeTraceTest {
         ) {
             ops += "circle $cx $cy $radius $fillColour $outlineColour"
         }
+        override fun thickCircle(
+            cx: Int,
+            cy: Int,
+            radius: Int,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {}
 
         override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {
             ops += "poly $fillColour $outlineColour ${points.size / 2} " +

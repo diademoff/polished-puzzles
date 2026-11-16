@@ -599,3 +599,47 @@ state-0 rebuild with the public overlay, the unchanged save without
 game delegates to `fifteen`, so the seam is checked without a mines
 port. `mines` still needs its own generator, layout decoder, drawing,
 and parity matrix.
+
+## Amendment: the thick circle primitive
+
+- **Date:** 2026-11-16
+
+`tracks` draws its sleepers with `draw_thick_circle`
+(`tracks.c:2658-2661`). The oracle already records the primitive,
+`TraceNormalizer` already accepts `thick_circle`, and the Android
+`drawing_api` already has the callback. This change adds the seam
+operation, not the game.
+
+1. **`DrawSink.thickCircle(cx, cy, radius, thickness, fillColour,
+   outlineColour)`** keeps the centre, the radius, and the two colours
+   of `DrawSink.circle`, so a game that has both primitives reads them
+   the same way. The thickness follows the radius in the seam; the
+   oracle and the Android callback take it first, so each sink places it
+   there. Upstream `draw_thick_circle` takes
+   `(thickness, cx, cy, radius, fillcolour, outlinecolour)`.
+
+2. **The trace sink copies `tr_draw_thick_circle`**
+   (`oracle.c:520-532`) field for field:
+   `{"op":"thick_circle","t":round(thickness*1000),"cx":..,"cy":..,
+   "r":..,"fill":..,"outline":..}`. The thickness, the centre, and the
+   radius are in thousandths, as `tc_milli` produces. The seam centre
+   and radius are already integers, so their milli fields are exact, and
+   the thickness rounds to the nearest thousandth as `lroundf` does. The
+   field order and the names are the oracle's; `TraceNormalizer` maps
+   them to `thick_circle t cx cy r fill outline`.
+
+3. **The engine forwards the primitive unchanged.** It adds the board
+   origin to the centre and calls
+   `viewCallbacks.drawCircle(thickness, cx+originX, cy+originY, radius,
+   outlineColour, fillColour)`, which is the call that `android.c:215-219`
+   makes through JNI. The radius and the thickness are not scaled by the
+   origin or by the zoom.
+
+4. **No ported game calls it.** Every frozen trace stays byte for byte
+   the same, and the parity suite pins that. The `tracks` port remains a
+   separate change with its own parity matrix.
+
+`ThickCircleTraceTest` pins the field order, the thousandths, the
+rounding, and the position inside the draw pair, and
+`KotlinGameEngineThickCircleTest` pins the origin offset and the
+callback argument order.

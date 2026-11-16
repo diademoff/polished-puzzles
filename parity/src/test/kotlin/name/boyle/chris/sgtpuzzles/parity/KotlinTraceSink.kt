@@ -101,6 +101,32 @@ class KotlinTraceSink : DrawSink {
         )
     }
 
+    /**
+     * `tr_draw_thick_circle` (`oracle.c:520-532`) records `t` first with
+     * the thickness in thousandths, then the centre, the radius, and the
+     * two colours. The oracle converts the thickness, the centre, and
+     * the radius with `tc_milli`; the seam's centre and radius are
+     * integers in game coordinates, so their milli fields are exact.
+     */
+    override fun thickCircle(
+        cx: Int,
+        cy: Int,
+        radius: Int,
+        thickness: Float,
+        fillColour: Int,
+        outlineColour: Int,
+    ) {
+        record(
+            "op" to JsonValue.Str("thick_circle"),
+            "t" to num((thickness * 1000.0f).roundToInt()),
+            "cx" to num(cx * 1000),
+            "cy" to num(cy * 1000),
+            "r" to num(radius * 1000),
+            "fill" to num(fillColour),
+            "outline" to num(outlineColour),
+        )
+    }
+
     override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {
         record(
             "op" to JsonValue.Str("poly"),

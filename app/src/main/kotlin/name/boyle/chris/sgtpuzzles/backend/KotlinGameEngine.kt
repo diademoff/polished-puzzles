@@ -291,6 +291,24 @@ class KotlinGameEngine private constructor(
             )
         }
 
+        override fun thickCircle(
+            cx: Int,
+            cy: Int,
+            radius: Int,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {
+            viewCallbacks.drawCircle(
+                thickness,
+                cx + geometry.originX.toFloat(),
+                cy + geometry.originY.toFloat(),
+                radius.toFloat(),
+                outlineColour,
+                fillColour,
+            )
+        }
+
         override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {
             viewCallbacks.drawPoly(
                 1.0f,
