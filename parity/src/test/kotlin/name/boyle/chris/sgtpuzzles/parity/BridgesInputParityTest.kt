@@ -65,6 +65,18 @@ class BridgesInputParityTest {
         OracleClient.Point(originX + 7 * tile, originY + tile, Buttons.LEFT_RELEASE),
     )
 
+    /** The same drag with the right button, which places a no-line. */
+    private fun rightDragPoints(tile: Int, originX: Int, originY: Int):
+        List<OracleClient.Point> = dragPoints(tile, originX, originY).map {
+        it.copy(
+            button = when (it.button) {
+                Buttons.LEFT_BUTTON -> Buttons.RIGHT_BUTTON
+                Buttons.LEFT_DRAG -> Buttons.RIGHT_DRAG
+                else -> Buttons.RIGHT_RELEASE
+            },
+        )
+    }
+
     private fun apply(midend: Midend, points: List<OracleClient.Point>, geometry: BoardGeometry) {
         for (point in points) {
             midend.processKey(
@@ -74,6 +86,24 @@ class BridgesInputParityTest {
                 geometry.tileSize,
             )
         }
+    }
+
+    private fun upstream(): String =
+        UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+
+    private fun assertTrace(what: String, expected: JsonValue.Obj?, actual: JsonValue.Obj) {
+        requireNotNull(expected) { "$what: the oracle sent no trace" }
+        val e = TraceNormalizer.normalize(expected, upstream()).lines()
+        val a = TraceNormalizer.normalize(actual, upstream()).lines()
+        for (i in 0 until minOf(e.size, a.size)) {
+            if (e[i] != a[i]) {
+                throw AssertionError(
+                    "$what: first diff at line ${i + 1}:\n" +
+                        "expected: ${e[i]}\nactual:   ${a[i]}",
+                )
+            }
+        }
+        assertEquals("$what: line count", e.size, a.size)
     }
 
     @Test
@@ -115,7 +145,13 @@ class BridgesInputParityTest {
             for (tile in listOf(48, 63, 82, 100)) {
                 val view = viewFor(tile)
                 val points = clickPoints(0, tile, 0, 0)
-                val expected = oracle.pointsSized(save, points, view, view).state
+                val result = oracle.pointsSized(
+                    save,
+                    points,
+                    view,
+                    view,
+                    recordTrace = true,
+                )
                 val midend = midend(save)
                 for (point in points) {
                     assertEquals(
@@ -124,18 +160,34 @@ class BridgesInputParityTest {
                         midend.processKey(point.x, point.y, point.button, tile),
                     )
                 }
-                assertSame("tile $tile", expected, midend)
+                assertSame("tile $tile", result.state, midend)
                 assertEquals(2, midend.stateCount)
                 assertEquals(listOf("M0,0"), midend.serialise().values("MOVE"))
+                assertTrace(
+                    "tile $tile frame",
+                    result.trace,
+                    KotlinTraceSink.stateTrace(midend, tile),
+                )
             }
 
             val geometry = midend(save).geometryFor(411, 702)
             val points = clickPoints(0, geometry.tileSize, geometry.originX, geometry.originY)
-            val expected = oracle.pointsSized(save, points, 411, 702).state
+            val result = oracle.pointsSized(
+                save,
+                points,
+                411,
+                702,
+                recordTrace = true,
+            )
             val actual = midend(save)
             apply(actual, points, geometry)
-            assertSame("letterbox click", expected, actual)
+            assertSame("letterbox click", result.state, actual)
             assertEquals(listOf("M0,0"), actual.serialise().values("MOVE"))
+            assertTrace(
+                "letterbox click frame",
+                result.trace,
+                KotlinTraceSink.stateTrace(actual, geometry.tileSize),
+            )
         }
 
     @Test
@@ -147,7 +199,13 @@ class BridgesInputParityTest {
             val midend = midend(save)
             for (round in 1..3) {
                 val points = dragPoints(tile, 0, 0)
-                val result = oracle.pointsSized(expected, points, view, view)
+                val result = oracle.pointsSized(
+                    expected,
+                    points,
+                    view,
+                    view,
+                    recordTrace = true,
+                )
                 for (point in points) {
                     assertEquals(
                         "tile $tile round $round",
@@ -162,6 +220,11 @@ class BridgesInputParityTest {
                     "L0,0,6,0,${if (round == 3) 0 else round}",
                     midend.serialise().values("MOVE").last(),
                 )
+                assertTrace(
+                    "tile $tile round $round frame",
+                    result.trace,
+                    KotlinTraceSink.stateTrace(midend, tile),
+                )
             }
             assertEquals(4, midend.stateCount)
         }
@@ -175,16 +238,14 @@ class BridgesInputParityTest {
             var expected = save
             val midend = midend(save)
             for (round in 1..2) {
-                val points = dragPoints(tile, 0, 0).map {
-                    it.copy(
-                        button = when (it.button) {
-                            Buttons.LEFT_BUTTON -> Buttons.RIGHT_BUTTON
-                            Buttons.LEFT_DRAG -> Buttons.RIGHT_DRAG
-                            else -> Buttons.RIGHT_RELEASE
-                        },
-                    )
-                }
-                val result = oracle.pointsSized(expected, points, view, view)
+                val points = rightDragPoints(tile, 0, 0)
+                val result = oracle.pointsSized(
+                    expected,
+                    points,
+                    view,
+                    view,
+                    recordTrace = true,
+                )
                 for (point in points) {
                     assertEquals(
                         "tile $tile right round $round",
@@ -194,6 +255,11 @@ class BridgesInputParityTest {
                 }
                 assertSame("tile $tile right round $round", result.state, midend)
                 expected = result.state.state
+                assertTrace(
+                    "tile $tile right round $round frame",
+                    result.trace,
+                    KotlinTraceSink.stateTrace(midend, tile),
+                )
             }
             assertEquals(3, midend.stateCount)
             assertEquals(
@@ -208,30 +274,74 @@ class BridgesInputParityTest {
         val save = oracle.newGame("bridges", PARAMS, SEED).state
         val geometry = midend(save).geometryFor(411, 702)
         val points = dragPoints(geometry.tileSize, geometry.originX, geometry.originY)
-        val expected = oracle.pointsSized(save, points, 411, 702).state
+        val result = oracle.pointsSized(save, points, 411, 702, recordTrace = true)
         val actual = midend(save)
         apply(actual, points, geometry)
-        assertSame("letterbox drag", expected, actual)
+        assertSame("letterbox drag", result.state, actual)
         assertEquals(2, actual.stateCount)
         assertEquals(listOf("L0,0,6,0,1"), actual.serialise().values("MOVE"))
+        assertTrace(
+            "letterbox drag frame",
+            result.trace,
+            KotlinTraceSink.stateTrace(actual, geometry.tileSize),
+        )
     }
 
     @Test
-    fun `a real bridge changes the board and the move count`() =
+    fun `every real lock bridge and no-line changes the board and the count`() =
         OracleClient().use { oracle ->
             val save = oracle.newGame("bridges", PARAMS, SEED).state
-            val midend = midend(save)
-            val before = (midend.state as Bridges.State).grid.copyOf()
-            val beforeText = midend.textFormat()
-            for (point in dragPoints(TILE, 0, 0)) {
-                midend.processKey(point.x, point.y, point.button, TILE)
+            for ((what, points, move, changesText) in listOf(
+                Quad(
+                    "lock",
+                    clickPoints(0, TILE, 0, 0),
+                    "M0,0",
+                    false,
+                ),
+                Quad(
+                    "bridge",
+                    dragPoints(TILE, 0, 0),
+                    "L0,0,6,0,1",
+                    true,
+                ),
+                Quad(
+                    "no-line",
+                    rightDragPoints(TILE, 0, 0),
+                    "N0,0,6,0",
+                    false,
+                ),
+            )) {
+                val midend = midend(save)
+                val before = (midend.state as Bridges.State).grid.copyOf()
+                val beforeText = midend.textFormat()
+                for (point in points) {
+                    assertEquals(
+                        "$what outcome",
+                        KeyOutcome.SomeEffect,
+                        midend.processKey(point.x, point.y, point.button, TILE),
+                    )
+                }
+                val after = (midend.state as Bridges.State).grid
+                assertFalse("$what changes the board", before.contentEquals(after))
+                if (changesText) {
+                    assertNotEquals("$what changes the text", beforeText, midend.textFormat())
+                }
+                assertEquals("$what adds one state", 2, midend.stateCount)
+                assertEquals(
+                    "$what adds one move",
+                    listOf(move),
+                    midend.serialise().values("MOVE"),
+                )
+                assertTrue("$what can undo", midend.canUndo)
             }
-            val after = (midend.state as Bridges.State).grid
-            assertFalse("the board changed", before.contentEquals(after))
-            assertNotEquals("the text changed", beforeText, midend.textFormat())
-            assertEquals(2, midend.stateCount)
-            assertEquals(1, midend.serialise().values("MOVE").size)
         }
+
+    private data class Quad(
+        val what: String,
+        val points: List<OracleClient.Point>,
+        val move: String,
+        val changesText: Boolean,
+    )
 
     @Test
     fun `inert clicks add no move and no state`() = OracleClient().use { oracle ->
@@ -294,6 +404,31 @@ class BridgesInputParityTest {
         assertEquals(1, cross.stateCount)
         assertTrue(cross.serialise().values("MOVE").isEmpty())
         assertTrue(before.contentEquals((cross.state as Bridges.State).grid))
+
+        // A click in the letterbox maps outside the grid and is Unused.
+        val geometry = midend(save).geometryFor(411, 702)
+        val letterbox = midend(save)
+        assertEquals(
+            KeyOutcome.Unused,
+            letterbox.processKey(
+                -geometry.originX,
+                -geometry.originY,
+                Buttons.LEFT_BUTTON,
+                geometry.tileSize,
+            ),
+        )
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            letterbox.processKey(
+                -geometry.originX,
+                -geometry.originY,
+                Buttons.LEFT_RELEASE,
+                geometry.tileSize,
+            ),
+        )
+        assertEquals(1, letterbox.stateCount)
+        assertTrue(letterbox.serialise().values("MOVE").isEmpty())
+        assertTrue(before.contentEquals((letterbox.state as Bridges.State).grid))
     }
 
     @Test
@@ -310,6 +445,51 @@ class BridgesInputParityTest {
         assertSame("marked edge", expected, midend)
         assertEquals(2, midend.stateCount)
         assertEquals(listOf("M6,0"), midend.serialise().values("MOVE"))
+    }
+
+    @Test
+    fun `a drag over a blocked crossing adds no move`() = OracleClient().use { oracle ->
+        val save = oracle.newGame("bridges", PARAMS, SEED).state
+
+        // A no-line on the edge blocks a later bridge drag.
+        val noLineFirst = midend(save)
+        for (point in rightDragPoints(TILE, 0, 0)) {
+            noLineFirst.processKey(point.x, point.y, point.button, TILE)
+        }
+        val afterNoLine = (noLineFirst.state as Bridges.State).grid.copyOf()
+        for (point in dragPoints(TILE, 0, 0)) {
+            assertEquals(
+                "blocked bridge",
+                KeyOutcome.SomeEffect,
+                noLineFirst.processKey(point.x, point.y, point.button, TILE),
+            )
+        }
+        assertEquals(2, noLineFirst.stateCount)
+        assertEquals(listOf("N0,0,6,0"), noLineFirst.serialise().values("MOVE"))
+        assertTrue(afterNoLine.contentEquals((noLineFirst.state as Bridges.State).grid))
+
+        // A bridge on the edge blocks a later no-line drag.
+        val bridgeFirst = midend(save)
+        for (point in dragPoints(TILE, 0, 0)) {
+            bridgeFirst.processKey(point.x, point.y, point.button, TILE)
+        }
+        val afterBridge = (bridgeFirst.state as Bridges.State).grid.copyOf()
+        for (point in rightDragPoints(TILE, 0, 0)) {
+            assertEquals(
+                "blocked no-line",
+                KeyOutcome.SomeEffect,
+                bridgeFirst.processKey(point.x, point.y, point.button, TILE),
+            )
+        }
+        assertEquals(2, bridgeFirst.stateCount)
+        assertEquals(listOf("L0,0,6,0,1"), bridgeFirst.serialise().values("MOVE"))
+        assertTrue(afterBridge.contentEquals((bridgeFirst.state as Bridges.State).grid))
+
+        val expected = oracle.pointsSized(
+            save,
+            rightDragPoints(TILE, 0, 0) + dragPoints(TILE, 0, 0),
+        ).state
+        assertSame("blocked bridge save", expected, noLineFirst)
     }
 
     @Test
@@ -384,12 +564,18 @@ class BridgesInputParityTest {
             )) {
                 val expected = oracle.keys(save, sequence)
                 val midend = midend(save)
+                val before = (midend.state as Bridges.State).grid.copyOf()
                 assertEquals(
                     KeyOutcome.SomeEffect,
                     midend.processKey(0, 0, sequence.single(), TILE),
                 )
                 assertSame("modified $sequence", expected, midend)
                 assertEquals(listOf(move), midend.serialise().values("MOVE"))
+                assertEquals(2, midend.stateCount)
+                assertFalse(
+                    "modified $sequence changes the board",
+                    before.contentEquals((midend.state as Bridges.State).grid),
+                )
             }
         }
 }

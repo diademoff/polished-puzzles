@@ -175,7 +175,7 @@ C wins.
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, and `untangle` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, and `bridges` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -193,7 +193,7 @@ submenu entries when a game groups its presets.
 | Game | Display name | Default params | Presets | Solver | Text format | Timed | Platform randomness | Status |
 |---|---|---|---:|---|---|---|---|---|
 | `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `dual-run` |
-| `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `C` |
+| `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `dual-run` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `C` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |

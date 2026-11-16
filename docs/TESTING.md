@@ -2247,6 +2247,87 @@ aggressive 100x100 latency is an enablement debt:
     `KotlinGames.handles(UNTANGLE)` is false and the two-release wait
     applies.
 
+- `bridges` has no deviation and three enablement items:
+
+  - `BridgesDescTest` is semantic. It compares the nine presets and the
+    default with the oracle, the `atoi` decode quirks, the validation
+    order and messages, the golden descriptions, every preset at nine
+    seed strings, a numeric seed sweep, and the two retry fixtures. The
+    generated `AUXINFO` is compared with the oracle save, so the solver
+    inside the retry gate and the island creation order are pinned.
+    The whole save keeps the `PARAMS ...d0` / `CPARAMS ...dN` split.
+  - `BridgesGameTest` is semantic. It compares the fresh game, the move
+    grammar, the real click and drag batches, the solver from the
+    initial board and from scratch, the two C error strings, undo,
+    redo, completion and its event, a hint, the keyboard keys, and
+    `requestKeys` on every preset.
+  - `BridgesSaveTest` is strict for the save text and semantic for the
+    state. It reads all ten corpus saves, rewrites them byte for byte,
+    and compares id, status, undo, redo, text, and `AUXINFO` with C. A
+    Kotlin save for every preset loads in C, and an oracle save loads
+    in Kotlin. The `PARAMS 7x7i30e10m2d0` / `CPARAMS 7x7i30e10m2d1`
+    split is pinned. In-memory history plays a bridge, a no-line, and
+    a lock, undoes to a live redo branch, and round-trips a `SOLVE`, a
+    `RESTART`, and a hint move that starts with `S`. A hand-written
+    `UI` record is ignored, and a corrupt description fails in both
+    engines. The corpus was not regenerated.
+  - `BridgesTraceTest` is strict. It compares the nine frozen traces
+    and the oracle `traceNew` for every preset, the ten-role palette,
+    the two whole-window updates, sized cold traces at tiles 48, 63,
+    82, and 100, the 411x702 letterbox at tile 51 with origin (2,147),
+    a warm press, a warm drag and release, the cursor island, the loop
+    and impossible-clue warnings, and the hints preference. No trace
+    contains a blitter or a flash frame.
+  - `BridgesInputParityTest` is semantic. It compares the layout at
+    tiles 48, 63, 82, and 100 and the 411x702 letterbox, then sends a
+    real lock click, a bridge drag cycle, and a right-button no-line
+    at all five views. Every real lock, bridge, or no-line changes the
+    grid, adds one move and one state, and matches state, id, status,
+    and the final frame with `pointsSized`. An empty click, an outside
+    press, a letterbox click, a lone release, a drag inside one cell,
+    a press on one island released on another, a drag back to the
+    source, a drag over a marked edge, and a drag over a blocked
+    crossing change neither the grid nor the count. The cursor keys,
+    the select pair, the select-cancel lock quirk, `L`, `G`, and the
+    digit jump are compared with the oracle. `SHFT`+arrow places a
+    no-line and `CTRL`+arrow a bridge, because C sets
+    `drag_is_noline = !control`.
+  - `BridgesTest` is the engine test. It pins the parameters, the
+    decode quirks, the validation messages and order, the description
+    decoder, the row-major island order and the `maxv`/`maxh` start
+    values, the retry attempt counts, the generated description and
+    `AUXINFO`, the initial-board solve, the two solver messages, the
+    move grammar, `L`, `N`, and `M`, the sticky completion, the
+    changed-state event, the cursor and select quirks, the digit-jump
+    ties, the text format, the hint diff, `requestKeys`,
+    `currentKeyLabel`, `computeSize`, the palette, the first draw, the
+    dirty cache, and the hints preference.
+  - The solver order is part of the description contract. `solve_sub`
+    restarts stage 1 after any change, then runs stage 2, then stage 3;
+    stage 3 lowers `maxv`/`maxh`, and the lowering must survive the
+    restart and `map_clear`. The generator gates every board on the
+    solver at `difficulty - 1` and again at `difficulty`, so a different
+    stage order changes every Medium and Hard `DESC`. The island order
+    is creation order in the generator and row-major after `new_game`;
+    `game_state_diff` walks that order, so the generated `AUXINFO` is
+    in creation order while a hint diff is in row-major order.
+  - `Game.solve` receives only the current state, so the port keeps the
+    initial board and executes the `AUXINFO` answer there, then diffs
+    against the current state. Running the answer on the current board
+    would leave a player's wrong bridge in place.
+  - Enablement debt. The seven configuration items and the `show-hints`
+    preference are not wired into the app. The preference is applied
+    after `newUi` and after `Midend.fromSave` and forces a redraw,
+    because it is not serialised and not in the drawstate. The solve
+    path still has no error channel, so the app must show
+    `Generated aux string is not a valid move (!).` and
+    `Game does not have a (non-recursive) solution.` instead of
+    throwing. The accepted `46340x46340` area and the unbounded retry
+    loop need an owner guard before generation can run on the app's UI
+    thread. `BRIDGES` is in `KotlinGames.gameFor` and not in
+    `APP_GAMES`, so `KotlinGames.handles(BRIDGES)` is false and the
+    app keeps the C backend. The two-release wait also applies.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals
