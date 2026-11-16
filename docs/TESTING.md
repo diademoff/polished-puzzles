@@ -1211,6 +1211,111 @@ Engine tests:
   `S` payload and the revive, `encodeUi`/`decodeUi`, `currentKeyLabel`,
   the solver strings, `computeSize`, the palette, `requestKeys`, the
   cursor rectangle, and the follow/status draw order.
+- `TentsDescTest` is semantic. It compares the six presets, the seven
+  golden descriptions, every preset at nine seed strings, a 61-seed
+  sweep over `8x8de`, `8x8dt`, `4x4de`, `4x4dt`, and `5x4dt`, the decode
+  quirks, the validation order and messages, the `4x4` difficulty
+  downgrade, the `validateDesc` strings, and the two D-009 abort
+  descriptions. The generator keeps the `treemap` id order, the seeded
+  `Matching.match`, and the retry stream, so a reordering changes every
+  description; the sweep and the goldens are the guard.
+- `TentsGameTest` is semantic. It compares new games, text, and status
+  for every preset, the move grammar, real press, drag, and release
+  batches, the three-state left and right click cycles, the select and
+  letter keys, a real win with its completion event, undo and redo
+  across the win, the sticky post-win status, the solve with and without
+  `AUXINFO`, a solve after a wrong user move, every preset's `SOLVE`,
+  the two solver failure messages, the zero-clue solve that is not a
+  win, the `PARAMS`/`CPARAMS` split, and `requestKeys`.
+- `TentsSaveTest` is strict for the save text. It reads all seven corpus
+  saves, rewrites them byte for byte, and reloads them in C with the
+  same id, status, undo, redo, and text. A Kotlin save for every preset
+  loads in C. A played click, a drag, a live redo branch, a `SOLVE`, and
+  a `RESTART` round-trip in both directions. The `PARAMS`/`CPARAMS`
+  split, the absent `UI` record, and the absent `AUXINFO` in a generated
+  save are pinned. A tree move and the two D-009 descriptions are
+  defined errors. The corpus was not regenerated.
+- `TentsTraceTest` is strict. It compares the six frozen traces and
+  `traceNew` for every preset, the exact operation counts, the tree
+  trunk and five leaf circles, the cursor ring, the two clipped error
+  diamonds of adjacent tents, sized cold traces at tiles 48, 63, 82, and
+  100, the 411x702 letterbox, and the warm path after a press, a drag,
+  and a release. Every frame keeps the `w + h + 2` grid lines, because
+  the C `started` flag is never set. No trace has a status line, a
+  blitter, or a flash color.
+- `TentsInputParityTest` is semantic. It compares the layout at tiles
+  48, 63, 82, and 100 and the 411x702 letterbox of every preset, the
+  `FROMCOORD` bands, and real input at all five views. A press and
+  release changes a blank cell and adds one move and one state; a press,
+  drag, and release produces one move at the release; the three-state
+  left cycle and the right cycle are compared for each round; a press
+  without a release, a middle press, a cancelled drag, an out-of-band
+  press, and a click on a tree change neither the grid nor the count.
+  `requestKeys` is arrow mode 3 with no labels, and the Android
+  full-cursor mode is arrow mode 1 with no labels.
+- `TentsTest` is the engine test. It pins the parameters and presets,
+  the decode quirks, the validation order, the description grammar, the
+  initial state and its shared clues, the two D-009 exceptions, the
+  text format, the move grammar, the stylus cycles, the drag lock, the
+  cursor and select keys, `currentKeyLabel`, the sticky completion, the
+  status values, the solver and its initial-grid rule, the two solver
+  failures, the engine generation attempt counts, the absent `AUXINFO`,
+  `computeSize`, the palette, `requestKeys`, the cursor rectangle, the
+  error marks, and the always-drawn grid lines.
+
+`tents` has one deviation, three enablement debts, and the usual S8/S9
+items:
+
+- D-009: two `8x8de` descriptions pass `validate_desc` and abort the C
+  decoder. `8x8:ddddddddz,0,...` fails
+  `i >= 0 && i <= w*h` at `tents.c:1292`; `8x8:dddddddcz_,0,...` fails
+  `type == TREE` at `tents.c:1294`. The shipped app keeps assertions, so
+  each is a real SIGABRT, and without assertions the same path writes
+  outside the grid. The port throws
+  `tents: the description runs past the grid` and
+  `tents: the description ends on a non-tree cell`. `TentsTest`,
+  `TentsDescTest`, and `TentsSaveTest` pin both; no test sends them to
+  the oracle. Every valid description is unchanged.
+- Generation cost: Easy on a large board is slow. 20x20 takes about
+  0.6 s and 25x25 Easy takes 39 s in C, and `validate_params` accepts an
+  area up to `INT_MAX`. The app must generate off the UI thread. A size
+  bound rejects parameters that C accepts, so it needs an owner decision,
+  a deviation entry, and a test; it is not added in this slice. The
+  generation tests stay on the six presets and small boards.
+- The params-dependent `can_format_as_text_now`
+  (`tents.c:1390-1393`, `w <= 1998 && h <= 1998`) has no seam hook.
+  `Game.canFormatAsText` is a constant and `Midend.textFormat` checks
+  only that constant, so a hand-written board above 1998 cells returns
+  text where C returns null. Normal play cannot reach the size, so this
+  is seam debt, not a deviation. A params-aware hook would be a
+  speculative feature for one game.
+- The initial-grid solve and the sticky completion are measured C
+  behavior, not deviations. C `midend_solve` passes `states[0]`, so
+  `Tents.Shared` keeps the decoded initial grid and `solve` reads it;
+  `TentsGameTest` plays a wrong tent before the solve and pins the same
+  `SOLVE` record. `completed` is copied by `executeMove` and only ever
+  set, so a post-win move keeps status 1 and raises no second event;
+  undo reaches the still-completed state, the next undo clears the
+  status, and redo restores it and raises the event again.
+- Save-text debt: C `new_game_desc` returns an `AUXINFO` answer, so a
+  C-generated save carries it. The Kotlin generator returns no aux,
+  because the solver reads the initial grid and produces the same
+  `SOLVE` record. A Kotlin-generated save therefore omits `AUXINFO`,
+  and C solves it on demand. The id, `DESC`, `PARAMS`, `CPARAMS`,
+  state, status, text, and `SOLVE` agree; every corpus save that
+  already carries `AUXINFO` keeps it byte for byte. `TentsDescTest` and
+  `TentsSaveTest` pin both sides. This is not a `.sgtp` format change:
+  the record is optional and both engines accept its absence.
+- The app still uses C. S8 must build the three-field configuration
+  dialog (Width, Height, Difficulty with `":Easy:Tricky"`), remove the
+  `Fifteen` casts in `KotlinGameEngine`, skip the preferences dialog
+  because `get_prefs`/`set_prefs` are `NULL`, and surface the generation
+  cost and the D-009 message. The app `solveEvent` must show a message
+  instead of throwing when a hand-written board fails to solve. S9 is a
+  tested `currentKeyLabel` helper with no Android call site. `TENTS` is
+  in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(TENTS)` is false and the app keeps the C backend.
+  The two-release wait also applies.
 
 `inertia` has one deviation and three open items:
 

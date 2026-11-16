@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
@@ -154,6 +155,176 @@ class TentsInputParityTest {
         }
 
     @Test
+    fun `a real drag at four tiles and in the letterbox is one move`() =
+        OracleClient().use { oracle ->
+            for (params in Tents.presets().map { it.params }) {
+                val save = oracle.newGame("tents", params, SEED).state
+                val state = midend(save).state as Tents.State
+                val (start, end) = blankRowRun(state)
+
+                for ((viewWidth, viewHeight, tile) in viewsFor(state.width)) {
+                    val geometry = midend(save).geometryFor(viewWidth, viewHeight)
+                    val label = "'$params' $viewWidth x $viewHeight"
+                    if (tile != null) {
+                        assertEquals("$label tile", tile, geometry.tileSize)
+                        assertEquals("$label origin x", 0, geometry.originX)
+                        assertEquals("$label origin y", 0, geometry.originY)
+                    }
+                    val points = dragPoints(
+                        start,
+                        end,
+                        geometry.tileSize,
+                        geometry.originX,
+                        geometry.originY,
+                    )
+                    val expected = oracle.pointsSized(
+                        save,
+                        points,
+                        viewWidth,
+                        viewHeight,
+                    ).state
+                    val actual = midend(save)
+                    for (point in points) {
+                        assertEquals(
+                            "$label outcome",
+                            KeyOutcome.SomeEffect,
+                            actual.processKey(
+                                point.x - geometry.originX,
+                                point.y - geometry.originY,
+                                point.button,
+                                geometry.tileSize,
+                            ),
+                        )
+                    }
+                    assertSame(label, expected, actual)
+                    assertEquals(
+                        "$label is one move",
+                        1,
+                        actual.serialise().values("MOVE").size,
+                    )
+                    assertEquals("$label adds one state", 2, actual.stateCount)
+                }
+            }
+        }
+
+    @Test
+    fun `the select cycles run at four tiles and in the letterbox`() =
+        OracleClient().use { oracle ->
+            for (params in Tents.presets().map { it.params }) {
+                val save = oracle.newGame("tents", params, SEED).state
+                val cell = blankCell(midend(save).state as Tents.State)
+
+                for ((viewWidth, viewHeight, tile) in viewsFor(
+                    (midend(save).state as Tents.State).width,
+                )) {
+                    val geometry = midend(save).geometryFor(viewWidth, viewHeight)
+                    val label = "'$params' $viewWidth x $viewHeight"
+                    if (tile != null) assertEquals("$label tile", tile, geometry.tileSize)
+
+                    var expected = save
+                    val actual = midend(save)
+                    for (round in 1..3) {
+                        val points = clickPoints(
+                            cell,
+                            geometry.tileSize,
+                            geometry.originX,
+                            geometry.originY,
+                        )
+                        expected = playCycleRound(
+                            "$label left round $round",
+                            oracle,
+                            expected,
+                            points,
+                            viewWidth,
+                            viewHeight,
+                            geometry,
+                            actual,
+                        )
+                        assertEquals(
+                            "$label left round $round records",
+                            SgtpSave.parse(expected).values("MOVE"),
+                            actual.serialise().values("MOVE"),
+                        )
+                    }
+                    assertEquals(
+                        "$label left cycle",
+                        3,
+                        actual.serialise().values("MOVE").size,
+                    )
+
+                    // The right button cycles the other way.
+                    var expectedRight = save
+                    val rightMidend = midend(save)
+                    for (round in 1..3) {
+                        val points = clickPoints(
+                            cell,
+                            geometry.tileSize,
+                            geometry.originX,
+                            geometry.originY,
+                        ).map { it.copy(button = if (it.button == Buttons.LEFT_BUTTON) {
+                            Buttons.RIGHT_BUTTON
+                        } else {
+                            Buttons.RIGHT_RELEASE
+                        }) }
+                        expectedRight = playCycleRound(
+                            "$label right round $round",
+                            oracle,
+                            expectedRight,
+                            points,
+                            viewWidth,
+                            viewHeight,
+                            geometry,
+                            rightMidend,
+                        )
+                    }
+                    assertEquals(
+                        "$label right cycle",
+                        3,
+                        rightMidend.serialise().values("MOVE").size,
+                    )
+                }
+            }
+        }
+
+    /** Applies one click round to both engines and returns the oracle save. */
+    private fun playCycleRound(
+        label: String,
+        oracle: OracleClient,
+        save: String,
+        points: List<OracleClient.Point>,
+        viewWidth: Int,
+        viewHeight: Int,
+        geometry: BoardGeometry,
+        midend: Midend,
+    ): String {
+        val expected = oracle.pointsSized(save, points, viewWidth, viewHeight).state
+        for (point in points) {
+            assertEquals(
+                label,
+                KeyOutcome.SomeEffect,
+                midend.processKey(
+                    point.x - geometry.originX,
+                    point.y - geometry.originY,
+                    point.button,
+                    geometry.tileSize,
+                ),
+            )
+        }
+        assertSame(label, expected, midend)
+        return expected.state
+    }
+
+    /**
+     * The exact board-size viewports at tiles 48, 63, 82, and 100, then
+     * the 411x702 letterbox, whose tile is chosen by the midend.
+     */
+    private fun viewsFor(width: Int): List<Triple<Int, Int, Int?>> =
+        listOf(48, 63, 82, 100).map { tile ->
+            val size = width * tile + tile / 2 + tile * 3 / 2
+            Triple(size, size, tile)
+        } + Triple(411, 702, null)
+
+    @Test
     fun `the cell bands follow FROMCOORD`() = OracleClient().use { oracle ->
         // Row 3 is blank at columns 0 and 7 in the golden board. The
         // bands are x = 16..47 for cell 0 and 240..271 for cell 7.
@@ -268,6 +439,45 @@ class TentsInputParityTest {
             if (state.grid[i] == 0) return i % state.width to i / state.width
         }
         error("the board has no blank cell")
+    }
+
+    /**
+     * The first and the last blank cell of a line with at least two
+     * blanks. A drag between them marks every blank in the rectangle.
+     */
+    private fun blankRowRun(
+        state: Tents.State,
+    ): Pair<Pair<Int, Int>, Pair<Int, Int>> {
+        for (y in 0 until state.height) {
+            val blanks = (0 until state.width).filter {
+                state.grid[y * state.width + it] == 0
+            }
+            if (blanks.size >= 2) return (blanks.first() to y) to (blanks.last() to y)
+        }
+        for (x in 0 until state.width) {
+            val blanks = (0 until state.height).filter {
+                state.grid[it * state.width + x] == 0
+            }
+            if (blanks.size >= 2) return (x to blanks.first()) to (x to blanks.last())
+        }
+        error("the board has no two blank cells in one line")
+    }
+
+    /** Press at [start], drag to [end], and release there. */
+    private fun dragPoints(
+        start: Pair<Int, Int>,
+        end: Pair<Int, Int>,
+        tile: Int,
+        originX: Int,
+        originY: Int,
+    ): List<OracleClient.Point> {
+        fun px(cell: Pair<Int, Int>) = originX + cell.first * tile + tile
+        fun py(cell: Pair<Int, Int>) = originY + cell.second * tile + tile
+        return listOf(
+            OracleClient.Point(px(start), py(start), Buttons.LEFT_BUTTON),
+            OracleClient.Point(px(end), py(end), Buttons.LEFT_DRAG),
+            OracleClient.Point(px(end), py(end), Buttons.LEFT_RELEASE),
+        )
     }
 
     /** Press and release at the centre of [cell], offset by a letterbox origin. */

@@ -17,6 +17,7 @@ import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
+import name.boyle.chris.sgtpuzzles.engine.Tents
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
 import name.boyle.chris.sgtpuzzles.engine.Unruly
 import org.junit.Assert.assertEquals
@@ -144,6 +145,12 @@ class KotlinGamesTest {
     fun `inertia is registered but the app still uses C`() {
         assertEquals(Inertia, KotlinGames.gameFor(INERTIA))
         assertFalse(KotlinGames.handles(INERTIA))
+    }
+
+    @Test
+    fun `tents is registered but the app still uses C`() {
+        assertEquals(Tents, KotlinGames.gameFor(TENTS))
+        assertFalse(KotlinGames.handles(TENTS))
     }
 
     @Test

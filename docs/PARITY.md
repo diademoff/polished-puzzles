@@ -174,7 +174,7 @@ C wins.
 | `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, and `inertia` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, and `tents` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -223,7 +223,7 @@ submenu entries when a game groups its presets.
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `dual-run` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
-| `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `C` |
+| `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `C` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `C` |
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `dual-run` |
@@ -884,6 +884,94 @@ Notes:
   `solveEvent` must show a message instead of throwing when the board
   is already solved or dead. `currentKeyLabel` is a tested helper
   because the Android shell has no call site for it. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `tents` is `dual-run`. Its parameters and six presets, the decode
+  quirks and validation order, the run-length description, the
+  generator, the state, the stylus clicks and drags, the cursor and
+  letter keys, completion, the solver, the text format, the save file,
+  palette, drawing, layout, and input pass the matrix in
+  `TentsDescTest`, `TentsGameTest`, `TentsSaveTest`, `TentsTraceTest`,
+  `TentsInputParityTest`, and the engine `TentsTest`. `TentsDescTest`
+  compares every preset at the golden seed and nine seed strings, a
+  61-seed sweep over `8x8de`, `8x8dt`, `4x4de`, `4x4dt`, and `5x4dt`,
+  the decode quirks, the validation messages, and the `4x4` difficulty
+  downgrade.
+  `TentsGameTest` compares the move grammar, the real press, drag, and
+  release batches, the select and letter keys, the win with its
+  completion event, undo and redo across the win, the sticky flag, the
+  solve with and without `AUXINFO`, the initial-grid solve after a
+  wrong move, the two solver failures, and `requestKeys`.
+  `TentsSaveTest` reads the seven corpus saves byte for byte and pins
+  the `PARAMS`/`CPARAMS` split and the absent `UI` record.
+  `TentsTraceTest` covers the six frozen traces, the tree and cursor
+  geometry, the two clipped error diamonds, the sized views, the
+  letterbox, and the warm path.
+
+  The generator keeps the C RNG order: the per-iteration
+  `random_upto`, the `treemap` ids assigned while the tents are placed
+  in `U, L, R, D` order, the seeded `Matching.match`, and the retry
+  condition that calls the `diff - 1` and `diff` solvers. A reordering
+  changes every description while still producing valid puzzles, so the
+  golden descriptions, the nine seed strings, and the 61-seed sweep are
+  the guards. `MatchingParityTest` pins the library itself.
+
+  The solver reads the decoded initial grid, because `midend_solve`
+  passes `states[0]` and C never reads the current board. `Tents.Shared`
+  keeps that grid, `dupGame` shares it, and `TentsGameTest` plays a
+  wrong tent before the solve and pins that the `SOLVE` record still
+  matches C. `completed` is sticky: `executeMove` copies the flag and
+  only sets it, so a post-win move keeps status 1 and raises no second
+  event. Both rules are measured against the oracle.
+
+  `TentsInputParityTest` sends real press, drag, and release batches and
+  the three-state left and right click cycles at tiles 48, 63, 82, and
+  100 and at the 411x702 letterbox of every preset. Each cycle changes
+  the grid and adds one move and one state; each drag produces one move
+  at the release. The `FROMCOORD` bands, a press without a release, a
+  middle press, a cancelled drag, and a click on a tree change neither
+  the grid nor the count. `requestKeys` is arrow mode 3 with no labels
+  in the default mode; the Android full-cursor mode asks for arrow mode
+  1 with no labels, because `game_request_keys` is `NULL` and only the
+  midend's arrow default changes.
+
+  D-009 covers the two descriptions that pass `validate_desc` and abort
+  the C decoder: `8x8:ddddddddz,...` at `tents.c:1292` and
+  `8x8:dddddddcz_,...` at `tents.c:1294`. The port throws
+  `tents: the description runs past the grid` and
+  `tents: the description ends on a non-tree cell`. The shipped app
+  keeps assertions, so the exception is the intended safe behavior;
+  every valid description is unchanged and no generated board reaches
+  either path.
+
+  Enablement debt. `validate_params` accepts any area up to `INT_MAX`,
+  and Easy on a large board is slow: 20x20 takes about 0.6 s and 25x25
+  Easy takes 39 s in C. Generation must move off the UI thread, and a
+  size bound is an owner decision that needs a deviation entry and a
+  test. The params-dependent `can_format_as_text_now`
+  (`tents.c:1390-1393`, `w <= 1998 && h <= 1998`) has no seam hook:
+  `Game.canFormatAsText` is a constant and `Midend.textFormat` checks
+  only that constant, so a hand-written board above 1998 cells would
+  return text where C returns null. The path is unreachable from normal
+  play.
+
+  One save-text difference is recorded as debt, not as a deviation.
+  C `new_game_desc` returns an `AUXINFO` answer, so a C-generated save
+  carries one. The Kotlin generator returns no aux, because the solver
+  reads the initial grid and produces the same `SOLVE` record. A
+  Kotlin-generated save therefore omits the `AUXINFO` record, and C
+  solves it on demand. The id, `DESC`, `PARAMS`, `CPARAMS`, state,
+  status, text, and `SOLVE` agree; every corpus save that already
+  carries `AUXINFO` keeps it byte for byte. `TentsDescTest` and
+  `TentsSaveTest` pin both sides. `KotlinGames.gameFor` knows the
+  Kotlin game, but the app still uses C: the three-field configuration
+  dialog (Width, Height, Difficulty with `":Easy:Tricky"`), the
+  preference-dialog skip (`get_prefs` is `NULL`), the `Fifteen` casts
+  in `KotlinGameEngine`, and the two-release wait are open. The app
+  `solveEvent` must show a message instead of throwing when a
+  hand-written board fails to solve. `currentKeyLabel` is a tested
+  helper because the Android shell has no call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 

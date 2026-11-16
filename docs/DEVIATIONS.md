@@ -302,6 +302,50 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-16
 
+### D-009: Tents rejects two descriptions that abort the C decoder
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_desc` accepts two descriptions that
+  overrun the decoder, so `new_game` aborts the shipped build. Both are
+  for `8x8de` and both are followed by sixteen `,0` numbers:
+  - `8x8:ddddddddz,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0` fails the
+    assertion `i >= 0 && i <= w*h` at `tents.c:1292`
+    (`new_game: Assertion 'i >= 0 && i <= w*h' failed.`, SIGABRT). The
+    final `z` run jumps from below `w*h` to exactly `w*h + 1`.
+  - `8x8:dddddddcz_,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0` fails the
+    assertion `type == TREE` at `tents.c:1294`
+    (`new_game: Assertion 'type == TREE' failed.`, SIGABRT). The final
+    `z` lands exactly on `w*h` with `type == BLANK`.
+
+  The Kotlin `newState` throws `IllegalArgumentException` with
+  `tents: the description runs past the grid` for the first case and
+  `tents: the description ends on a non-tree cell` for the second.
+  `validateDesc` keeps the C messages and still accepts both
+  descriptions.
+- **Why:** the C abort is a debug assertion, and the shipped app keeps
+  assertions (`app/src/main/jni/cmake/setup.cmake:17-25` removes
+  `-DNDEBUG`). In a release build without assertions the same path
+  writes outside the grid, so it is undefined behavior. A crash in the
+  app is not acceptable, and a deterministic exception is the intended
+  safe behavior. The guard depends only on the decoded cells, so the
+  same description always fails the same way. Every valid description,
+  seed, `DESC`, `AUXINFO`, and `.sgtp` file is unchanged, and no
+  generated description reaches either path.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../TentsTest.kt::the two C aborts are defined exceptions`
+  pins both messages; the parity tests
+  `parity/src/test/kotlin/.../TentsDescTest.kt::the two C aborts are a defined port result`
+  and
+  `parity/src/test/kotlin/.../TentsSaveTest.kt::a tree move and the overshooting description are defined errors`
+  pin the `newState` and `Midend.fromSave` results. No test sends either
+  description to the oracle, because the abort would kill the process.
+- **Review:** the owner should review this entry before `tents` is
+  enabled in the app.
+- **Scope:** `tents`
+- **Upstream:** none known
+- **Date:** 2026-11-16
+
 ## Examples
 
 Allowed:
