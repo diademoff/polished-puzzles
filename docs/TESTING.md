@@ -2023,6 +2023,125 @@ aggressive 100x100 latency is an enablement debt:
   `current_key_label` is `NULL`. `PALISADE` is in `KotlinGames.gameFor`
   but not in `APP_GAMES`, so `KotlinGames.handles(PALISADE)` is false.
 
+`undead` has no deviation and three enablement items:
+
+- `UndeadDescTest` is semantic. It compares the eight presets, the
+  default, and both encodings with the oracle, the nine golden
+  descriptions, every preset at the nine named seeds, and a numeric
+  sweep. It pins the decode quirks (`4x4d`, `4x4dte`, `4X5`,
+  `4x4dnjunk`, `4x`, `-4x4`, `4x-4`, the empty string, and the area
+  boundaries `18x3`, `3x18`, `13x4`, `19x3`, and `3x19`), the
+  validation order and messages, and a seed for every retry gate:
+  `num_total <= 4`, the ratio bounds, a path over `max_length`, a
+  missing monster type, a Tricky singleton, and an Easy depth over 3.
+  The `Float` ratio and the stable `num_monsters` sort are guarded by
+  the goldens and the sweep, and `UndeadTest` pins the retry counts.
+  A `4x4` board whose longest ray is 22 cells, longer than `w*h = 16`,
+  loads and solves like the oracle.
+- `UndeadGameTest` is semantic. It compares the new game, text,
+  status, and empty status text of every preset, real selects and the
+  three count-row moves, the keyboard, and the count-row geometry at
+  tiles 48, 63, 82, and 100, the move grammar through a save replay
+  (`G`, `V`, `Z`, `g`, `v`, `z`, `E`, `M`, `D`, the optional
+  separator, a leading `;`, a double `;;`, an empty move, signs,
+  spaces, and out-of-range ids), undo and redo, the real win and its
+  one completion event, a post-win move, a redo into the win, the
+  hint payload for every preset, a wrong move that does not change the
+  payload, a solve on a solved board, and both solver errors
+  (`Puzzle is inconsistent` and `Puzzle is unsolvable`). It also pins
+  the inert mirror, letterbox, and fixed-cell clicks and the empty
+  status text.
+- `UndeadSaveTest` is strict for the save text, semantic for the
+  state. It reads the nine corpus saves, rewrites them byte for byte,
+  and reloads them in C with the same id, status, undo, redo, and
+  text. A Kotlin save for every preset and nine seeds loads in C. The
+  `PARAMS`/`CPARAMS` split is pinned: `PARAMS` is the Normal long form
+  and `CPARAMS` keeps the Easy or Tricky difficulty, and the short id
+  drops it. It round trips a played `G0`, a pencil `g0`, a clear
+  `E0`, a clue `D1,0`, an `M`, an empty `MOVE`, a `SOLVE`, a
+  `RESTART`, and an undone position with a live redo branch. The
+  in-memory history case plays a real cell change through the count
+  row, undoes it with a live redo, redoes it, solves, and restarts,
+  comparing each text with the oracle. A hand-written fixed board
+  loads, is not editable by a click, and solves in both directions; a
+  hand-written `AUXINFO` is ignored and stays in the save; an `S`
+  move is cheated in both directions. No generated save has a `UI` or
+  an `AUXINFO` record.
+- `UndeadTraceTest` is strict. It compares the eight frozen traces at
+  the preferred tile with the oracle, including the 12-colour palette,
+  the three count icons, the eight hint texts in the stable sort
+  order, the four mirrors, and the column-major cell order. Cold
+  traces run at tiles 48, 63, 82, and 100 and at the 411x702
+  letterboxes (tile 63, origin (1,115); tile 55, origin (0,118); tile
+  43, origin (2,126)). The cursor, the normal highlight, the pencil
+  highlight, the Android same-cell toggle, a done clue, a clue error,
+  a count error, a `cell_errors`-only redraw, ascii mode, a solved
+  state, a cheated solve, a fixed board, and the warm path are
+  compared. No trace has a flash or a status line. The thick-line
+  trace unit is fixed: `thick_line t x1 y1 x2 y2 c`, where `t` is the
+  thickness in thousandths and both endpoints are in thousandths (the
+  oracle uses `tc_milli`), so a mirror at tile 64 is
+  `thick_line 4000 ...`.
+- `UndeadInputParityTest` is semantic and `ui`. It compares the layout
+  at 411x702 (tiles 63, 55, and 43 with the measured origins), the
+  exact sizes at tiles 48, 63, 82, and 100, real cell selects at all
+  four tiles and at the 411x702 letterbox, and the count row at all
+  four tiles and at the letterbox. A cell change at the count row
+  alters the guess, adds one move and one state, and leaves the status
+  at 0; a clue click adds one `D` move and toggles the mark without
+  touching the guess or the status; a second click on the same clue
+  removes it. The pencil select pair, a right press that enters pencil
+  mode, and a second right press that hides the highlight change
+  neither the board nor the history at every tile and at the letterbox. A mirror, a letterbox point, the
+  middle button, the one-pixel bands of the cell rect and of the count
+  row, a lone drag and release, and a press-plus-drag are inert. The
+  final frame is compared with `pointsSized` for a select at every
+  tile and the letterbox, a clue toggle, a pencil pair, both right
+  presses, and a real count-row move, so the highlight and the pencil
+  triangle are part of the comparison. The keyboard covers arrows, a
+  modified arrow, both selects, digits, the letters, the clear keys,
+  `M`, and a key with the cursor hidden; the `pencil-keep-highlight`
+  cases compare the mouse and keyboard paths; `requestKeys` is arrow
+  mode 2 with the five labels `Ghost`, `Vampire`, `Zombie`, `Clear`,
+  and `Mark` on every preset.
+- `UndeadTest` is the engine test. It pins the parameters and eight
+  presets, the `atoi` decode quirks including saturation, the encode
+  fallback, the validation boundaries, the description grammar and
+  lenient forms, the text format, the fixed cells, the move grammar,
+  the error arrays, the solver payload and the two messages, the
+  path arrays, the five key labels, `currentKeyLabel` with the hidden
+  highlight quirk, `setCursorVisible`, `changedState`, the two
+  preferences and their defaults, the palette, `computeSize`, the
+  drawstate caches, and the copy semantics.
+- Two upstream undefined behaviours have port definitions, not
+  deviation entries. The C path arrays hold `wh` entries, but a ray
+  can revisit a cell through both mirror channels; the port sizes
+  `p`, `xy`, and `mapping` at `4*wh` entries (the number of cell and
+  direction states) and caps a walk at `4*wh` steps. This changes no
+  accepted description, and the oracle is not asked to compare a
+  corrupted path; `UndeadTest` pins the `4*wh` length and a 22-cell
+  ray on a 16-cell board. In `solve_iterative` and
+  `solve_bruteforce` a mask of 0 leaves `loop.guess` uninitialised in
+  C; the port defines it as "no allowed type" and stops the
+  enumeration. `UndeadTest` and the solve error cases pin the result.
+- Enablement debt. Generation runs on the calling thread: the eight
+  presets take about 1 ms, but a hand-written maximum `13x4` board can
+  take about 1.3 s, so the app must generate off the UI thread. The
+  solver is a brute force bounded by `3 ** num_total`, so a
+  hand-written description can be expensive; the app must run `SOLVE`
+  off the UI thread. `Game.solve` has no error channel, so the app must
+  show `Puzzle is inconsistent` and `Puzzle is unsolvable` instead of
+  throwing. S8 must build the Width, Height, and
+  `:Easy:Normal:Tricky` configuration fields, parse and apply
+  `pencil-keep-highlight` (boolean, default true) and `monsters`
+  (`:Pictures:Letters`, default Pictures) after `newUi` and after
+  `Midend.fromSave`, force a redraw for `monsters`, gate the status
+  text on `wantsStatusBar`, and remove the `Fifteen` casts. Neither
+  preference is serialised. S9 is a tested `currentKeyLabel` helper
+  with no Android call site. `UNDEAD` is in `KotlinGames.gameFor` and
+  not in `APP_GAMES`, so `KotlinGames.handles(UNDEAD)` is false and
+  the app keeps the C backend. The two-release wait also applies.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

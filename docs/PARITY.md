@@ -175,7 +175,7 @@ C wins.
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, and `signpost` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, and `undead` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -228,7 +228,7 @@ submenu entries when a game groups its presets.
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `C` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `C` |
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `dual-run` |
-| `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `C` |
+| `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `dual-run` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `C` |
 | `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `dual-run` |
 | `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `C` |
@@ -1190,6 +1190,78 @@ Notes:
   `currentKeyLabel` helper with no Android call site. `SIGNPOST` is in
   `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(SIGNPOST)`
   is false and the two-release wait still applies.
+
+- `undead` is `dual-run`. Its parameters and eight presets, the decode
+  and validation quirks, the generator and its RNG order, the
+  description grammar, the state and the fixed cells, the move
+  grammar, the solve and its two error strings, the text format, the
+  sticky completion, `changedState`, the palette, the thick-line
+  drawing, layout, input, `currentKeyLabel`, and `requestKeys` pass the
+  matrix in `UndeadDescTest`, `UndeadGameTest`, `UndeadSaveTest`,
+  `UndeadTraceTest`, `UndeadInputParityTest`, and the engine
+  `UndeadTest`.
+
+  The generator draws one `random_upto(5)` per cell, one
+  `random_upto` per filled unique path, and one `random_upto(3)` per
+  still-unfilled monster. The nine golden descriptions, the nine seed
+  strings, the numeric sweep, and a pinned seed for every retry gate
+  guard the stream; the `Float` ratio and the stable path sort are
+  part of it. `UndeadTest` pins the retry counts and the decode table.
+
+  `UndeadSaveTest` reads all nine corpus saves, rewrites them byte for
+  byte, and reloads them in C with the same id, status, undo, redo, and
+  text. A Kotlin save for every preset and nine seeds is loaded by C.
+  The `PARAMS`/`CPARAMS` split is pinned: a generated Easy or Tricky
+  save has the Normal long form in `PARAMS` and the real difficulty in
+  `CPARAMS`, and the short id drops the difficulty. In-memory history
+  round-trips a real cell change, an undone position with a live redo
+  branch, a `SOLVE`, and a `RESTART`. No save has a `UI` or an
+  `AUXINFO` record, and a hand-written `AUXINFO` is ignored by the
+  solver and kept in the text.
+
+  `UndeadInputParityTest` sends real cell selects and count-row ghost,
+  vampire, and zombie presses at tiles 48, 63, 82, and 100, plus clue
+  presses at the same tiles and a real cell change and a clue press at
+  the 411x702 letterbox with the measured (1,115) origin. The pencil
+  select pair and both right-button presses are UI-only at every tile
+  and at the letterbox; the count row and the clue each add one move. Every pointer frame is compared with
+  `pointsSized`, so the highlight and the pencil triangle are checked;
+  a count-row change alters the guess and the status stays 0, a clue
+  click toggles its mark, and an inert click changes neither.
+  `requestKeys` is arrow mode 2 with the five labels `Ghost`,
+  `Vampire`, `Zombie`, `Clear`, and `Mark`.
+
+  Two upstream undefined behaviours have port definitions, not
+  deviations. The C path arrays hold `wh` entries but a ray can revisit
+  a cell through both mirror channels, so the port sizes them `4*wh`
+  entries (the number of cell and direction states) and caps a walk at
+  `4*wh` steps; this changes no accepted description. In the solver a
+  mask of 0 leaves `loop.guess` uninitialised in C, so the port defines
+  it as "no allowed type" and stops the enumeration. The oracle is
+  never asked to compare a corrupted path, and a generated board never
+  reaches either case. The thick line is `draw_thick_line` with integer
+  endpoints and `T/16` as a float; the trace records `t` in
+  thousandths and both endpoints in thousandths, so a mirror at tile 64
+  is `thick_line 4000 ...`. `undead` is the first game-level consumer
+  of the primitive.
+
+  Enablement debt. Generation runs on the calling thread; the presets
+  are milliseconds, but a hand-written maximum `13x4` board can take
+  about 1.3 s, so the app must generate off the UI thread. The solver
+  is a brute force bounded by `3 ** num_total`, so a hand-written
+  description can be expensive and the app must run `SOLVE` off the UI
+  thread. `Game.solve` has no error channel, so the app must show
+  `Puzzle is inconsistent` and `Puzzle is unsolvable` instead of
+  throwing. The app must parse and apply `pencil-keep-highlight`
+  (boolean, default true) and `monsters` (`:Pictures:Letters`, default
+  Pictures) after `newUi` and after `Midend.fromSave`, then force a
+  redraw for `monsters`; neither value is serialised. S8 must build the
+  Width, Height, and `:Easy:Normal:Tricky` configuration fields, gate
+  the status text on `wantsStatusBar` (it is false), and remove the
+  `Fifteen` casts. S9 is a tested `currentKeyLabel` helper with no
+  Android call site. `UNDEAD` is in `KotlinGames.gameFor` and not in
+  `APP_GAMES`, so `handles(UNDEAD)` is false and the two-release wait
+  still applies.
 
 ## 8. Goldens
 

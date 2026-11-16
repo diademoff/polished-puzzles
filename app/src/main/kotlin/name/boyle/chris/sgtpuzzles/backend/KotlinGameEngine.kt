@@ -39,6 +39,7 @@ import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Tents
 import name.boyle.chris.sgtpuzzles.engine.Text
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
+import name.boyle.chris.sgtpuzzles.engine.Undead
 import name.boyle.chris.sgtpuzzles.engine.Unruly
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.MenuEntry
@@ -114,9 +115,10 @@ object KotlinGames {
      * `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`,
      * `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`,
      * `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`,
-     * `tents`, `magnets`, `pattern`, and `signpost` are in dual-run:
-     * their engines pass the parity matrix, but the app still uses C
-     * until the configuration dialog and the two-release wait are done.
+     * `tents`, `magnets`, `pattern`, `signpost`, and `undead` are in
+     * dual-run: their engines pass the parity matrix, but the app still
+     * uses C until the configuration dialog and the two-release wait are
+     * done.
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
@@ -144,6 +146,7 @@ object KotlinGames {
         INERTIA -> Inertia
         TENTS -> Tents
         MAGNETS -> Magnets
+        UNDEAD -> Undead
         else -> null
     }
 

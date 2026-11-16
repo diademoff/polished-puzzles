@@ -22,6 +22,7 @@ import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Tents
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
+import name.boyle.chris.sgtpuzzles.engine.Undead
 import name.boyle.chris.sgtpuzzles.engine.Unruly
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -172,6 +173,12 @@ class KotlinGamesTest {
     fun `signpost is registered but the app still uses C`() {
         assertEquals(Signpost, KotlinGames.gameFor(SIGNPOST))
         assertFalse(KotlinGames.handles(SIGNPOST))
+    }
+
+    @Test
+    fun `undead is registered but the app still uses C`() {
+        assertEquals(Undead, KotlinGames.gameFor(UNDEAD))
+        assertFalse(KotlinGames.handles(UNDEAD))
     }
 
     @Test

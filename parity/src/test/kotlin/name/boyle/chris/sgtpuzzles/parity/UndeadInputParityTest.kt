@@ -129,7 +129,8 @@ class UndeadInputParityTest {
                         points,
                         size.width,
                         size.height,
-                    ).state
+                        recordTrace = true,
+                    )
                     val actual = midend(save)
                     for (point in points) {
                         assertEquals(
@@ -138,26 +139,59 @@ class UndeadInputParityTest {
                             actual.processKey(point.x, point.y, point.button, tile),
                         )
                     }
-                    assertSame("'$params' tile $tile select", expected, actual)
+                    assertSame("'$params' tile $tile select", expected.state, actual)
+                    assertTrace(
+                        "'$params' tile $tile select",
+                        requireNotNull(expected.trace),
+                        KotlinTraceSink.stateTrace(actual, tile),
+                    )
                     assertEquals("'$params' tile $tile adds no move", 0, actual.serialise().values("MOVE").size)
+                    // The selection is UI state: the highlight is on the
+                    // cell and it came from the mouse.
+                    val ui = actual.ui as Undead.Ui
+                    assertTrue("'$params' tile $tile highlight", ui.hshow)
+                    assertFalse("'$params' tile $tile not pencil", ui.hpencil)
+                    assertFalse("'$params' tile $tile mouse", ui.hcursor)
+                    assertEquals("'$params' tile $tile hx", cell.first, ui.hx)
+                    assertEquals("'$params' tile $tile hy", cell.second, ui.hy)
                 }
 
-                // The 411x702 letterbox.
+                // The 411x702 letterbox. The shell sends view coordinates
+                // and subtracts the origin, so the tap still reaches the
+                // drawn cell. The state and the final frame, which shows
+                // the highlight, are compared with the oracle.
                 val geometry = midend(save).geometryFor(411, 702)
-                val points = listOf(
-                    cellPoint(
-                        cell.first,
-                        cell.second,
+                assertTrue("'$params' letterbox has an origin", geometry.originY != 0)
+                val view = cellPoint(
+                    cell.first,
+                    cell.second,
+                    geometry.tileSize,
+                    geometry.originX,
+                    geometry.originY,
+                )
+                val expected = oracle.pointsSized(save, listOf(view), 411, 702, recordTrace = true)
+                val actual = midend(save)
+                assertEquals(
+                    "'$params' letterbox select",
+                    KeyOutcome.SomeEffect,
+                    actual.processKey(
+                        view.x - geometry.originX,
+                        view.y - geometry.originY,
+                        view.button,
                         geometry.tileSize,
-                        geometry.originX,
-                        geometry.originY,
                     ),
                 )
-                val expected = oracle.pointsSized(save, points, 411, 702).state
-                val actual = midend(save)
-                for (point in points) actual.processKey(point.x, point.y, point.button, geometry.tileSize)
-                assertSame("'$params' letterbox select", expected, actual)
+                assertSame("'$params' letterbox select", expected.state, actual)
+                assertTrace(
+                    "'$params' letterbox select",
+                    requireNotNull(expected.trace),
+                    KotlinTraceSink.stateTrace(actual, geometry.tileSize),
+                )
                 assertEquals(0, actual.serialise().values("MOVE").size)
+                val ui = actual.ui as Undead.Ui
+                assertTrue("'$params' letterbox highlight", ui.hshow)
+                assertEquals("'$params' letterbox hx", cell.first, ui.hx)
+                assertEquals("'$params' letterbox hy", cell.second, ui.hy)
             }
         }
 
@@ -181,6 +215,261 @@ class UndeadInputParityTest {
             assertSame("cell change", expected, start)
             assertEquals("one move", 1, start.serialise().values("MOVE").size)
             assertNotEquals(before, (start.state as Undead.State).guess)
+            assertEquals("status is unchanged", 0, start.status())
+        }
+
+    @Test
+    fun `a clue click toggles the mark at four tiles and in the letterbox`() =
+        OracleClient().use { oracle ->
+            val params = "4x4dn"
+            val save = oracle.newGame("undead", params, SEED).state
+            val initial = (midend(save).state as Undead.State).guess.copyOf()
+
+            for (tile in listOf(48, 63, 82, 100)) {
+                val size = Undead.computeSize(Undead.decodeParams(params), tile)
+                // (1,0) is the first clue in the top row, not a corner.
+                val points = listOf(cellPoint(1, 0, tile))
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    size.width,
+                    size.height,
+                    recordTrace = true,
+                )
+                val actual = midend(save)
+                assertEquals(
+                    "tile $tile clue press",
+                    KeyOutcome.SomeEffect,
+                    actual.processKey(points[0].x, points[0].y, points[0].button, tile),
+                )
+                assertSame("tile $tile clue", expected.state, actual)
+                assertTrace(
+                    "tile $tile clue",
+                    requireNotNull(expected.trace),
+                    KotlinTraceSink.stateTrace(actual, tile),
+                )
+                assertEquals("tile $tile one move", 1, actual.serialise().values("MOVE").size)
+                assertTrue(
+                    "tile $tile is a clue move",
+                    actual.serialise().values("MOVE").single().startsWith("D"),
+                )
+                assertTrue(
+                    "tile $tile marks the clue",
+                    (actual.state as Undead.State).hintsDone.any { it },
+                )
+                // A clue does not touch the board or the status.
+                assertTrue(
+                    "tile $tile leaves the guess",
+                    initial.contentEquals((actual.state as Undead.State).guess),
+                )
+                assertEquals("tile $tile status", 0, actual.status())
+            }
+
+            // The 411x702 letterbox: the view point carries the measured
+            // origin (1,115), and the engine receives the game point.
+            val geometry = midend(save).geometryFor(411, 702)
+            assertEquals(63, geometry.tileSize)
+            assertEquals(1, geometry.originX)
+            assertEquals(115, geometry.originY)
+            val view = cellPoint(1, 0, geometry.tileSize, geometry.originX, geometry.originY)
+            val expected = oracle.pointsSized(save, listOf(view), 411, 702, recordTrace = true)
+            val actual = midend(save)
+            assertEquals(
+                "letterbox clue press",
+                KeyOutcome.SomeEffect,
+                actual.processKey(
+                    view.x - geometry.originX,
+                    view.y - geometry.originY,
+                    view.button,
+                    geometry.tileSize,
+                ),
+            )
+            assertSame("letterbox clue", expected.state, actual)
+            assertTrace(
+                "letterbox clue",
+                requireNotNull(expected.trace),
+                KotlinTraceSink.stateTrace(actual, geometry.tileSize),
+            )
+            assertEquals(1, actual.serialise().values("MOVE").size)
+            assertTrue((actual.state as Undead.State).hintsDone.any { it })
+            assertTrue((actual.state as Undead.State).guess.contentEquals(initial))
+
+            // A second click on the same clue removes the mark.
+            val second = oracle.pointsSized(save, listOf(view, view), 411, 702, recordTrace = true)
+            val toggle = midend(save)
+            for (point in listOf(view, view)) {
+                toggle.processKey(
+                    point.x - geometry.originX,
+                    point.y - geometry.originY,
+                    point.button,
+                    geometry.tileSize,
+                )
+            }
+            assertSame("letterbox clue toggle", second.state, toggle)
+            assertTrace(
+                "letterbox clue toggle",
+                requireNotNull(second.trace),
+                KotlinTraceSink.stateTrace(toggle, geometry.tileSize),
+            )
+            assertFalse(
+                "the second click removes the mark",
+                (toggle.state as Undead.State).hintsDone.any { it },
+            )
+            assertEquals(2, toggle.serialise().values("MOVE").size)
+        }
+
+    @Test
+    fun `pencils and the right button are UI only at every tile`() =
+        OracleClient().use { oracle ->
+            val params = "4x4dn"
+            val save = oracle.newGame("undead", params, SEED).state
+            val state = midend(save).state as Undead.State
+            val cell = firstFloor(state)
+            val initial = state.guess.copyOf()
+
+            for (tile in listOf(48, 63, 82, 100)) {
+                val size = Undead.computeSize(Undead.decodeParams(params), tile)
+                val select = cellPoint(cell.first, cell.second, tile)
+
+                // A second press on the highlighted cell enters pencil
+                // mode and changes no state.
+                val pencil = oracle.pointsSized(
+                    save,
+                    listOf(select, select),
+                    size.width,
+                    size.height,
+                    recordTrace = true,
+                )
+                val actual = midend(save)
+                for (point in listOf(select, select)) {
+                    actual.processKey(point.x, point.y, point.button, tile)
+                }
+                assertSame("tile $tile pencil", pencil.state, actual)
+                assertTrace(
+                    "tile $tile pencil",
+                    requireNotNull(pencil.trace),
+                    KotlinTraceSink.stateTrace(actual, tile),
+                )
+                assertEquals("tile $tile pencil adds no move", 0, actual.serialise().values("MOVE").size)
+                val pencilUi = actual.ui as Undead.Ui
+                assertTrue("tile $tile pencil highlight", pencilUi.hshow)
+                assertTrue("tile $tile pencil mode", pencilUi.hpencil)
+                assertFalse("tile $tile pencil from mouse", pencilUi.hcursor)
+
+                // A right press on an unknown cell enters pencil mode;
+                // a second right press on it hides the highlight.
+                val right = select.copy(button = Buttons.RIGHT_BUTTON)
+                val rightOnce = oracle.pointsSized(
+                    save,
+                    listOf(right),
+                    size.width,
+                    size.height,
+                    recordTrace = true,
+                )
+                val rightMidend = midend(save)
+                assertEquals(
+                    "tile $tile right press",
+                    KeyOutcome.SomeEffect,
+                    rightMidend.processKey(right.x, right.y, right.button, tile),
+                )
+                assertSame("tile $tile right press", rightOnce.state, rightMidend)
+                assertTrace(
+                    "tile $tile right press",
+                    requireNotNull(rightOnce.trace),
+                    KotlinTraceSink.stateTrace(rightMidend, tile),
+                )
+                val rightUi = rightMidend.ui as Undead.Ui
+                assertTrue("tile $tile right pencil", rightUi.hpencil)
+                assertEquals("tile $tile right hx", cell.first, rightUi.hx)
+                assertEquals("tile $tile right no move", 0, rightMidend.serialise().values("MOVE").size)
+
+                val rightTwice = oracle.pointsSized(
+                    save,
+                    listOf(right, right),
+                    size.width,
+                    size.height,
+                    recordTrace = true,
+                )
+                val twice = midend(save)
+                for (point in listOf(right, right)) {
+                    twice.processKey(point.x, point.y, point.button, tile)
+                }
+                assertSame("tile $tile right twice", rightTwice.state, twice)
+                assertTrace(
+                    "tile $tile right twice",
+                    requireNotNull(rightTwice.trace),
+                    KotlinTraceSink.stateTrace(twice, tile),
+                )
+                val hiddenUi = twice.ui as Undead.Ui
+                assertFalse("tile $tile right twice hides", hiddenUi.hshow)
+                assertFalse("tile $tile right twice leaves pencil", hiddenUi.hpencil)
+                assertEquals("tile $tile right twice hx", 0, hiddenUi.hx)
+                assertEquals("tile $tile right twice hy", 0, hiddenUi.hy)
+                assertEquals("tile $tile right twice no move", 0, twice.serialise().values("MOVE").size)
+
+                assertTrue(
+                    "tile $tile leaves the guess",
+                    initial.contentEquals((twice.state as Undead.State).guess),
+                )
+                assertEquals("tile $tile status", 0, twice.status())
+            }
+
+            // The same two UI-only shapes at the 411x702 letterbox,
+            // where the view points carry the measured origin.
+            val geometry = midend(save).geometryFor(411, 702)
+            assertEquals(63, geometry.tileSize)
+            val game = cellPoint(cell.first, cell.second, geometry.tileSize)
+            fun view(point: OracleClient.Point) = OracleClient.Point(
+                geometry.originX + point.x,
+                geometry.originY + point.y,
+                point.button,
+            )
+
+            val pencil = oracle.pointsSized(
+                save,
+                listOf(view(game), view(game)),
+                411,
+                702,
+                recordTrace = true,
+            )
+            val letterbox = midend(save)
+            for (point in listOf(game, game)) {
+                letterbox.processKey(point.x, point.y, point.button, geometry.tileSize)
+            }
+            assertSame("letterbox pencil", pencil.state, letterbox)
+            assertTrace(
+                "letterbox pencil",
+                requireNotNull(pencil.trace),
+                KotlinTraceSink.stateTrace(letterbox, geometry.tileSize),
+            )
+            val letterboxUi = letterbox.ui as Undead.Ui
+            assertTrue("letterbox pencil highlight", letterboxUi.hshow)
+            assertTrue("letterbox pencil mode", letterboxUi.hpencil)
+            assertEquals("letterbox pencil no move", 0, letterbox.serialise().values("MOVE").size)
+
+            val right = game.copy(button = Buttons.RIGHT_BUTTON)
+            val rightTwice = oracle.pointsSized(
+                save,
+                listOf(view(right), view(right)),
+                411,
+                702,
+                recordTrace = true,
+            )
+            val letterboxRight = midend(save)
+            for (point in listOf(right, right)) {
+                letterboxRight.processKey(point.x, point.y, point.button, geometry.tileSize)
+            }
+            assertSame("letterbox right", rightTwice.state, letterboxRight)
+            assertTrace(
+                "letterbox right",
+                requireNotNull(rightTwice.trace),
+                KotlinTraceSink.stateTrace(letterboxRight, geometry.tileSize),
+            )
+            val letterboxRightUi = letterboxRight.ui as Undead.Ui
+            assertFalse("letterbox right hides", letterboxRightUi.hshow)
+            assertFalse("letterbox right leaves pencil", letterboxRightUi.hpencil)
+            assertEquals("letterbox right no move", 0, letterboxRight.serialise().values("MOVE").size)
+            assertEquals("letterbox right status", 0, letterboxRight.status())
         }
 
     @Test
@@ -254,6 +543,7 @@ class UndeadInputParityTest {
         OracleClient().use { oracle ->
             val save = oracle.newGame("undead", "4x4dn", SEED).state
             val cell = firstFloor(midend(save).state as Undead.State)
+            val initial = (midend(save).state as Undead.State).guess.copyOf()
             for (tile in listOf(48, 63, 82, 100)) {
                 val geometry = Undead.countsGeometry(tile, 4)
                 val cy = (geometry.y1 + geometry.y2) / 2
@@ -321,8 +611,61 @@ class UndeadInputParityTest {
                         "tile $tile $letter payload",
                         actual.serialise().values("MOVE").single().startsWith(letter),
                     )
+                    // A real change sets the guess and adds one state.
+                    assertFalse(
+                        "tile $tile $letter changes the guess",
+                        initial.contentEquals((actual.state as Undead.State).guess),
+                    )
+                    assertEquals("tile $tile $letter status", 0, actual.status())
+                    assertEquals("tile $tile $letter two states", 2, actual.stateCount)
                 }
             }
+
+            // The 411x702 letterbox, which has the measured origin
+            // (1,115). The view points carry the origin; the engine
+            // receives the game points.
+            val geometry = midend(save).geometryFor(411, 702)
+            assertEquals(63, geometry.tileSize)
+            val counts = Undead.countsGeometry(geometry.tileSize, 4)
+            val gameSelect = cellPoint(cell.first, cell.second, geometry.tileSize)
+            val gameGhost = OracleClient.Point(
+                (counts.ghostX1 + counts.ghostX2) / 2,
+                (counts.y1 + counts.y2) / 2,
+                Buttons.LEFT_BUTTON,
+            )
+            fun view(point: OracleClient.Point) = OracleClient.Point(
+                geometry.originX + point.x,
+                geometry.originY + point.y,
+                point.button,
+            )
+            val expected = oracle.pointsSized(
+                save,
+                listOf(view(gameSelect), view(gameGhost)),
+                411,
+                702,
+                recordTrace = true,
+            )
+            val actual = midend(save)
+            for (point in listOf(gameSelect, gameGhost)) {
+                assertEquals(
+                    "letterbox $point",
+                    KeyOutcome.SomeEffect,
+                    actual.processKey(point.x, point.y, point.button, geometry.tileSize),
+                )
+            }
+            assertSame("letterbox count row", expected.state, actual)
+            assertTrace(
+                "letterbox count row",
+                requireNotNull(expected.trace),
+                KotlinTraceSink.stateTrace(actual, geometry.tileSize),
+            )
+            assertEquals("letterbox one move", 1, actual.serialise().values("MOVE").size)
+            assertEquals(
+                "letterbox ghost",
+                "G",
+                actual.serialise().values("MOVE").single().take(1),
+            )
+            assertEquals("letterbox status", 0, actual.status())
         }
 
     @Test

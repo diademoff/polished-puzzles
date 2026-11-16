@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Undead
@@ -217,6 +218,76 @@ class UndeadSaveTest {
         assertSame("redo", redo, midend)
         assertEquals(redo.state, midend.serialise().serialise())
     }
+
+    @Test
+    fun `the in-memory history round-trips through the oracle`() =
+        OracleClient().use { oracle ->
+            val params = "4x4dn"
+            val tile = 64
+            val midend = Midend.newGame(Undead, params, SEED)
+            val state = midend.state as Undead.State
+            val w = state.common.params.w
+            var cell: Pair<Int, Int>? = null
+            for (y in 1..state.common.params.h) {
+                for (x in 1..w) {
+                    val xi = state.common.xinfo[x + y * (w + 2)]
+                    if (xi >= 0 && !state.common.fixed[xi]) cell = x to y
+                }
+            }
+            val target = requireNotNull(cell)
+            val size = Undead.computeSize(Undead.decodeParams(params), tile)
+            val counts = Undead.countsGeometry(tile, w)
+            val select = OracleClient.Point(
+                tile / 4 + target.first * tile + tile / 2,
+                tile / 4 + target.second * tile + 3 * tile / 2,
+                Buttons.LEFT_BUTTON,
+            )
+            val ghost = OracleClient.Point(
+                (counts.ghostX1 + counts.ghostX2) / 2,
+                (counts.y1 + counts.y2) / 2,
+                Buttons.LEFT_BUTTON,
+            )
+
+            // A real cell change: select the cell, then press the ghost
+            // count icon. One move, and the guess changes.
+            val expected = oracle.pointsSized(
+                oracle.newGame("undead", params, SEED).state,
+                listOf(select, ghost),
+                size.width,
+                size.height,
+            ).state
+            for (point in listOf(select, ghost)) {
+                midend.processKey(point.x, point.y, point.button, tile)
+            }
+            assertSame("real cell change", expected, midend)
+            assertEquals(1, midend.serialise().values("MOVE").size)
+            assertTrue((midend.state as Undead.State).guess.any { it == 1 })
+
+            // Undo keeps a live redo branch; redo returns to the played
+            // state in both directions.
+            val played = midend.serialise().serialise()
+            val undone = oracle.undo(played)
+            assertTrue(midend.undo())
+            assertSame("undo", undone, midend)
+            assertTrue("redo is live", midend.canRedo)
+            assertTrue(midend.redo())
+            assertSame("redo", oracle.redo(undone.state), midend)
+            assertFalse(midend.canRedo)
+
+            // SOLVE and RESTART each add one history entry.
+            val beforeSolve = midend.serialise().serialise()
+            assertTrue(midend.solve())
+            assertSame("solve", oracle.solve(beforeSolve), midend)
+            assertEquals(0, midend.status())
+
+            assertTrue(midend.restart())
+            assertSame("restart", oracle.id(midend.serialise().serialise()), midend)
+            assertEquals(0, midend.status())
+            val fresh = Midend.newGame(Undead, params, SEED)
+            assertEquals("restart id", fresh.id(), midend.id())
+            assertEquals("restart text", fresh.textFormat(), midend.textFormat())
+            assertNull("restart has no AUXINFO", midend.serialise().value("AUXINFO"))
+        }
 
     @Test
     fun `a solver move is cheated in both directions`() = OracleClient().use { oracle ->
