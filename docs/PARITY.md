@@ -175,7 +175,7 @@ C wins.
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, and `pattern` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, and `signpost` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -219,7 +219,7 @@ submenu entries when a game groups its presets.
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
-| `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `C` |
+| `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `dual-run` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `C` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `dual-run` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
@@ -1118,6 +1118,69 @@ Notes:
   casts, and the two-release wait are open. S9 is a tested
   `currentKeyLabel` helper with no Android call site. `PATTERN` is not
   in `APP_GAMES`, so `handles(PATTERN)` is false.
+
+- `signpost` is `dual-run`. Its parameters and six presets, the decode
+  and validation quirks, the generator and its RNG order, the
+  description grammar, the state, the move grammar, the arrow chaining,
+  the two-state solve and its two error strings, the text format with
+  the `h`-column bound, the sticky completion, `changedState`, the
+  palette, drawing, layout, input, `currentKeyLabel`, and `requestKeys`
+  pass the matrix in `SignpostDescTest`, `SignpostGameTest`,
+  `SignpostSaveTest`, `SignpostTraceTest`, `SignpostInputParityTest`,
+  and the engine `SignpostTest`.
+
+  The generator draws the free-ends head and tail pair, one
+  `random_upto` per filled cell, and the `n-1` shuffle. The six
+  goldens, the seed sweep, a pinned fill-retry fixture, and a sweep
+  that proves the strip never retries for the presets guard the stream:
+  a reordered draw or a hoisted free-ends pick changes every
+  description. `SignpostTest` pins the retry counts, and
+  `SignpostDescTest` pins the decode quirks and the validation order.
+
+  `SignpostGameTest` compares the move grammar through a save replay,
+  the `L`, `C`, `X`, `S`, and `H` forms, the number and colour chaining,
+  undo, redo, completion, and both solver errors. The seam gives the
+  game only the current state, so `State` carries the initial board and
+  `solveAttempt` tries the current state and then the initial one, as
+  C does; a link that breaks the current board pins the fallback.
+
+  `SignpostInputParityTest` sends real press-drag-release links at
+  tiles 48, 63, 82, and 100 and the letterboxed 7x7c view at origin
+  (2,147). It also covers the reverse right drag, the cut on a release
+  outside the board, the four no-op shapes, keyboard drags and
+  shortcuts, and the whole-set cut. Every real link changes the board
+  and adds one state; every no-op changes neither and asserts that the
+  press reached the game, so a missing press path cannot pass.
+
+  `SignpostTraceTest` compares the six frozen traces, cold traces at
+  tiles 48, 63, 82, and 100, the two 411x702 letterboxes, and the warm
+  path. One `T x T` blitter is allocated in the drawstate, before the
+  first `start_draw`; the warm trace pins the `blitter_load` and its
+  update, the mid-drag `blitter_save`, and the release frame with no
+  save. No frame has a flash or a status line.
+
+  The text form keeps the C `state->h` column bound. For `w > h` the
+  last columns are dropped and that is reproduced. For `w < h` C reads
+  past three arrays, so the port defines the out-of-range cell as
+  direction N, number 0, and no flags; this is a definition of
+  undefined behavior, not a deviation. Above 99 cells `textFormat`
+  returns `""`, which is what the oracle prints for a null text, because
+  `canFormatAsText` is a constant seam and the params-aware hook is
+  missing.
+
+  Enablement debt. Generation runs on the calling thread; the presets
+  are milliseconds, but `validate_params` accepts an area up to
+  `INT_MAX`, so a size bound is an owner decision and no bound is
+  added. `Game.solve` has no error channel, so the app must show the
+  two C messages instead of throwing. S8 must build the Width, Height,
+  and `Start and end in corners` configuration fields, show the
+  `Victory rotation effect` (`flash-type`, `:Unidirectional:Meshing
+  gears`) preference, gate the status text on `wantsStatusBar`, and
+  remove the `Fifteen` casts. The `flash-type` value stays on the UI
+  and never enters the state, id, status, text, or save. S9 is a tested
+  `currentKeyLabel` helper with no Android call site. `SIGNPOST` is in
+  `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(SIGNPOST)`
+  is false and the two-release wait still applies.
 
 ## 8. Goldens
 

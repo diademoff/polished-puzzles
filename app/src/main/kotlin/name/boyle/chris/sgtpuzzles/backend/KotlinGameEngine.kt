@@ -33,6 +33,7 @@ import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.Signpost
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Tents
@@ -113,9 +114,9 @@ object KotlinGames {
      * `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`,
      * `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`,
      * `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`,
-     * `tents`, `magnets`, and `pattern` are in dual-run: their engines
-     * pass the parity matrix, but the app still uses C until the
-     * configuration dialog and the two-release wait are done.
+     * `tents`, `magnets`, `pattern`, and `signpost` are in dual-run:
+     * their engines pass the parity matrix, but the app still uses C
+     * until the configuration dialog and the two-release wait are done.
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
@@ -139,6 +140,7 @@ object KotlinGames {
         MOSAIC -> Mosaic
         PALISADE -> Palisade
         PATTERN -> Pattern
+        SIGNPOST -> Signpost
         INERTIA -> Inertia
         TENTS -> Tents
         MAGNETS -> Magnets

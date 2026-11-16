@@ -17,6 +17,7 @@ import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.Signpost
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Tents
@@ -165,6 +166,12 @@ class KotlinGamesTest {
     fun `pattern is registered but the app still uses C`() {
         assertEquals(Pattern, KotlinGames.gameFor(PATTERN))
         assertFalse(KotlinGames.handles(PATTERN))
+    }
+
+    @Test
+    fun `signpost is registered but the app still uses C`() {
+        assertEquals(Signpost, KotlinGames.gameFor(SIGNPOST))
+        assertFalse(KotlinGames.handles(SIGNPOST))
     }
 
     @Test

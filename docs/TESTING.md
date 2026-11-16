@@ -1551,6 +1551,103 @@ items:
   `KotlinGames.handles(PATTERN)` is false and the app keeps the C
   backend. The two-release wait also applies.
 
+`signpost` has no deviation and three enablement items:
+
+- `SignpostDescTest` is semantic. It compares the six presets, the
+  default, and both encodings with the oracle, the seven golden
+  descriptions, every preset at the nine named seeds, and a numeric
+  sweep over `4x4`, `4x4c`, `5x5c`, and `4x5c`. The free-ends presets
+  guard the head and tail picks, and the corner presets guard the
+  fill draws; a pinned fill-retry fixture (`4x4` seed 3) and a sweep
+  that proves the strip never retries for the presets guard the retry
+  stream. It also pins the decode quirks (`4`, `4c`, `4x4junk`,
+  `+4x4`, ` 4x4`, `4x-4`, `04x04`, `4x4c5`, `4x4x4`, and other
+  suffixes), the validation
+  order and messages, the `DESC` grammar with `0a`, `16a`, a 17th
+  group, a bad character, and a short description, and that no
+  generated game has aux text.
+- `SignpostGameTest` is semantic. It compares the new game, text, and
+  status of every preset, the move grammar through a save replay
+  (`L`, `C`, `X`, `S`, `H`, signs, leading zeros, trailing junk, and
+  junk text), the number and colour chaining, the `DSF` loop refusal,
+  undo and redo, the solve, and both solver error strings
+  (`Puzzle is impossible.` and `Unable to solve puzzle.`).
+- `SignpostSaveTest` is strict for the save text. It reads the seven
+  corpus saves, rewrites them byte for byte, and reloads them in C
+  with the same id, status, undo, redo, and text. A Kotlin save for
+  every preset and three seeds loads in C. It round trips a played
+  link, a cut, an undone position with a live redo branch, a `SOLVE`,
+  a `RESTART`, a `MOVE H`, and a hand-written `S` save. `PARAMS` keeps
+  the short form and `CPARAMS` the full form with `c`; a `PARAMS 4x4c`
+  save is accepted and rewritten byte for byte. No save has a `UI` or
+  an `AUXINFO` record.
+- `SignpostTraceTest` is strict. It compares the six frozen traces at
+  the preferred tile with the oracle, including the 78-colour palette,
+  the operation counts, the single `changed_state`, and one `T x T`
+  `blitter_new`. Cold traces run at tiles 48, 63, 82, and 100 and at
+  the 411x702 letterboxes (tile 82, origin (0,146) for `4x4c`; tile
+  51, origin (2,147) for `7x7c`). The warm path compares a press, a
+  mid-drag frame, a release, and a link frame. The blitter cache is
+  the guard: every warm frame erases the old sprite with
+  `blitter_load` and its update, a live drag adds `blitter_save` and
+  the indicator polygon, and the release frame has no save. A cut
+  preview with the pointer outside the grid, and a keyboard drag that
+  moves the ring and the sprite together, are compared too. No trace
+  has a flash or a status line.
+- `SignpostInputParityTest` is semantic and `ui`. It compares the
+  layout at phone, tablet, landscape, small, and the four exact fits.
+  Real press-drag-release links run at tiles 48, 63, 82, and 100 and
+  at the 411x702 letterbox `7x7c` view with origin (2,147); each
+  makes one `L`, adds one state, and matches the oracle state and
+  text. The reverse right drag links in the other order, a release
+  outside the board makes `C` or `X`, and a click on the source adds
+  nothing. The four no-op shapes (a left press on the final immutable
+  number, a right press on the first, a lone release, and a drag that
+  never leaves its source) change neither the board nor the count;
+  each no-op also asserts that the press reached the game, and a real
+  link follows as the vacuity guard. Keyboard sequences cover arrows,
+  a modified arrow, the two selects, `x`, `X`, backspace, TAB, a keypad
+  digit, `u`, and `r`; the keyboard drag labels change from `To here`
+  to `Cancel`. `requestKeys` is arrow mode 3 with one `Clear` label on
+  button 8.
+- `SignpostTest` is the engine test. It pins the parameters and six
+  presets, the decode and encode quirks, the validation order, the
+  goldens, the fill and strip retry counts, the description grammar,
+  the state fields, the move grammar, chaining, completion, the text
+  form, `currentKeyLabel`, `changedState` including the null guard,
+  `requestKeys`, `cursorLocation`, the palette, `computeSize`, and
+  the drawstate blitter.
+- The two-state solve is measured C behavior. `solve_game` tries the
+  current state first and the decoded initial state second. The seam
+  gives `Game.solve` only the current state, so `State` carries the
+  initial board and `solveAttempt` reproduces the order. A link that
+  makes the current board impossible returning the initial board's
+  `SOLVE` record pins it; the `S` move sets `usedSolve`, so the solve
+  reaches status 1 without a completion event.
+- The text form keeps the C `state->h` column bound. For `w > h` the
+  last columns of every row are dropped and the port reproduces it;
+  for `w < h` C reads `dirs`, `nums`, and `flags` past their arrays
+  and writes past the buffer, so the port defines the out-of-range
+  cell as direction N, number 0, and no flags and pins that
+  Kotlin-only. The oracle is not asked for a `w < h` text. Above 99
+  cells `textFormat` returns `""`, which is what the oracle prints
+  for the null text of `can_format_as_text_now == false`, because the
+  seam constant has no params-aware hook.
+- Enablement debt. Generation runs on the calling thread; the six
+  presets are milliseconds, but `validate_params` accepts an area up
+  to `INT_MAX`, so a size bound is an owner decision and no bound is
+  added in this slice. `Game.solve` has no error channel, so the app
+  must show the two C solver messages instead of throwing. S8 must
+  build the Width, Height, and `Start and end in corners` fields, show
+  the `Victory rotation effect` (`flash-type`) preference with
+  `:Unidirectional:Meshing gears`, keep that value on the live `Ui`
+  and out of the state, id, status, text, and save, gate the status
+  text on `wantsStatusBar`, and remove the `Fifteen` casts. S9 is a
+  tested `currentKeyLabel` helper with no Android call site.
+  `SIGNPOST` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(SIGNPOST)` is false and the app keeps the C
+  backend. The two-release wait also applies.
+
 `inertia` has one deviation and three open items:
 
 - D-008: C `validate_params` accepts an area up to `INT_MAX` cells,

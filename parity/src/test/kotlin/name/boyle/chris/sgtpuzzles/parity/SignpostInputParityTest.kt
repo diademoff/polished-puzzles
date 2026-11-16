@@ -15,10 +15,10 @@ import org.junit.Test
  * Level: semantic and input geometry. Game: signpost.
  *
  * The layout, real press-drag-release links at four tile sizes and at a
- * letterboxed origin, a right-button reverse drag, a release outside the
- * board that cuts, the four no-op shapes, keyboard moves and shortcuts,
- * and the whole-set cut. Every "no move" case also asserts that the
- * press reached the game, so a missing press path cannot pass.
+ * letterboxed origin on both axes, a right-button reverse drag, a release
+ * outside the board that cuts, the four no-op shapes, keyboard moves and
+ * shortcuts, and the whole-set cut. Every "no move" case also asserts
+ * that the press reached the game, so a missing press path cannot pass.
  */
 class SignpostInputParityTest {
 
@@ -264,6 +264,72 @@ class SignpostInputParityTest {
         assertEquals(listOf("L0,0-1,1"), midend.serialise().values("MOVE"))
         assertEquals(expected.state.state, midend.serialise().serialise())
     }
+
+    @Test
+    fun `a letterbox with a nonzero origin links at the same cell`() =
+        OracleClient().use { oracle ->
+            val params = "7x7c"
+            val save = oracle.newGame("signpost", params, SEED).state
+            val midend = Midend.newGame(Signpost, params, SEED)
+            val geometry = midend.geometryFor(411, 702)
+            assertEquals(51, geometry.tileSize)
+            assertEquals(2, geometry.originX)
+            assertEquals(147, geometry.originY)
+
+            val tile = geometry.tileSize
+            val border = tile / 2
+            // Cell (0,0) is number 1 and points south at (0,1).
+            val gx0 = border
+            val gy0 = border
+            val gx1 = border
+            val gy1 = border + tile + tile / 2
+
+            // The oracle takes view coordinates; the midend takes game
+            // coordinates, so the shell has already subtracted the
+            // letterbox origin on both axes.
+            val sequence = points(
+                OracleClient.Point(
+                    geometry.originX + gx0,
+                    geometry.originY + gy0,
+                    Buttons.LEFT_BUTTON,
+                ),
+                OracleClient.Point(
+                    geometry.originX + gx1,
+                    geometry.originY + gy1,
+                    Buttons.LEFT_DRAG,
+                ),
+                OracleClient.Point(
+                    geometry.originX + gx1,
+                    geometry.originY + gy1,
+                    Buttons.LEFT_RELEASE,
+                ),
+            )
+            val expected = oracle.pointsSized(
+                save,
+                sequence,
+                width = 411,
+                height = 702,
+            )
+
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                midend.processKey(gx0, gy0, Buttons.LEFT_BUTTON, tile),
+            )
+            assertTrue("the press starts a drag", (midend.ui as Signpost.Ui).dragging)
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                midend.processKey(gx1, gy1, Buttons.LEFT_DRAG, tile),
+            )
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                midend.processKey(gx1, gy1, Buttons.LEFT_RELEASE, tile),
+            )
+            assertFalse("the release ends the drag", (midend.ui as Signpost.Ui).dragging)
+            assertEquals(listOf("L0,0-0,1"), midend.serialise().values("MOVE"))
+            assertEquals("one state", 2, midend.stateCount)
+            assertEquals(expected.state.state, midend.serialise().serialise())
+            assertEquals(oracle.text(expected.state.state), midend.textFormat())
+        }
 
     @Test
     fun `the no-op shapes change neither board nor count`() = OracleClient().use { oracle ->
