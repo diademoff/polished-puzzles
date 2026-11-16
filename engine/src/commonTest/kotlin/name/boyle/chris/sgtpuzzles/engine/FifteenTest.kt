@@ -291,6 +291,8 @@ class FifteenTest {
     }
 
     private class UpdateSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         data class Update(val x: Int, val y: Int)
         val updates = ArrayList<Update>()
         val statuses = ArrayList<String>()

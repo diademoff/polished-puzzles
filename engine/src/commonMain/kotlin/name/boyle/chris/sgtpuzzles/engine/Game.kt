@@ -350,6 +350,14 @@ interface DrawSink {
     fun status(text: String)
 
     /**
+     * `inertia_follow`: the Android `drawing_api` follow callback. The
+     * game reports whether the auto-solver still steers the player to
+     * the next step, so the shell can hide the primary controls. It is a
+     * shell hint, not a game rule, and it changes no state.
+     */
+    fun inertiaFollow(isSolved: Boolean)
+
+    /**
      * `blitter_new`: allocates a [width] x [height] image buffer and
      * returns the id that [blitterFree], [blitterSave], and
      * [blitterLoad] use for it.

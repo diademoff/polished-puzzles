@@ -312,6 +312,8 @@ class DrawStateTest {
 
     /** Records the blitter and draw boundaries, and the ids they use. */
     private class EventSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val events = ArrayList<String>()
         private var nextBlitterId = 1
 

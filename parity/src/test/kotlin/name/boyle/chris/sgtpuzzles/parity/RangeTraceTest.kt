@@ -407,6 +407,8 @@ class RangeTraceTest {
 
     /** Records the drawing operations as compact text at the preferred tile. */
     private class RecordingSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val ops = ArrayList<String>()
 
         override fun changedState(canUndo: Boolean, canRedo: Boolean) {

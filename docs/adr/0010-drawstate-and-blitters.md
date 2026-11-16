@@ -186,3 +186,16 @@ Negative:
    Rejected: that trace did not allocate the id, so the free would name
    an id the trace does not own and the normalizer rejects it. The free
    goes to the sink that created the cache.
+
+## Amendment: the inertia follow callback
+
+- **Date:** 2026-11-16
+
+`DrawSink.inertiaFollow(isSolved)` is the Android `drawing_api` follow
+callback (`puzzles.h:867`), not a drawstate operation and not a game
+rule. The game calls it from `redraw`, and the sink records
+`{"op":"inertia_follow","solved":true|false}`. It neither reads nor
+changes the drawstate, allocates no blitter, and does not affect the
+first-draw clear. The lifecycle in the decision above is unchanged. The
+seam and the shell behavior are defined in
+`docs/adr/0007-kotlin-game-seam.md`.

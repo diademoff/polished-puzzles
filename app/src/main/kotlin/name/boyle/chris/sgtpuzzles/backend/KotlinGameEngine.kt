@@ -285,6 +285,10 @@ class KotlinGameEngine private constructor(
             activityCallbacks.setStatus(text)
         }
 
+        override fun inertiaFollow(isSolved: Boolean) {
+            activityCallbacks.inertiaFollow(isSolved)
+        }
+
         override fun blitterNew(width: Int, height: Int): Int =
             viewCallbacks.blitterAlloc(width, height)
 

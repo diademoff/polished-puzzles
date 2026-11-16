@@ -549,6 +549,8 @@ class PegsTraceTest {
      * primitives that pegs uses are exercised.
      */
     private class OpSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val ops = ArrayList<String>()
         private var nextBlitterId = 1
 

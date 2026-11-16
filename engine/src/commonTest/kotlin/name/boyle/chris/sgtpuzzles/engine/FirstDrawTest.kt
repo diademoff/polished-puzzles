@@ -114,6 +114,8 @@ class FirstDrawTest {
 
     /** Records every operation with its geometry, in call order. */
     private class OpSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val ops = ArrayList<String>()
 
         override fun changedState(canUndo: Boolean, canRedo: Boolean) {

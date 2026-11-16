@@ -1050,6 +1050,8 @@ class SixteenTest {
     private data class Update(val x: Int, val y: Int, val w: Int, val h: Int)
 
     private class RecordingSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val rects = ArrayList<Rect>()
         val polys = ArrayList<Poly>()
         val updates = ArrayList<Update>()

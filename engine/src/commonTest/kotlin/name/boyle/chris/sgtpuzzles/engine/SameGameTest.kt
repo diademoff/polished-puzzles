@@ -519,6 +519,8 @@ class SameGameTest {
         SameGame.executeMove(state, text) as SameGame.State?
 
     private class RecordingSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         data class Rect(val x: Int, val y: Int, val w: Int, val h: Int, val colour: Int)
         data class Line(val x1: Int, val y1: Int, val x2: Int, val y2: Int, val colour: Int)
         data class Update(val x: Int, val y: Int, val w: Int, val h: Int)

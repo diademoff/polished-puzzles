@@ -339,3 +339,45 @@ it returns no labels and sets `ANDROID_ARROWS_LEFT_RIGHT`.
 `keysResultFor` gains the flag as a required argument. A default would
 hide a dropped value: a call site that forgot it would compile and
 silently request the wrong keys, which is the bug this amendment fixes.
+
+## Amendment: the Android inertia follow callback
+
+- **Date:** 2026-11-16
+
+`inertia.c` calls `inertia_follow(dr, is_solved)` from `game_redraw`
+(`inertia.c:2128`) under `#ifdef ANDROID`. It is the `inertia_follow`
+entry of the Android `drawing_api` (`puzzles.h:867`), not a game rule:
+`android.c:285-289` forwards the boolean to the activity, and
+`GamePlay.inertiaFollow` only hides or shows the primary controls while
+the auto-solver steers the player. The value is
+`state->cheated && state->soln && state->solnpos < state->soln->len`.
+It changes no state, RNG draw, seed, `DESC`, `.sgtp`, `AUXINFO`, or
+palette, so it has no parity entry and no deviation.
+
+1. **`DrawSink.inertiaFollow(isSolved)`** is the seam operation. The
+   game calls it from `redraw` at the point where the C game calls the
+   drawing API. It is not a `Game` property: the value depends on the
+   current state and the solution position, and the shell must hear it
+   on every redraw. A game that does not use the callback, which is
+   every ported game today, does not call it.
+
+2. **The trace records the oracle fields in the oracle order.**
+   `KotlinTraceSink` writes `{"op":"inertia_follow","solved":...}`,
+   with `solved` as a JSON boolean, as `tr_inertia_follow`
+   (`oracle.c:707-715`) does. `TraceNormalizer` already accepts the
+   line.
+
+3. **`KotlinGameEngine` forwards it to the activity.** The sink calls
+   `ActivityCallbacks.inertiaFollow`, the same callback that
+   `android.c` invokes through JNI. The engine stores nothing and
+   applies no shell behavior of its own.
+
+4. **The operation stays inside the draw.** It appears after the
+   operations the game emitted before the callback and before
+   `end_draw`. In `inertia.c` the call is before `status_bar`, so the
+   trace places it before the status line, as C does. The callback is
+   never outside the `start_draw` and `end_draw` pair.
+
+This change does not port `inertia`. It adds the callback that the port
+will call, and the port remains a separate change with its own parity
+matrix.

@@ -546,6 +546,8 @@ class FloodTest {
     }
 
     private class RecordingSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         data class Rect(val x: Int, val y: Int, val w: Int, val h: Int, val colour: Int)
         data class Poly(val fill: Int, val colour: Int)
         data class Circle(val cx: Int, val cy: Int, val radius: Int)

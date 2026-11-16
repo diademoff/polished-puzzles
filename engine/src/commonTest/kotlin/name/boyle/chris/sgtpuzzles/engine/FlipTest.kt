@@ -531,6 +531,8 @@ class FlipTest {
     }
 
     private class RecordingSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         data class Line(val x1: Int, val y1: Int, val x2: Int, val y2: Int, val colour: Int)
 
         val lines = ArrayList<Line>()

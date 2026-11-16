@@ -462,6 +462,8 @@ class LightupTest {
     }
 
     private class OpSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val ops = ArrayList<String>()
 
         override fun changedState(canUndo: Boolean, canRedo: Boolean) {

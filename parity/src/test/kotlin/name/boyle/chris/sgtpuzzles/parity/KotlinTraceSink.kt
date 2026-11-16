@@ -149,6 +149,13 @@ class KotlinTraceSink : DrawSink {
     /** Blitter ids start at 1 in every trace, as the oracle's do. */
     private var nextBlitterId = 1
 
+    override fun inertiaFollow(isSolved: Boolean) {
+        record(
+            "op" to JsonValue.Str("inertia_follow"),
+            "solved" to JsonValue.Bool(isSolved),
+        )
+    }
+
     override fun blitterNew(width: Int, height: Int): Int {
         val id = nextBlitterId++
         record(

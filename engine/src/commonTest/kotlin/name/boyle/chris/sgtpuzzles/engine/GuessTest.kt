@@ -1001,6 +1001,8 @@ class GuessTest {
 
     /** Records the drawing operations as compact text. */
     private class RecordingSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val ops = ArrayList<String>()
         private var nextBlitterId = 1
 

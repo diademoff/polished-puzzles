@@ -60,6 +60,8 @@ class GameSeamTest {
     }
 
     private class StatusSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val statuses = ArrayList<String>()
         var drew = false
 

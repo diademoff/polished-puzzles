@@ -957,6 +957,8 @@ class UnrulyTest {
     private data class Update(val x: Int, val y: Int, val width: Int, val height: Int)
 
     private class RecordingSink : DrawSink {
+        override fun inertiaFollow(isSolved: Boolean) {}
+
         val ops = ArrayList<String>()
         val rects = ArrayList<Rect>()
         val clips = ArrayList<Update>()
