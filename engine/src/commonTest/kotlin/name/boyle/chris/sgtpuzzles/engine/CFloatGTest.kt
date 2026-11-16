@@ -28,6 +28,7 @@ class CFloatGTest {
         assertEquals("1e-05", cFloatG(1.0e-5f))
         assertEquals("1e+06", cFloatG(1000000.0f))
         assertEquals("-1.5", cFloatG(-1.5f))
+        assertEquals("-0", cFloatG(-0.0f))
         assertEquals("nan", cFloatG(Float.NaN))
         assertEquals("inf", cFloatG(Float.POSITIVE_INFINITY))
         assertEquals("-inf", cFloatG(Float.NEGATIVE_INFINITY))

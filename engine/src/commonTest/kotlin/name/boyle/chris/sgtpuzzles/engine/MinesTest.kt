@@ -36,7 +36,6 @@ class MinesTest {
     fun `the game identity and flags are the C game`() {
         assertEquals("Mines", Mines.name)
         assertEquals("mines", Mines.backendName)
-        assertEquals("games.mines", "games.mines")
         assertEquals(20, Mines.preferredTileSize)
         assertTrue(Mines.canSolve)
         assertTrue(Mines.canFormatAsText)
@@ -75,7 +74,7 @@ class MinesTest {
         assertEquals("0", midend.serialise().value("TIME"))
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the first uncover generates the layout and supersedes the description`() {
         val midend = opened()
 
@@ -113,7 +112,7 @@ class MinesTest {
         assertEquals("O4,4", save.value("MOVE"))
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `a first click on a mine-free start opens the same area`() {
         val midend = Midend.newGame(Mines, "9x9n10", "12345")
         click(midend, 0, 0)
@@ -125,7 +124,7 @@ class MinesTest {
         )
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the other presets generate their oracle layouts`() {
         val cases = listOf(
             Triple("9x9n35", 4 to 4, "4,4,m8e698d55d9185abbcea78"),
@@ -150,6 +149,31 @@ class MinesTest {
             click(midend, cell.first, cell.second)
             assertEquals(desc, midend.desc, "$params ${cell.first},${cell.second}")
         }
+    }
+
+    @Test(timeout = 120_000)
+    fun `a high-density layout pins the perturbation counter`() {
+        // 9x9n35 seed 18 needs 103 attempts, so the big-perturbation
+        // branch (`ntries > 100`) runs. This layout is the oracle one.
+        // Removing the second post-increment of
+        // `nperturbs_since_last_new_open` gives
+        // `0,0,m45540a73c0b7fbb896938` after 101 attempts. Assigning
+        // the dead `prevret` never reaches a layout: every attempt that
+        // needs a second solver pass retries, without end.
+        val midend = Midend.newGame(Mines, "9x9n35", "18")
+        click(midend, 0, 0)
+        assertEquals("0,0,mf4ac480d0763fb8209c80", midend.desc)
+        assertEquals("mf4ac480d0763fb8209c80", midend.privDesc)
+
+        val run = Mines.generateLayoutForSeed(
+            Mines.Params(9, 9, 35, true, -1, -1),
+            "18",
+            0,
+            0,
+        )
+        assertEquals("0,0,mf4ac480d0763fb8209c80", run.desc)
+        assertEquals(103, run.attempts)
+        assertEquals(35, run.mines.count { it })
     }
 
     @Test
@@ -190,6 +214,64 @@ class MinesTest {
             "Width and height must both be greater than two",
             Mines.validateParams(Mines.decodeParams("2x2"), true),
         )
+    }
+
+    @Test(timeout = 120_000)
+    fun `the parameter and move parsers saturate at the Int limits`() {
+        // C leaves an overflowing `atoi` and `sscanf("%d")` undefined.
+        // The port defines both as a saturation at the Int limits.
+        assertEquals(
+            Mines.Params(Int.MAX_VALUE, 9, 10, true, -1, -1),
+            Mines.decodeParams("2147483648x9"),
+        )
+        assertEquals(
+            "Neither width nor height may be unreasonably large",
+            Mines.validateParams(Mines.decodeParams("2147483648x9"), true),
+        )
+        assertEquals(
+            Mines.Params(9, 9, Int.MAX_VALUE, true, -1, -1),
+            Mines.decodeParams("9x9n2147483648"),
+        )
+        assertEquals(
+            "Too many mines for grid size",
+            Mines.validateParams(Mines.decodeParams("9x9n2147483648"), true),
+        )
+        assertEquals(
+            Mines.Params(9, 9, Int.MIN_VALUE, true, -1, -1),
+            Mines.decodeParams("9x9n-2147483649"),
+        )
+        assertEquals(
+            "Mine count may not be negative",
+            Mines.validateParams(Mines.decodeParams("9x9n-2147483649"), true),
+        )
+        assertEquals(
+            Mines.Params(9, 9, 8, true, Int.MAX_VALUE, -1),
+            Mines.decodeParams("9x9X2147483648"),
+        )
+        assertEquals(
+            "First-click x coordinate must be inside the grid",
+            Mines.validateParams(Mines.decodeParams("9x9X2147483648"), true),
+        )
+        // The 64-bit overflow saturates to the same limit.
+        assertEquals(
+            Mines.Params(9, 9, Int.MAX_VALUE, true, -1, -1),
+            Mines.decodeParams("9x9n99999999999999999999999"),
+        )
+
+        // The move `%d` scan saturates, and the range test rejects the
+        // saturated coordinates instead of wrapping them onto the board.
+        val state = opened().state
+        for (move in listOf(
+            "O2147483648,0",
+            "F-2147483649,0",
+            "C99999999999999999999999,0",
+            // Without saturation, the low 32 bits are zero, so these
+            // would act on (0,4) instead of being rejected.
+            "O4294967296,4",
+            "F-4294967296,4",
+        )) {
+            assertNull(Mines.executeMove(state, move), move)
+        }
     }
 
     @Test
@@ -262,7 +344,7 @@ class MinesTest {
         assertEquals(10, state.layout.n)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the move grammar matches the C conditions`() {
         val state = opened().state as Mines.State
 
@@ -306,7 +388,7 @@ class MinesTest {
         assertEquals("Game has not been started yet", Mines.solveError(pending.state))
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `a correct chord opens the neighbours and a wrong flag dies`() {
         val midend = Midend.newGame(Mines, "9x9n10", "12345")
         click(midend, 4, 4)
@@ -337,7 +419,7 @@ class MinesTest {
         assertEquals("DEAD!  Deaths: 1", Mines.statusText(wrong.state, wrong.ui))
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `death win completion and the sticky UI flag`() {
         val midend = Midend.newGame(Mines, "4x4n1", "7")
         click(midend, 0, 0)
@@ -369,7 +451,7 @@ class MinesTest {
         assertTrue(Mines.executeMove(dead, "S") != null)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `solve reveals the board and keeps the C status rule`() {
         val midend = opened()
         assertTrue(midend.solve())
@@ -412,7 +494,7 @@ class MinesTest {
         )
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `undo keeps the generated layout and restart starts a new one`() {
         val midend = opened()
         val generated = midend.state as Mines.State
@@ -448,7 +530,7 @@ class MinesTest {
         )
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the UI record is the C encoder and the C parser`() {
         assertEquals("D0", Mines.encodeUi(Mines.newUi(opened().state)))
         val vectors = listOf(
@@ -499,7 +581,7 @@ class MinesTest {
         assertEquals(4, decoded.curX, "the cursor is not in the record")
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the timer follows the C formula and the midend prefix`() {
         val midend = Midend.newGame(Mines, "9x9n10", "12345")
         assertFalse(Mines.timingState(midend.state, midend.ui))
@@ -538,7 +620,7 @@ class MinesTest {
         assertFalse(win.timing)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `TIME round-trips through a save in both directions`() {
         val midend = opened()
         midend.timerTick(12.5f)
@@ -556,7 +638,7 @@ class MinesTest {
         assertEquals(withTime, reloadedTime.serialise().serialise())
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the TIME parser takes the C numeric prefix`() {
         val vectors = listOf(
             "0" to 0f,
@@ -627,7 +709,7 @@ class MinesTest {
         assertEquals("", Mines.currentKeyLabel(ui, midend.state, Buttons.CURSOR_SELECT))
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the palette geometry and draw cache match the C constants`() {
         val colours = Mines.colours()
         assertEquals(20, colours.size / 3)
@@ -658,7 +740,7 @@ class MinesTest {
         assertEquals(-1, ds.curY)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `a vacuous click changes nothing and a real one changes the board`() {
         val midend = Midend.newGame(Mines, "9x9n10", "12345")
         val px = 4 * tile + 8 + tile / 2
@@ -706,7 +788,7 @@ class MinesTest {
         assertEquals(3, midend.stateCount)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the left button beats an overlapping right press`() {
         val midend = Midend.newGame(Mines, "9x9n10", "12345")
         val x = 4 * tile + 8 + tile / 2
@@ -726,7 +808,7 @@ class MinesTest {
         assertEquals(2, midend.stateCount)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the generated layout can be read as an unmasked bitmap`() {
         val run = Mines.generateLayoutForSeed(
             Mines.Params(9, 9, 10, true, -1, -1),

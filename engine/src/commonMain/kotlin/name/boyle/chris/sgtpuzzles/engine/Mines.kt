@@ -1566,8 +1566,9 @@ object Mines : Game {
                 val ctx = MineContext(ret, w, h, x, y, rs)
                 ctx.allowBigPerturbs = ntries > 100
                 // `prevret` is never assigned in C. It stays dead here on
-                // purpose: a "fix" changes every description at seeds
-                // that need more than one solver pass.
+                // purpose. Assigning it makes every attempt that needs a
+                // second solver pass retry, so generation does not finish
+                // in the tested space.
                 var prevret = -2
                 while (true) {
                     val solvegrid = IntArray(wh) { UNKNOWN }

@@ -350,6 +350,46 @@ class MinesInputParityTest {
     }
 
     @Test(timeout = 120_000)
+    fun `a right press then a left press gets the fabricated release`() =
+        OracleClient().use { oracle ->
+            // `flags` has no `BUTTON_BEATS(RIGHT_BUTTON, LEFT_BUTTON)`,
+            // so the midend releases the held right button before it
+            // sends the left press. The flag stays, and the left click
+            // then opens its cell.
+            val start = oracle.newGame("mines", "9x9n10", SEED).state
+            val points = listOf(
+                OracleClient.Point(
+                    0 * tile + 8 + tile / 2,
+                    0 * tile + 8 + tile / 2,
+                    Buttons.RIGHT_BUTTON,
+                ),
+                OracleClient.Point(
+                    4 * tile + 8 + tile / 2,
+                    4 * tile + 8 + tile / 2,
+                    Buttons.LEFT_BUTTON,
+                ),
+                OracleClient.Point(
+                    4 * tile + 8 + tile / 2,
+                    4 * tile + 8 + tile / 2,
+                    Buttons.LEFT_RELEASE,
+                ),
+            )
+            val expected = oracle.pointsSized(start, points, width = 196, height = 196)
+            val midend = Midend.newGame(Mines, "9x9n10", SEED)
+            apply(midend, points, tile)
+
+            assertEquals("id", expected.state.id, midend.id())
+            assertEquals("canonical", expected.state.state, midend.serialise().serialise())
+            assertEquals(
+                "flag then open",
+                listOf("F0,0", "O4,4"),
+                midend.serialise().values("MOVE"),
+            )
+            assertEquals(3, midend.stateCount)
+            assertEquals(-1, (midend.state as Mines.State).grid[0])
+        }
+
+    @Test(timeout = 120_000)
     fun `a press drag and release make one move`() = OracleClient().use { oracle ->
         val start = oracle.newGame("mines", "9x9n10", SEED).state
         val points = listOf(
@@ -502,15 +542,61 @@ class MinesInputParityTest {
         assertEquals(KeyOutcome.Unused, midend.processKey(98, 98, Buttons.LEFT_RELEASE, tile))
         assertEquals(before, midend.stateCount)
 
+        // A drag with no press is dropped by the midend as well.
+        assertEquals(KeyOutcome.Unused, midend.processKey(98, 98, Buttons.LEFT_DRAG, tile))
+        assertEquals(before, midend.stateCount)
+
+        // A right press outside the grid is unused.
+        assertEquals(KeyOutcome.Unused, midend.processKey(0, 0, Buttons.RIGHT_BUTTON, tile))
+        assertEquals(before, midend.stateCount)
+        assertEquals(KeyOutcome.Unused, midend.processKey(0, 0, Buttons.RIGHT_RELEASE, tile))
+        assertEquals(before, midend.stateCount)
+
         // A middle press on a covered cell is UI-only.
         assertEquals(KeyOutcome.SomeEffect, midend.processKey(98, 98, Buttons.MIDDLE_BUTTON, tile))
         assertEquals(before, midend.stateCount)
         midend.processKey(98, 98, Buttons.MIDDLE_RELEASE, tile)
         assertEquals(before, midend.stateCount)
 
-        // A cursor select on an open cell is a no-effect key.
+        // A right press on an open cell with too few flags chords
+        // nothing, so it is UI-only.
         apply(midend, clickPoints(4, 4), tile)
         val opened = midend.stateCount
+        // (1,0) is open with the number 2 on this board, and no flag is
+        // set around it.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(
+                1 * tile + 8 + tile / 2,
+                0 * tile + 8 + tile / 2,
+                Buttons.RIGHT_BUTTON,
+                tile,
+            ),
+        )
+        assertEquals(opened, midend.stateCount)
+        assertEquals(
+            KeyOutcome.Unused,
+            midend.processKey(
+                1 * tile + 8 + tile / 2,
+                0 * tile + 8 + tile / 2,
+                Buttons.RIGHT_RELEASE,
+                tile,
+            ),
+        )
+        assertEquals(opened, midend.stateCount)
+
+        // A cursor key that cannot advance is a no-effect key.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_LEFT, tile),
+        )
+        assertEquals(
+            KeyOutcome.NoEffect,
+            midend.processKey(0, 0, Buttons.CURSOR_LEFT, tile),
+        )
+        assertEquals(opened, midend.stateCount)
+
+        // A cursor select on an open cell is a no-effect key.
         // (1,0) is open with the number 2 on this board.
         midend.processKey(0, 0, Buttons.CURSOR_RIGHT, tile)
         assertEquals(KeyOutcome.NoEffect, midend.processKey(
@@ -528,6 +614,15 @@ class MinesInputParityTest {
         assertEquals(KeyOutcome.Unused, win.processKey(98, 98, Buttons.LEFT_BUTTON, tile))
         assertEquals(wonStates, win.stateCount)
         assertTrue(win.undo())
+
+        val dead = Midend.newGame(Mines, "9x9n10", SEED)
+        apply(dead, clickPoints(4, 4), tile)
+        apply(dead, clickPoints(0, 0), tile)
+        assertTrue((dead.state as Mines.State).dead)
+        val deadStates = dead.stateCount
+        apply(dead, clickPoints(8, 8), tile)
+        assertEquals(deadStates, dead.stateCount)
+        assertTrue(dead.canUndo)
 
         // The positive control after all the inert events.
         val control = Midend.newGame(Mines, "9x9n10", SEED)

@@ -872,8 +872,8 @@ class Midend private constructor(
                     else -> MoveType.RESTART
                 }
                 val next = if (type == MoveType.RESTART) {
-                    game.validateDesc(currentParams, record.value)?.let {
-                        error("restart move: $it")
+                    if (game.validateDesc(currentParams, record.value) != null) {
+                        error("Save file contained an invalid restart move")
                     }
                     game.newState(currentParams, record.value)
                 } else {

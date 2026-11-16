@@ -119,6 +119,7 @@ class MinesSaveTest {
             val reloaded = Midend.fromSave(Mines, SgtpSave.parse(loaded.state))
             assertEquals(text, reloaded.serialise().serialise())
             assertEquals(midend.state, reloaded.state)
+            assertSameLayout(midend.state as Mines.State, reloaded.state as Mines.State)
             assertEquals(midend.id(), reloaded.id())
             assertTrue(reloaded.canUndo)
         }
@@ -241,6 +242,7 @@ class MinesSaveTest {
                 assertEquals("$name reload", text, reloaded.serialise().serialise())
                 assertEquals("$name reload UI", save.value("UI"), reloaded.serialise().value("UI"))
                 assertEquals("$name reload TIME", "0", reloaded.serialise().value("TIME"))
+                assertSameLayout(midend.state as Mines.State, reloaded.state as Mines.State)
             }
 
             // The live redo branch: undo after the chord, save, and the
@@ -341,6 +343,30 @@ class MinesSaveTest {
         }
 
     @Test
+    fun `an invalid restart record reports the C message`() = OracleClient().use { oracle ->
+        val text = historySave(
+            desc = "4,4,m9eed07198e89048f2e4d0",
+            privDesc = "m9eed07198e89048f2e4d0",
+            history = listOf("RESTART" to "zz"),
+            statePos = 2,
+        )
+        val oracleError = try {
+            oracle.id(text)
+            null
+        } catch (e: OracleException) {
+            e.message
+        }
+        assertEquals("Save file contained an invalid restart move", oracleError)
+        val kotlinError = try {
+            Midend.fromSave(Mines, SgtpSave.parse(text))
+            null
+        } catch (e: IllegalStateException) {
+            e.message
+        }
+        assertEquals(oracleError, kotlinError)
+    }
+
+    @Test
     fun `an empty move is an accepted copy`() = OracleClient().use { oracle ->
         val text = historySave(
             desc = "4,4,m9eed07198e89048f2e4d0",
@@ -427,6 +453,8 @@ class MinesSaveTest {
             // `atof` takes the numeric prefix of a hand-written record.
             "3.5junk", "61.25x", " 3.5", "1e2junk", ".5junk", "-2.5junk",
             "0x10", "0x1.8p1",
+            // `%g` keeps the sign of a negative zero.
+            "-0", "-0.0",
         )) {
             val save = SgtpSave.of(
                 template.records.map {
@@ -542,6 +570,23 @@ class MinesSaveTest {
         assertEquals(clickedId, midend.id())
         assertEquals("4,4,m9eed07198e89048f2e4d0", midend.desc)
         assertEquals("m9eed07198e89048f2e4d0", midend.privDesc)
+    }
+
+    /**
+     * `State.equals` ignores the shared layout, as C's reference count
+     * does not compare it. A save round trip must still rebuild the same
+     * mine bitmap and the same first-click cell, because both reach the
+     * drawing and the status text.
+     */
+    private fun assertSameLayout(expected: Mines.State, actual: Mines.State) {
+        val expectedMines = expected.layout.mines
+        val actualMines = actual.layout.mines
+        assertEquals("layout has mines", expectedMines != null, actualMines != null)
+        if (expectedMines != null && actualMines != null) {
+            assertTrue("layout mine bitmap", expectedMines.contentEquals(actualMines))
+        }
+        assertEquals("layout start x", expected.layout.startX, actual.layout.startX)
+        assertEquals("layout start y", expected.layout.startY, actual.layout.startY)
     }
 
     private fun click(midend: Midend, x: Int, y: Int) {

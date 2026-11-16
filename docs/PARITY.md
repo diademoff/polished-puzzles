@@ -1428,6 +1428,16 @@ Notes:
   the matrix in `MinesDescTest`, `MinesSaveTest`, `MinesTraceTest`,
   `MinesInputParityTest`, and the engine `MinesTest`.
 
+  The double post-increment of `nperturbs_since_last_new_open` is
+  pinned by the `9x9n35` seed `18` first click: the oracle layout is
+  `0,0,mf4ac480d0763fb8209c80` after 103 attempts, while removing the
+  second increment gives `0,0,m45540a73c0b7fbb896938` after 101. The
+  never-assigned `prevret` has no layout fixture: assigning it makes
+  every tested base case retry without end, so the finite attempt count
+  and the layout above are the guards. A bounded search covered 1,767
+  base cases over small boards and the presets, and none reached a
+  layout under the fix.
+
   `MinesSaveTest` reads the five frozen corpus saves, rewrites them
   byte for byte, and compares id, status, undo, redo, text, `UI`, and
   `TIME` with C; every file has no `PRIVDESC` and `TIME 0`. In-memory
@@ -1437,21 +1447,25 @@ Notes:
   `CPARAMS:9x9n10` split, the `DESC`/`PRIVDESC` pair after the first
   click, and the record order are pinned. `TIME` uses the C `%g` writer
   and the C `atof` reader: a hand-written `3.5junk` is 3.5, `0x10` is
-  16, and `inf` and `nan` round-trip. A non-finite clock is a
-  hand-written record only, and its status prefix depends on the C
-  undefined `(int)` cast, so that prefix is a defined Kotlin result
-  pinned by `MinesTest`.
+  16, `-0` keeps its sign, and `inf` and `nan` round-trip. A
+  non-finite clock is a hand-written record only, and its status prefix
+  depends on the C undefined `(int)` cast, so that prefix is a defined
+  Kotlin result pinned by `MinesTest`. An invalid `RESTART` record
+  reports the C message `Save file contained an invalid restart move`.
 
   The timer has no oracle clock: the oracle's timer callbacks are
   empty. `MinesTest` pins the `[m:ss] ` prefix, the stop on death and
   win, the sticky completion after undo, and the live clock after a
-  solve. The `BUTTON_BEATS(LEFT, RIGHT)` rule is pinned by the engine
-  test: a right press while the left button is held is ignored, and a
-  left press after a right press gets the fabricated right release.
+  solve. The `BUTTON_BEATS(LEFT, RIGHT)` rule is pinned in both
+  orders: a right press while the left button is held is ignored, and a
+  left press after a right press is accepted and writes the same
+  flag-then-open save as C. The fabricated right release itself has no
+  mines-visible effect.
 
   C undefined behavior is defined by the port and pinned, not entered
   in `DEVIATIONS.md`: `atoi` and the move `%d` scan saturate where C is
-  undefined, `decode_ui` now reproduces the glibc `long`-to-`int`
+  undefined and the saturation vectors run through `decodeParams` and
+  `executeMove`, `decode_ui` now reproduces the glibc `long`-to-`int`
   wrap, a non-hex bitmap character reads as zero, an RNG text that
   does not decode is a zero state, and a perturbation that C asserts
   on returns no change so the solver retries. The generator's

@@ -2490,13 +2490,18 @@ aggressive 100x100 latency is an enablement debt:
   sweep, the first-click description, the layout-description grammar,
   and the exact bitmap length.
 - `MinesTest` is the engine test. It pins the deferred layout, the
-  generator and its two upstream quirks, the shared mutable `Layout`,
+  generator, the perturbation counter through the `9x9n35` seed `18`
+  layout (103 attempts, so the big-perturbation branch runs), and the
+  dead `prevret` (assigning it does not produce a layout: every tested
+  base case retries without end, so the finite attempt count is the
+  guard), the shared mutable `Layout`,
   the move grammar including the whole-move rejection for an
   out-of-range `F`/`O`/`C` token, the chord results, death and win, the
   solve, the text form, the `UI` character parser, the timing formula,
   the `[m:ss] ` prefix, `TIME` with the C `atof` prefix (including
-  `3.5junk`, `0x10`, `inf`, and `nan`), undo, redo, restart, the key
-  labels, `requestKeys`, the palette, and the geometry.
+  `3.5junk`, `0x10`, `inf`, and `nan`), the `atoi` and move `%d`
+  saturation, undo, redo, restart, the key labels, `requestKeys`, the
+  palette, and the geometry.
 - `MinesSaveTest` is strict for the save text and semantic for the
   state. It reads the five corpus saves, rewrites them byte for byte,
   and compares id, status, undo, redo, text, `UI`, and `TIME` with C.
@@ -2510,10 +2515,12 @@ aggressive 100x100 latency is an enablement debt:
   opens the click. The `UI` record round-trips in both directions,
   including the glibc `%d` wrap (`D2147483648` is `-2147483648`), `C`,
   `D-3`, and `D3Cjunk`. `TIME` uses the C `%g` writer and the C
-  `atof` reader: a hand-written `3.5junk` is 3.5, `0x1.8p1` is 3, and
-  `inf` and `nan` round-trip. A non-finite clock is hand-written only;
-  the C status prefix casts it to `int`, which is undefined, so that
-  one result is a Kotlin definition.
+  `atof` reader: a hand-written `3.5junk` is 3.5, `0x1.8p1` is 3,
+  `-0` keeps its sign, and `inf` and `nan` round-trip. A non-finite
+  clock is hand-written only; the C status prefix casts it to `int`,
+  which is undefined, so that one result is a Kotlin definition. An
+  invalid `RESTART` record reports the C message
+  `Save file contained an invalid restart move`.
 - `MinesTraceTest` is strict. It compares the four frozen traces and
   `traceNew` for every preset, sized cold traces after a click at tiles
   48, 63, 82, and 100, the 411x702 letterbox at tile 43 with origin
@@ -2535,12 +2542,16 @@ aggressive 100x100 latency is an enablement debt:
   State, id, status, `UI`, `TIME`, and the final frame with
   `pointsSized` are compared for every real pointer gesture. Every real
   open, flag, wrong-flag chord, and win changes the board and adds one
-  move and one state; an inert press, a middle press on a covered cell,
-  a too-few-flags chord, a letterbox click, and a click after a death
-  or a win change neither, each followed by a positive control. The
-  button-priority rule is pinned in the engine test: a right press
-  while the left button is held is ignored, and a left press after a
-  right press gets the fabricated right release.
+  move and one state; a right press outside the grid, a drag with no
+  press, a release with no press, a middle press on a covered cell, a
+  cursor key that cannot advance, a right-press chord with too few
+  flags, a too-few-flags middle chord, a letterbox click, and a click
+  after a death or a win change neither, each followed by a positive
+  control. The button-priority rule is pinned in both orders: a right
+  press while the left button is held is ignored, and a left press after
+  a right press is accepted and writes the same flag-then-open save as
+  C. The fabricated right release itself has no mines-visible effect, so
+  the right-then-left case pins the ordering, not the internal call.
 - Mines has C undefined behavior in four places, and the port defines
   each one without a `DEVIATIONS.md` entry because a valid game never
   reaches it: `atoi` and the move `%d` scan saturate, `decode_ui` keeps

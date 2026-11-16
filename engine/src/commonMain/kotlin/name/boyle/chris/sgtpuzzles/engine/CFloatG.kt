@@ -18,7 +18,8 @@ internal fun cFloatG(value: Float): String {
     if (value != value) return "nan"
     if (value == Float.POSITIVE_INFINITY) return "inf"
     if (value == Float.NEGATIVE_INFINITY) return "-inf"
-    if (value == 0.0f) return "0"
+    // glibc prints the sign of a negative zero.
+    if (value == 0.0f) return if (value.toRawBits() < 0) "-0" else "0"
 
     val negative = value < 0.0f
     val absolute = abs(value.toDouble())

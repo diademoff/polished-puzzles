@@ -258,6 +258,7 @@ class MinesDescTest {
                 FirstClick("9x9n10", "12345", 4, 4, 48),
                 FirstClick("9x9n10", "12345", 0, 0, 20),
                 FirstClick("9x9n35", "12345", 4, 4, 63),
+                FirstClick("9x9n35", "18", 0, 0, 20),
                 FirstClick("16x16n40", "12345", 0, 0, 82),
                 FirstClick("16x16n40", "12345", 15, 15, 100),
                 FirstClick("16x16n99", "1", 8, 8, 20),
