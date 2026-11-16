@@ -27,7 +27,7 @@ class ThickLineTraceTest {
     @Test
     fun `the sink records the oracle fields in the oracle order`() {
         val sink = KotlinTraceSink()
-        sink.thickLine(1000, 2000, 3000, 4000, 1.5f, 5)
+        sink.thickLine(1, 2, 3, 4, 1.5f, 5)
 
         val op = sink.ops.single()
         assertEquals(
@@ -59,7 +59,7 @@ class ThickLineTraceTest {
     fun `the normalized operation matches the oracle line`() {
         val sink = KotlinTraceSink()
         sink.startDraw()
-        sink.thickLine(1000, 2000, 3000, 4000, 1.5f, 5)
+        sink.thickLine(1, 2, 3, 4, 1.5f, 5)
         sink.endDraw()
 
         val ours = TraceNormalizer.normalize(trace(sink.ops))
@@ -78,7 +78,7 @@ class ThickLineTraceTest {
 
         val start = lines.indexOf("start_draw")
         val preceding = lines.indexOfLast { it.startsWith("poly ") }
-        val thick = lines.indexOf("thick_line 3000 8 16 24 32 1")
+        val thick = lines.indexOf("thick_line 3000 8000 16000 24000 32000 1")
         val end = lines.indexOf("end_draw")
 
         assertTrue("the trace has a start", start >= 0)

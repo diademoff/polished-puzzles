@@ -67,6 +67,9 @@ class KotlinTraceSink : DrawSink {
     /**
      * `tr_draw_thick_line` (`oracle.c:695-706`) records `t` first with
      * the thickness in thousandths, then the endpoints, then the colour.
+     * The oracle converts the thickness and both endpoints with
+     * `tc_milli`; the seam's endpoints are integers in game coordinates,
+     * so their milli fields are exact.
      */
     override fun thickLine(
         x1: Int,
@@ -79,10 +82,10 @@ class KotlinTraceSink : DrawSink {
         record(
             "op" to JsonValue.Str("thick_line"),
             "t" to num((thickness * 1000.0f).roundToInt()),
-            "x1" to num(x1),
-            "y1" to num(y1),
-            "x2" to num(x2),
-            "y2" to num(y2),
+            "x1" to num(x1 * 1000),
+            "y1" to num(y1 * 1000),
+            "x2" to num(x2 * 1000),
+            "y2" to num(y2 * 1000),
             "c" to num(colour),
         )
     }
