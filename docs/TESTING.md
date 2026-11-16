@@ -2644,9 +2644,14 @@ aggressive 100x100 latency is an enablement debt:
   `requestKeys` payload (arrow mode 3, the labels `0..n`, unchanged by
   the full-cursor hint) against the oracle for every preset, the
   payloads with and without `AUXINFO`, and the 651-character `6db`
-  solver string that pins the `rule_out_placement` swap-with-last
-  compaction and the vertical-before-horizontal placement order. It
-  also pins the move acceptance table, the text form, the completion
+  solver string. That string pins the `E` and `D` payload and the
+  vertical-before-horizontal placement order, but it cannot pin the
+  internal compaction of `rule_out_placement`: the `E` pass lists
+  placements by index, so the emitted order carries no information
+  about the internal list order, and the measured `6db` payload is the
+  same under a stable removal. The compaction is pinned directly in
+  `DominosaTest`. This test also
+  pins the move acceptance table, the text form, the completion
   event, undo/redo/restart, the key labels `Place`/`Remove`/`Line`, and
   D-013.
 - `DominosaSaveTest` is strict for the save text and semantic for the
@@ -2668,26 +2673,32 @@ aggressive 100x100 latency is an enablement debt:
   parity and the useful second ring, and the two highlight colours. No
   trace contains a flash frame, a blitter, or a thick primitive.
 - `DominosaInputParityTest` is semantic and ui. It compares the layout
-  at five viewports, then sends real placements and removals, real
-  edges, and drags at tiles 48, 63, 82, and 100, and the 411x702
-  letterbox with origin (1,178) with the origin subtracted on both
-  sides. It pins the measured `208x176` boundary table, the same edge
-  twice as a toggle, the refusal of an edge on a covered square, the
-  keyboard cursor and both selects, the digit highlights with and
-  without the keypad flag, a modified arrow, a third highlight, undo
-  and redo with no history, a solve on a solved board, and a real
-  click completion. State, id, status, and the final frame with
-  `pointsSized` are compared for every real placement, removal, and
-  edge. Every real placement and removal changes the board and adds
-  one move; every inert click, drag, release, middle press, digit
-  above `n`, letter, `TAB`, letterbox click, and out-of-board click
-  changes neither, each with a positive control.
+  and the letterbox origin at five viewports, then sends real
+  placements and removals, real edges, and drags at tiles 48, 63, 82,
+  and 100, and the 411x702 letterbox with origin (1,178) with the
+  origin subtracted on both sides. It pins the measured `208x176`
+  boundary table, including `x = BORDER-1` and `y = BORDER-1`
+  separately, the last cell and one pixel past it on each axis, the
+  four letterbox bands, the same edge twice as a toggle, the refusal
+  of an edge on a covered square, the keyboard cursor and both
+  selects, the digit highlights with and without the keypad flag, a
+  modified arrow, a third highlight, undo and redo with no history, a
+  solve on a solved board, and a real click completion. State, id,
+  status, and the final frame with `pointsSized` are compared for
+  every real placement, removal, and edge. Every real placement and
+  removal changes the board and adds one move; every inert click,
+  drag, release, middle press, digit above `n`, letter, `TAB`,
+  letterbox click, and out-of-board click changes neither, each with a
+  positive control.
 - `DominosaTest` is the engine test. It pins the decode and validation
   tables, the six description messages, the `atoi` saturation, the
   out-of-range difficulty encoded as `d?`, the short-`AUXINFO`
   definition, the text form and its empty
   result above the C `n < 1000` bound, the solver reach for the Hard
-  and Extreme techniques, the allocator retry counters, the move
+  and Extreme techniques, the swap-with-last compaction of
+  `rule_out_placement` on the internal domino and square lists (the
+  `3dt` fixture asserts the exact order, which a stable removal
+  changes), the allocator retry counters, the move
   grammar and the edge echo pair, the completion counter, the cursor,
   the palette, and the geometry. D-013 is pinned here: the description
   `00222301130313132021` has no `3-3` placement; C aborts at
@@ -2695,12 +2706,12 @@ aggressive 100x100 latency is an enablement debt:
   Kotlin returns the measured `S;E...;D...` text. The other C
   undefined-behavior spots are port definitions without a deviation
   entry: `atoi` saturates, an unknown difficulty encodes as `d?`, a
-  missing auxiliary character reads as `.`, the set mask is 64 bits
-  wide, and `isdigit` is defined after the keypad mask. Enablement
-  debt: `can_format_as_text_now` is params-dependent (`n < 1000`) and
-  the seam has no such hook, so `textFormat` returns `""` for
-  `n >= 1000`; S8 is the two-field configuration schema (`Maximum
-  number on dominoes`, `:Trivial:Basic:Hard:Extreme:Ambiguous`), the
+  missing auxiliary character reads as `.`, the set mask is a signed
+  64-bit `Long`, and `isdigit` is defined after the keypad mask.
+  Enablement debt: `can_format_as_text_now` is params-dependent
+  (`n < 1000`) and the seam has no such hook, so `textFormat` returns
+  `""` for `n >= 1000`; S8 is the two-field configuration schema
+  (`Maximum number on dominoes`, `:Trivial:Basic:Hard:Extreme:Ambiguous`), the
   twelve presets, the solve message, generation off the UI thread, an
   owner size bound for the accepted `46339` order, and the
   two-release wait. Dominosa has no preferences and no `UI` record.

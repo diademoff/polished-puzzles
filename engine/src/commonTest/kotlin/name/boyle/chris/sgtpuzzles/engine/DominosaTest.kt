@@ -884,6 +884,30 @@ class DominosaTest {
         assertEquals(8, plainSink.ops.count { it == "line" })
     }
 
+    @Test
+    fun `the rule-out compaction swaps with the last entry`() {
+        // The real `3dt` board. Placement 3 is the first rule-out of the
+        // measured solver run (`S;E3,11;...`).
+        val state = Midend.newGame(Dominosa, "3dt", SEED).state as Dominosa.State
+        val initial =
+            Dominosa.solverPlacementLists(3, state.numbers.values, IntArray(0))
+        assertEquals(listOf(2, 3, 15, 16, 17, 21, 30), initial.dominoes[1])
+        assertEquals(listOf(3, 17, 18), initial.squares[3])
+        assertEquals(listOf(3, 8, 21, 22), initial.squares[8])
+
+        val compacted =
+            Dominosa.solverPlacementLists(3, state.numbers.values, intArrayOf(3))
+        // `dominosa.c:596-612`: the last entry replaces the removed one.
+        // A stable shift would give [2, 15, 16, 17, 21, 30], [17, 18],
+        // and [8, 21, 22] instead. The measured `E` list is in
+        // placement-index order, so no public payload in this suite
+        // sees the difference: this hook is the pin for the internal
+        // order.
+        assertEquals(listOf(2, 30, 15, 16, 17, 21), compacted.dominoes[1])
+        assertEquals(listOf(18, 17), compacted.squares[3])
+        assertEquals(listOf(22, 8, 21), compacted.squares[8])
+    }
+
     @Test(timeout = 120_000)
     fun `the set technique defines a domino number above fifteen`() {
         // C stores `ds[othernum]` in a 16-entry array and shifts an
@@ -910,7 +934,13 @@ class DominosaTest {
             false,
         )
         val report = Dominosa.analyse(state)
-        assertTrue(report.ret in 0..2)
+        // The defined result for this hand-built board: most dominoes
+        // have no placement, so the grade is inconsistent (0). The mask
+        // and the table keep the `ds[16]` write defined. The bit above
+        // the 16-entry table is never counted: `ndominoes` reads only
+        // the `nsq <= 16` subset bits, so the extra bit changes no
+        // examined value.
+        assertEquals(0, report.ret)
         assertEquals(0, state.grid[0])
         assertEquals(0, state.edges.sum())
     }

@@ -55,10 +55,14 @@ class DominosaGameTest {
         val save = oracle.newGame("dominosa", "6db", SEED).state
         val full = oracle.requestKeys(save, fullCursor = true)
         assertEquals(3, full.arrowMode)
-        assertEquals(
-            ArrowMode.ARROWS_LEFT_RIGHT,
-            Dominosa.requestKeys(Dominosa.decodeParams("6db"), fullCursor = true).arrowMode,
-        )
+        val kotlinFull = Dominosa.requestKeys(Dominosa.decodeParams("6db"), fullCursor = true)
+        assertEquals(ArrowMode.ARROWS_LEFT_RIGHT, kotlinFull.arrowMode)
+        assertEquals(full.labels.size, kotlinFull.labels.size)
+        for (i in full.labels.indices) {
+            assertEquals("full-cursor label $i", full.labels[i].label, kotlinFull.labels[i].name)
+            assertEquals("full-cursor button $i", full.labels[i].button, kotlinFull.labels[i].button)
+            assertFalse(kotlinFull.labels[i].needsArrows)
+        }
     }
 
     @Test(timeout = 300_000)

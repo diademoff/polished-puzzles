@@ -47,6 +47,19 @@ class DominosaInputParityTest {
                     "${expected.width}x${expected.height}",
                     "${geometry.width}x${geometry.height}",
                 )
+                // The oracle centres the board with `(view - board) / 2`;
+                // this checks the letterbox origin at every viewport, not
+                // only at the 411x702 one.
+                assertEquals(
+                    "origin x ${viewport.first}x${viewport.second}",
+                    (viewport.first - expected.width) / 2,
+                    geometry.originX,
+                )
+                assertEquals(
+                    "origin y ${viewport.first}x${viewport.second}",
+                    (viewport.second - expected.height) / 2,
+                    geometry.originY,
+                )
                 assertTrue(geometry.tileSize >= 1)
             }
         }
@@ -255,9 +268,12 @@ class DominosaInputParityTest {
         val save = oracle.newGame("dominosa", "3dt", SEED).state
         val cases = listOf(
             24 to 24 to "",
+            23 to 41 to "",
+            41 to 23 to "",
             40 to 40 to "",
             41 to 40 to "D0,1",
             39 to 40 to "",
+            40 to 25 to "",
             24 to 41 to "",
             40 to 41 to "D0,5",
             55 to 41 to "D0,1",
@@ -338,6 +354,24 @@ class DominosaInputParityTest {
         assertEquals("letterbox state count", count, midend.stateCount)
         assertEquals("letterbox id", id, midend.id())
         assertEquals("letterbox text", text, Dominosa.textFormat(midend.state))
+
+        // One click in the middle of each letterbox band: view x = 0 and
+        // 410, view y = 0 and 701, with the origin subtracted.
+        for ((side, gx, gy) in listOf(
+            Triple("top", 100, geom.toGameY(0)),
+            Triple("bottom", 100, geom.toGameY(701)),
+            Triple("left", geom.toGameX(0), 100),
+            Triple("right", geom.toGameX(410), 100),
+        )) {
+            assertEquals(
+                "$side letterbox",
+                KeyOutcome.Unused,
+                midend.processKey(gx, gy, Buttons.LEFT_BUTTON, geom.tileSize),
+            )
+            assertEquals("$side state count", count, midend.stateCount)
+            assertEquals("$side id", id, midend.id())
+            assertEquals("$side text", text, Dominosa.textFormat(midend.state))
+        }
 
         // The view coordinates of the board origin are a real click.
         val point = halfPoint(0, 0, geom.tileSize, 'R')
@@ -699,6 +733,37 @@ class DominosaInputParityTest {
                 midend.processKey(board.width, board.height, Buttons.LEFT_BUTTON, tileSize),
             )
             assertEquals(1, midend.stateCount)
+        }
+    }
+
+    @Test(timeout = 120_000)
+    fun `the last cell is a move and one pixel past it is outside`() {
+        for (tileSize in listOf(48, 63, 82, 100)) {
+            val midend = Midend.newGame(Dominosa, "3dt", SEED)
+            val board = Dominosa.computeSize(Dominosa.decodeParams("3dt"), tileSize)
+            val point = halfPoint(4, 3, tileSize, 'L')
+
+            // The bottom-right cell with its left half: a real click.
+            assertEquals(
+                "tile $tileSize last cell",
+                KeyOutcome.SomeEffect,
+                midend.processKey(point.first, point.second, Buttons.LEFT_BUTTON, tileSize),
+            )
+            assertEquals("tile $tileSize last cell move", "D18,19", moveOf(midend))
+            assertEquals("tile $tileSize last cell count", 2, midend.stateCount)
+
+            // One pixel past the last cell on each axis is outside.
+            assertEquals(
+                "tile $tileSize past x",
+                KeyOutcome.Unused,
+                midend.processKey(board.width, point.second, Buttons.LEFT_BUTTON, tileSize),
+            )
+            assertEquals(
+                "tile $tileSize past y",
+                KeyOutcome.Unused,
+                midend.processKey(point.first, board.height, Buttons.LEFT_BUTTON, tileSize),
+            )
+            assertEquals("tile $tileSize state count", 2, midend.stateCount)
         }
     }
 

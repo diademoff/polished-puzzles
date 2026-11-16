@@ -1233,8 +1233,8 @@ object Dominosa : Game {
             sc.squaresByNumberInitialised = true
         }
 
-        val dominoSets = ULongArray(16)
-        val adjacent = ULongArray(16)
+        val dominoSets = LongArray(16)
+        val adjacent = LongArray(16)
         val ds = IntArray(64) { -1 }
 
         var sqp = 0
@@ -1246,54 +1246,56 @@ object Dominosa : Game {
 
             for (i in 0 until nsq) sc.whScratch[squaresByNumber[sqs + i]] = i
 
-            adjacent.fill(0UL)
+            adjacent.fill(0L)
             for (i in 0 until nsq) {
                 val sq = squaresByNumber[sqs + i]
-                var mask = 0UL
+                var mask = 0L
                 for (j in 0 until sc.squareNPlacements[sq]) {
                     val p = sc.squarePlacements[sq][j]
                     val d = sc.placementDomino[p]
                     val othernum = sc.dominoLo[d] + sc.dominoHi[d] - num
                     // C shifts an unsigned long and writes ds[othernum]
                     // into a 16-entry array. Both are undefined above 15
-                    // on C. The port keeps a 64-bit mask and a 64-entry
-                    // table; a number above 63 is "no such domino".
+                    // on C. The port keeps a signed 64-bit mask and a
+                    // 64-entry table; a number above 63 is "no such
+                    // domino", and bit 63 is the sign bit, which still
+                    // works for the bit tests.
                     if (othernum in 0..63) {
-                        mask = mask or (1UL shl othernum)
+                        mask = mask or (1L shl othernum)
                         ds[othernum] = d
                     }
                     if (othernum == num) {
                         val other = sc.placementSquare0[p] + sc.placementSquare1[p] - sq
                         val i2 = sc.whScratch[other]
-                        adjacent[i] = adjacent[i] or (1UL shl i2)
-                        adjacent[i2] = adjacent[i2] or (1UL shl i)
+                        adjacent[i] = adjacent[i] or (1L shl i2)
+                        adjacent[i2] = adjacent[i2] or (1L shl i)
                     }
                 }
                 dominoSets[i] = mask
             }
 
-            var subsetDone = 0UL
-            val limit = 1UL shl nsq
-            var subset = 0UL
+            var subsetDone = 0L
+            val limit = 1L shl nsq
+            var subset = 0L
             while (subset < limit) {
-                if ((subset and subsetDone) != 0UL) {
+                if ((subset and subsetDone) != 0L) {
                     subset++
                     continue
                 }
 
                 var gotAdjacent = false
                 var nsquares = 0
-                var dominoes = 0UL
+                var dominoes = 0L
                 for (bitpos in 0 until nsq) {
-                    if ((subset and (1UL shl bitpos)) == 0UL) continue
-                    if ((adjacent[bitpos] and subset) != 0UL) gotAdjacent = true
+                    if ((subset and (1L shl bitpos)) == 0L) continue
+                    if ((adjacent[bitpos] and subset) != 0L) gotAdjacent = true
                     dominoes = dominoes or dominoSets[bitpos]
                     nsquares++
                 }
 
                 var ndominoes = 0
                 for (bitpos in 0 until nsq) {
-                    if ((dominoes and (1UL shl bitpos)) != 0UL) ndominoes++
+                    if ((dominoes and (1L shl bitpos)) != 0L) ndominoes++
                 }
 
                 val ruleOutNondoubles: Boolean
@@ -1331,7 +1333,7 @@ object Dominosa : Game {
 
                 var reported = false
                 for (bitpos in 0 until nsq) {
-                    if ((dominoes and (1UL shl bitpos)) == 0UL) continue
+                    if ((dominoes and (1L shl bitpos)) == 0L) continue
                     val d = ds[bitpos]
                     check(d >= 0) { "dominosa set has no domino for bit $bitpos" }
 
@@ -1346,7 +1348,7 @@ object Dominosa : Game {
                                 sc.placementSquare1[p]
                             }
                             if (sc.squareNumber[sq2] == num &&
-                                (subset and (1UL shl sc.whScratch[sq2])) != 0UL
+                                (subset and (1L shl sc.whScratch[sq2])) != 0L
                             ) {
                                 nused++
                             }
@@ -1702,6 +1704,40 @@ object Dominosa : Game {
         setupGrid(sc, s.numbers.values)
         val ret = runSolver(sc, DIFFCOUNT)
         return SolverReport(ret, sc.maxDiffUsed, sc.stats.copy())
+    }
+
+    /** The per-domino and per-square placement lists in compaction order. */
+    internal class PlacementLists(
+        val dominoes: List<List<Int>>,
+        val squares: List<List<Int>>,
+    )
+
+    /**
+     * Test hook for [ruleOutPlacement]. It builds the same solver state
+     * as [solve], applies [ruleOut] in order, and returns the lists that
+     * the later techniques read.
+     *
+     * The emitted `E` list is built in placement-index order, so it
+     * cannot show the internal order on its own. This hook exposes the
+     * order directly, and the engine test pins the swap-with-last
+     * compaction through it.
+     */
+    internal fun solverPlacementLists(
+        n: Int,
+        numbers: IntArray,
+        ruleOut: IntArray,
+    ): PlacementLists {
+        val sc = SolverScratch(n)
+        setupGrid(sc, numbers)
+        for (p in ruleOut) ruleOutPlacement(sc, p)
+        return PlacementLists(
+            dominoes = (0 until sc.dc).map { d ->
+                (0 until sc.dominoNPlacements[d]).map { sc.dominoPlacements[d][it] }
+            },
+            squares = (0 until sc.wh).map { square ->
+                (0 until sc.squareNPlacements[square]).map { sc.squarePlacements[square][it] }
+            },
+        )
     }
 
     // ------------------------------------------------------------------
