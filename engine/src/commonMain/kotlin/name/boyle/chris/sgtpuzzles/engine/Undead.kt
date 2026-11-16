@@ -2600,10 +2600,10 @@ object Undead : Game {
             my2 = dy - t / 4
         }
         sink.thickLine(
-            mx1,
-            my1,
-            mx2,
-            my2,
+            mx1.toFloat(),
+            my1.toFloat(),
+            mx2.toFloat(),
+            my2.toFloat(),
             (t / 16).toFloat(),
             if (hflash) COL_FLASH else COL_TEXT,
         )

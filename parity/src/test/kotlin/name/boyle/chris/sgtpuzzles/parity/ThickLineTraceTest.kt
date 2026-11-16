@@ -11,23 +11,25 @@ import org.junit.Test
 /**
  * Level: strict. The `thick_line` operation of the trace.
  *
- * `draw_thick_line` is an upstream `drawing_api` primitive. The oracle
- * records it as `{"op":"thick_line","t":..,"x1":..,"y1":..,"x2":..,
- * "y2":..,"c":..}` (`oracle.c:695-706`) and expresses the thickness and
- * the endpoints in thousandths. No ported game draws a thick line yet,
- * so the tests call the sink directly and wrap `fifteen` for the
- * in-draw order.
+ * `draw_thick_line` is an upstream `drawing_api` primitive that takes
+ * float coordinates. The oracle records it as
+ * `{"op":"thick_line","t":..,"x1":..,"y1":..,"x2":..,"y2":..,"c":..}`
+ * (`oracle.c:695-706`) and expresses the thickness and the endpoints in
+ * thousandths with `lroundf(value * 1000)`. A game can pass a fractional
+ * endpoint, as `tracks` does, so the tests use fractional input. No
+ * ported game draws a thick line yet, so the tests call the sink
+ * directly and wrap `fifteen` for the in-draw order.
  */
 class ThickLineTraceTest {
 
     /** A thick line as the oracle writes it, in the oracle field order. */
     private val oracleOp =
-        """{"op":"thick_line","t":1500,"x1":1000,"y1":2000,"x2":3000,"y2":4000,"c":5}"""
+        """{"op":"thick_line","t":1500,"x1":1250,"y1":2500,"x2":3750,"y2":4000,"c":5}"""
 
     @Test
     fun `the sink records the oracle fields in the oracle order`() {
         val sink = KotlinTraceSink()
-        sink.thickLine(1, 2, 3, 4, 1.5f, 5)
+        sink.thickLine(1.25f, 2.5f, 3.75f, 4f, 1.5f, 5)
 
         val op = sink.ops.single()
         assertEquals(
@@ -36,30 +38,33 @@ class ThickLineTraceTest {
         )
         assertEquals("thick_line", (op.fields["op"] as JsonValue.Str).value)
         assertEquals(1500L, (op.fields["t"] as JsonValue.Num).value)
-        assertEquals(1000L, (op.fields["x1"] as JsonValue.Num).value)
-        assertEquals(2000L, (op.fields["y1"] as JsonValue.Num).value)
-        assertEquals(3000L, (op.fields["x2"] as JsonValue.Num).value)
+        assertEquals(1250L, (op.fields["x1"] as JsonValue.Num).value)
+        assertEquals(2500L, (op.fields["y1"] as JsonValue.Num).value)
+        assertEquals(3750L, (op.fields["x2"] as JsonValue.Num).value)
         assertEquals(4000L, (op.fields["y2"] as JsonValue.Num).value)
         assertEquals(5L, (op.fields["c"] as JsonValue.Num).value)
     }
 
     @Test
-    fun `the thickness rounds to thousandths like the oracle`() {
-        // `TILESIZE/16` is 3 at the upstream 48-pixel tile, and
-        // `tc_milli` rounds a half away from zero.
+    fun `the thousandths round like tc_milli`() {
+        // `TILESIZE/16` is 3 at the upstream 48-pixel tile. `0.0625`
+        // scales to 62.5, and `tc_milli` rounds a half away from zero.
+        // A fractional endpoint must be rounded, not truncated.
         val sink = KotlinTraceSink()
-        sink.thickLine(0, 0, 0, 0, 3.0f, 1)
-        sink.thickLine(0, 0, 0, 0, 0.0625f, 1)
+        sink.thickLine(59.25f, 3.125f, 0.0625f, -0.0625f, 0.0625f, 1)
 
-        assertEquals(3000L, (sink.ops[0].fields["t"] as JsonValue.Num).value)
-        assertEquals(63L, (sink.ops[1].fields["t"] as JsonValue.Num).value)
+        assertEquals(63L, (sink.ops[0].fields["t"] as JsonValue.Num).value)
+        assertEquals(59250L, (sink.ops[0].fields["x1"] as JsonValue.Num).value)
+        assertEquals(3125L, (sink.ops[0].fields["y1"] as JsonValue.Num).value)
+        assertEquals(63L, (sink.ops[0].fields["x2"] as JsonValue.Num).value)
+        assertEquals(-63L, (sink.ops[0].fields["y2"] as JsonValue.Num).value)
     }
 
     @Test
     fun `the normalized operation matches the oracle line`() {
         val sink = KotlinTraceSink()
         sink.startDraw()
-        sink.thickLine(1, 2, 3, 4, 1.5f, 5)
+        sink.thickLine(1.25f, 2.5f, 3.75f, 4f, 1.5f, 5)
         sink.endDraw()
 
         val ours = TraceNormalizer.normalize(trace(sink.ops))
@@ -68,7 +73,24 @@ class ThickLineTraceTest {
         )
 
         assertEquals(oracle, ours)
-        assertTrue(ours.lines().contains("thick_line 1500 1000 2000 3000 4000 5"))
+        assertTrue(ours.lines().contains("thick_line 1500 1250 2500 3750 4000 5"))
+    }
+
+    /**
+     * The frozen `tracks` trace contains this line
+     * (`testdata/trace/tracks/8x8dt.trace`): two integer endpoints and
+     * one fractional endpoint. An `Int` seam would truncate `59.25` to
+     * `59` and write `59000`.
+     */
+    @Test
+    fun `the tracks-shaped fractional line matches the oracle format`() {
+        val sink = KotlinTraceSink()
+        sink.startDraw()
+        sink.thickLine(63f, 73f, 59.25f, 73f, 3.75f, 5)
+        sink.endDraw()
+
+        val lines = TraceNormalizer.normalize(trace(sink.ops)).lines()
+        assertTrue(lines.contains("thick_line 3750 63000 73000 59250 73000 5"))
     }
 
     @Test
@@ -78,7 +100,7 @@ class ThickLineTraceTest {
 
         val start = lines.indexOf("start_draw")
         val preceding = lines.indexOfLast { it.startsWith("poly ") }
-        val thick = lines.indexOf("thick_line 3000 8000 16000 24000 32000 1")
+        val thick = lines.indexOf("thick_line 3000 8000 16000 24250 32000 1")
         val end = lines.indexOf("end_draw")
 
         assertTrue("the trace has a start", start >= 0)
@@ -120,7 +142,7 @@ class ThickLineTraceTest {
             tileSize: Int,
         ) {
             Fifteen.redraw(state, ui, drawState, sink, tileSize)
-            sink.thickLine(8, 16, 24, 32, 3.0f, 1)
+            sink.thickLine(8f, 16f, 24.25f, 32f, 3.0f, 1)
         }
     }
 }

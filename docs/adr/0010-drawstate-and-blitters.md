@@ -221,3 +221,14 @@ no blitter, and does not affect the first-draw clear. A game may call it
 inside any draw between `start_draw` and `end_draw`, and the cache rules
 in the decision above apply unchanged. The seam definition and the trace
 format are in `docs/adr/0007-kotlin-game-seam.md`.
+
+## Amendment: fractional thick line endpoints
+
+- **Date:** 2026-11-16
+
+`DrawSink.thickLine` takes `Float` endpoints. This changes only the
+argument type of the primitive, because upstream `draw_thick_line`
+takes float coordinates. It remains a drawing operation, not a
+drawstate or blitter operation, so the lifecycle rules in the decision
+above are unchanged. The rounding rule and the callers are in
+`docs/adr/0007-kotlin-game-seam.md`.

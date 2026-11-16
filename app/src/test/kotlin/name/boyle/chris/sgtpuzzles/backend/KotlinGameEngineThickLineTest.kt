@@ -28,7 +28,7 @@ class KotlinGameEngineThickLineTest {
             // endpoints and not only to the first.
             setGeometry(engine, BoardGeometry(24, 7, 11, 100, 100))
 
-            sinkOf(engine).thickLine(10, 20, 30, 40, 2.5f, 3)
+            sinkOf(engine).thickLine(10f, 20f, 30f, 40f, 2.5f, 3)
         }
 
         Mockito.verify(view).drawLine(2.5f, 17f, 31f, 37f, 51f, 3)

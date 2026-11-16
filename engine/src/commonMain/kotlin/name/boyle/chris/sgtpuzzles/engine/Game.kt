@@ -462,11 +462,15 @@ interface DrawSink {
 
     /**
      * `draw_thick_line`: a line with [thickness] pixels. The endpoints
-     * keep the order of [line]; the upstream `drawing_api` and the
+     * keep the order of [line], and they are floats because upstream
+     * takes `float` coordinates. A game that draws fractional geometry
+     * must not truncate it here. The trace stores thousandths and rounds
+     * each value with the oracle's `tc_milli` rule, so an integer
+     * coordinate converts exactly. The upstream `drawing_api` and the
      * Android `ViewCallbacks.drawLine` callback take the thickness
      * first.
      */
-    fun thickLine(x1: Int, y1: Int, x2: Int, y2: Int, thickness: Float, colour: Int)
+    fun thickLine(x1: Float, y1: Float, x2: Float, y2: Float, thickness: Float, colour: Int)
 
     fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int)
 

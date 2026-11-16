@@ -419,6 +419,45 @@ callback. This change adds the seam operation, not the game.
    the same, and the parity suite pins that. The `undead` port remains a
    separate change with its own parity matrix.
 
+## Amendment: fractional thick line endpoints
+
+- **Date:** 2026-11-16
+
+`tracks` draws `draw_thick_line` at fractional coordinates. The circle
+sleepers are `cx + r*cos(th)` (`tracks.c:2614-2618`), and the straight
+sleepers and spokes divide the tile by 8 (`tracks.c:2633`, `2643`,
+`2669-2689`). The frozen trace already contains
+`thick_line 3750 63000 73000 59250 73000 5`, which an `Int` endpoint
+cannot express. This amendment supersedes the integer endpoints of the
+thick line amendment above.
+
+1. **`DrawSink.thickLine` takes `Float` endpoints.** The signature is
+   `thickLine(x1: Float, y1: Float, x2: Float, y2: Float,
+   thickness: Float, colour: Int)`, which matches the `float`
+   coordinates of upstream `draw_thick_line`. The argument order is
+   unchanged.
+
+2. **The trace sink records every value with `tc_milli`.** Each
+   endpoint and the thickness is `lroundf(value * 1000)`, which rounds
+   a half away from zero. An integer coordinate converts exactly, so
+   every frozen trace of a game that passes integers is unchanged.
+
+3. **The engine adds the origin as a float.** `KotlinGameEngine`
+   computes `x1 + originX.toFloat()`, and the same for the other three
+   endpoints, before it calls `viewCallbacks.drawLine`. The thickness is
+   not scaled by the origin or by the zoom.
+
+4. **`undead` widens its integer endpoints at the call.** Upstream
+   `undead.c:2633` already passes the integer endpoints as floats, so
+   the values and the traces do not change.
+
+`ThickLineTraceTest` pins the fractional rounding (`59.25` to `59250`,
+`3.125` to `3125`, `0.0625` to `63`, and `-0.0625` to `-63`), the
+`tracks`-shaped line, and the unchanged integer form.
+`KotlinGameEngineThickLineTest` pins the origin offset.
+
+The `tracks` port remains a separate change with its own parity matrix.
+
 ## Amendment: the platform random seed (S7)
 
 - **Date:** 2026-11-16

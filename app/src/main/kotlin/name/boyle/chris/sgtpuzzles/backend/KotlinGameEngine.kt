@@ -257,10 +257,10 @@ class KotlinGameEngine private constructor(
         }
 
         override fun thickLine(
-            x1: Int,
-            y1: Int,
-            x2: Int,
-            y2: Int,
+            x1: Float,
+            y1: Float,
+            x2: Float,
+            y2: Float,
             thickness: Float,
             colour: Int,
         ) {

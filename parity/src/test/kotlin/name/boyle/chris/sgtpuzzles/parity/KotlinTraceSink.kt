@@ -26,6 +26,17 @@ class KotlinTraceSink : DrawSink {
         if (recording) ops += obj(*fields)
     }
 
+    /**
+     * `tc_milli` (`oracle.c:433-436`): `lroundf(value * 1000)`, which
+     * rounds a half away from zero. `roundToInt` rounds a half towards
+     * positive infinity, so the negative branch is flipped to keep the
+     * oracle rule for every coordinate.
+     */
+    private fun milli(value: Float): Int {
+        val scaled = value * 1000.0f
+        return if (scaled < 0f) -(-scaled).roundToInt() else scaled.roundToInt()
+    }
+
     override fun changedState(canUndo: Boolean, canRedo: Boolean) {
         record(
             "op" to JsonValue.Str("changed_state"),
@@ -68,24 +79,25 @@ class KotlinTraceSink : DrawSink {
      * `tr_draw_thick_line` (`oracle.c:695-706`) records `t` first with
      * the thickness in thousandths, then the endpoints, then the colour.
      * The oracle converts the thickness and both endpoints with
-     * `tc_milli`; the seam's endpoints are integers in game coordinates,
-     * so their milli fields are exact.
+     * `tc_milli`, which is `lroundf(value * 1000)`. The endpoints are
+     * floats because upstream takes floats, so a fractional endpoint is
+     * rounded and not truncated. An integer endpoint converts exactly.
      */
     override fun thickLine(
-        x1: Int,
-        y1: Int,
-        x2: Int,
-        y2: Int,
+        x1: Float,
+        y1: Float,
+        x2: Float,
+        y2: Float,
         thickness: Float,
         colour: Int,
     ) {
         record(
             "op" to JsonValue.Str("thick_line"),
-            "t" to num((thickness * 1000.0f).roundToInt()),
-            "x1" to num(x1 * 1000),
-            "y1" to num(y1 * 1000),
-            "x2" to num(x2 * 1000),
-            "y2" to num(y2 * 1000),
+            "t" to num(milli(thickness)),
+            "x1" to num(milli(x1)),
+            "y1" to num(milli(y1)),
+            "x2" to num(milli(x2)),
+            "y2" to num(milli(y2)),
             "c" to num(colour),
         )
     }
