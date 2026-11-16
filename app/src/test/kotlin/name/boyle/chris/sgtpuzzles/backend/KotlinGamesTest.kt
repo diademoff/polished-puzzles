@@ -24,6 +24,7 @@ import name.boyle.chris.sgtpuzzles.engine.Tents
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
 import name.boyle.chris.sgtpuzzles.engine.Undead
 import name.boyle.chris.sgtpuzzles.engine.Unruly
+import name.boyle.chris.sgtpuzzles.engine.Untangle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -179,6 +180,12 @@ class KotlinGamesTest {
     fun `undead is registered but the app still uses C`() {
         assertEquals(Undead, KotlinGames.gameFor(UNDEAD))
         assertFalse(KotlinGames.handles(UNDEAD))
+    }
+
+    @Test
+    fun `untangle is registered but the app still uses C`() {
+        assertEquals(Untangle, KotlinGames.gameFor(UNTANGLE))
+        assertFalse(KotlinGames.handles(UNTANGLE))
     }
 
     @Test

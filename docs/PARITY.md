@@ -175,7 +175,7 @@ C wins.
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, and `undead` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, and `untangle` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -231,7 +231,7 @@ submenu entries when a game groups its presets.
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `dual-run` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `C` |
 | `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `dual-run` |
-| `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `C` |
+| `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `dual-run` |
 
 Notes:
 
@@ -1272,6 +1272,73 @@ Notes:
   Android call site. `UNDEAD` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(UNDEAD)` is false and the two-release wait
   still applies.
+
+- `untangle` is `dual-run`. Its parameters and five presets, the
+  decode and validation quirks, the generator and its two RNG draws,
+  the description and move grammars, the state and the sticky
+  completion, the solver, the empty text form, the palette, the
+  drawing, layout, input, and `requestKeys` pass the matrix in
+  `UntangleDescTest`, `UntangleGameTest`, `UntangleSaveTest`,
+  `UntangleTraceTest`, `UntangleInputParityTest`, and the engine
+  `UntangleTest`.
+
+  The generator draws one `w*h` grid shuffle and one or more `n` label
+  shuffles. The five presets, nine seeds, and a numeric sweep pin the
+  stream, and the exact `make_circle` coordinate table pins the double
+  `sin`/`cos` values at denominator 64. Those float coordinates reach
+  the description, the auxiliary answer, the save, and every trace, so
+  a host whose libm differs would change all four; the port keeps C's
+  order and truncation.
+
+  `UntangleSaveTest` reads all six corpus saves, rewrites them byte for
+  byte, and compares id, status, undo, redo, text, and the raw
+  `AUXINFO` bytes with C. `PARAMS` and `CPARAMS` are always equal
+  because `encode_params` ignores `full`. A Kotlin save for every
+  preset and nine seeds matches a fresh C game and reloads in C with
+  the same text. In-memory history covers a click, a drag, an undo
+  with a live redo branch, a `SOLVE`, a `RESTART`, and the empty
+  `MOVE`; an `S` move fails in both engines. No save has a `UI`
+  record.
+
+  `UntangleInputParityTest` sends real press/release clicks and
+  press-drag-drag-release drags at tiles 48, 63, 82, and 100 and at a
+  letterbox whose origin is subtracted on both sides, and compares the
+  final frame with `pointsSized`. It also covers the four arrow
+  quadrants, the failed first arrow that leaves `cursorpoint = 0`, the
+  select pair, the space and `SHFT+TAB` cycle, a modified arrow, the
+  midend's stripping of `SHFT+CURSOR_SELECT`, the inert centre,
+  letterbox, and no-press events, and `requestKeys` for every preset.
+  `UntangleGameTest` pins the fixed 60-pixel hit radius at the four
+  tile sizes: 59 pixels hits and 61 misses. The pointer snap is
+  engine-only because the oracle's `pointsSized` has no `prefs` field:
+  a one-pixel negative release commits at grid 0, and 36 pixels outside
+  reaches grid -1 and cancels. The keyboard snap is compared with the
+  oracle `keys` prefs.
+
+  `UntangleTraceTest` compares the five frozen traces, a loaded save,
+  sized traces, the 411x702 letterbox, the cursor frame, the press
+  frame with the drag point and its neighbours, the release frame, the
+  vertex-number and crossed-edge preferences, and the empty warm
+  frame. Untangle draws a full settled frame, so a strict trace is
+  taken from `traceNew`, a loaded save, or a drag move, never after an
+  undo or a `SOLVE` in a live midend. Colour 0 is darker than the
+  board, so the midend clear and the game rect differ.
+
+  Enablement debt. Generation runs on the calling thread; the presets
+  are milliseconds, but `validate_params` accepts `n` up to
+  `INT_MAX / 3`, where `newDesc` allocates about 17 GB, so the
+  configuration dialog and the game-id path need a bound (an owner
+  decision). `Game.solve` has no error channel, so the app must show
+  `Solution not known for this puzzle` or `Internal error: aux_info
+  badly formatted` instead of throwing. S8 must build the one-field
+  `Number of points` dialog, parse and apply `snap-to-grid`,
+  `show-crossed-edges`, and `vertex-style` after `newUi` and after
+  `Midend.fromSave`, force a redraw for the two drawing preferences,
+  gate the status text on `wantsStatusBar` (it is false), and remove
+  the `Fifteen` casts. S9 is not needed because `current_key_label` is
+  `NULL`. `UNTANGLE` is in `KotlinGames.gameFor` and not in
+  `APP_GAMES`, so `handles(UNTANGLE)` is false and the two-release
+  wait still applies.
 
 ## 8. Goldens
 

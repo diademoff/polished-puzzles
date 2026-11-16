@@ -1,14 +1,17 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Untangle
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Level: semantic and input geometry. Game: untangle.
@@ -21,6 +24,11 @@ import org.junit.Test
  * board and adds one state; every vacuous event changes neither.
  */
 class UntangleInputParityTest {
+
+    private val testdata = File(
+        System.getProperty("testdata") ?: error("testdata system property is not set"),
+    )
+    private val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
 
     private data class View(
         val viewWidth: Int,
@@ -56,6 +64,255 @@ class UntangleInputParityTest {
                 assertTrue("the board is square at $label", layout.width == layout.height)
             }
         }
+
+    @Test
+    fun `real clicks and drags match the oracle at every tile and in the letterbox`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("untangle", "10", SEED).state
+            val reference = Midend.fromSave(Untangle, SgtpSave.parse(save))
+            for (tile in listOf(48, 63, 82, 100)) {
+                val board = Untangle.computeSize(Untangle.decodeParams("10"), tile)
+                val view = View(board.width + 4, board.height + 4, tile, 2, 2)
+                val geometry = Midend.newGame(Untangle, "10", SEED)
+                    .geometryFor(view.viewWidth, view.viewHeight)
+                val label = "tile $tile"
+                assertEquals("$label tile", view.tile, geometry.tileSize)
+                assertEquals("$label origin x", view.originX, geometry.originX)
+                assertEquals("$label origin y", view.originY, geometry.originY)
+
+                val (px, py) = pixelOf(reference.state, 1, tile)
+                val viewX = geometry.originX + px
+                val viewY = geometry.originY + py
+
+                // A click a few pixels off the point is one real move,
+                // and the point's rational changes.
+                val click = listOf(
+                    OracleClient.Point(viewX + 3, viewY + 2, Buttons.LEFT_BUTTON),
+                    OracleClient.Point(viewX + 3, viewY + 2, Buttons.LEFT_RELEASE),
+                )
+                val expectedClick = oracle.pointsSized(
+                    save,
+                    click,
+                    view.viewWidth,
+                    view.viewHeight,
+                    recordTrace = true,
+                )
+                assertEquals("$label click move", 1, movesOf(expectedClick.state.state).size)
+                val clickMidend = Midend.fromSave(Untangle, SgtpSave.parse(save))
+                val beforeClick = clickMidend.state as Untangle.State
+                for (p in click) {
+                    assertEquals(
+                        "$label click is consumed",
+                        KeyOutcome.SomeEffect,
+                        clickMidend.processKey(
+                            p.x - geometry.originX,
+                            p.y - geometry.originY,
+                            p.button,
+                            tile,
+                        ),
+                    )
+                }
+                assertEquals("$label click adds one state", 2, clickMidend.stateCount)
+                assertNotEquals(
+                    "$label click changes point 1",
+                    beforeClick.point(1),
+                    (clickMidend.state as Untangle.State).point(1),
+                )
+                assertSame("$label click", expectedClick.state, clickMidend)
+                assertTrace(
+                    "$label click trace",
+                    requireNotNull(expectedClick.trace),
+                    KotlinTraceSink.stateTrace(clickMidend, tile),
+                )
+
+                // A real press, two drags, and a release: one move at
+                // the release, again with a changed point.
+                val drag = listOf(
+                    OracleClient.Point(viewX, viewY, Buttons.LEFT_BUTTON),
+                    OracleClient.Point(
+                        viewX + tile / 2,
+                        viewY + tile / 4,
+                        Buttons.LEFT_DRAG,
+                    ),
+                    OracleClient.Point(
+                        viewX + tile,
+                        viewY + tile / 2,
+                        Buttons.LEFT_DRAG,
+                    ),
+                    OracleClient.Point(
+                        viewX + tile,
+                        viewY + tile / 2,
+                        Buttons.LEFT_RELEASE,
+                    ),
+                )
+                val expectedDrag = oracle.pointsSized(
+                    save,
+                    drag,
+                    view.viewWidth,
+                    view.viewHeight,
+                    recordTrace = true,
+                )
+                assertEquals("$label drag move", 1, movesOf(expectedDrag.state.state).size)
+                val dragMidend = Midend.fromSave(Untangle, SgtpSave.parse(save))
+                val beforeDrag = dragMidend.state as Untangle.State
+                for (p in drag) {
+                    assertNotEquals(
+                        "$label drag is consumed",
+                        KeyOutcome.Unused,
+                        dragMidend.processKey(
+                            p.x - geometry.originX,
+                            p.y - geometry.originY,
+                            p.button,
+                            tile,
+                        ),
+                    )
+                }
+                assertEquals("$label drag adds one state", 2, dragMidend.stateCount)
+                assertNotEquals(
+                    "$label drag changes point 1",
+                    beforeDrag.point(1),
+                    (dragMidend.state as Untangle.State).point(1),
+                )
+                assertSame("$label drag", expectedDrag.state, dragMidend)
+                assertTrace(
+                    "$label drag trace",
+                    requireNotNull(expectedDrag.trace),
+                    KotlinTraceSink.stateTrace(dragMidend, tile),
+                )
+
+                // The letterbox itself is inert; the same click shifted
+                // onto the board is the positive control.
+                val letterbox = Midend.fromSave(Untangle, SgtpSave.parse(save))
+                assertEquals(
+                    "$label letterbox press",
+                    KeyOutcome.NoEffect,
+                    letterbox.processKey(0, 0, Buttons.LEFT_BUTTON, tile),
+                )
+                assertEquals(
+                    "$label letterbox release",
+                    KeyOutcome.NoEffect,
+                    letterbox.processKey(0, 0, Buttons.LEFT_RELEASE, tile),
+                )
+                assertEquals("$label letterbox state", 1, letterbox.stateCount)
+                assertEquals(
+                    "$label letterbox guard",
+                    KeyOutcome.SomeEffect,
+                    letterbox.processKey(px, py, Buttons.LEFT_BUTTON, tile),
+                )
+                assertEquals("$label guard is a state", 1, letterbox.stateCount)
+            }
+        }
+
+    @Test
+    fun `the snap pointer commits at grid zero and cancels one cell outside`() {
+        // The oracle's `pointsSized` has no `prefs` field, so a pointer
+        // snap cannot be compared through the oracle. This case is
+        // engine-only; the keyboard snap is compared with `keys`.
+        val midend = Midend.newGame(Untangle, "10", SEED)
+        val start = midend.state as Untangle.State
+        (midend.ui as Untangle.Ui).snapToGrid = true
+        val (px, py) = pixelOf(start, 0, 64)
+
+        // A snapped press and release commit the grid cell, not the
+        // exact rational: d = n - 1 = 9 and w = h = 5 at tile 64.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(px, py, Buttons.LEFT_BUTTON, 64),
+        )
+        assertEquals("no state before the release", 1, midend.stateCount)
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(px, py, Buttons.LEFT_RELEASE, 64),
+        )
+        assertEquals("one snapped state", 2, midend.stateCount)
+        assertEquals(
+            "the snapped move",
+            "P0:45,5/18",
+            movesOf(midend.serialise().serialise()).last(),
+        )
+        assertNotEquals(
+            "the snapped point changed",
+            start.point(0),
+            (midend.state as Untangle.State).point(0),
+        )
+
+        // One pixel outside truncates to grid 0 and commits.
+        val near = Midend.newGame(Untangle, "10", SEED)
+        (near.ui as Untangle.Ui).snapToGrid = true
+        val nearStart = near.state as Untangle.State
+        val (nx, ny) = pixelOf(nearStart, 0, 64)
+        near.processKey(nx, ny, Buttons.LEFT_BUTTON, 64)
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            near.processKey(-1, -1, Buttons.LEFT_DRAG, 64),
+        )
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            near.processKey(-1, -1, Buttons.LEFT_RELEASE, 64),
+        )
+        assertEquals("a negative pixel commits", 2, near.stateCount)
+        assertEquals(
+            "grid zero wins a truncating division",
+            "P0:5,5/18",
+            movesOf(near.serialise().serialise()).last(),
+        )
+
+        // 36 pixels outside reaches grid -1 and cancels.
+        val far = Midend.newGame(Untangle, "10", SEED)
+        (far.ui as Untangle.Ui).snapToGrid = true
+        val farStart = far.state as Untangle.State
+        val (fx, fy) = pixelOf(farStart, 0, 64)
+        far.processKey(fx, fy, Buttons.LEFT_BUTTON, 64)
+        far.processKey(-36, -36, Buttons.LEFT_DRAG, 64)
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            far.processKey(-36, -36, Buttons.LEFT_RELEASE, 64),
+        )
+        assertEquals("no move one grid cell outside", 1, far.stateCount)
+        assertEquals(
+            "the point did not move",
+            farStart.point(0),
+            (far.state as Untangle.State).point(0),
+        )
+    }
+
+    @Test
+    fun `the three preferences are settings only and stay out of the save`() {
+        val midend = Midend.newGame(Untangle, "10", SEED)
+        val text = midend.serialise().serialise()
+        val ui = midend.ui as Untangle.Ui
+        ui.snapToGrid = true
+        ui.showCrossedEdges = true
+        ui.vertexNumbers = true
+        assertEquals("no preference enters the save", text, midend.serialise().serialise())
+        assertEquals("no preference changes the status", 0, midend.status())
+        assertEquals("no preference adds history", 1, midend.stateCount)
+        // The two drawing preferences are compared through the oracle
+        // `trace` prefs field in `UntangleTraceTest`.
+    }
+
+    @Test
+    fun `request keys matches the oracle on every preset`() = OracleClient().use { oracle ->
+        for (params in listOf("6", "10", "15", "20", "25")) {
+            val save = oracle.newGame("untangle", params, SEED).state
+            for (fullCursor in listOf(false, true)) {
+                val expected = oracle.requestKeys(save, fullCursor)
+                val actual = Untangle.requestKeys(Untangle.decodeParams(params), fullCursor)
+                assertEquals(
+                    "arrow mode '$params' full=$fullCursor",
+                    if (fullCursor) 1 else 3,
+                    expected.arrowMode,
+                )
+                assertEquals(
+                    "arrow mode '$params' full=$fullCursor",
+                    if (fullCursor) ArrowMode.ARROWS_ONLY else ArrowMode.ARROWS_LEFT_RIGHT,
+                    actual.arrowMode,
+                )
+                assertTrue("no labels '$params' full=$fullCursor", expected.labels.isEmpty())
+                assertTrue("no labels '$params' full=$fullCursor", actual.labels.isEmpty())
+            }
+        }
+    }
 
     @Test
     fun `a click on every point is one real move`() = OracleClient().use { oracle ->
@@ -277,6 +534,37 @@ class UntangleInputParityTest {
     }
 
     @Test
+    fun `a modified select reaches the game as a plain select`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("untangle", "10", SEED).state
+            // The midend drops MOD_SHFT from a key that is not a cursor
+            // move, so the game sees a plain CURSOR_SELECT and the
+            // exact comparison in branch 8 still holds.
+            val plain = listOf(
+                Buttons.CURSOR_SELECT,
+                Buttons.CURSOR_SELECT,
+                Buttons.CURSOR_LEFT,
+                Buttons.CURSOR_DOWN,
+                Buttons.CURSOR_SELECT,
+            )
+            val modified = listOf(
+                Buttons.MOD_SHFT or Buttons.CURSOR_SELECT,
+                Buttons.CURSOR_SELECT,
+                Buttons.CURSOR_LEFT,
+                Buttons.CURSOR_DOWN,
+                Buttons.CURSOR_SELECT,
+            )
+            val plainExpected = oracle.keys(save, plain)
+            val modifiedExpected = oracle.keys(save, modified)
+            assertEquals("C strips the modifier", plainExpected.state, modifiedExpected.state)
+
+            val midend = Midend.fromSave(Untangle, SgtpSave.parse(save))
+            for (key in modified) midend.processKey(0, 0, key, 64)
+            assertSame("modified select", plainExpected, midend)
+            assertEquals("one move", 1, movesOf(midend.serialise().serialise()).size)
+        }
+
+    @Test
     fun `a modified arrow is unused and a plain one works`() =
         OracleClient().use { oracle ->
             val save = oracle.newGame("untangle", "10", SEED).state
@@ -432,6 +720,20 @@ class UntangleInputParityTest {
         assertEquals("status $what", expected.status, actual.status())
         assertEquals("undo $what", expected.canUndo, actual.canUndo)
         assertEquals("redo $what", expected.canRedo, actual.canRedo)
+    }
+
+    private fun assertTrace(what: String, expected: JsonValue.Obj, actual: JsonValue.Obj) {
+        val e = TraceNormalizer.normalize(expected, upstream).lines()
+        val a = TraceNormalizer.normalize(actual, upstream).lines()
+        for (i in 0 until minOf(e.size, a.size)) {
+            if (e[i] != a[i]) {
+                throw AssertionError(
+                    "$what: first diff at line ${i + 1}:\n" +
+                        "expected: ${e[i]}\nactual:   ${a[i]}",
+                )
+            }
+        }
+        assertEquals("$what: line count", e.size, a.size)
     }
 
     private companion object {

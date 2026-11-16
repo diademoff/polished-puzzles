@@ -1,10 +1,12 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SaveRecord
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Untangle
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -30,9 +32,11 @@ class UntangleSaveTest {
     @Test
     fun `the corpus saves rewrite byte for byte`() = OracleClient().use { oracle ->
         val directory = File(testdata, "saves/initial/untangle")
-        val files = listOf("default", "6", "10", "15", "20", "25").map {
-            File(directory, "$it.sgtp")
-        }
+        val files = directory.walkTopDown()
+            .filter { it.isFile && it.extension == "sgtp" }
+            .sorted()
+            .toList()
+        assertEquals("every untangle corpus save", 6, files.size)
         for (file in files) {
             val text = file.readText()
             val save = SgtpSave.parse(text)
@@ -43,6 +47,7 @@ class UntangleSaveTest {
             assertEquals("status ${file.name}", expected.status, midend.status())
             assertEquals("undo ${file.name}", expected.canUndo, midend.canUndo)
             assertEquals("redo ${file.name}", expected.canRedo, midend.canRedo)
+            assertEquals("text ${file.name}", oracle.text(text), midend.textFormat())
             assertEquals("save ${file.name}", text, midend.serialise().serialise())
 
             assertEquals(
@@ -51,6 +56,15 @@ class UntangleSaveTest {
                 save.value("CPARAMS"),
             )
             assertNotNull("AUXINFO in ${file.name}", save.value("AUXINFO"))
+            val params = requireNotNull(save.value("PARAMS"))
+            val generated = SgtpSave.parse(
+                oracle.newGame("untangle", params, requireNotNull(save.value("SEED"))).state,
+            )
+            assertEquals(
+                "AUXINFO bytes in ${file.name}",
+                generated.value("AUXINFO"),
+                save.value("AUXINFO"),
+            )
             assertNull("no UI record in ${file.name}", save.value("UI"))
             assertEquals("NSTATES in ${file.name}", "1", save.value("NSTATES"))
             assertEquals("STATEPOS in ${file.name}", "1", save.value("STATEPOS"))
@@ -64,21 +78,127 @@ class UntangleSaveTest {
     }
 
     @Test
-    fun `a kotlin generated save loads in C for every preset and seed`() =
+    fun `a kotlin generated save matches the oracle for every preset and seed`() =
         OracleClient().use { oracle ->
             for (params in listOf("6", "10", "15", "20", "25")) {
-                for (seed in listOf("12345", "1", "-7", "another seed", "")) {
+                for (seed in SEEDS) {
                     val midend = Midend.newGame(Untangle, params, seed)
                     val text = midend.serialise().serialise()
+
+                    // Kotlin to C: a fresh game from the same seed, then
+                    // a reload of the Kotlin text.
+                    val generated = oracle.newGame("untangle", params, seed)
+                    assertEquals("generated id '$params' '$seed'", generated.id, midend.id())
+                    assertEquals("generated save '$params' '$seed'", generated.state, text)
                     val expected = oracle.id(text)
-                    assertEquals("id '$params' '$seed'", midend.id(), expected.id)
-                    assertEquals("save '$params' '$seed'", text, expected.state)
+                    assertEquals("reloaded id '$params' '$seed'", midend.id(), expected.id)
+                    assertEquals("reloaded save '$params' '$seed'", text, expected.state)
+                    assertEquals("text '$params' '$seed'", oracle.text(text), midend.textFormat())
+                    assertEquals("status '$params' '$seed'", expected.status, midend.status())
+                    assertEquals("undo '$params' '$seed'", expected.canUndo, midend.canUndo)
+                    assertEquals("redo '$params' '$seed'", expected.canRedo, midend.canRedo)
+
+                    // C to Kotlin: load the C game's save and compare.
+                    val reloaded = Midend.fromSave(
+                        Untangle,
+                        SgtpSave.parse(generated.state),
+                    )
+                    assertSame("C to Kotlin '$params' '$seed'", generated, reloaded)
+                    assertEquals(
+                        "C to Kotlin save '$params' '$seed'",
+                        generated.state,
+                        reloaded.serialise().serialise(),
+                    )
+
                     val save = SgtpSave.parse(text)
-                    assertEquals(save.value("PARAMS"), save.value("CPARAMS"))
+                    assertEquals(
+                        "PARAMS '$params' '$seed'",
+                        save.value("PARAMS"),
+                        save.value("CPARAMS"),
+                    )
                     assertNotNull("AUXINFO '$params' '$seed'", save.value("AUXINFO"))
+                    assertEquals(
+                        "aux text '$params' '$seed'",
+                        SgtpSave.parse(generated.state).value("AUXINFO"),
+                        save.value("AUXINFO"),
+                    )
                     assertNull("UI '$params' '$seed'", save.value("UI"))
                 }
             }
+        }
+
+    @Test
+    fun `the in-memory history covers a click, a drag, and a live redo`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("untangle", "10", SEED).state
+            val midend = Midend.fromSave(Untangle, SgtpSave.parse(save))
+            val start = midend.state as Untangle.State
+            val reference = Untangle.newState(Untangle.Params(10), midend.desc) as Untangle.State
+
+            // A click on point 1, a few pixels off its pixel: one move,
+            // one state, and a real coordinate change.
+            val clickPoint = pixel(reference, 1, 64)
+            val click = listOf(
+                OracleClient.Point(
+                    clickPoint.first + 3,
+                    clickPoint.second + 2,
+                    Buttons.LEFT_BUTTON,
+                ),
+                OracleClient.Point(
+                    clickPoint.first + 3,
+                    clickPoint.second + 2,
+                    Buttons.LEFT_RELEASE,
+                ),
+            )
+            var expected = oracle.pointsSized(save, click, width = 320, height = 320).state
+            for (p in click) midend.processKey(p.x, p.y, p.button, 64)
+            assertEquals("one click step", 2, midend.stateCount)
+            assertSame("click", expected, midend)
+            assertNotEquals(
+                "the click changed point 1",
+                start.point(1),
+                (midend.state as Untangle.State).point(1),
+            )
+
+            // A drag of point 0 to a new pixel: a second move.
+            val dragPoint = pixel(reference, 0, 64)
+            val drag = listOf(
+                OracleClient.Point(dragPoint.first, dragPoint.second, Buttons.LEFT_BUTTON),
+                OracleClient.Point(
+                    dragPoint.first + 32,
+                    dragPoint.second + 16,
+                    Buttons.LEFT_DRAG,
+                ),
+                OracleClient.Point(
+                    dragPoint.first + 64,
+                    dragPoint.second + 64,
+                    Buttons.LEFT_RELEASE,
+                ),
+            )
+            expected = oracle.pointsSized(expected.state, drag, width = 320, height = 320).state
+            for (p in drag) midend.processKey(p.x, p.y, p.button, 64)
+            assertEquals("two history steps", 3, midend.stateCount)
+            assertSame("drag", expected, midend)
+            assertNotEquals(
+                "the drag changed point 0",
+                start.point(0),
+                (midend.state as Untangle.State).point(0),
+            )
+
+            // Undo leaves a live redo branch, and redo restores it.
+            expected = oracle.undo(expected.state)
+            assertTrue("undo", midend.undo())
+            assertSame("after undo", expected, midend)
+            assertEquals("at the click", 2, midend.statePos)
+            assertTrue("can undo", midend.canUndo)
+            assertTrue("can redo", midend.canRedo)
+
+            expected = oracle.redo(expected.state)
+            assertTrue("redo", midend.redo())
+            assertSame("after redo", expected, midend)
+            assertEquals("three states", 3, midend.stateCount)
+            assertEquals("status", expected.status, midend.status())
+            assertEquals("text", oracle.text(expected.state), midend.textFormat())
         }
 
     @Test
@@ -165,6 +285,8 @@ class UntangleSaveTest {
             assertEquals("the empty move keeps the id", expected.id, midend.id())
             assertEquals("the empty move is one state", 2, midend.stateCount)
             assertEquals("status", expected.status, midend.status())
+            assertEquals("the empty move save", empty, midend.serialise().serialise())
+            assertEquals("the empty move text", oracle.text(empty), midend.textFormat())
 
             val invalid = saveWith(
                 oracle.newGame("untangle", "10", SEED).state,
@@ -212,7 +334,22 @@ class UntangleSaveTest {
         return SgtpSave.of(result).serialise()
     }
 
+    private fun pixel(state: Untangle.State, index: Int, tile: Int): Pair<Int, Int> {
+        val point = state.point(index)
+        return (point.x * tile / point.d).toInt() to (point.y * tile / point.d).toInt()
+    }
+
+    private fun assertSame(what: String, expected: GameState, actual: Midend) {
+        assertEquals("save $what", expected.state, actual.serialise().serialise())
+        assertEquals("id $what", expected.id, actual.id())
+        assertEquals("status $what", expected.status, actual.status())
+        assertEquals("undo $what", expected.canUndo, actual.canUndo)
+        assertEquals("redo $what", expected.canRedo, actual.canRedo)
+    }
+
     private companion object {
         const val SEED = "12345"
+
+        val SEEDS = listOf("12345", "1", "2", "3", "seed", "another seed", "0", "-7", "")
     }
 }

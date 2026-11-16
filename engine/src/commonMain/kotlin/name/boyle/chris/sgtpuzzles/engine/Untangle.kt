@@ -815,6 +815,18 @@ object Untangle : Game {
     override fun requestKeys(params: Game.Params): KeyRequest =
         KeyRequest(emptyList(), ArrowMode.ARROWS_LEFT_RIGHT)
 
+    /**
+     * The C midend forces `ANDROID_ARROWS_ONLY` before it calls a game
+     * with no `request_keys` when the Android full-cursor hint is set,
+     * as `midend_request_keys_by_game` does. The game itself still has
+     * no labels.
+     */
+    override fun requestKeys(params: Game.Params, fullCursor: Boolean): KeyRequest =
+        KeyRequest(
+            emptyList(),
+            if (fullCursor) ArrowMode.ARROWS_ONLY else ArrowMode.ARROWS_LEFT_RIGHT,
+        )
+
     /** `game_compute_size`: a square board of `COORDLIMIT(n)` cells. */
     override fun computeSize(params: Game.Params, tileSize: Int): Size {
         val side = coordLimit((params as Params).n) * tileSize

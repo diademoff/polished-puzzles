@@ -56,10 +56,8 @@ class UntangleGameTest {
 
         val actual = Untangle.requestKeys(Untangle.decodeParams("6"))
         assertEquals(ArrowMode.ARROWS_LEFT_RIGHT, actual.arrowMode)
+        assertEquals(3, expected.arrowMode)
         assertTrue(actual.labels.isEmpty())
-        // The seam's full-cursor flag is the midend's palisade hack, so
-        // the game ignores it.
-        assertEquals(actual, Untangle.requestKeys(Untangle.decodeParams("6"), true))
     }
 
     @Test

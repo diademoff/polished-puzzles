@@ -2157,6 +2157,96 @@ aggressive 100x100 latency is an enablement debt:
   not in `APP_GAMES`, so `KotlinGames.handles(UNDEAD)` is false and
   the app keeps the C backend. The two-release wait also applies.
 
+- `untangle` has no deviation and three enablement items:
+
+  - `UntangleDescTest` is semantic. It compares the five presets and
+    the default with the oracle, the `atoi` decode quirks and the two
+    validation messages, the two-pass description validator, every
+    preset at nine seeds, a numeric seed sweep, and a frozen
+    description plus `AUXINFO`. The generator draws one `w*h` grid
+    shuffle and one or more `n` label shuffles, so the sweep guards
+    both. The float evidence is the exact `make_circle` table at
+    denominator 64 in `UntangleTest`: every preset's `sin`/`cos`
+    coordinates are pinned as integers, because those coordinates
+    reach `DESC`, `AUXINFO`, every save, and every trace. The same
+    values match the oracle on this host; a host that disagreed would
+    need a coordinate table or a correctly rounded `sin`, not a golden
+    update.
+  - `UntangleGameTest` is semantic. It compares the new game, the
+    empty text form and status text, undo and redo with a live redo
+    branch, a real completion and its one event, the solver for every
+    preset, a solve after a move, a solved board, and the missing
+    `AUXINFO` case. It sends real clicks and press-drag-drag-release
+    drags at tiles 48, 63, 82, and 100 and compares state, id, status,
+    and the final frame with `pointsSized`. The fixed hit radius is
+    60 pixels: a click 59 pixels from a point hits and 61 misses, at
+    every tile size. The radius does not scale with the tile, so the
+    same offset is a different fraction of the disc.
+  - `UntangleSaveTest` is strict for the save text and semantic for
+    the state. It reads all six corpus saves, rewrites them byte for
+    byte, and compares id, status, undo, redo, text, and the raw
+    `AUXINFO` bytes with C; `PARAMS` equals `CPARAMS` because
+    `encode_params` ignores `full`. A Kotlin save for every preset and
+    nine seeds is byte-identical to a fresh C game and reloads in C.
+    In-memory history plays a click and a drag, undoes to a live redo,
+    redoes, saves, restarts, and replays the empty `MOVE`; a `MOVE`
+    whose value is `S` fails in both engines. No save has a `UI`
+    record.
+  - `UntangleInputParityTest` is semantic and `ui`. It sends real
+    clicks and drags at tiles 48, 63, 82, and 100 and at a small
+    letterbox whose origin is subtracted on both sides; every real
+    click or drag adds one move and one state and changes the point,
+    and an inert press changes neither. It covers the four arrow
+    quadrants, the failed first arrow that leaves `cursorpoint = 0`,
+    the select pair, space and `SHFT+TAB`, a modified arrow, the
+    midend stripping `SHFT+CURSOR_SELECT` to a plain select, the inert
+    centre, letterbox, drag-without-press, and release-without-press
+    cases, and `requestKeys` for every preset with and without the
+    full-cursor hint. The full-cursor hint is the C midend's forced
+    `ANDROID_ARROWS_ONLY`, so the mode is 1 instead of 3; the labels
+    stay empty.
+  - `UntangleTraceTest` is strict. It compares the five frozen traces,
+    a loaded save, tiles 48, 63, 82, and 100, the 411x702 letterbox,
+    the cursor frame, the press frame with the drag point and its
+    neighbours, the release frame, `vertex-style=number`,
+    `show-crossed-edges=true`, and the warm path, which settles to
+    exactly `start_draw` and `end_draw`. The animation and the flash
+    are not ported, and C draws an animation frame at `anim_pos == 0`
+    after an undo or a `SOLVE`, so a strict trace is taken from
+    `traceNew`, a loaded save, or a drag move, never after an undo or
+    a solve in a live midend.
+  - `UntangleTest` is the engine test. It pins the parameters, the
+    constants, `squarert`, `cross`, the exact `make_circle` table, the
+    shared graph and copy semantics, the sticky completion, the move
+    grammar (`S;P...`, `SP...`, the empty move, a rejected `S`, a
+    rejected second `S`, `P9` in range for `n = 10` and `P10` out of
+    range), `normsq` truncation, the drag and snap arithmetic, the
+    60-pixel hit test, the two solver errors, the single-precision
+    symmetry choice and `+0.5F` rounding, and the cursor rectangle.
+  - The pointer snap cannot be compared through the oracle because
+    `pointsSized` has no `prefs` field. It is engine-only: with
+    `snap-to-grid` on, a release at `x = -1` truncates to grid 0 and
+    commits `P0:5,5/18` at `n = 10`, `T = 64`, and 36 pixels outside
+    reaches grid -1 and cancels. The keyboard snap is compared with
+    the oracle `keys` prefs path. The three preferences
+    (`snap-to-grid`, `show-crossed-edges`, `vertex-style`) are not
+    serialised and never enter the state, id, status, text, or save.
+  - Enablement debt. `validate_params` accepts `n` up to
+    `INT_MAX / 3`, where the generator allocates about 17 GB, so the
+    configuration dialog and the game-id path need a bound; this is an
+    owner decision and no bound is added. `Game.solve` has no error
+    channel, so the app must show `Solution not known for this
+    puzzle` and `Internal error: aux_info badly formatted` instead of
+    throwing. S8 must build the one-field `Number of points`
+    configuration dialog, parse and apply the three preferences after
+    `newUi` and after `Midend.fromSave` with a forced redraw for the
+    two drawing preferences, gate the status text on `wantsStatusBar`
+    (it is false), and remove the `Fifteen` casts. S9 is not needed
+    because `current_key_label` is `NULL`. `UNTANGLE` is in
+    `KotlinGames.gameFor` and not in `APP_GAMES`, so
+    `KotlinGames.handles(UNTANGLE)` is false and the two-release wait
+    applies.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals
