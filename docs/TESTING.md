@@ -2252,15 +2252,22 @@ aggressive 100x100 latency is an enablement debt:
   - `BridgesDescTest` is semantic. It compares the nine presets and the
     default with the oracle, the `atoi` decode quirks, the validation
     order and messages, the golden descriptions, every preset at nine
-    seed strings, a numeric seed sweep, and the two retry fixtures. The
-    generated `AUXINFO` is compared with the oracle save, so the solver
-    inside the retry gate and the island creation order are pinned.
-    The whole save keeps the `PARAMS ...d0` / `CPARAMS ...dN` split.
+    seed strings, a numeric seed sweep, and the two retry fixtures. A
+    two-invalid-field case pins the C message order: width, then area,
+    then `maxb`, then `islands`, then `expansion`. The generated
+    `AUXINFO` is compared with the oracle save, so the solver inside
+    the retry gate and the island creation order are pinned. The whole
+    save keeps the `PARAMS ...d0` / `CPARAMS ...dN` split. Generation
+    runs under a two-minute timeout, because the retry loops are
+    unbounded.
   - `BridgesGameTest` is semantic. It compares the fresh game, the move
-    grammar, the real click and drag batches, the solver from the
-    initial board and from scratch, the two C error strings, undo,
-    redo, completion and its event, a hint, the keyboard keys, and
-    `requestKeys` on every preset.
+    grammar, the solver from the initial board and from scratch, two
+    hand-written stage-3 boards including the `maxv`/`maxh` carry-over,
+    the two C error strings, undo, redo, completion and its event, a
+    hint, the keyboard keys, and `requestKeys` on every preset. Real
+    clicks and drag batches are compared in `BridgesInputParityTest`.
+    The solver cases run under a two-minute timeout, so a solver that
+    loops fails instead of hanging.
   - `BridgesSaveTest` is strict for the save text and semantic for the
     state. It reads all ten corpus saves, rewrites them byte for byte,
     and compares id, status, undo, redo, text, and `AUXINFO` with C. A
@@ -2276,8 +2283,12 @@ aggressive 100x100 latency is an enablement debt:
     the two whole-window updates, sized cold traces at tiles 48, 63,
     82, and 100, the 411x702 letterbox at tile 51 with origin (2,147),
     a warm press, a warm drag and release, the cursor island, the loop
-    and impossible-clue warnings, and the hints preference. No trace
-    contains a blitter or a flash frame.
+    and impossible-clue warnings, and the hints preference. The loop
+    warning is also compared on an asymmetric graph of two cycles
+    joined by one bridge: only the cycle cells are warned. A solved
+    board is traced too; every island must draw the mark background
+    and every bridge cell a lock background. No trace contains a
+    blitter or a flash frame.
   - `BridgesInputParityTest` is semantic. It compares the layout at
     tiles 48, 63, 82, and 100 and the 411x702 letterbox, then sends a
     real lock click, a bridge drag cycle, and a right-button no-line
@@ -2301,11 +2312,20 @@ aggressive 100x100 latency is an enablement debt:
     changed-state event, the cursor and select quirks, the digit-jump
     ties, the text format, the hint diff, `requestKeys`,
     `currentKeyLabel`, `computeSize`, the palette, the first draw, the
-    dirty cache, and the hints preference.
+    dirty cache, and the hints preference. It also pins the `findloop`
+    neighbour order: an island returns left, right, up, down, and a
+    line cell returns left then right or up then down. A stage-3 solve
+    is pinned with a timeout, because a `maxv`/`maxh` reset per
+    `solve_sub` pass changes the answer and a reset per stage-3 island
+    can loop. Generation and solver tests run under a two-minute
+    timeout.
   - The solver order is part of the description contract. `solve_sub`
     restarts stage 1 after any change, then runs stage 2, then stage 3;
     stage 3 lowers `maxv`/`maxh`, and the lowering must survive the
-    restart and `map_clear`. The generator gates every board on the
+    restart and `map_clear`. The engine test `the solver maxima survive
+    the restart` pins that: a reset per `solve_sub` pass adds an `N`
+    token to the answer, and a reset per stage-3 island can loop until
+    its timeout. The generator gates every board on the
     solver at `difficulty - 1` and again at `difficulty`, so a different
     stage order changes every Medium and Hard `DESC`. The island order
     is creation order in the generator and row-major after `new_game`;

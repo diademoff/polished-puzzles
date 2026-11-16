@@ -61,7 +61,7 @@ class BridgesDescTest {
         )
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the golden descriptions are pinned`() = OracleClient().use { oracle ->
         val golden = Json.parse(
             File(testdata, "golden/bridges/desc.json").readText(),
@@ -84,7 +84,7 @@ class BridgesDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `every preset and seed matches the oracle`() = OracleClient().use { oracle ->
         for (params in Bridges.presets().map { it.params }) {
             for (seed in seeds) {
@@ -97,7 +97,7 @@ class BridgesDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `a numeric sweep pins the generator order`() = OracleClient().use { oracle ->
         for (params in listOf(
             "7x7i30e10m2d0", "7x7i30e10m2d1", "7x7i30e10m2d2",
@@ -163,7 +163,40 @@ class BridgesDescTest {
         )
     }
 
-    @Test
+    @Test(timeout = 120_000)
+    fun `two invalid fields keep the C message order`() =
+        OracleClient().use { oracle ->
+            for ((params, message) in listOf(
+                // The width is checked before `maxb` and `islands`.
+                "2x2m0i0" to "Width and height must be at least 3",
+                // The area is checked before `maxb` and `islands`.
+                "46341x46341m0i0" to
+                    "Width times height must not be unreasonably large",
+                // `maxb` is checked before the two full-only fields.
+                "7x7m0i0" to "Too many bridges.",
+                "7x7m0e101" to "Too many bridges.",
+                // `islands` is checked before `expansion`.
+                "7x7i0e101" to
+                    "%age of island squares must be between 1% and 30%",
+            )) {
+                val expected = try {
+                    oracle.newGame("bridges", params, "12345").id
+                    null
+                } catch (e: OracleException) {
+                    e.message
+                }
+                val actual = try {
+                    Midend.newGame(Bridges, params, "12345")
+                    null
+                } catch (e: IllegalArgumentException) {
+                    e.message
+                }
+                assertEquals("oracle '$params'", message, expected)
+                assertEquals("kotlin '$params'", message, actual)
+            }
+        }
+
+    @Test(timeout = 120_000)
     fun `the generated aux matches the oracle auxinfo`() = OracleClient().use { oracle ->
         for (params in listOf("7x7i30e10m2d0", "7x7i30e10m2d1", "10x10i30e10m2d0")) {
             for (seed in listOf("1", "12345", "99999")) {
@@ -187,7 +220,7 @@ class BridgesDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the whole generated save retains the params split`() = OracleClient().use { oracle ->
         val save = Midend.newGame(Bridges, "7x7i30e10m2d1", "12345").serialise()
         assertEquals("7x7i30e10m2d0", save.value("PARAMS"))
@@ -210,7 +243,7 @@ class BridgesDescTest {
         assertEquals(Midend.newGame(Bridges, "7x7i30e10m2d1", "12345").id(), oracleState.id)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `retry fixtures match the oracle`() = OracleClient().use { oracle ->
         for ((seed, desc) in listOf(
             "4" to "a1a3b2g1b2a1b4d43g4a2c4a4c3",
@@ -222,7 +255,7 @@ class BridgesDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `generation is deterministic`() {
         for (params in Bridges.presets().map { it.params }) {
             val first = generated(params, "12345")

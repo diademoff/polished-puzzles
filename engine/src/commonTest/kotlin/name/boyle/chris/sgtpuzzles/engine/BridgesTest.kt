@@ -143,6 +143,28 @@ class BridgesTest {
         )
         // Short validation skips the two percentage checks.
         assertEquals(null, Bridges.validateParams(params("7x7i0e101"), false))
+        // Two invalid fields at once: the C order picks the message.
+        assertEquals(
+            "Width times height must not be unreasonably large",
+            Bridges.validateParams(
+                Bridges.Params(46341, 46341, 0, 101, 0, true, 0),
+                true,
+            ),
+        )
+        assertEquals(
+            "Too many bridges.",
+            Bridges.validateParams(
+                Bridges.Params(7, 7, 0, 101, 0, true, 0),
+                true,
+            ),
+        )
+        assertEquals(
+            "%age of island squares must be between 1% and 30%",
+            Bridges.validateParams(
+                Bridges.Params(7, 7, 0, 101, 2, true, 0),
+                true,
+            ),
+        )
         // The C boundary: 46340 * 46340 fits in INT_MAX.
         assertEquals(
             null,
@@ -178,6 +200,10 @@ class BridgesTest {
         assertEquals("Game description shorter than expected", check("a1a"))
         assertEquals("Game description contains unexpected character", check("a0a1a"))
         assertEquals("Game description longer than expected", check("ii"))
+        // `y` and `z` are valid runs of 25 and 26 cells, so they
+        // overshoot the board instead of failing as unknown characters.
+        assertEquals("Game description longer than expected", check("y"))
+        assertEquals("Game description longer than expected", check("z"))
         assertEquals("Game description has too few islands", check("i"))
         // Diagonal islands are allowed.
         assertEquals(null, check("1ba1ab1"))
@@ -220,6 +246,30 @@ class BridgesTest {
 
 
     @Test
+    fun `the findloop neighbour order follows the C callback`() {
+        // A centre island at (2,2) with one neighbour in each direction
+        // and one bridge each. `bridges_neighbour` walks the island
+        // directions in `points` order (left, right, up, down) and names
+        // the adjacent line cell, not the island at the far end.
+        val s = stateOf("5x5i30e10m2d0", "b4be1a4a1eb1b")
+        val joined = Bridges.executeMove(
+            s,
+            "L2,2,0,2,1;L2,2,4,2,1;L2,2,2,0,1;L2,2,2,4,1",
+        ) as Bridges.State
+        assertEquals(listOf(11, 13, 7, 17), Bridges.neighbourOrder(joined, 2, 2))
+        // A line cell returns its two ends in `(x1,y1)` then `(x2,y2)`
+        // order, that is left then right, or up then down.
+        assertEquals(listOf(10, 12), Bridges.neighbourOrder(joined, 1, 2))
+        assertEquals(listOf(2, 12), Bridges.neighbourOrder(joined, 2, 1))
+        // A vertex with no bridge has no neighbours.
+        assertEquals(emptyList(), Bridges.neighbourOrder(joined, 0, 0))
+        // `findloop_is_loop_edge` is true exactly for the edges that are
+        // not bridges, so the warning marks do not depend on this order.
+        // The callback order still matches C, and only this check sees
+        // a reversal.
+    }
+
+    @Test(timeout = 120_000)
     fun `retry fixtures pin the attempt counts`() {
         val params = params("7x7i30e10m2d1")
 
@@ -246,14 +296,14 @@ class BridgesTest {
         assertEquals("3b3b1a1t3a3j2e2", tooEasy.description.text)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the generator matches the golden description and aux`() {
         val generated = descOf("7x7i30e10m2d0", SEED)
         assertEquals(GOLDEN_DESC, generated.text)
         assertEquals(GOLDEN_AUX, generated.auxInfo)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the generated aux solves the initial board`() {
         val s = stateOf("7x7i30e10m2d0", GOLDEN_DESC)
         val solved = Bridges.executeMove(s, GOLDEN_AUX) as Bridges.State
@@ -265,7 +315,7 @@ class BridgesTest {
         })
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the two C error strings are defined port results`() {
         val s = stateOf("7x7i30e10m2d0", GOLDEN_DESC)
         assertEquals(
@@ -284,6 +334,24 @@ class BridgesTest {
             Bridges.solveAttempt(unsolvable, null).error,
         )
         assertNull(Bridges.solveAttempt(unsolvable, null).move)
+    }
+
+    @Test(timeout = 120_000)
+    fun `the solver maxima survive the restart`() {
+        // Stage 3 lowers `maxv`/`maxh`, and the lowering must reach the
+        // next `solve_sub` pass. A reset per restart changes this answer:
+        // the extra `N3,0,5,0` is the maximum that a reset loses. The
+        // timeout turns a solver that loops instead of finishing into a
+        // failure with a clear message.
+        val s = stateOf("6x6i30e10m2d2", "a2a2a1f2f1c2f4b4a2")
+        val attempt = Bridges.solveAttempt(s, null)
+        assertNull(attempt.error)
+        assertEquals(
+            "S;L1,0,3,0,1;L1,0,1,3,1;M1,0;L3,0,3,5,1;M3,0;L5,0,5,3,1;M5,0;" +
+                "L0,2,0,5,2;M0,2;N1,3,5,3;M1,3;L5,3,5,5,1;M5,3;L0,5,3,5,2;M0,5;" +
+                "L3,5,5,5,1;M3,5;M5,5",
+            attempt.move,
+        )
     }
 
     // ------------------------------------------------------------------

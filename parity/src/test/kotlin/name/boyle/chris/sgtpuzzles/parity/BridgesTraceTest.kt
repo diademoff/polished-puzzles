@@ -300,6 +300,102 @@ class BridgesTraceTest {
         }
 
     @Test
+    fun `an asymmetric loop marks only the cycle cells`() =
+        OracleClient().use { oracle ->
+            // Two four-cycles joined by a single bridge. The four-cycle
+            // test above is symmetric, so this board also pins that the
+            // warning covers exactly the cells on a cycle: the bridge
+            // cell (3,2) is not part of any loop.
+            val save = saveText(
+                "7x5i30e10m2Ld0",
+                "7x5m2L",
+                "2a2dg2a3a3a2gd2a2",
+                listOf(
+                    "L0,0,2,0,1;L2,0,2,2,1;L2,2,0,2,1;L0,2,0,0,1;" +
+                        "L2,2,4,2,1;L4,2,6,2,1;L6,2,6,4,1;L6,4,4,4,1;" +
+                        "L4,4,4,2,1",
+                ),
+            )
+            val upstream = upstream()
+            val expected = TraceNormalizer.normalize(oracle.trace(save), upstream)
+            val midend = Midend.fromSave(Bridges, SgtpSave.parse(save))
+            val actual = TraceNormalizer.normalize(
+                KotlinTraceSink.stateTrace(midend, TILE),
+                upstream,
+            )
+            assertLines("asymmetric loop warning", expected, actual)
+            assertEquals(0, midend.status())
+
+            fun warned(x: Int, y: Int): Boolean {
+                val left = TILE / 2 + x * TILE
+                val top = TILE / 2 + y * TILE
+                return actual.lines().any { line ->
+                    val p = line.split(' ')
+                    p.size == 6 && p[0] == "rect" && p[5] == "8" &&
+                        p[1].toInt() in left until left + TILE &&
+                        p[2].toInt() in top until top + TILE
+                }
+            }
+            assertTrue("a cell on the first cycle is warned", warned(1, 0))
+            assertTrue("a cell on the second cycle is warned", warned(5, 2))
+            assertFalse("the joining bridge is not a loop", warned(3, 2))
+        }
+
+    @Test
+    fun `a solved board draws every island and bridge as marked`() =
+        OracleClient().use { oracle ->
+            val fresh = oracle.newGame("bridges", "7x7i30e10m2d0", SEED).state
+            val solved = oracle.solve(fresh).state
+            val upstream = upstream()
+            val expected = TraceNormalizer.normalize(oracle.trace(solved), upstream)
+            val midend = Midend.fromSave(Bridges, SgtpSave.parse(solved))
+            val actual = TraceNormalizer.normalize(
+                KotlinTraceSink.stateTrace(midend, TILE),
+                upstream,
+            )
+            assertLines("solved trace", expected, actual)
+
+            val state = midend.state as Bridges.State
+            assertTrue(state.completed)
+            assertTrue(state.solved)
+            val ops = actual.lines()
+
+            // Every island draws its centre circle on `DI_BG_MARK`,
+            // which is COL_MARK (5).
+            val islandRadius = TILE * 12 / 20 - TILE / 8
+            for (island in state.islands) {
+                val cx = TILE + island.x * TILE
+                val cy = TILE + island.y * TILE
+                assertTrue(
+                    "island (${island.x},${island.y}) is marked",
+                    ops.contains("circle $cx $cy $islandRadius 5 5"),
+                )
+            }
+
+            // Every bridge cell carries a `DL_LOCK` background, which is
+            // a COL_MARK rectangle inside the cell.
+            fun locked(x: Int, y: Int): Boolean {
+                val left = TILE / 2 + x * TILE
+                val top = TILE / 2 + y * TILE
+                return ops.any { line ->
+                    val p = line.split(' ')
+                    p.size == 6 && p[0] == "rect" && p[5] == "5" &&
+                        p[1].toInt() in left until left + TILE &&
+                        p[2].toInt() in top until top + TILE
+                }
+            }
+            var bridges = 0
+            for (y in 0 until state.height) {
+                for (x in 0 until state.width) {
+                    if (state.lines[y * state.width + x] == 0) continue
+                    bridges++
+                    assertTrue("bridge cell ($x,$y) is locked", locked(x, y))
+                }
+            }
+            assertTrue("the board has bridges", bridges > 0)
+        }
+
+    @Test
     fun `an impossible clue draws the warning colours`() =
         OracleClient().use { oracle ->
             val save = saveText("3x3i30e10m4d0", "3x3m4", "4a1f")

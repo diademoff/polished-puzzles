@@ -998,6 +998,22 @@ object Bridges : Game {
         }
     }
 
+    /**
+     * Test hook: the neighbours of one grid vertex in the order that
+     * [BridgesNeighbour] returns them. The order decides the `findloop`
+     * DFS forest, so the engine test pins it.
+     */
+    internal fun neighbourOrder(state: State, x: Int, y: Int): List<Int> {
+        val neighbour = BridgesNeighbour(state)
+        val order = ArrayList<Int>(4)
+        var v = neighbour.next(y * state.width + x)
+        while (v >= 0) {
+            order.add(v)
+            v = neighbour.next(-1)
+        }
+        return order
+    }
+
     private fun mapHasLoops(state: State, mark: Boolean): Boolean {
         val findLoop = FindLoopState(state.width * state.height)
         val neighbour = BridgesNeighbour(state)

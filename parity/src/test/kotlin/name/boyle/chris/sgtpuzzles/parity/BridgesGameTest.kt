@@ -66,6 +66,21 @@ class BridgesGameTest {
         ).serialise()
     }
 
+    private fun handWritten(params: String, cparams: String, desc: String): String =
+        SgtpSave.of(
+            listOf(
+                SaveRecord("SAVEFILE", SgtpSave.MAGIC),
+                SaveRecord("VERSION", SgtpSave.VERSION),
+                SaveRecord("GAME", Bridges.name),
+                SaveRecord("PARAMS", params),
+                SaveRecord("CPARAMS", cparams),
+                SaveRecord("SEED", "1"),
+                SaveRecord("DESC", desc),
+                SaveRecord("NSTATES", "1"),
+                SaveRecord("STATEPOS", "1"),
+            ),
+        ).serialise()
+
     private fun auxTokens(): List<String> {
         val aux = requireNotNull(
             Bridges.newDesc(
@@ -151,7 +166,7 @@ class BridgesGameTest {
         assertEquals(0x44, state.grid[1] and 0x44)
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the solver matches the oracle from the initial board`() =
         OracleClient().use { oracle ->
             val save = fresh(oracle)
@@ -200,7 +215,7 @@ class BridgesGameTest {
             )
         }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the solver from scratch matches the oracle`() = OracleClient().use { oracle ->
         for (params in listOf(
             "7x7i30e10m2d0", "7x7i30e10m2d1", "7x7i30e10m2d2", "10x10i30e10m2d2",
@@ -242,9 +257,45 @@ class BridgesGameTest {
             "S;L0,0,0,2,1;M0,0;M0,2",
             midend.serialise().values("SOLVE").single(),
         )
+
+        // Two boards that need stage 3. The 6x6 solve depends on the
+        // `maxv`/`maxh` lowering surviving a `solve_sub` restart: a
+        // reset per restart adds an `N3,0,5,0` token. The 5x5 solve
+        // loops instead of failing when the maxima are reset for every
+        // stage-3 island, so the caller needs a timeout.
+        for ((params, cparams, desc, solve) in listOf(
+            listOf(
+                "6x6i30e10m2d2", "6x6m2", "a2a2a1f2f1c2f4b4a2",
+                "S;L1,0,3,0,1;L1,0,1,3,1;M1,0;L3,0,3,5,1;M3,0;" +
+                    "L5,0,5,3,1;M5,0;L0,2,0,5,2;M0,2;N1,3,5,3;M1,3;" +
+                    "L5,3,5,5,1;M5,3;L0,5,3,5,2;M0,5;L3,5,5,5,1;M3,5;M5,5",
+            ),
+            listOf(
+                "5x5i30e10m2d2", "5x5m2", "2a1a2e4b2f2c3",
+                "S;L0,0,2,0,1;L0,0,0,2,1;M0,0;N2,0,4,0;M2,0;" +
+                    "L4,0,4,4,2;M4,0;L0,2,3,2,2;L0,2,0,4,1;M0,2;M3,2;" +
+                    "L0,4,4,4,1;M0,4;M4,4",
+            ),
+        )) {
+            val text = handWritten(params, cparams, desc)
+            val oracleSolved = oracle.solve(text)
+            assertEquals(
+                "$params SOLVE",
+                solve,
+                SgtpSave.parse(oracleSolved.state).values("SOLVE").single(),
+            )
+            val kotlinSolved = Midend.fromSave(Bridges, SgtpSave.parse(text))
+            assertTrue("$params solves", kotlinSolved.solve())
+            assertSame("$params stage 3 solve", oracleSolved, kotlinSolved)
+            assertEquals(
+                "$params SOLVE",
+                solve,
+                kotlinSolved.serialise().values("SOLVE").single(),
+            )
+        }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the two C error strings match the oracle`() = OracleClient().use { oracle ->
         val save = fresh(oracle)
         val invalid = withRecord(save, "AUXINFO", "")
@@ -358,7 +409,7 @@ class BridgesGameTest {
         assertFalse(solved.takeCompletedEvent())
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `a hint returns the solver diff`() = OracleClient().use { oracle ->
         val save = fresh(oracle)
         val expected = oracle.key(save, 0, 0, 'h'.code)

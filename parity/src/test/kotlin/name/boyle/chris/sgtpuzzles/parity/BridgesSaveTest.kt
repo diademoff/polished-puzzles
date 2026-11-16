@@ -276,7 +276,7 @@ class BridgesSaveTest {
             "a1",               // too few islands
             "3e2g6a3c2i1b3h4d4b", // too long
             "3e2g6a3c2i1b3h4d4",  // too short
-            "3e2g6a3c2i1b3h4d4z", // unexpected character
+            "3e2g6a3c2i1b3h4d4z", // longer than expected: z is a 26-cell run
         )) {
             val save = SgtpSave.parse(base)
             val records = save.records.map {
