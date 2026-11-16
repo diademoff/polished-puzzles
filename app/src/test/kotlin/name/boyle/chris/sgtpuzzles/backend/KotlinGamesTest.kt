@@ -12,6 +12,7 @@ import name.boyle.chris.sgtpuzzles.engine.Magnets
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Palisade
+import name.boyle.chris.sgtpuzzles.engine.Pattern
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
@@ -158,6 +159,12 @@ class KotlinGamesTest {
     fun `magnets is registered but the app still uses C`() {
         assertEquals(Magnets, KotlinGames.gameFor(MAGNETS))
         assertFalse(KotlinGames.handles(MAGNETS))
+    }
+
+    @Test
+    fun `pattern is registered but the app still uses C`() {
+        assertEquals(Pattern, KotlinGames.gameFor(PATTERN))
+        assertFalse(KotlinGames.handles(PATTERN))
     }
 
     @Test

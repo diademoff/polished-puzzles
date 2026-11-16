@@ -1450,6 +1450,104 @@ items:
   not in `APP_GAMES`, so `KotlinGames.handles(MAGNETS)` is false and
   the app keeps the C backend. The two-release wait also applies.
 
+`pattern` has no deviation and three enablement items:
+
+- `PatternDescTest` is semantic. It compares the five golden
+  descriptions and the default with fresh oracle games, a numeric seed
+  sweep per preset, the small sizes `1x2`, `2x1`, `1x5`, `5x1`, `2x2`,
+  `2x3`, `3x2`, `3x3`, `4x4`, and `5x5`, the retry counts from
+  `newDescWithAttempts`, the decode quirks (`6`, `+6x5`, `4X4`, `06x05`,
+  `4x4x4`, a leading and a trailing space), the validation messages and
+  order, the accepted `46341x46340` boundary and the rejected
+  `46341x46341`, the `DESC` grammar with a bare `/` and the suffix
+  cases, and the `15x15` clue that selects the small font. No test
+  generates an accepted huge area.
+- `PatternGameTest` is semantic. It compares new games, text, status,
+  the move grammar and its accepted and rejected forms, the left and
+  right cycles, the drag snap and the clamp, the middle rectangle, the
+  immutable select, the no-op win, the real win, the sticky completion,
+  undo, redo, restart, the solve with and without `AUXINFO`, the
+  reachable solver failure, `currentKeyLabel`, and `requestKeys`.
+- `PatternSaveTest` is strict for the save text. It reads the six
+  corpus saves, rewrites them byte for byte, and reloads them in C with
+  the same id, status, undo, redo, and text. `PARAMS` and `CPARAMS` are
+  always equal. A Kotlin save for every preset loads in C. It round
+  trips a played click, an undone position with a live redo branch, a
+  `SOLVE`, a `RESTART`, a save without `AUXINFO`, an empty seed, and a
+  suffix description with all cells immutable. No save has a `UI`
+  record. `default.sgtp` and `15x15.sgtp` are the same file.
+- `PatternTraceTest` is strict. It compares the five frozen traces and
+  the oracle `traceNew` for every preset, a cold loaded state, a
+  visible cursor with the two `COL_CURSOR` polygons and the two guided
+  clue colours, a `COL_ERROR` clue, the completed `2x2` frame, the warm
+  path after a press, a release, a cursor key, and a win, sized traces
+  at tiles 48, 63, 82, and 100, and the 411x702 letterbox at tile 25
+  with origin (6,152). No trace contains a blitter, a status line, or
+  a flash frame.
+- `PatternInputParityTest` is semantic and `ui`. It compares the layout
+  at tiles 24, 48, 63, 82, and 100 and at the 781x781 (tile 48, origin
+  (6,6)) and 411x702 (tile 25, origin (6,152)) letterboxes. Real left
+  and right press and release pairs run the full three-way cycle at
+  every view: every step changes the grid, adds one move and one state,
+  and the final state, id, status, history flags, and trace match
+  `pointsSized`. The snaps are compared in both axes, a drag past the
+  right edge clamps to the last column, and the unsnapped middle drag
+  marks the `U0,0,2,2` rectangle. A clue-band click at `TOCOORD(0)-1`
+  and a letterbox tap are inert; a press at `TOCOORD(0)` moves; an
+  immutable click changes neither the grid nor the count. A select on
+  an immutable clue cell adds one state and one `U` move without a
+  visible change, and a cursor walk to the four corners draws the two
+  cursor polygons. The `2x2` no-op win reaches status 1 with one
+  completion event and no grid change. `requestKeys` is arrow mode 3
+  with no labels on every preset, and the full-cursor hint is mode 1.
+- `PatternTest` is the engine test. It pins the parameters and five
+  presets, the decode and encode quirks, the validation order and
+  boundaries, the description grammar and its messages, the small
+  descriptions, the retry attempt counts at seed `12345` and seed `0`,
+  the suffix cells, the deep state copy with shared clue data, the
+  solver and the hard-board null, the text format, the palette,
+  `computeSize`, `currentKeyLabel`, `requestKeys`, and the derived
+  font size. The attempt counts have no C counterpart, so they are the
+  fixture for the retry stream.
+- The `STYLUS_BASED` cycles are C behaviour, not a port choice. A left
+  press cycles unknown to filled to empty to unknown, a right press
+  runs the same cycle backwards, and a middle press always targets
+  unknown. A pointer press only starts a drag preview; the move happens
+  at the release. A click on an immutable cell is UI only, while a
+  cursor select on one produces a 1x1 `U` move. The left and right
+  fills snap to the dominant axis from the press, and a middle drag
+  does not snap.
+- The no-op win is measured C behavior. `2x2:1/1//2,aaAA` loads at
+  status 0 because `new_game` does not run the completion test. The
+  first select only reveals the hidden cursor; the second produces a
+  1x1 move even on the locked cell, and the completion test then sets
+  status 1 and raises one event. The grid does not change.
+- The solve quirks are C behavior. Every generated game carries
+  `AUXINFO` as `S` plus one `'1'` or `'0'` per cell, and `solve`
+  returns it verbatim. An aux-less save recomputes the same answer with
+  the line solver. The `S` move sets `completed` and `cheated`, so a
+  solve reaches status 1 but raises no completion event. `completed`
+  is sticky, a post-win move keeps status 1, and a redo into the
+  completed state raises the event again. The hand-written
+  `4x4:2/1/2/1/1.1/2/1/1` cannot be finished one line at a time; C
+  returns `Solving algorithm cannot complete this puzzle`, and the
+  seam returns null because it has no error channel.
+- Generation cost is enablement debt: the five presets are under
+  30 ms, `40x40` takes about 0.3 s, `50x50` takes about 16 s, and
+  `100x100` does not finish in a minute. The app must generate off the
+  UI thread. `validate_params` accepts an area up to `INT_MAX`, so a
+  size bound rejects parameters that C accepts; that needs an owner
+  decision, a deviation entry, and a test, so no bound is added in this
+  slice. The app still uses C. S8 must build the two-field
+  configuration dialog (Width, Height), remove the `Fifteen` casts in
+  `KotlinGameEngine`, skip the preferences dialog because
+  `get_prefs`/`set_prefs` are `NULL`, gate the status text on
+  `wantsStatusBar`, and show the solve message instead of throwing. S9
+  is a tested `currentKeyLabel` helper with no Android call site.
+  `PATTERN` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(PATTERN)` is false and the app keeps the C
+  backend. The two-release wait also applies.
+
 `inertia` has one deviation and three open items:
 
 - D-008: C `validate_params` accepts an area up to `INT_MAX` cells,

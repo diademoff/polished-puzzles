@@ -175,7 +175,7 @@ C wins.
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, and `tents` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, and `pattern` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -213,7 +213,7 @@ submenu entries when a game groups its presets.
 | `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `C` |
 | `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
 | `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `dual-run` |
-| `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `C` |
+| `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `dual-run` |
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `C` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `dual-run` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
@@ -1059,6 +1059,62 @@ Notes:
   two-release wait are open. S9 is a tested `currentKeyLabel` helper
   with no Android call site. `MAGNETS` is not in `APP_GAMES`, so
   `handles(MAGNETS)` is false.
+
+- `pattern` is `dual-run`. Its parameters and five presets, the decode
+  and validation quirks, the generator and its line-solver gate, the
+  description grammar and suffix, the state, the `STYLUS_BASED`
+  three-way cycles, the drag snap and clamp rules, the unsnapped middle
+  rectangle, the cursor, the no-op win, the solve with and without
+  `AUXINFO`, the text format, the save file, palette, drawing, layout,
+  input, and `requestKeys` pass the matrix in `PatternDescTest`,
+  `PatternGameTest`, `PatternSaveTest`, `PatternTraceTest`,
+  `PatternInputParityTest`, and the engine `PatternTest`.
+
+  The generator draws one `random_upto(100000000)` per cell, averages
+  every 3x3 neighbourhood once in single precision, and retries until
+  no row or column is monochrome and the line solver finishes. The
+  five goldens, the seed sweep, and the corpus `AUXINFO` are the guard:
+  a missing draw, a different float order, or a different solver bound
+  changes every description. `PatternTest` pins the retry attempt
+  counts, and `PatternDescTest` pins the small-size descriptions and
+  the reachable solver failure on `4x4:2/1/2/1/1.1/2/1/1`.
+
+  `PatternGameTest` compares the move grammar, the left and right
+  cycles, the drag rules, the cursor keys, the immutable select, the
+  no-op win, the real win, undo, redo, restart, and the solve.
+  `PatternInputParityTest` sends real left and right cycles at tiles
+  24, 48, 63, 82, and 100 and at the 781x781 and 411x702 letterboxes,
+  plus the snapped and clamped drags, the middle rectangle, an inert
+  clue-band click, an immutable click, an immutable select, the cursor
+  corner walk, the no-op win, and `requestKeys`. Every real cycle
+  changes the grid and adds one move and one state; an inert or
+  immutable click changes neither; a select on an immutable clue cell
+  adds a state with no visible change, as C does. The final trace is
+  compared with `pointsSized` where the input is a pointer.
+
+  `PatternSaveTest` reads the six corpus saves byte for byte and
+  reloads them in C with the same id, status, undo, redo, and text.
+  `PatternTraceTest` compares the five frozen traces, a cold loaded
+  state, the cursor ring and guided clues, a `COL_ERROR` clue, a
+  completed frame, the warm path, sized traces at tiles 48, 63, 82,
+  and 100, and the 411x702 letterbox. No trace has a blitter, a status
+  line, or a flash frame.
+
+  Enablement debt. Generation runs on the calling thread today: the
+  five presets are under 30 ms, `50x50` takes about 16 s, and `100x100`
+  does not finish in a minute. The app must generate off the UI thread.
+  `validate_params` accepts an area up to `INT_MAX`, so a size bound
+  would reject parameters that C accepts; that is an owner decision
+  that needs a deviation entry and a test, and no bound is added in
+  this slice. The solve of `4x4:2/1/2/1/1.1/2/1/1` returns null
+  because the seam has no error channel; the app must show the C
+  message instead of throwing. `KotlinGames.gameFor` knows the Kotlin
+  game, but the app still uses C: the S8 configuration schema (Width,
+  Height), the preference-dialog skip (`get_prefs`/`set_prefs` are
+  `NULL`), the unconditional status text in the adapter, the `Fifteen`
+  casts, and the two-release wait are open. S9 is a tested
+  `currentKeyLabel` helper with no Android call site. `PATTERN` is not
+  in `APP_GAMES`, so `handles(PATTERN)` is false.
 
 ## 8. Goldens
 
