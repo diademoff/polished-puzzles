@@ -217,6 +217,9 @@ class KotlinGameEngine private constructor(
     private var sized = false
     private var invertCursor = false
 
+    /** The clock reading of the previous timer tick, in nanoseconds. */
+    private var timerBaselineNanos = System.nanoTime()
+
     private var configMode: ConfigMode? = null
     private val configValues = HashMap<String, String>()
     private var configParams: Fifteen.Params =
@@ -362,6 +365,10 @@ class KotlinGameEngine private constructor(
     }
 
     init {
+        // The C midend starts and stops the shell timer through
+        // `activate_timer` and `deactivate_timer`. The setter syncs the
+        // shell with the state of the loaded game immediately.
+        midend.timerCallback = { on -> activityCallbacks.requestTimer(on) }
         applyPrefs(initialPrefs)
         Log.d(TAG, "using the Kotlin backend for ${game.backendName}")
     }
@@ -513,7 +520,15 @@ class KotlinGameEngine private constructor(
         palisadeFullCursor: Boolean,
     ): GameEngine.KeysResult = keysResultFor(game, midend.currentParams, palisadeFullCursor)
 
-    override fun timerTick() {}
+    override fun timerTick() {
+        val now = System.nanoTime()
+        val delta = (now - timerBaselineNanos).toDouble() / 1_000_000_000.0
+        timerBaselineNanos = now
+        // The status line shows whole seconds, so a redraw is needed
+        // only when the game time crosses one, as `midend_timer` calls
+        // `status_bar` only then.
+        if (midend.timerTick(delta.toFloat())) redraw()
+    }
 
     override fun htmlHelpTopic(): String = htmlHelpTopicFor(game)
 
@@ -586,7 +601,11 @@ class KotlinGameEngine private constructor(
             return undo or redo or 4 or solve or status
         }
 
-    override fun resetTimerBaseline() {}
+    override fun resetTimerBaseline() {
+        // The shell calls this when the view regains focus, so the time
+        // spent in the background is not added to the game clock.
+        timerBaselineNanos = System.nanoTime()
+    }
 
     override fun purgeStates() = midend.purgeStates()
 

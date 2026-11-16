@@ -461,3 +461,67 @@ it, so a net port could not reach the oracle.
 S7 is done with this change. The `net` port remains a separate change
 and needs the game-level `newUi` and `decodeUi` overrides; the seam
 only guarantees the bytes.
+
+## Amendment: the timed game clock (S5)
+
+- **Date:** 2026-11-16
+
+`mines` is the only upstream game with `is_timed` set. `midend.c` keeps
+an `elapsed` float and a `timing` flag, asks `timing_state` after every
+state change, prefixes the status text with `[m:ss] `, and writes a
+`TIME` record when it saves. The seam had none of this.
+
+1. **`Game.isTimed` and `Game.timingState` are the game side.**
+   `isTimed` mirrors the static `is_timed` flag and defaults to false.
+   `timingState(state, ui)` mirrors `timing_state` and defaults to
+   false, so an untimed game declares nothing. A timed game returns
+   true only while the clock should run; `mines` stops it on a win, on
+   a loss, and after a solve.
+
+2. **`Midend` owns `elapsed` and `timing`.** `elapsed` is the float C
+   stores, in seconds, with a private setter. `timing` is the last
+   answer of `game.isTimed && game.timingState(state, ui)`.
+
+3. **`Midend.timerCallback` is the shell switch.** It is the seam
+   counterpart of `activate_timer` and `deactivate_timer`. The setter
+   calls the callback with the current `timing` value, so a shell that
+   attaches after a new game or a load starts in sync. `refreshTimer`
+   calls it again only on a transition. The midend calls `refreshTimer`
+   after construction, after `fromSave`, and after `processKey`,
+   `undo`, `redo`, `solve`, and `restart`. The C midend calls
+   `midend_set_timer` after the move, solve, restart, new game, load,
+   and timer paths; the undo and redo calls are extra and safe because
+   `timing_state` is a pure function of the state and the UI.
+
+4. **`Midend.timerTick(tplus)` is `midend_timer` without the animation
+   clocks.** While `timing` is true it adds `tplus` to `elapsed` and
+   returns true when `(int)elapsed` changed, which is the condition
+   under which C rewrites the status bar. It refreshes the timer state
+   on every call, as C does. The seam does not port `anim_time`,
+   `anim_pos`, `flash_time`, or `flash_pos`: no ported game uses them,
+   and a game that needs them adds them with its own trace.
+
+5. **`statusText` writes the C prefix.** A timed game is prefixed with
+   `sprintf("[%d:%02d] ", min, sec)`, where `sec` is `(int)elapsed`, so
+   the output is `[0:00] `, `[0:05] `, and `[1:05] ` for 0, 5, and 65
+   seconds. The prefix is part of `midend_rewrite_statusbar` and not a
+   game rule.
+
+6. **The `TIME` record keeps its C position and format.** `serialise`
+   writes `TIME` after `UI` and before `NSTATES`, and only for a timed
+   game. The value comes from the shared `%g` helper `cFloatG`, which
+   is the formatter that `net` already used for the `b` parameter
+   field. A save without `TIME` loads at 0, as C leaves
+   `data.elapsed` at its zero initializer.
+
+The engine clock is not the shell clock. The engine never reads a
+system clock, so the parity module stays deterministic. The app
+measures each interval with `System.nanoTime()`, from the previous tick
+or from `resetTimerBaseline`, and passes the delta to
+`midend.timerTick`. The baseline is reset when the view regains focus,
+so the time spent in the background does not enter the game time.
+`KotlinGameEngine` redraws only when the displayed second changed.
+
+`TimerTest` pins the two transitions, the accumulated time, the three
+prefix strings, both save directions, the position of `TIME`, and the
+untimed game.

@@ -31,6 +31,14 @@ interface Game {
      */
     val canSolve: Boolean get() = true
 
+    /**
+     * True when the game keeps an elapsed-time clock, the counterpart of
+     * upstream `is_timed`. A timed game writes the `TIME` save record
+     * and prefixes its status text with `[m:ss] `. `mines` is the only
+     * upstream timed game, so every ported game keeps the default.
+     */
+    val isTimed: Boolean get() = false
+
     fun defaultParams(): Params
 
     /** The presets in menu order. The title is the menu label. */
@@ -87,6 +95,18 @@ interface Game {
      * return value is true when this transition completed the game.
      */
     fun changedState(ui: Ui, oldState: State?, newState: State): Boolean = false
+
+    /**
+     * Mirrors `game_timing_state`: true when the clock of a timed game
+     * should run for this state and frontend state, for example while
+     * the board is live and unsolved. The midend calls it whenever the
+     * state or the UI can change, and starts or stops the shell timer
+     * with the result.
+     *
+     * The default false. An untimed game never runs a clock, so it
+     * needs no override; a timed game declares the real rule.
+     */
+    fun timingState(state: State, ui: Ui): Boolean = false
 
     fun requestKeys(params: Params): KeyRequest
 

@@ -136,3 +136,16 @@ A test double that implements `Game` by delegation forwards the new
 default methods to its delegate, so it must override the overloads it
 uses. `UiSaveTest.UiFifteen` does; a real game overrides `newUi` and
 `decodeUi` directly and needs no extra method.
+
+## Amendment: the `TIME` record follows `UI`
+
+- **Date:** 2026-11-16
+
+Decision 7 puts `UI` after `AUXINFO`. The timed-game clock of ADR 0007
+(S5) adds a `TIME` record that `midend_serialise` writes between `UI`
+and `NSTATES`. The save order is therefore `AUXINFO`, `UI`, `TIME`,
+`NSTATES`. A game without a UI record writes no `UI` and still writes
+`TIME`, and an untimed game writes neither record. The position is
+fixed and not an ordering preference, because the record stream is
+compared byte for byte against C. `Midend.fromSave` reads `TIME` into
+`Midend.elapsed`; a save without the record loads at 0.

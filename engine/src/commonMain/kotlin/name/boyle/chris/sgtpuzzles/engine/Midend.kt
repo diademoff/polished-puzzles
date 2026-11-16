@@ -25,6 +25,7 @@ class Midend private constructor(
     val auxInfo: String?,
     private val entries: MutableList<Entry>,
     var statePos: Int,
+    initialElapsed: Float = 0f,
     initialUi: Game.Ui? = null,
     private val platformSeed: ByteArray = byteArrayOf(0),
 ) {
@@ -85,6 +86,43 @@ class Midend private constructor(
 
     /** Set when `changedState` reports a completion; cleared by a take. */
     private var completedEvent = false
+
+    /**
+     * The elapsed seconds of a timed game, the counterpart of
+     * `me->elapsed`. A save stores it in the `TIME` record and the
+     * status text shows it as `[m:ss] `. An untimed game keeps 0.
+     */
+    var elapsed: Float = initialElapsed
+        private set
+
+    /**
+     * True while the clock runs, the counterpart of `me->timing`.
+     * [refreshTimer] keeps it equal to `game.isTimed &&
+     * game.timingState(state, ui)`.
+     */
+    var timing: Boolean = false
+        private set
+
+    /**
+     * The shell's timer switch, the counterpart of `activate_timer` and
+     * `deactivate_timer`.
+     *
+     * The setter calls the callback with the current [timing] value, so
+     * a shell that attaches after a new game or a load starts in the
+     * right state instead of waiting for the next transition.
+     * [refreshTimer] calls it again only when the value changes.
+     */
+    var timerCallback: ((Boolean) -> Unit)? = null
+        set(value) {
+            field = value
+            value?.invoke(timing)
+        }
+
+    init {
+        // `midend_new_game` and `midend_load` call `midend_set_timer`
+        // before they return, so the shell starts in the loaded state.
+        refreshTimer()
+    }
 
     /**
      * The mouse button that is currently held, or 0 when none is. It is
@@ -155,7 +193,52 @@ class Midend private constructor(
 
     fun status(): Int = game.status(state)
 
-    fun statusText(): String = game.statusText(state, ui)
+    /**
+     * `midend_rewrite_statusbar`: the game text, prefixed with the
+     * elapsed clock as `[%d:%02d] ` when the game is timed. The prefix
+     * is always present for a timed game, even before the first second.
+     */
+    fun statusText(): String {
+        val text = game.statusText(state, ui)
+        if (!game.isTimed) return text
+        val seconds = elapsed.toInt()
+        val minutes = seconds / 60
+        return "[$minutes:${(seconds % 60).toString().padStart(2, '0')}] $text"
+    }
+
+    /**
+     * `midend_timer`: adds [tplus] seconds to the clock while [timing]
+     * is true. Returns true when the whole second shown by [statusText]
+     * changed, so the shell can redraw the status line.
+     *
+     * The C midend also advances its animation and flash clocks here.
+     * The seam has neither, so this call only advances the game time.
+     * The timer state is refreshed on every call, as C does.
+     */
+    fun timerTick(tplus: Float): Boolean {
+        var secondChanged = false
+        if (timing) {
+            val oldElapsed = elapsed
+            elapsed += tplus
+            // The C test is `(int)oldelapsed != (int)me->elapsed`.
+            secondChanged = oldElapsed.toInt() != elapsed.toInt()
+        }
+        refreshTimer()
+        return secondChanged
+    }
+
+    /**
+     * `midend_set_timer`: recomputes whether the clock runs and tells
+     * the shell only when the value changes. The midend calls it after
+     * every move, undo, redo, solve, restart, a new game, and a load,
+     * as C does.
+     */
+    private fun refreshTimer() {
+        val next = game.isTimed && game.timingState(state, ui)
+        if (next == timing) return
+        timing = next
+        timerCallback?.invoke(next)
+    }
 
     /**
      * `midend_text_format`: the state as text.
@@ -188,6 +271,7 @@ class Midend private constructor(
             completedEvent = true
         }
         statePos--
+        refreshTimer()
         return true
     }
 
@@ -197,6 +281,7 @@ class Midend private constructor(
             completedEvent = true
         }
         statePos++
+        refreshTimer()
         return true
     }
 
@@ -222,6 +307,7 @@ class Midend private constructor(
         entries += Entry(restarted, desc, MoveType.RESTART)
         statePos++
         if (game.changedState(ui, previous, restarted)) completedEvent = true
+        refreshTimer()
         return true
     }
 
@@ -239,6 +325,7 @@ class Midend private constructor(
         // `midend_solve` calls changed_state for its UI effect but ignores
         // the return value, so a solve never raises the completion event.
         game.changedState(ui, previous, solved)
+        refreshTimer()
         return true
     }
 
@@ -344,6 +431,7 @@ class Midend private constructor(
             pressedMouseButton = key
         }
 
+        refreshTimer()
         return outcome
     }
 
@@ -557,6 +645,9 @@ class Midend private constructor(
         // `encode_ui` writes its record only when it has one, between
         // `AUXINFO` and `NSTATES`, as `midend_serialise` does.
         game.encodeUi(ui)?.let { records += SaveRecord("UI", it) }
+        // The game time, if it is a timed game, goes between `UI` and
+        // `NSTATES`, as `midend_serialise` writes it. C writes `%g`.
+        if (game.isTimed) records += SaveRecord("TIME", cFloatG(elapsed))
         records += SaveRecord("NSTATES", entries.size.toString())
         records += SaveRecord("STATEPOS", statePos.toString())
         for (index in 1 until entries.size) {
@@ -745,6 +836,9 @@ class Midend private constructor(
                 auxInfo = save.value("AUXINFO")?.let { AuxInfo.decode(it) },
                 entries = entries,
                 statePos = statePos,
+                // C reads `TIME` with `atof`; a save without the record
+                // keeps the elapsed time at 0.
+                initialElapsed = save.value("TIME")?.toFloatOrNull() ?: 0f,
                 initialUi = save.value("UI")?.let {
                     game.decodeUi(entries[statePos - 1].state, it, baseUi)
                 } ?: baseUi,

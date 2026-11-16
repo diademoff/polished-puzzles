@@ -244,7 +244,8 @@ Notes:
   is compiled with the same definitions, so the parity comparison is
   between the app and the same engine.
 - `mines` is the only timed game. The timer affects the clock, not
-  `DESC`, the move history, or the save file.
+  `DESC` or the move history. A save stores the clock in the `TIME`
+  record, which is not part of the state payload.
 - `net` asks the frontend for a random seed when it jumbles tiles. The
   oracle returns a fixed seed, so the oracle path is deterministic.
 - `fifteen` is the first port target (`ROADMAP.md`, Phase 4). Its
