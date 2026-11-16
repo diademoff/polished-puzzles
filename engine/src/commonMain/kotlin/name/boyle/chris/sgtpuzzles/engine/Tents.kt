@@ -11,18 +11,19 @@ package name.boyle.chris.sgtpuzzles.engine
  * solves it.
  *
  * The code keeps the C structure on purpose:
- * - the tree-candidate ids are assigned while the tents are placed, in
- *   the order `U, L, R, D`, because that order decides the matching and
- *   therefore the description;
+ * - the tent neighbours are collected while the tents are placed, and
+ *   each adjacency list is built in the order `U, L, R, D`, because
+ *   that order decides the matching and therefore the description;
  * - `completed` is sticky: `executeMove` starts from a copy and only
  *   ever sets the flag;
  * - `solve` runs on the initial grid, not on the current one;
  * - the solver combines row placements with the C loop's side effects.
  *
- * The generator does not emit `AUXINFO`. The solver answers from the
- * initial grid, so an answer text would be the same move. A save that
- * already carries `AUXINFO` (the frozen corpus does) keeps it and
- * `solve` returns it unchanged, as `solve_game` does.
+ * The generator writes the answer as `AUXINFO`, exactly as C's
+ * `new_game_desc` does: a leading `S` and one `;Tx,y` per tent in
+ * row-major order. A save that already carries `AUXINFO` (the frozen
+ * corpus does) keeps it and `solve` returns it unchanged, as
+ * `solve_game` does.
  *
  * C reaches two assertions for descriptions that `validate_desc`
  * accepts: `8x8:ddddddddz,...` overruns the grid, and
@@ -180,11 +181,11 @@ object Tents : Game {
         var cy: Int = -1
     }
 
-    /** One generated description and the number of generation attempts. */
-    data class Generation(val desc: String, val attempts: Int)
+    /** One generated description, the C aux answer, and the attempt count. */
+    data class Generation(val desc: String, val auxInfo: String, val attempts: Int)
 
-    /** The solver result, with the two C error strings when it fails. */
-    internal data class SolveAttempt(val move: String?, val error: String?)
+    /** The solver result: a move, or one of the two C error strings. */
+    data class SolveAttempt(val move: String?, val error: String?)
 
     override val name: String = "Tents"
     override val backendName: String = "tents"
@@ -259,10 +260,12 @@ object Tents : Game {
 
     /**
      * `new_game_desc`. The caller owns [random]; a retry draws from the
-     * same stream, as C does.
+     * same stream, as C does. The aux answer is the C solution string.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description =
-        Description(generate(params as Params, random).desc)
+    override fun newDesc(params: Game.Params, random: RandomState): Description {
+        val generation = generate(params as Params, random)
+        return Description(generation.desc, generation.auxInfo)
+    }
 
     /** [newDesc] with the generation attempt count, for tests. */
     fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
@@ -392,8 +395,12 @@ object Tents : Game {
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveAttempt(state, auxInfo).move
 
-    /** The solver result with the C error strings; the seam has no error channel. */
-    internal fun solveAttempt(state: Game.State, auxInfo: String?): SolveAttempt {
+    /**
+     * The solver result with the C error strings. The seam has no error
+     * channel, so a caller that needs the message uses this helper and
+     * [solve] keeps the seam shape.
+     */
+    fun solveAttempt(state: Game.State, auxInfo: String?): SolveAttempt {
         if (auxInfo != null) return SolveAttempt(auxInfo, null)
         val s = state as State
         val soln = IntArray(s.width * s.height)
@@ -1401,7 +1408,16 @@ object Tents : Game {
             }
         }
         for (value in numbers) desc.append(',').append(value)
-        return Generation(desc.toString(), attempts)
+
+        // The C aux answer: `S` then one `;Tx,y` per tent in row-major
+        // order (`tents.c:1175-1182`).
+        val aux = StringBuilder("S")
+        for (cell in 0 until wh) {
+            if (grid[cell] == TENT) {
+                aux.append(";T").append(cell % w).append(',').append(cell / w)
+            }
+        }
+        return Generation(desc.toString(), aux.toString(), attempts)
     }
 
     // ------------------------------------------------------------------

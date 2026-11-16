@@ -19,8 +19,8 @@ import java.io.File
  * byte, and reloaded by C. A Kotlin save for every preset is loaded by
  * C with the same id and text. The history cases cover a played click,
  * a drag, an undone position with a live redo branch, a `SOLVE`, and a
- * `RESTART`. The `PARAMS`/`CPARAMS` split and the absent `UI` record are
- * pinned.
+ * `RESTART`. The `PARAMS`/`CPARAMS` split, the generated `AUXINFO`, and
+ * the absent `UI` record are pinned.
  */
 class TentsSaveTest {
 
@@ -93,9 +93,32 @@ class TentsSaveTest {
                 assertEquals("$params status", midend.status(), loaded.status)
                 assertFalse("$params starts with no undo", loaded.canUndo)
                 assertFalse("$params starts with no redo", loaded.canRedo)
-                assertNull("$params has no AUXINFO", SgtpSave.parse(text).value("AUXINFO"))
+                assertTrue("$params carries AUXINFO", SgtpSave.parse(text).value("AUXINFO") != null)
             }
         }
+
+    @Test
+    fun `a generated save is byte-identical to the oracle`() = OracleClient().use { oracle ->
+        // C writes the answer as `AUXINFO`, so the whole save text matches.
+        val seeds = listOf("1", "2", "3", "12345", "99999", "seed", "another seed", "", "-7")
+        for (params in Tents.presets().map { it.params }) {
+            for (seed in seeds) {
+                val expected = oracle.newGame("tents", params, seed)
+                val actual = Midend.newGame(Tents, params, seed)
+                assertEquals("'$params' seed '$seed' id", expected.id, actual.id())
+                assertEquals(
+                    "'$params' seed '$seed' save",
+                    expected.state,
+                    actual.serialise().serialise(),
+                )
+                assertEquals(
+                    "'$params' seed '$seed' AUXINFO",
+                    SgtpSave.parse(expected.state).value("AUXINFO"),
+                    actual.serialise().value("AUXINFO"),
+                )
+            }
+        }
+    }
 
     @Test
     fun `a played click, a drag and a live redo branch round-trip`() =

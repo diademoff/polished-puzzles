@@ -895,27 +895,34 @@ Notes:
   `TentsDescTest`, `TentsGameTest`, `TentsSaveTest`, `TentsTraceTest`,
   `TentsInputParityTest`, and the engine `TentsTest`. `TentsDescTest`
   compares every preset at the golden seed and nine seed strings, a
-  61-seed sweep over `8x8de`, `8x8dt`, `4x4de`, `4x4dt`, and `5x4dt`,
-  the decode quirks, the validation messages, and the `4x4` difficulty
-  downgrade.
+  61-seed sweep over `8x8de`, `8x8dt`, `4x4de`, `4x4dt`, `5x4de`, and
+  `5x4dt`, the decode quirks, the validation messages, and the `4x4`
+  difficulty downgrade. It also pins the generated aux answer against
+  the oracle's own `SOLVE` text for every preset.
   `TentsGameTest` compares the move grammar, the real press, drag, and
   release batches, the select and letter keys, the win with its
   completion event, undo and redo across the win, the sticky flag, the
   solve with and without `AUXINFO`, the initial-grid solve after a
   wrong move, the two solver failures, and `requestKeys`.
   `TentsSaveTest` reads the seven corpus saves byte for byte and pins
-  the `PARAMS`/`CPARAMS` split and the absent `UI` record.
+  the `PARAMS`/`CPARAMS` split, the absent `UI` record, and the
+  generated `AUXINFO`. A Kotlin-generated save is byte-identical to the
+  oracle save for every preset and nine seeds.
   `TentsTraceTest` covers the six frozen traces, the tree and cursor
   geometry, the two clipped error diamonds, the sized views, the
   letterbox, and the warm path.
 
   The generator keeps the C RNG order: the per-iteration
-  `random_upto`, the `treemap` ids assigned while the tents are placed
-  in `U, L, R, D` order, the seeded `Matching.match`, and the retry
-  condition that calls the `diff - 1` and `diff` solvers. A reordering
-  changes every description while still producing valid puzzles, so the
-  golden descriptions, the nine seed strings, and the 61-seed sweep are
-  the guards. `MatchingParityTest` pins the library itself.
+  `random_upto`, each tent's adjacency list built in `U, L, R, D` order
+  with the tents in row-major order, the seeded `Matching.match`, and
+  the retry condition that calls the `diff - 1` and `diff` solvers. The
+  `treemap` id *values* are not observable: a consistent renumbering of
+  the right vertices leaves the matching and the description unchanged.
+  A reordering of the adjacency lists, or a different candidate
+  partition, changes every description while still producing valid
+  puzzles, so the golden descriptions, the nine seed strings, and the
+  61-seed sweep are the guards. `MatchingParityTest` pins the library
+  itself.
 
   The solver reads the decoded initial grid, because `midend_solve`
   passes `states[0]` and C never reads the current board. `Tents.Shared`
@@ -956,15 +963,15 @@ Notes:
   return text where C returns null. The path is unreachable from normal
   play.
 
-  One save-text difference is recorded as debt, not as a deviation.
-  C `new_game_desc` returns an `AUXINFO` answer, so a C-generated save
-  carries one. The Kotlin generator returns no aux, because the solver
-  reads the initial grid and produces the same `SOLVE` record. A
-  Kotlin-generated save therefore omits the `AUXINFO` record, and C
-  solves it on demand. The id, `DESC`, `PARAMS`, `CPARAMS`, state,
-  status, text, and `SOLVE` agree; every corpus save that already
-  carries `AUXINFO` keeps it byte for byte. `TentsDescTest` and
-  `TentsSaveTest` pin both sides. `KotlinGames.gameFor` knows the
+  The generator writes the C aux answer. `newDesc` returns
+  `Description(desc, auxInfo)`, where the aux text is `S` followed by
+  one `;Tx,y` per tent in row-major order (`tents.c:1175-1182`), so a
+  Kotlin-generated save carries the same `AUXINFO` record as C and the
+  whole save text is byte-identical. `TentsDescTest` pins the aux text
+  against the oracle's own `SOLVE` record, and `TentsSaveTest` compares
+  the generated save byte for byte for every preset and nine seeds.
+  Every corpus save that already carries `AUXINFO` keeps it byte for
+  byte. `KotlinGames.gameFor` knows the
   Kotlin game, but the app still uses C: the three-field configuration
   dialog (Width, Height, Difficulty with `":Easy:Tricky"`), the
   preference-dialog skip (`get_prefs` is `NULL`), the `Fifteen` casts

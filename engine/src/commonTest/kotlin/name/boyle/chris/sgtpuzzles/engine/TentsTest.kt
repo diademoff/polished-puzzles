@@ -525,13 +525,21 @@ class TentsTest {
     }
 
     @Test
-    fun `the generated description has no AUXINFO`() {
+    fun `the generated description carries the C aux answer`() {
         val description = Tents.newDesc(params("8x8de"), RandomState.fromSeed(SEED))
-        assertEquals(null, description.auxInfo)
         assertEquals(GOLDEN_DESC, description.text)
+        assertEquals(SOLVE, description.auxInfo)
+        assertEquals(GOLDEN_DESC, descOf("8x8de", SEED))
+
+        // The answer is the oracle's own `SOLVE` text for the same game.
+        val tricky = Tents.newDesc(params("8x8dt"), RandomState.fromSeed(SEED))
         assertEquals(
-            GOLDEN_DESC,
-            descOf("8x8de", SEED),
+            "S;T1,0;T4,0;T6,1;T0,2;T2,2;T5,3;T3,4;T7,4;T1,5;T5,6;T1,7;T7,7",
+            tricky.auxInfo,
+        )
+        assertEquals(
+            "S;T0,0;T6,0;T2,1;T0,2;T6,2;T3,3;T1,4;T5,5;T0,6;T2,7;T4,7;T7,7",
+            Tents.solve(stateOf("8x8de", GOLDEN_DESC), null),
         )
     }
 
@@ -642,6 +650,45 @@ class TentsTest {
     }
 
     @Test
+    fun `a warm redraw updates a clue when its error flag changes`() {
+        val start = stateOf("8x8de", GOLDEN_DESC)
+        assertEquals(3, start.shared.numbers[0])
+        val u = ui()
+        val sink = RecordingSink()
+        val ds = Tents.newDrawState(start, TILE, sink) as Tents.DrawState
+        Tents.redraw(start, u, ds, sink, TILE)
+        assertEquals(16, sink.texts.size)
+        assertTrue(sink.texts.contains("32 304 1 16 1 1 3"))
+
+        // Four tents in column 0 make 4 > 3, so the column clue turns
+        // red. The cells changed without an intermediate frame, so this
+        // warm redraw also repaints them; the clue cache transition is
+        // the one number update.
+        var state = start
+        for (row in listOf(0, 2, 3, 4)) {
+            state = Tents.executeMove(state, "T0,$row") as Tents.State
+        }
+        sink.ops.clear()
+        sink.texts.clear()
+        sink.rects.clear()
+        sink.updates.clear()
+        Tents.redraw(state, u, ds, sink, TILE)
+        assertEquals(18, sink.ops.count { it == "line" })
+        assertEquals("32 304 1 16 1 6 3", sink.texts.single())
+        assertEquals(listOf("16 273 32 47 0"), sink.rects.filter { it == "16 273 32 47 0" })
+        assertEquals(1, sink.updates.count { it == "16 273 32 47" })
+        assertEquals(1, ds.numbersDrawn[0])
+
+        // A third frame has no number transition left.
+        sink.ops.clear()
+        sink.texts.clear()
+        Tents.redraw(state, u, ds, sink, TILE)
+        assertEquals(18, sink.ops.count { it == "line" })
+        assertEquals(0, sink.ops.count { it == "text" })
+        assertEquals(0, sink.ops.count { it == "update" })
+    }
+
+    @Test
     fun `a cursor ring is a four-point outline`() {
         val state = stateOf("8x8de", GOLDEN_DESC)
         val u = ui()
@@ -679,6 +726,9 @@ class TentsTest {
     private class RecordingSink : DrawSink {
         val ops = ArrayList<String>()
         val polys = ArrayList<IntArray>()
+        val texts = ArrayList<String>()
+        val rects = ArrayList<String>()
+        val updates = ArrayList<String>()
 
         override fun changedState(canUndo: Boolean, canRedo: Boolean) {
             ops += "changed_state"
@@ -694,6 +744,7 @@ class TentsTest {
 
         override fun rect(x: Int, y: Int, width: Int, height: Int, colour: Int) {
             ops += "rect"
+            rects += "$x $y $width $height $colour"
         }
 
         override fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int) {
@@ -719,6 +770,7 @@ class TentsTest {
             text: String,
         ) {
             ops += "text"
+            texts += "$x $y $font $size $align $colour $text"
         }
 
         override fun clip(x: Int, y: Int, width: Int, height: Int) {
@@ -731,6 +783,7 @@ class TentsTest {
 
         override fun update(x: Int, y: Int, width: Int, height: Int) {
             ops += "update"
+            updates += "$x $y $width $height"
         }
 
         override fun status(text: String) {

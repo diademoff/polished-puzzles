@@ -353,14 +353,26 @@ class TentsInputParityTest {
             assertTrue(actual.serialise().values("MOVE").isEmpty())
         }
 
-        // The same for the row bands at x = 32: y = 15 is out and 272
-        // is out; y = 16 and 271 are rows 0 and 7.
+        // The same for the row bands at x = 32: y = 16 and y = 271 are
+        // rows 0 and 7, both blank in column 0; y = 15 and 272 are out.
         val x = 0 * TILE + TILE
+        for ((y2, cell) in listOf(16 to "T0,0", 271 to "T0,7")) {
+            val points = listOf(
+                OracleClient.Point(x, y2, Buttons.LEFT_BUTTON),
+                OracleClient.Point(x, y2, Buttons.LEFT_RELEASE),
+            )
+            val expected = oracle.pointsSized(save, points).state
+            val actual = midend(save)
+            for (point in points) actual.processKey(point.x, point.y, point.button, TILE)
+            assertSame("y=$y2", expected, actual)
+            assertEquals("y=$y2", listOf(cell), actual.serialise().values("MOVE"))
+        }
         for (y2 in listOf(15, 272)) {
             val actual = midend(save)
             assertEquals("y=$y2", KeyOutcome.Unused,
                 actual.processKey(x, y2, Buttons.LEFT_BUTTON, TILE))
             assertEquals(1, actual.stateCount)
+            assertTrue(actual.serialise().values("MOVE").isEmpty())
         }
     }
 

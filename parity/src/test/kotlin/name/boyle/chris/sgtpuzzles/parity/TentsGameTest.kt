@@ -20,9 +20,10 @@ import org.junit.Test
  * press/drag/release batches, the keyboard select cycles, undo and
  * redo, completion (including the sticky flag), and the solver.
  *
- * A generated Kotlin save has no AUXINFO, so the oracle comparison of a
- * new game is the id, the text, and the status. The corpus saves keep
- * their AUXINFO and are compared byte for byte in `TentsSaveTest`.
+ * A generated Kotlin save now carries the C `AUXINFO` answer, so the
+ * oracle comparison of a new game is the whole save text in
+ * `TentsSaveTest`. The corpus saves keep their `AUXINFO` and are
+ * compared byte for byte there too.
  */
 class TentsGameTest {
 
@@ -428,11 +429,14 @@ class TentsGameTest {
     @Test
     fun `the two solver error strings are the C messages`() = OracleClient().use { oracle ->
         val cases = listOf(
-            "8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
-            "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8",
-            "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1",
+            "8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0" to
+                "This puzzle is not self-consistent",
+            "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8" to
+                "This puzzle is not self-consistent",
+            "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1" to
+                "Unable to find a unique solution for this puzzle",
         )
-        for (numbers in cases) {
+        for ((numbers, kotlinError) in cases) {
             val save = saveText("8x8de", "$GOLDEN_GRID,$numbers")
             val expected = try {
                 oracle.solve(save)
@@ -440,16 +444,45 @@ class TentsGameTest {
             } catch (e: OracleException) {
                 e.message
             }
+            assertEquals("'$numbers' is the C message", kotlinError, expected)
+
             val midend = Midend.fromSave(Tents, SgtpSave.parse(save))
             assertFalse("'$numbers' fails", midend.solve())
             assertEquals("this save has no history", 1, midend.stateCount)
-            assertTrue(
-                "one of the two messages",
-                expected == "This puzzle is not self-consistent" ||
-                    expected == "Unable to find a unique solution for this puzzle",
+            assertEquals(
+                "'$numbers' is the Kotlin message",
+                kotlinError,
+                Tents.solveAttempt(midend.state, midend.auxInfo).error,
             )
         }
     }
+
+    @Test
+    fun `an AUXINFO that is invalid for the board fails the solve`() =
+        OracleClient().use { oracle ->
+            // The 8x8dt answer places a tent on (1,0), which is a tree in
+            // the 8x8de board. C returns the aux verbatim, `execute_move`
+            // rejects it, and `midend_solve` reports its fixed message.
+            val aux = SgtpSave.parse(
+                oracle.newGame("tents", "8x8dt", SEED).state,
+            ).value("AUXINFO")
+            val save = saveText("8x8de", GOLDEN_DESC, auxInfo = aux)
+            val expected = try {
+                oracle.solve(save)
+                null
+            } catch (e: OracleException) {
+                e.message
+            }
+            assertEquals("Solve unavailable (already solved?)", expected)
+
+            val midend = Midend.fromSave(Tents, SgtpSave.parse(save))
+            assertFalse("the Kotlin solve fails", midend.solve())
+            assertEquals("the failed solve adds no state", 1, midend.stateCount)
+            assertTrue(
+                "the failed solve records no SOLVE",
+                midend.serialise().values("SOLVE").isEmpty(),
+            )
+        }
 
     @Test
     fun `a solve applies but is not a win with zero clues`() = OracleClient().use { oracle ->

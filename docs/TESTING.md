@@ -1213,27 +1213,34 @@ Engine tests:
   cursor rectangle, and the follow/status draw order.
 - `TentsDescTest` is semantic. It compares the six presets, the seven
   golden descriptions, every preset at nine seed strings, a 61-seed
-  sweep over `8x8de`, `8x8dt`, `4x4de`, `4x4dt`, and `5x4dt`, the decode
-  quirks, the validation order and messages, the `4x4` difficulty
-  downgrade, the `validateDesc` strings, and the two D-009 abort
-  descriptions. The generator keeps the `treemap` id order, the seeded
+  sweep over `8x8de`, `8x8dt`, `4x4de`, `4x4dt`, `5x4de`, and `5x4dt`,
+  the decode quirks, the validation order and messages, the `4x4`
+  difficulty downgrade, the `validateDesc` strings, and the two D-009
+  abort descriptions. It pins the generated aux text against the
+  oracle's own `SOLVE` record for every preset and three seeds. The
+  generator keeps the candidate partition, each tent's adjacency list
+  in `U, L, R, D` order with the tents in row-major order, the seeded
   `Matching.match`, and the retry stream, so a reordering changes every
-  description; the sweep and the goldens are the guard.
+  description; the sweep and the goldens are the guard. The `treemap`
+  id values are not observable, because a consistent renumbering of the
+  right vertices leaves the matching unchanged.
 - `TentsGameTest` is semantic. It compares new games, text, and status
   for every preset, the move grammar, real press, drag, and release
   batches, the three-state left and right click cycles, the select and
   letter keys, a real win with its completion event, undo and redo
   across the win, the sticky post-win status, the solve with and without
-  `AUXINFO`, a solve after a wrong user move, every preset's `SOLVE`,
-  the two solver failure messages, the zero-clue solve that is not a
-  win, the `PARAMS`/`CPARAMS` split, and `requestKeys`.
+  `AUXINFO`, an `AUXINFO` that is invalid for the board, a solve after a
+  wrong user move, every preset's `SOLVE`, the two solver failure
+  messages mapped to the exact Kotlin strings, the zero-clue solve that
+  is not a win, the `PARAMS`/`CPARAMS` split, and `requestKeys`.
 - `TentsSaveTest` is strict for the save text. It reads all seven corpus
   saves, rewrites them byte for byte, and reloads them in C with the
   same id, status, undo, redo, and text. A Kotlin save for every preset
-  loads in C. A played click, a drag, a live redo branch, a `SOLVE`, and
-  a `RESTART` round-trip in both directions. The `PARAMS`/`CPARAMS`
-  split, the absent `UI` record, and the absent `AUXINFO` in a generated
-  save are pinned. A tree move and the two D-009 descriptions are
+  loads in C, and is byte-identical to the oracle save for nine seeds,
+  including the generated `AUXINFO`. A played click, a drag, a live redo
+  branch, a `SOLVE`, and a `RESTART` round-trip in both directions. The
+  `PARAMS`/`CPARAMS` split, the generated `AUXINFO`, and the absent `UI`
+  record are pinned. A tree move and the two D-009 descriptions are
   defined errors. The corpus was not regenerated.
 - `TentsTraceTest` is strict. It compares the six frozen traces and
   `traceNew` for every preset, the exact operation counts, the tree
@@ -1259,11 +1266,12 @@ Engine tests:
   text format, the move grammar, the stylus cycles, the drag lock, the
   cursor and select keys, `currentKeyLabel`, the sticky completion, the
   status values, the solver and its initial-grid rule, the two solver
-  failures, the engine generation attempt counts, the absent `AUXINFO`,
+  failures, the engine generation attempt counts, the generated aux
+  answer, a warm redraw that changes a clue's error flag,
   `computeSize`, the palette, `requestKeys`, the cursor rectangle, the
   error marks, and the always-drawn grid lines.
 
-`tents` has one deviation, three enablement debts, and the usual S8/S9
+`tents` has one deviation, two enablement debts, and the usual S8/S9
 items:
 
 - D-009: two `8x8de` descriptions pass `validate_desc` and abort the C
@@ -1297,15 +1305,14 @@ items:
   set, so a post-win move keeps status 1 and raises no second event;
   undo reaches the still-completed state, the next undo clears the
   status, and redo restores it and raises the event again.
-- Save-text debt: C `new_game_desc` returns an `AUXINFO` answer, so a
-  C-generated save carries it. The Kotlin generator returns no aux,
-  because the solver reads the initial grid and produces the same
-  `SOLVE` record. A Kotlin-generated save therefore omits `AUXINFO`,
-  and C solves it on demand. The id, `DESC`, `PARAMS`, `CPARAMS`,
-  state, status, text, and `SOLVE` agree; every corpus save that
-  already carries `AUXINFO` keeps it byte for byte. `TentsDescTest` and
-  `TentsSaveTest` pin both sides. This is not a `.sgtp` format change:
-  the record is optional and both engines accept its absence.
+- The generated `AUXINFO` is the C answer. `newDesc` returns
+  `Description(desc, auxInfo)` with `S` and one `;Tx,y` per tent in
+  row-major order, so a Kotlin-generated save is byte-identical to a C
+  save for every preset and nine seeds. `TentsDescTest` pins the aux
+  text as the oracle's `SOLVE` record, and `TentsSaveTest` compares the
+  whole save. Every corpus save that already carries `AUXINFO` keeps it
+  byte for byte. `solve` still reads the initial grid and returns an
+  existing aux verbatim.
 - The app still uses C. S8 must build the three-field configuration
   dialog (Width, Height, Difficulty with `":Easy:Tricky"`), remove the
   `Fifteen` casts in `KotlinGameEngine`, skip the preferences dialog

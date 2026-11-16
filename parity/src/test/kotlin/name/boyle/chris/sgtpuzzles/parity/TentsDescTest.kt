@@ -2,6 +2,7 @@ package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.RandomState
+import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Tents
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -97,7 +98,9 @@ class TentsDescTest {
 
     @Test
     fun `a numeric sweep pins the generator order`() = OracleClient().use { oracle ->
-        for (params in listOf("8x8de", "8x8dt", "4x4de", "4x4dt", "5x4dt")) {
+        for (params in listOf(
+            "8x8de", "8x8dt", "4x4de", "4x4dt", "5x4de", "5x4dt",
+        )) {
             for (seed in 0..60) {
                 assertEquals(
                     "'$params' seed=$seed",
@@ -270,16 +273,29 @@ class TentsDescTest {
     }
 
     @Test
-    fun `the generated descriptions carry no AUXINFO`() {
-        // The port generator answers from the initial grid, so it writes
-        // no AUXINFO; the corpus saves still load and keep theirs.
-        for (params in Tents.presets()) {
-            val midend = Midend.newGame(Tents, params.params, "12345")
-            val save = midend.serialise()
-            assertEquals(params.params, save.value("CPARAMS"))
-            assertEquals(Tents.encodeParams(params.let { Tents.decodeParams(it.params) }, false),
-                midend.id().substringBefore(':'))
-            assertEquals(null, save.value("AUXINFO"))
+    fun `the generated aux answer matches the oracle solve`() = OracleClient().use { oracle ->
+        // The generator writes the answer as `AUXINFO`, so the aux text
+        // is exactly the `SOLVE` record the oracle writes for the game.
+        for (params in Tents.presets().map { it.params }) {
+            for (seed in listOf("1", "12345", "99999")) {
+                val expected = oracle.newGame("tents", params, seed)
+                val generated = Tents.newDesc(
+                    Tents.decodeParams(params),
+                    RandomState.fromSeed(seed),
+                )
+                assertEquals(
+                    "'$params' seed '$seed' desc",
+                    expected.id.substringAfter(':'),
+                    generated.text,
+                )
+                assertEquals(
+                    "'$params' seed '$seed' aux",
+                    SgtpSave.parse(oracle.solve(expected.state).state).values("SOLVE").single(),
+                    generated.auxInfo,
+                )
+                assertEquals("'$params' seed '$seed' aux is the answer", 'S',
+                    generated.auxInfo?.first())
+            }
         }
     }
 }
