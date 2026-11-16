@@ -177,7 +177,7 @@ class UntangleTest {
         assertEquals(1, Untangle.status(state))
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `completion is sticky after a real move`() {
         val midend = Midend.newGame(Untangle, "4", "12345")
         val start = midend.state as Untangle.State
@@ -232,10 +232,15 @@ class UntangleTest {
             "P0:1,2/3",
             "P0:1,2/3;P1:4,5/6",
             "P0:1,2/3P1:4,5/6",
+            // `S` may start the second segment, not only the first.
+            "P0:1,2/3;S;P1:4,5/6",
+            "P0:1,2/3;SP1:4,5/6",
             "S;P0:1,2/3",
             "SP0:1,2/3",
             "P 0: 1,2/3",
             "P+0:1,2/3",
+            // `P9` is the last valid index at n = 10.
+            "P9:1,2/3",
         )) {
             assertNotNull(Untangle.executeMove(ten, move), "accepted '$move'")
         }
@@ -244,10 +249,13 @@ class UntangleTest {
             "S",
             "SS;P0:1,2/3",
             "S;S;P0:1,2/3",
+            "P0:1,2/3;S",
             "P0:1,2/0",
-            // `P9` is in range for n = 10; `P10` is not.
             "P10:1,2/3",
             "P-1:1,2/3",
+            // `%d` saturates at the long range and keeps the low 32
+            // bits, so this is INT_MAX, out of range.
+            "P-2147483649:1,2/3",
             "xP0:1,2/3",
             "P0:1,2/3junk",
             "P0:1,2",
@@ -267,6 +275,19 @@ class UntangleTest {
         val after = Untangle.executeMove(solved, "P0:1,2/3") as Untangle.State
         assertTrue(after.cheated)
         assertFalse(after.justSolved)
+
+        // A mid-move `S` sets the flags and the two segments apply.
+        val midS = Untangle.executeMove(ten, "P0:1,2/3;S;P1:4,5/6") as Untangle.State
+        assertEquals(Untangle.Point(1, 2, 3), midS.point(0))
+        assertEquals(Untangle.Point(4, 5, 6), midS.point(1))
+        assertTrue(midS.cheated)
+        assertTrue(midS.justSolved)
+
+        // 2^32 truncates to 0, so this moves point 0 and leaves the
+        // other points alone.
+        val wrapped = Untangle.executeMove(ten, "P4294967296:1,2/3") as Untangle.State
+        assertEquals(Untangle.Point(1, 2, 3), wrapped.point(0))
+        assertEquals((ten as Untangle.State).point(1), wrapped.point(1))
     }
 
     @Test
@@ -310,10 +331,75 @@ class UntangleTest {
         // other point more than 60 pixels away.
         assertEquals(0, Untangle.pointUnderMouse(state, 64, 160, 23))
         assertEquals(0, Untangle.pointUnderMouse(state, 64, 160, 23 - 59))
+        // The comparison is `<=`, so exactly 60 pixels is still a hit.
+        assertEquals(0, Untangle.pointUnderMouse(state, 64, 160, 23 - 60))
         assertEquals(-1, Untangle.pointUnderMouse(state, 64, 160, 23 - 61))
         // A click at the board centre is far from every point.
         assertEquals(-1, Untangle.pointUnderMouse(state, 64, 160, 160))
     }
+
+    @Test
+    fun `point under mouse and the cursor break a tie to the lowest index`() {
+        // Both points are on the x axis. At (19, 10) the second one is
+        // nearer, and at (20, 10) they are both 10 pixels away.
+        val state = pointerState(Untangle.Point(30, 10, 1), Untangle.Point(10, 10, 1))
+        assertEquals(
+            1,
+            Untangle.pointUnderMouse(state, 1, 19, 10),
+            "the nearest point wins",
+        )
+        assertEquals(0, Untangle.pointUnderMouse(state, 1, 20, 10), "a tie goes to index 0")
+
+        // The cursor quadrant search uses the same rule. Both points
+        // are 200 away on the two edges of the right quadrant.
+        val quadrantTie = triangle(
+            Untangle.Point(10, 10, 1),
+            Untangle.Point(10, -10, 1),
+        )
+        val ui = Untangle.Ui(cursorPoint = 0)
+        assertEquals(
+            MoveResult.UiUpdate,
+            Untangle.interpretMove(quadrantTie, ui, 0, 0, Buttons.CURSOR_RIGHT, 64),
+        )
+        assertEquals(1, ui.cursorPoint, "a tie goes to the lowest index")
+
+        // A nearer point on the second edge wins over the first one.
+        val nearer = triangle(
+            Untangle.Point(20, 20, 1),
+            Untangle.Point(10, -10, 1),
+        )
+        val cursor = Untangle.Ui(cursorPoint = 0)
+        Untangle.interpretMove(nearer, cursor, 0, 0, Buttons.CURSOR_RIGHT, 64)
+        assertEquals(2, cursor.cursorPoint, "the nearest point wins")
+    }
+
+    /** Three points with an empty graph, for the pointer and cursor tests. */
+    private fun pointerState(first: Untangle.Point, second: Untangle.Point): Untangle.State =
+        Untangle.State(
+            params = Untangle.Params(3),
+            w = 4,
+            h = 4,
+            pts = arrayOf(first, second, Untangle.Point(100, 100, 1)),
+            graph = Untangle.Graph(emptyList()),
+            crosses = BooleanArray(0),
+            completed = false,
+            cheated = false,
+            justSolved = false,
+        )
+
+    /** Point 0 at the origin, then two candidates on the right edge. */
+    private fun triangle(first: Untangle.Point, second: Untangle.Point): Untangle.State =
+        Untangle.State(
+            params = Untangle.Params(3),
+            w = 4,
+            h = 4,
+            pts = arrayOf(Untangle.Point(0, 0, 1), first, second),
+            graph = Untangle.Graph(emptyList()),
+            crosses = BooleanArray(0),
+            completed = false,
+            cheated = false,
+            justSolved = false,
+        )
 
     @Test
     fun `the solve error strings are the C strings`() {
@@ -331,6 +417,19 @@ class UntangleTest {
             Untangle.solveWithError(state, ""),
         )
         assertNull(Untangle.solve(state, null))
+
+        // The aux point index is `%d` too: 2^32 truncates to point 0
+        // and the answer parses, while -2^31-1 truncates to INT_MAX,
+        // which is not point 0.
+        val aux = "S;P4294967296:1,2/3;P1:4,5/6;P2:7,8/9;P3:1,1/1"
+        assertNotNull(Untangle.solve(state, aux), "2^32 is point 0")
+        assertEquals(
+            null to Untangle.ERROR_BAD_AUX,
+            Untangle.solveWithError(
+                state,
+                "S;P-2147483649:1,2/3;P1:4,5/6;P2:7,8/9;P3:1,1/1",
+            ),
+        )
     }
 
     @Test

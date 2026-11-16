@@ -28,7 +28,7 @@ class UntangleGameTest {
 
     private val presets = listOf("6", "10", "15", "20", "25")
 
-    @Test
+    @Test(timeout = 120_000)
     fun `a new game matches the oracle for every preset`() = OracleClient().use { oracle ->
         for (params in presets) {
             val expected = oracle.newGame("untangle", params, SEED)
@@ -173,6 +173,56 @@ class UntangleGameTest {
                 assertEquals("one state at tile $tile", 2, hitMidend.stateCount)
                 assertSame("hit at tile $tile", hit.state, hitMidend)
             }
+
+            // The radius is inclusive. Point 1 is at (241, 49) at tile
+            // 64; at (301, 49) it is exactly 60 pixels away and no
+            // other point is inside 61 pixels.
+            val (hx, hy) = pixelOf(Midend.fromSave(Untangle, SgtpSave.parse(save)).state, 1, 64)
+            assertEquals("point 1 at tile 64", 241 to 49, hx to hy)
+            val edge = listOf(
+                OracleClient.Point(hx + 60, hy, Buttons.LEFT_BUTTON),
+                OracleClient.Point(hx + 60, hy, Buttons.LEFT_RELEASE),
+            )
+            val edgeExpected = oracle.pointsSized(save, edge, width = 320, height = 320)
+            assertEquals(
+                "the oracle hits at exactly 60 pixels",
+                1,
+                movesOf(edgeExpected.state.state).size,
+            )
+            val edgeMidend = Midend.fromSave(Untangle, SgtpSave.parse(save))
+            for (p in edge) {
+                assertEquals(
+                    "exactly 60 pixels is a hit",
+                    KeyOutcome.SomeEffect,
+                    edgeMidend.processKey(p.x, p.y, p.button, 64),
+                )
+            }
+            assertSame("60 pixels", edgeExpected.state, edgeMidend)
+            assertEquals(
+                "the boundary move text",
+                "P1:301,49/64",
+                movesOf(edgeMidend.serialise().serialise()).last(),
+            )
+
+            val outside = listOf(
+                OracleClient.Point(hx + 61, hy, Buttons.LEFT_BUTTON),
+                OracleClient.Point(hx + 61, hy, Buttons.LEFT_RELEASE),
+            )
+            val outsideExpected = oracle.pointsSized(save, outside, width = 320, height = 320)
+            assertEquals(
+                "the oracle misses at 61 pixels",
+                0,
+                movesOf(outsideExpected.state.state).size,
+            )
+            val outsideMidend = Midend.fromSave(Untangle, SgtpSave.parse(save))
+            for (p in outside) {
+                assertEquals(
+                    "61 pixels is a miss",
+                    KeyOutcome.NoEffect,
+                    outsideMidend.processKey(p.x, p.y, p.button, 64),
+                )
+            }
+            assertEquals("no state at 61 pixels", 1, outsideMidend.stateCount)
         }
 
     @Test
@@ -295,7 +345,7 @@ class UntangleGameTest {
             assertFalse("the redo event is once", midend.takeCompletedEvent())
         }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `every preset solves exactly like the oracle`() = OracleClient().use { oracle ->
         for (params in presets) {
             val save = oracle.newGame("untangle", params, SEED).state
@@ -312,6 +362,30 @@ class UntangleGameTest {
             assertEquals("status 1 '$params'", 1, actual.status())
             assertEquals("cheated, not a win", false, actual.takeCompletedEvent())
         }
+    }
+
+    @Test
+    fun `the aux point index truncates like the C sscanf`() = OracleClient().use { oracle ->
+        val save = oracle.newGame("untangle", "6", SEED).state
+        val midend = Midend.newGame(Untangle, "6", SEED)
+        val aux = requireNotNull(midend.auxInfo)
+        assertTrue("the aux starts at point 0: $aux", aux.startsWith("S;P0:"))
+        val solved = SgtpSave.parse(oracle.solve(save).state).values("SOLVE").single()
+
+        // glibc reads `%d` as a `long` and keeps the low 32 bits, so
+        // 2^32 is point 0 and the answer is the same as without it.
+        assertEquals(
+            "2^32 is point 0",
+            solved,
+            Untangle.solve(midend.state, aux.replaceFirst(";P0:", ";P4294967296:")),
+        )
+
+        // -2^31-1 truncates to INT_MAX, which is not point 0. The
+        // oracle reports "Internal error: aux_info badly formatted"
+        // for that aux; the seam drops the message and returns null.
+        assertNull(
+            Untangle.solve(midend.state, aux.replaceFirst(";P0:", ";P-2147483649:")),
+        )
     }
 
     @Test

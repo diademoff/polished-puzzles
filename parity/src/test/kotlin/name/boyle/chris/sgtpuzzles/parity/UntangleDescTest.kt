@@ -9,6 +9,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Level: semantic. Game: untangle.
@@ -23,6 +24,10 @@ import org.junit.Test
  * pins the double `sin`/`cos` in `make_circle`.
  */
 class UntangleDescTest {
+
+    private val testdata = File(
+        System.getProperty("testdata") ?: error("testdata system property is not set"),
+    )
 
     private val presets = listOf("6", "10", "15", "20", "25")
 
@@ -64,7 +69,7 @@ class UntangleDescTest {
         )
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `parameter decoding follows atoi and validation`() = OracleClient().use { oracle ->
         // Valid forms: the oracle generates the same game.
         for (text in listOf("6", "10", "10x10", "10abc", " 10", "+10", "010")) {
@@ -167,7 +172,7 @@ class UntangleDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `every preset and seed matches the oracle`() = OracleClient().use { oracle ->
         for (params in presets) {
             for (seed in seeds) {
@@ -186,7 +191,7 @@ class UntangleDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the numeric seed sweep matches the oracle`() = OracleClient().use { oracle ->
         for (params in listOf("6", "10")) {
             for (seed in 0..60) {
@@ -202,7 +207,7 @@ class UntangleDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 120_000)
     fun `the frozen corpus description and aux text are reproduced`() = OracleClient().use { oracle ->
         val save = oracle.newGame("untangle", "6", "12345")
         val actual = Midend.newGame(Untangle, "6", "12345")
@@ -212,6 +217,36 @@ class UntangleDescTest {
         )
         assertEquals(save.state.auxRecord(), actual.auxRecord())
     }
+
+    /**
+     * `GoldenDescTest` pins the oracle side of the golden file. This
+     * pins the engine against the file directly, including the `""`
+     * default entry that no other test generates.
+     */
+    @Test(timeout = 120_000)
+    fun `the golden file entries match the engine and the oracle`() =
+        OracleClient().use { oracle ->
+            val golden = Json.parse(
+                File(File(testdata, "golden/untangle"), "desc.json").readText(),
+            ) as JsonValue.Obj
+            assertEquals("untangle", golden.string("game"))
+            assertEquals("semantic", golden.string("level"))
+            val seed = golden.string("seed")
+            val entries = (golden.field("entries") as JsonValue.Arr).items
+            assertEquals("the default and five presets", 6, entries.size)
+
+            for (item in entries) {
+                val entry = item as JsonValue.Obj
+                val params = entry.string("params")
+                val id = Midend.newGame(Untangle, params, seed).id()
+                assertEquals("golden id params='$params'", entry.string("id"), id)
+                assertEquals(
+                    "oracle id params='$params'",
+                    oracle.newGame("untangle", params, seed).id,
+                    id,
+                )
+            }
+        }
 
     private fun save(n: Int, desc: String): String =
         SgtpSave.of(

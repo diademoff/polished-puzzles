@@ -1217,26 +1217,29 @@ object Untangle : Game {
 
     /** `atoi` is the same scanner as `%ld`, truncated at the end. */
     private fun atoi(text: String, start: Int): Int =
-        (scanSigned(text, start, Long.MAX_VALUE)?.first ?: 0L).toInt()
+        (scanSigned(text, start)?.first ?: 0L).toInt()
 
-    /** `%d`: white space, a sign, then digits, saturated to `long`. */
+    /**
+     * `%d`: white space, a sign, then digits. glibc reads the number as
+     * a `long`, saturating at its range, and assigns the low 32 bits to
+     * the `int`. So `4294967296` becomes 0, not `INT_MAX`, and
+     * `-2147483649` becomes `INT_MAX`, not `INT_MIN`.
+     */
     private fun scanInt(text: String, start: Int): Pair<Int, Int>? {
-        val scanned = scanSigned(text, start, Int.MAX_VALUE.toLong()) ?: return null
+        val scanned = scanSigned(text, start) ?: return null
         return scanned.first.toInt() to scanned.second
     }
 
     /** `%ld`: white space, a sign, then digits, saturated to `long`. */
-    private fun scanLong(text: String, start: Int): Pair<Long, Int>? {
-        val scanned = scanSigned(text, start, Long.MAX_VALUE) ?: return null
-        return scanned
-    }
+    private fun scanLong(text: String, start: Int): Pair<Long, Int>? =
+        scanSigned(text, start)
 
     /**
      * The shared `strtol` body. Returns the saturated value and the
      * position after the digits, or null when no digit follows the
      * optional white space and sign.
      */
-    private fun scanSigned(text: String, start: Int, limit: Long): Pair<Long, Int>? {
+    private fun scanSigned(text: String, start: Int): Pair<Long, Int>? {
         var i = start
         while (i < text.length && isCWhiteSpace(text[i])) i++
         var negative = false
@@ -1250,7 +1253,7 @@ object Untangle : Game {
         while (i < text.length && text[i] in '0'..'9') {
             val digit = (text[i] - '0').toLong()
             if (!overflow) {
-                if (value > (limit - digit) / 10) {
+                if (value > (Long.MAX_VALUE - digit) / 10) {
                     overflow = true
                 } else {
                     value = value * 10 + digit

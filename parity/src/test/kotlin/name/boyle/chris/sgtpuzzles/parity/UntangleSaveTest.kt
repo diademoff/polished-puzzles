@@ -309,6 +309,56 @@ class UntangleSaveTest {
             }
         }
 
+    @Test
+    fun `the move index truncates like C and a mid-move S is accepted`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("untangle", "10", SEED).state
+
+            // glibc reads `%d` as a `long` and keeps the low 32 bits,
+            // so 2^32 is point 0, not an out-of-range index.
+            val wrapped = saveWith(save, listOf("MOVE" to "P4294967296:1,2/3"))
+            val wrappedMidend = Midend.fromSave(Untangle, SgtpSave.parse(wrapped))
+            val wrappedExpected = oracle.id(wrapped)
+            assertEquals("wrapped id", wrappedExpected.id, wrappedMidend.id())
+            assertEquals("wrapped save", wrapped, wrappedMidend.serialise().serialise())
+            assertEquals(
+                "2^32 is point 0",
+                Untangle.Point(1, 2, 3),
+                (wrappedMidend.state as Untangle.State).point(0),
+            )
+
+            // -2^31-1 truncates to INT_MAX, which is out of range.
+            val rejected = saveWith(save, listOf("MOVE" to "P-2147483649:1,2/3"))
+            try {
+                oracle.id(rejected)
+                fail("the oracle accepts P-2147483649")
+            } catch (e: OracleException) {
+                assertEquals("oracle message", "Save file contained an invalid move", e.message)
+            }
+            try {
+                Midend.fromSave(Untangle, SgtpSave.parse(rejected))
+                fail("Kotlin accepts P-2147483649")
+            } catch (e: IllegalStateException) {
+                assertTrue(
+                    "Kotlin message: ${e.message}",
+                    e.message.orEmpty().contains("invalid move"),
+                )
+            }
+
+            // `S` may start any segment, not only the first, so this is
+            // one accepted move with two point updates.
+            val midS = saveWith(save, listOf("MOVE" to "P0:160,23/64;S;P1:241,49/64"))
+            val midMidend = Midend.fromSave(Untangle, SgtpSave.parse(midS))
+            val midExpected = oracle.id(midS)
+            assertEquals("mid S id", midExpected.id, midMidend.id())
+            assertEquals("mid S save", midS, midMidend.serialise().serialise())
+            assertEquals(
+                "the mid S move is kept verbatim",
+                "P0:160,23/64;S;P1:241,49/64",
+                SgtpSave.parse(midMidend.serialise().serialise()).values("MOVE").last(),
+            )
+        }
+
     /**
      * Appends history records and rewrites `NSTATES` and `STATEPOS`.
      * The base save must have one state.

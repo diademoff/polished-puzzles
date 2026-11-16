@@ -180,26 +180,29 @@ class UntangleInputParityTest {
                     KotlinTraceSink.stateTrace(dragMidend, tile),
                 )
 
-                // The letterbox itself is inert; the same click shifted
-                // onto the board is the positive control.
-                val letterbox = Midend.fromSave(Untangle, SgtpSave.parse(save))
+                // A press in the board corner (the view origin is the
+                // board corner here, so board (0, 0)) is a miss; the
+                // same click shifted onto a point is the positive
+                // control. The 411x702 letterbox case is in the vacuous
+                // pointer test below.
+                val corner = Midend.fromSave(Untangle, SgtpSave.parse(save))
                 assertEquals(
-                    "$label letterbox press",
+                    "$label board corner press",
                     KeyOutcome.NoEffect,
-                    letterbox.processKey(0, 0, Buttons.LEFT_BUTTON, tile),
+                    corner.processKey(0, 0, Buttons.LEFT_BUTTON, tile),
                 )
                 assertEquals(
-                    "$label letterbox release",
+                    "$label board corner release",
                     KeyOutcome.NoEffect,
-                    letterbox.processKey(0, 0, Buttons.LEFT_RELEASE, tile),
+                    corner.processKey(0, 0, Buttons.LEFT_RELEASE, tile),
                 )
-                assertEquals("$label letterbox state", 1, letterbox.stateCount)
+                assertEquals("$label board corner state", 1, corner.stateCount)
                 assertEquals(
-                    "$label letterbox guard",
+                    "$label board corner guard",
                     KeyOutcome.SomeEffect,
-                    letterbox.processKey(px, py, Buttons.LEFT_BUTTON, tile),
+                    corner.processKey(px, py, Buttons.LEFT_BUTTON, tile),
                 )
-                assertEquals("$label guard is a state", 1, letterbox.stateCount)
+                assertEquals("$label guard is a state", 1, corner.stateCount)
             }
         }
 
