@@ -8,6 +8,7 @@ import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Lightup
+import name.boyle.chris.sgtpuzzles.engine.Magnets
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Palisade
@@ -151,6 +152,12 @@ class KotlinGamesTest {
     fun `tents is registered but the app still uses C`() {
         assertEquals(Tents, KotlinGames.gameFor(TENTS))
         assertFalse(KotlinGames.handles(TENTS))
+    }
+
+    @Test
+    fun `magnets is registered but the app still uses C`() {
+        assertEquals(Magnets, KotlinGames.gameFor(MAGNETS))
+        assertFalse(KotlinGames.handles(MAGNETS))
     }
 
     @Test

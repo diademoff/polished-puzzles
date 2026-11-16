@@ -1280,6 +1280,83 @@ Engine tests:
   answer, a warm redraw that changes a clue's error flag,
   `computeSize`, the palette, `requestKeys`, the cursor rectangle, the
   error marks, and the always-drawn grid lines.
+- `MagnetsDescTest` is semantic. It compares the eight presets and the
+  default, the nine golden descriptions, every preset at nine seed
+  strings, a numeric sweep, the decode quirks, the validation order and
+  messages, the `46340x46340` boundary and the `65536x65536` rejection,
+  the `"" -> 6x5de` downgrade, and the `PARAMS`/`CPARAMS` split. It
+  compares the generated `AUXINFO` with the oracle save, so the solver
+  inside the retry gate is pinned, and it reads the attempt counts from
+  `newDescWithAttempts`. The generator stream is `LayDomino.layout`,
+  one shuffle in `lay_dominoes`, the strip-clues shuffle, and the
+  retry gate; a reordering changes every description, so the goldens
+  and the sweep are the guard.
+- `MagnetsGameTest` is semantic. It compares new games, text, and
+  status, the move grammar and the measured acceptance table, the left
+  and right cycles, the four clue bands, the `D` clue move, the
+  singleton no-ops, a real win with its completion event, the sticky
+  flag, undo, redo, restart, the solve with and without `AUXINFO`, the
+  two-attempt fallback on the decoded initial state, the overwrite of a
+  wrong magnet, the `S;` solve of a solved board, every preset's
+  `SOLVE`, `changedState`, `currentKeyLabel`, and `requestKeys`. The
+  state-count test asserts that a real magnet changes the grid and the
+  flags and adds one move and one state, that a `D` toggle changes only
+  the shading and adds one move, and that an inert click changes
+  neither.
+- `MagnetsSaveTest` is strict for the save text. It reads all nine
+  `magnets` corpus saves, rewrites them byte for byte, and reloads them
+  in C with the same id, status, undo, redo, text, and `AUXINFO`. A
+  Kotlin save for every preset loads in C, and a generated save is
+  byte-identical to the oracle for eight seeds. It round-trips a played
+  magnet, a `D` clue toggle, a live redo branch, a `SOLVE`, and a
+  `RESTART` in both directions, pins the `PARAMS 6x5de` /
+  `CPARAMS 6x5dtS` split and the absent `UI` record, and solves a save
+  without `AUXINFO` through the initial-state fallback.
+  `default.sgtp` and `6x5de.sgtp` are the same file.
+- `MagnetsTraceTest` is strict. It compares the eight frozen traces,
+  a cold loaded state, the cursor on and off, a `COL_DONE` clue after
+  a `D` toggle, a `COL_ERROR` clue after an overfull row, sized traces
+  at tiles 48, 63, 82, and 100, the 411x702 letterbox, the first-draw
+  corner symbols and the two whole-window updates, and a Kotlin-only
+  warm frame with the changed tile and clue. No trace contains a
+  blitter, a line, a circle, a polygon, a clip, or a flash color.
+- `MagnetsInputParityTest` is semantic. It compares the layout at
+  tiles 48, 63, 82, and 100 and the 411x702 letterbox, the `FROMCOORD`
+  cell and clue bands, and real left and right clicks at all five
+  views. Every real magnet or neutral cycle changes the grid or the
+  flags and adds one move and one state; every real clue click changes
+  the shading, keeps the grid, and adds one move and one state. A
+  middle press, a corner click, an out-of-band click, a lone drag, and
+  a lone release change neither the board, the shading, nor the count;
+  a press-drag-release makes one move at the press. The cursor keys,
+  `SHFT` and `CTRL` on an arrow, both select buttons, TAB, backspace,
+  letters, and keypad digits are compared with the oracle.
+  `requestKeys` is arrow mode 3 with no labels, and the full-cursor
+  mode is arrow mode 1 with no labels.
+- `MagnetsTest` is the engine test. It pins the parameters and eight
+  presets, the decode and encode quirks, the validation order and
+  messages, the `validateDesc` grammar, the text format, the move
+  grammar and the three-state cycles, the `D` toggle as a state move,
+  the singleton no-ops, the deep state copy with shared counts, the
+  solver with and without `AUXINFO`, the initial-state fallback, a
+  completion that hides the cursor and reports once, the key-label
+  table, `requestKeys`, `computeSize`, the attempt counts, and a strip
+  board that keeps the missing clues and solves.
+- `LayDominoTest` pins three measured vectors. The 6x5 seed `12345`
+  grid is `1,0,3,2,5,4,...` and needs two repair passes; the odd-area
+  3x3 has one singleton at index 6 and one pass; the one-row 1x5 board
+  needs no pass. The encoded state is recorded for each vector, so a
+  missing candidate or neighbour shuffle fails even when the tiling
+  looks valid. The test also sweeps every `1 <= w,h <= 8` over four
+  string seeds and one byte-seed state for partner symmetry,
+  orthogonality, and the `w*h % 2` singleton count, pins the repair
+  counts 0, 1, 2, and 6, checks the scratch buffers, and rejects
+  invalid sizes and short buffers.
+- `LayDominoParityTest` compares the grid, the prealloc grid, the
+  attempt count, and the encoded generator state of the direct
+  `laydomino` oracle op for 15 shapes from 1x1 to 10x9, including
+  seeds with 1, 2, 3, and 6 repair passes, and continues from an
+  encoded state. It also pins the oracle input guards.
 
 `tents` has one deviation, two enablement debts, and the usual S8/S9
 items:
@@ -1333,6 +1410,39 @@ items:
   in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(TENTS)` is false and the app keeps the C backend.
   The two-release wait also applies.
+
+`magnets` has no deviation and three enablement items:
+
+- Generation cost: the eight presets generate in under 20 ms, but
+  `16x14de` takes about 5.9 s and `20x20` does not finish in 90 s.
+  `validate_params` accepts an area up to `INT_MAX`, and the retry loop
+  is unbounded. The app must generate off the UI thread. A size bound
+  rejects parameters that C accepts, so it needs an owner decision, a
+  deviation entry, and a test; no bound is added in this slice. No
+  test generates a huge accepted area.
+- `laydomino` is done. `LayDominoParityTest` compares the grid,
+  prealloc grid, attempt count, and encoded random state against the
+  direct `laydomino` oracle op for 15 shapes, including seeds with 1,
+  2, 3, and 6 repair passes and a continuation from an encoded state.
+  `LayDominoTest` pins the 6x5, 3x3, and 1x5 vectors and the valid
+  tiling over `1 <= w,h <= 8`. A wrong candidate shuffle or neighbour
+  shuffle changes the encoded state and, through magnets, every `DESC`.
+- The initial-grid solve and the two attempts are measured C
+  behavior. C `midend_solve` passes `states[0]`, so `Magnets.Common`
+  keeps the decoded initial grid; `solve` first runs the current state
+  and then the decoded initial state, and the diff is always against
+  the current state. `MagnetsGameTest` and `MagnetsTest` pin the
+  fallback after a wrong neutral domino, the `AUXINFO` path that wins
+  over a wrong board, the overwrite of a wrong magnet, and the `S;`
+  solve of an already solved board.
+- The app still uses C. S8 must build the four-field configuration
+  dialog (Width, Height, Difficulty with `":Easy:Tricky"`, Strip
+  clues), remove the `Fifteen` casts in `KotlinGameEngine`, skip the
+  preferences dialog because `get_prefs`/`set_prefs` are `NULL`, and
+  generate off the UI thread. S9 is a tested `currentKeyLabel` helper
+  with no Android call site. `MAGNETS` is in `KotlinGames.gameFor` and
+  not in `APP_GAMES`, so `KotlinGames.handles(MAGNETS)` is false and
+  the app keeps the C backend. The two-release wait also applies.
 
 `inertia` has one deviation and three open items:
 

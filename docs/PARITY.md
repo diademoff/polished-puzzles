@@ -206,7 +206,7 @@ submenu entries when a game groups its presets.
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `C` |
 | `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `dual-run` |
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
-| `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `C` |
+| `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `C` |
 | `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `C` |
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `dual-run` |
@@ -982,6 +982,76 @@ Notes:
   helper because the Android shell has no call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `magnets` is `dual-run`. Its parameters and eight presets, the decode
+  quirks, the validation order, the two-attempt description generator,
+  `laydomino`, the magnet and neutral cycles, the `D` clue toggle, the
+  state, the solver, the text format, the save file, palette, drawing,
+  layout, input, and `requestKeys` pass the matrix in
+  `MagnetsDescTest`, `MagnetsGameTest`, `MagnetsSaveTest`,
+  `MagnetsTraceTest`, `MagnetsInputParityTest`, the engine
+  `MagnetsTest`, and the `laydomino` pair `LayDominoParityTest` and
+  `LayDominoTest`. Every preset and nine seed strings, plus a numeric
+  sweep, guard the generator stream: `LayDomino.layout`, one shuffle in
+  `lay_dominoes`, the strip-clues shuffle, and the retry gate. The
+  generated `AUXINFO` is compared with the oracle, so the solver inside
+  the gate is pinned too.
+
+  `LayDominoTest` pins three measured vectors: 6x5 seed `12345` grid
+  `1,0,3,2,5,4,...` with two repair passes, the odd-area 3x3 with one
+  singleton at index 6 and one pass, and the one-row 1x5 board with no
+  pass. `LayDominoParityTest` compares the grid, the prealloc grid, the
+  attempt count, and the encoded random state for 15 shapes from 1x1 to
+  10x9, including seeds that need 1, 2, 3, and 6 repair passes; the
+  encoded state proves that every candidate and neighbour shuffle drew
+  the same numbers. `dominosa` can reuse the library later without a
+  new port.
+
+  `MagnetsGameTest` compares the move grammar and the measured
+  acceptance table, the left and right cycles, the `D` clue toggle, the
+  singleton no-ops, completion and the sticky flag, undo, redo,
+  restart, the solve with and without `AUXINFO`, the initial-state
+  fallback after a wrong move, the `S;` solve of a solved board, the
+  key labels, and `requestKeys`. `MagnetsInputParityTest` sends real
+  left and right clicks at tiles 48, 63, 82, and 100 and in the 411x702
+  letterbox, real clue clicks at the same views, the cursor keys, both
+  select buttons, and the inert middle, corner, drag, and release
+  cases. Every real magnet or neutral cycle changes the grid or the
+  flags and adds one move and one state; every real `D` toggle changes
+  the shading and adds one move while the grid stays; an inert click
+  changes neither the board, the shading, nor the count.
+  `requestKeys` is arrow mode 3 with no labels, and the full-cursor
+  mode asks for arrow mode 1 with no labels, because `game_request_keys`
+  is `NULL`.
+
+  `MagnetsSaveTest` reads all nine corpus saves byte for byte and
+  reloads them in C with the same id, status, undo, redo, and text. It
+  round-trips a played move, an undone position with a live redo
+  branch, a `D` toggle, a `SOLVE`, and a `RESTART` in both directions,
+  and pins the `PARAMS`/`CPARAMS` split (`PARAMS 6x5de`,
+  `CPARAMS 6x5dtS`), the absent `UI` record, and the `AUXINFO` round
+  trip. `MagnetsTraceTest` compares the eight frozen traces, a cold
+  loaded state, the cursor, a `COL_DONE` clue after `D`, a `COL_ERROR`
+  clue, sized traces at tiles 48, 63, 82, and 100, the letterbox, the
+  first-draw corner symbols and two whole-window updates, and a
+  Kotlin-only warm frame with the changed tile and clue. The
+  completion flash is not ported; section 1 allows animations to
+  differ and the oracle never emits one.
+
+  Enablement debt. Generation runs on the calling thread today:
+  `16x14de` takes about 5.9 s and `20x20` does not finish in 90 s,
+  while the eight presets are under 20 ms. The app must generate off
+  the UI thread. `validate_params` accepts an area up to `INT_MAX`, so
+  a size bound would reject parameters that C accepts; that is an owner
+  decision that needs a deviation entry and a test, and no bound is
+  added in this slice. `KotlinGames.gameFor` knows the Kotlin game, but
+  the app still uses C: the S8 configuration schema (Width, Height,
+  Difficulty with `":Easy:Tricky"`, Strip clues), the
+  preference-dialog skip (`get_prefs` is `NULL`), the `Fifteen` casts
+  in `KotlinGameEngine`, the generation off the UI thread, and the
+  two-release wait are open. S9 is a tested `currentKeyLabel` helper
+  with no Android call site. `MAGNETS` is not in `APP_GAMES`, so
+  `handles(MAGNETS)` is false.
 
 ## 8. Goldens
 

@@ -253,6 +253,54 @@ class MagnetsTraceTest {
         (value.fields[key] as? JsonValue.Num)?.value?.toInt() ?: Int.MIN_VALUE
 
     @Test
+    fun `a shaded clue and an overfull clue draw in the C colours`() =
+        OracleClient().use { oracle ->
+            // A `D` toggle shades the top clue with COL_DONE (6). The
+            // clue still reads `2` and keeps its font and alignment.
+            val shaded = Midend.newGame(Magnets, "6x5dt", SEED)
+            shaded.processKey(52, 20, Buttons.LEFT_BUTTON, TILE)
+            shaded.processKey(52, 20, Buttons.LEFT_RELEASE, TILE)
+            val shadedSave = shaded.serialise().serialise()
+            val shadedExpected = TraceNormalizer.normalize(
+                oracle.trace(shadedSave),
+                upstream(),
+            )
+            val shadedActual = TraceNormalizer.normalize(
+                KotlinTraceSink.stateTrace(shaded, TILE),
+                upstream(),
+            )
+            assertLines("shaded clue", shadedExpected, shadedActual)
+            assertTrue(
+                "the shaded clue is COL_DONE",
+                shadedActual.lines().any { it == "text 52 20 1 22 257 6 \"2\"" },
+            )
+
+            // Three positive magnets in row 0 overfill its target of 2,
+            // so the left row clue draws in COL_ERROR (4).
+            val overfull = Midend.newGame(Magnets, "6x5dt", SEED)
+            for (x in listOf(0, 2, 4)) {
+                val px = (x + 1) * TILE + TILE / 8 + TILE / 2
+                val py = TILE + TILE / 8 + TILE / 2
+                overfull.processKey(px, py, Buttons.LEFT_BUTTON, TILE)
+                overfull.processKey(px, py, Buttons.LEFT_RELEASE, TILE)
+            }
+            val overfullSave = overfull.serialise().serialise()
+            val overfullExpected = TraceNormalizer.normalize(
+                oracle.trace(overfullSave),
+                upstream(),
+            )
+            val overfullActual = TraceNormalizer.normalize(
+                KotlinTraceSink.stateTrace(overfull, TILE),
+                upstream(),
+            )
+            assertLines("overfull clue", overfullExpected, overfullActual)
+            assertTrue(
+                "the overfull clue is COL_ERROR",
+                overfullActual.lines().any { it == "text 20 52 1 22 257 4 \"2\"" },
+            )
+        }
+
+    @Test
     fun `an inert click leaves the settled frame empty`() = OracleClient().use { oracle ->
         val save = oracle.newGame("magnets", "6x5dt", SEED).state
         val upstream = upstream()

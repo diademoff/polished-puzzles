@@ -91,10 +91,24 @@ class MagnetsInputParityTest {
                         size.height,
                     ).state
                     val actual = midend(save)
+                    val before = actual.state as Magnets.State
+                    val beforeGrid = before.grid.copyOf()
+                    val beforeFlags = before.flags.copyOf()
+                    val beforeCounts = before.countsDone.copyOf()
                     val press = actual.processKey(points[0].x, points[0].y, points[0].button, tile)
                     assertEquals("$button tile $tile outcome", KeyOutcome.SomeEffect, press)
                     actual.processKey(points[1].x, points[1].y, points[1].button, tile)
                     assertSame("$button tile $tile", expected, actual)
+                    val after = actual.state as Magnets.State
+                    assertTrue(
+                        "$button tile $tile changes the grid or the flags",
+                        !beforeGrid.contentEquals(after.grid) ||
+                            !beforeFlags.contentEquals(after.flags),
+                    )
+                    assertTrue(
+                        "$button tile $tile keeps the clue shading",
+                        beforeCounts.contentEquals(after.countsDone),
+                    )
                     assertEquals("$button tile $tile move", 1, actual.serialise().values("MOVE").size)
                     assertEquals(2, actual.stateCount)
                 }
@@ -113,6 +127,10 @@ class MagnetsInputParityTest {
                 )
                 val expected = oracle.pointsSized(save, points, 411, 702).state
                 val actual = midend(save)
+                val before = actual.state as Magnets.State
+                val beforeGrid = before.grid.copyOf()
+                val beforeFlags = before.flags.copyOf()
+                val beforeCounts = before.countsDone.copyOf()
                 for ((i, point) in points.withIndex()) {
                     val gameX = point.x - geometry.originX
                     val gameY = point.y - geometry.originY
@@ -120,7 +138,45 @@ class MagnetsInputParityTest {
                     if (i == 0) assertEquals("letterbox outcome", KeyOutcome.SomeEffect, outcome)
                 }
                 assertSame("letterbox $button", expected, actual)
+                val after = actual.state as Magnets.State
+                assertTrue(
+                    "letterbox $button changes the grid or the flags",
+                    !beforeGrid.contentEquals(after.grid) ||
+                        !beforeFlags.contentEquals(after.flags),
+                )
+                assertTrue(
+                    "letterbox $button keeps the clue shading",
+                    beforeCounts.contentEquals(after.countsDone),
+                )
+                assertEquals(1, actual.serialise().values("MOVE").size)
                 assertEquals(2, actual.stateCount)
+            }
+        }
+
+    @Test
+    fun `a press drag and release at four tiles makes one move at the press`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("magnets", "6x5dt", SEED).state
+            for (tile in listOf(48, 63, 82, 100)) {
+                val size = Magnets.computeSize(Magnets.decodeParams("6x5dt"), tile)
+                val points = listOf(
+                    cellPoint(0, 0, tile, 0, 0, Buttons.LEFT_BUTTON),
+                    cellPoint(2, 0, tile, 0, 0, Buttons.LEFT_DRAG),
+                    cellPoint(2, 0, tile, 0, 0, Buttons.LEFT_RELEASE),
+                )
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    size.width,
+                    size.height,
+                ).state
+                val actual = midend(save)
+                for (point in points) {
+                    actual.processKey(point.x, point.y, point.button, tile)
+                }
+                assertSame("drag tile $tile", expected, actual)
+                assertEquals("drag tile $tile move", listOf("+0,0"), actual.serialise().values("MOVE"))
+                assertEquals("drag tile $tile count", 2, actual.stateCount)
             }
         }
 
@@ -133,15 +189,25 @@ class MagnetsInputParityTest {
                 val points = clueClickTop(0, tile, 0, 0)
                 val expected = oracle.pointsSized(save, points, size.width, size.height).state
                 val actual = midend(save)
+                val before = actual.state as Magnets.State
+                val beforeGrid = before.grid.copyOf()
+                val beforeCounts = before.countsDone.copyOf()
                 for (point in points) actual.processKey(point.x, point.y, point.button, tile)
                 assertSame("clue tile $tile", expected, actual)
-                assertEquals(listOf("D0,-1"), actual.serialise().values("MOVE"))
+                val after = actual.state as Magnets.State
+                assertTrue("clue tile $tile keeps the grid", beforeGrid.contentEquals(after.grid))
+                assertFalse("clue tile $tile changes the shading", beforeCounts.contentEquals(after.countsDone))
+                assertEquals("clue tile $tile move", listOf("D0,-1"), actual.serialise().values("MOVE"))
+                assertEquals("clue tile $tile count", 2, actual.stateCount)
             }
 
             val geometry = midend(save).geometryFor(411, 702)
             val points = clueClickTop(0, geometry.tileSize, geometry.originX, geometry.originY)
             val expected = oracle.pointsSized(save, points, 411, 702).state
             val actual = midend(save)
+            val before = actual.state as Magnets.State
+            val beforeGrid = before.grid.copyOf()
+            val beforeCounts = before.countsDone.copyOf()
             for (point in points) {
                 actual.processKey(
                     point.x - geometry.originX,
@@ -151,6 +217,11 @@ class MagnetsInputParityTest {
                 )
             }
             assertSame("clue letterbox", expected, actual)
+            val after = actual.state as Magnets.State
+            assertTrue("clue letterbox keeps the grid", beforeGrid.contentEquals(after.grid))
+            assertFalse("clue letterbox changes the shading", beforeCounts.contentEquals(after.countsDone))
+            assertEquals("clue letterbox move", listOf("D0,-1"), actual.serialise().values("MOVE"))
+            assertEquals("clue letterbox count", 2, actual.stateCount)
         }
 
     @Test
@@ -210,17 +281,30 @@ class MagnetsInputParityTest {
                 OracleClient.Point(120, 52, Buttons.LEFT_DRAG),
                 OracleClient.Point(120, 52, Buttons.LEFT_RELEASE),
             ),
+            // A lone drag and a lone release.
+            listOf(OracleClient.Point(120, 52, Buttons.LEFT_DRAG)),
+            listOf(OracleClient.Point(120, 52, Buttons.LEFT_RELEASE)),
         )
         for ((index, points) in sequences.withIndex()) {
             val expected = oracle.pointsSized(save, points).state
             val actual = midend(save)
+            val before = actual.state as Magnets.State
+            val beforeGrid = before.grid.copyOf()
+            val beforeFlags = before.flags.copyOf()
+            val beforeCounts = before.countsDone.copyOf()
             for (point in points) actual.processKey(point.x, point.y, point.button, TILE)
             assertSame("sequence $index", expected, actual)
+            val after = actual.state as Magnets.State
             val moves = actual.serialise().values("MOVE")
             if (index == 2) {
                 assertEquals("the press is one move", 1, moves.size)
+                assertEquals(2, actual.stateCount)
             } else {
                 assertTrue("no move", moves.isEmpty())
+                assertTrue("grid stays", beforeGrid.contentEquals(after.grid))
+                assertTrue("flags stay", beforeFlags.contentEquals(after.flags))
+                assertTrue("counts stay", beforeCounts.contentEquals(after.countsDone))
+                assertEquals(1, actual.stateCount)
             }
         }
     }
@@ -291,6 +375,19 @@ class MagnetsInputParityTest {
                 assertSame("keys $sequence", expected, actual)
             }
         }
+
+    private fun cellPoint(
+        x: Int,
+        y: Int,
+        tile: Int,
+        originX: Int,
+        originY: Int,
+        button: Int,
+    ): OracleClient.Point {
+        val px = originX + (x + 1) * tile + tile / 8 + tile / 2
+        val py = originY + (y + 1) * tile + tile / 8 + tile / 2
+        return OracleClient.Point(px, py, button)
+    }
 
     private fun cellClick(
         x: Int,
