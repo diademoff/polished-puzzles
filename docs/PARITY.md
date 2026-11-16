@@ -208,7 +208,7 @@ submenu entries when a game groups its presets.
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `C` |
-| `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `C` |
+| `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `dual-run` |
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `dual-run` |
 | `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `dual-run` |
 | `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
@@ -1419,6 +1419,66 @@ Notes:
   tested `currentKeyLabel` helper with no Android call site.
   `NET` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(NET)` is false and the two-release wait still applies.
+- `mines` is `dual-run`. Its parameters and four presets, the decode
+  and validation quirks, the deferred interactive description, the
+  gated generator with its RNG order and two upstream quirks, the
+  first-click public/private description pair, the move grammar, the
+  chord and button-priority rules, the death and win state, the solve,
+  the text, the palette, drawing, layout, input, and `requestKeys` pass
+  the matrix in `MinesDescTest`, `MinesSaveTest`, `MinesTraceTest`,
+  `MinesInputParityTest`, and the engine `MinesTest`.
+
+  `MinesSaveTest` reads the five frozen corpus saves, rewrites them
+  byte for byte, and compares id, status, undo, redo, text, `UI`, and
+  `TIME` with C; every file has no `PRIVDESC` and `TIME 0`. In-memory
+  history covers an open, a flag, a correct chord, a death, a win, a
+  live redo branch, a `SOLVE`, a `RESTART`, and an undone position, and
+  every shape is reloaded in Kotlin and in C. The `PARAMS:9x9n8` /
+  `CPARAMS:9x9n10` split, the `DESC`/`PRIVDESC` pair after the first
+  click, and the record order are pinned. `TIME` uses the C `%g` writer
+  and the C `atof` reader: a hand-written `3.5junk` is 3.5, `0x10` is
+  16, and `inf` and `nan` round-trip. A non-finite clock is a
+  hand-written record only, and its status prefix depends on the C
+  undefined `(int)` cast, so that prefix is a defined Kotlin result
+  pinned by `MinesTest`.
+
+  The timer has no oracle clock: the oracle's timer callbacks are
+  empty. `MinesTest` pins the `[m:ss] ` prefix, the stop on death and
+  win, the sticky completion after undo, and the live clock after a
+  solve. The `BUTTON_BEATS(LEFT, RIGHT)` rule is pinned by the engine
+  test: a right press while the left button is held is ignored, and a
+  left press after a right press gets the fabricated right release.
+
+  C undefined behavior is defined by the port and pinned, not entered
+  in `DEVIATIONS.md`: `atoi` and the move `%d` scan saturate where C is
+  undefined, `decode_ui` now reproduces the glibc `long`-to-`int`
+  wrap, a non-hex bitmap character reads as zero, an RNG text that
+  does not decode is a zero state, and a perturbation that C asserts
+  on returns no change so the solver retries. The generator's
+  `mineperturb` assertions and the unbounded retry loop are enablement
+  debt, described in `TESTING.md`.
+
+  `MinesInputParityTest` compares the layout at six viewports, real
+  opens, flags, correct and wrong-flag chords, the first-click
+  `PRIVDESC`, the cursor walk and the two select keys, undo and redo
+  after a death, and `requestKeys` with and without the full-cursor
+  hint. It sends opens at tiles 20, 48, 63, 82, and 100, a four-pixel
+  letterbox at tiles 48, 63, 82, and 100, and the 411x702 letterbox,
+  and compares the final frame with `pointsSized`. Every real open,
+  flag, wrong-flag chord, and win changes the board and adds one state;
+  an inert press, a middle press on a covered cell, a too-few-flags
+  chord, a letterbox click, and a click after death or a win change
+  neither, each followed by a positive control.
+
+  Enablement debt. Mines has no preferences, so S8 needs only the
+  four-field `Width`, `Height`, `Mines` (with the `%` rule), and
+  `Ensure solubility` configuration schema, the solve message
+  `Game has not been started yet` instead of the `solveEvent` throw,
+  generation off the UI thread, an owner size bound for the accepted
+  `2^28 - 1` area, a guard for the unbounded retry loop, and the
+  two-release wait. `MINES` is in `KotlinGames.gameFor` and not in
+  `APP_GAMES`, so `handles(MINES)` is false and the app uses C. The
+  seam is `docs/adr/0007-kotlin-game-seam.md`.
 
 ## 8. Goldens
 

@@ -470,15 +470,21 @@ class MinesTest {
         for ((text, encoded) in vectors) {
             assertEquals(encoded, Mines.encodeUi(Mines.decodeUi(state, text)), text)
         }
-        // `%d` overflow is undefined in C. The port saturates.
-        assertEquals(
-            Int.MAX_VALUE,
-            (Mines.decodeUi(state, "D2147483648") as Mines.Ui).deaths,
+        // `%d` overflow is undefined in C. glibc reads the count as a
+        // `long` and assigns its low 32 bits, so the port does the same.
+        val overflowVectors = listOf(
+            "D2147483647" to Int.MAX_VALUE,
+            "D2147483648" to Int.MIN_VALUE,
+            "D4294967296" to 0,
+            "D99999999999" to 1215752191,
+            "D-2147483649" to Int.MAX_VALUE,
+            "D-4294967297" to -1,
+            "D99999999999999999999999" to -1,
+            "D-99999999999999999999999" to 0,
         )
-        assertEquals(
-            Int.MIN_VALUE,
-            (Mines.decodeUi(state, "D-2147483649") as Mines.Ui).deaths,
-        )
+        for ((text, expected) in overflowVectors) {
+            assertEquals(expected, (Mines.decodeUi(state, text) as Mines.Ui).deaths, text)
+        }
         val base = Mines.Ui().apply {
             curX = 4
             curY = 4
@@ -548,6 +554,49 @@ class MinesTest {
         val reloadedTime = Midend.fromSave(Mines, SgtpSave.parse(withTime))
         assertEquals(61.25f, reloadedTime.elapsed)
         assertEquals(withTime, reloadedTime.serialise().serialise())
+    }
+
+    @Test
+    fun `the TIME parser takes the C numeric prefix`() {
+        val vectors = listOf(
+            "0" to 0f,
+            "3.5" to 3.5f,
+            "61.25" to 61.25f,
+            "3.5junk" to 3.5f,
+            "61.25x" to 61.25f,
+            " 3.5" to 3.5f,
+            "abc" to 0f,
+            "" to 0f,
+            "1e2junk" to 100f,
+            "1e" to 1f,
+            ".5junk" to 0.5f,
+            "+.5" to 0.5f,
+            "-2.5junk" to -2.5f,
+            "0x10" to 16f,
+            "0x1.8p1" to 3f,
+            "0x1p3" to 8f,
+            "0x" to 0f,
+            "1e999" to Float.POSITIVE_INFINITY,
+            "-1e999" to Float.NEGATIVE_INFINITY,
+            "inf" to Float.POSITIVE_INFINITY,
+            "-infinity" to Float.NEGATIVE_INFINITY,
+        )
+        for ((text, expected) in vectors) {
+            assertEquals(expected, cAtof(text), text)
+        }
+        assertTrue(cAtof("nan").isNaN())
+        assertTrue(cAtof("NaN").isNaN())
+
+        // The prefix reaches `elapsed`, and the writer canonicalizes it.
+        val opened = opened()
+        val text = opened.serialise().serialise()
+        val withJunk = text.replace("TIME    :1:0", "TIME    :7:3.5junk")
+        val reloaded = Midend.fromSave(Mines, SgtpSave.parse(withJunk))
+        assertEquals(3.5f, reloaded.elapsed)
+        assertEquals(
+            text.replace("TIME    :1:0", "TIME    :3:3.5"),
+            reloaded.serialise().serialise(),
+        )
     }
 
     @Test

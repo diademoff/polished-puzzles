@@ -52,7 +52,10 @@ import kotlin.math.abs
  *   The port returns an empty label for an out-of-range cursor, and a
  *   cursor select on such a cursor is a no-effect key.
  * - `atoi`, `sscanf("%d")`, and `decode_ui` overflow is undefined in C.
- *   The port saturates at the `Int` limits.
+ *   The port saturates the two parsers at the `Int` limits. The
+ *   `decode_ui` assignment matches the glibc result instead: the count
+ *   is read as a `long` and its low 32 bits become the `int`, so
+ *   `D2147483648` is `-2147483648`.
  */
 object Mines : Game {
 
@@ -1092,7 +1095,8 @@ object Mines : Game {
     /**
      * `decode_ui`: `sscanf("D%d%n")` followed by a `C` test. A missing
      * or malformed count leaves the fresh value and tests character
-     * zero, so `C` alone sets the completion flag.
+     * zero, so `C` alone sets the completion flag. An overflowing count
+     * keeps the low 32 bits, as glibc assigns them.
      */
     override fun decodeUi(state: Game.State, text: String): Game.Ui {
         val ui = Ui()
@@ -1118,26 +1122,29 @@ object Mines : Game {
                 i++
             }
             if (i < text.length && text[i] in '0'..'9') {
+                // glibc reads the number as a `long` and assigns the
+                // low 32 bits to the `int`, so `D2147483648` is
+                // `-2147483648` and `D-2147483649` is `2147483647`.
                 var value = 0L
-                val start = i
+                var overflow = false
                 while (i < text.length && text[i] in '0'..'9') {
-                    value = value * 10 + (text[i] - '0')
-                    if (value > Int.MAX_VALUE) {
-                        value = if (negative) Int.MAX_VALUE.toLong() + 1 else Int.MAX_VALUE.toLong()
-                        while (i < text.length && text[i] in '0'..'9') i++
-                        break
+                    if (!overflow) {
+                        val digit = text[i] - '0'
+                        if (value > (Long.MAX_VALUE - digit) / 10) {
+                            overflow = true
+                        } else {
+                            value = value * 10 + digit
+                        }
                     }
                     i++
                 }
-                if (start < i) {
-                    val signed = if (negative) -value else value
-                    ui.deaths = when {
-                        signed > Int.MAX_VALUE -> Int.MAX_VALUE
-                        signed < Int.MIN_VALUE -> Int.MIN_VALUE
-                        else -> signed.toInt()
-                    }
-                    p = i
+                val parsed = when {
+                    overflow -> if (negative) Long.MIN_VALUE else Long.MAX_VALUE
+                    negative -> -value
+                    else -> value
                 }
+                ui.deaths = parsed.toInt()
+                p = i
             }
         }
         if (p < text.length && text[p] == 'C') ui.completed = true

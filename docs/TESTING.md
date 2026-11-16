@@ -2483,6 +2483,76 @@ aggressive 100x100 latency is an enablement debt:
     `APP_GAMES`, so `KotlinGames.handles(NET)` is false and the app
     keeps the C backend. The two-release wait also applies.
 
+- `MinesDescTest` is semantic. It compares the four presets, the decode
+  quirks (`9`, `+9x9`, `9x9n1.5`, `9x9X-1`, `9x9junk`, `300x6`), the
+  nine validation messages and their order, the full and short
+  encodings, `params + seed -> DESC` for the five goldens and a seed
+  sweep, the first-click description, the layout-description grammar,
+  and the exact bitmap length.
+- `MinesTest` is the engine test. It pins the deferred layout, the
+  generator and its two upstream quirks, the shared mutable `Layout`,
+  the move grammar including the whole-move rejection for an
+  out-of-range `F`/`O`/`C` token, the chord results, death and win, the
+  solve, the text form, the `UI` character parser, the timing formula,
+  the `[m:ss] ` prefix, `TIME` with the C `atof` prefix (including
+  `3.5junk`, `0x10`, `inf`, and `nan`), undo, redo, restart, the key
+  labels, `requestKeys`, the palette, and the geometry.
+- `MinesSaveTest` is strict for the save text and semantic for the
+  state. It reads the five corpus saves, rewrites them byte for byte,
+  and compares id, status, undo, redo, text, `UI`, and `TIME` with C.
+  A Kotlin save for every preset and nine seeds loads in C. In-memory
+  history covers an open, a flag, a correct chord, a death, a win, an
+  undone position with a live redo branch, a `SOLVE`, a `RESTART`, and
+  an empty `MOVE`, and every shape reloads in both engines. The test
+  pins the first-click `DESC`/`PRIVDESC` pair, the `PARAMS:9x9n8` /
+  `CPARAMS:9x9n10` split, the record order, and that a load with
+  `PRIVDESC` rebuilds state 0 all-covered while a load without it
+  opens the click. The `UI` record round-trips in both directions,
+  including the glibc `%d` wrap (`D2147483648` is `-2147483648`), `C`,
+  `D-3`, and `D3Cjunk`. `TIME` uses the C `%g` writer and the C
+  `atof` reader: a hand-written `3.5junk` is 3.5, `0x1.8p1` is 3, and
+  `inf` and `nan` round-trip. A non-finite clock is hand-written only;
+  the C status prefix casts it to `int`, which is undefined, so that
+  one result is a Kotlin definition.
+- `MinesTraceTest` is strict. It compares the four frozen traces and
+  `traceNew` for every preset, sized cold traces after a click at tiles
+  48, 63, 82, and 100, the 411x702 letterbox at tile 43 with origin
+  (4,149), the start cross after an undo and after a load, the dead,
+  won, solved, and post-death-solve frames, a flag, a hover highlight,
+  the cursor, the wrong-number tile, the 20-entry palette, and the warm
+  frame that is exactly `start_draw`, `end_draw`. No trace contains a
+  blitter, a thick primitive, or a text fallback.
+- `MinesInputParityTest` is semantic. It compares the layout at six
+  viewports, then sends real opens at tiles 20, 48, 63, 82, and 100, a
+  four-pixel letterbox at tiles 48, 63, 82, and 100, and the 411x702
+  letterbox with the origin subtracted on both sides. It sends a first
+  click, a flag and unflag, a correct chord (`C1,0`, which adds one
+  state but opens nothing because every covered neighbour is already
+  flagged), a wrong-flag chord that opens the mine, the cursor walk and
+  both select keys, the one-key undo and redo after a death, and
+  `requestKeys` with and without the full-cursor hint, which C forces
+  to `ANDROID_ARROWS_ONLY` (1) even for a game with no `request_keys`.
+  State, id, status, `UI`, `TIME`, and the final frame with
+  `pointsSized` are compared for every real pointer gesture. Every real
+  open, flag, wrong-flag chord, and win changes the board and adds one
+  move and one state; an inert press, a middle press on a covered cell,
+  a too-few-flags chord, a letterbox click, and a click after a death
+  or a win change neither, each followed by a positive control. The
+  button-priority rule is pinned in the engine test: a right press
+  while the left button is held is ignored, and a left press after a
+  right press gets the fabricated right release.
+- Mines has C undefined behavior in four places, and the port defines
+  each one without a `DEVIATIONS.md` entry because a valid game never
+  reaches it: `atoi` and the move `%d` scan saturate, `decode_ui` keeps
+  the low 32 bits as glibc does, a non-hex bitmap character reads as
+  zero, and an impossible perturbation returns no change so the
+  generator retries. Enablement debt: mines has no preferences, so S8
+  is the four-field configuration schema (Width, Height, Mines with the
+  `%` rule, `Ensure solubility`), the solve message, generation off the
+  UI thread, an owner size bound and a retry guard, and the two-release
+  wait. `MINES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(MINES)` is false.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

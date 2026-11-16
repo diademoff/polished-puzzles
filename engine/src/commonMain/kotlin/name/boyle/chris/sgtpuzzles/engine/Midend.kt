@@ -898,9 +898,10 @@ class Midend private constructor(
                 auxInfo = save.value("AUXINFO")?.let { AuxInfo.decode(it) },
                 entries = entries,
                 statePos = statePos,
-                // C reads `TIME` with `atof`; a save without the record
-                // keeps the elapsed time at 0.
-                initialElapsed = save.value("TIME")?.toFloatOrNull() ?: 0f,
+                // C reads `TIME` with `atof`, which takes the numeric
+                // prefix; a save without the record keeps the elapsed
+                // time at 0.
+                initialElapsed = save.value("TIME")?.let { cAtof(it) } ?: 0f,
                 initialUi = save.value("UI")?.let {
                     game.decodeUi(entries[statePos - 1].state, it, baseUi)
                 } ?: baseUi,

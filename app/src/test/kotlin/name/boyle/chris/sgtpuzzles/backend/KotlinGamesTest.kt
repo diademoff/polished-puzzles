@@ -10,6 +10,7 @@ import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Magnets
+import name.boyle.chris.sgtpuzzles.engine.Mines
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.engine.Netslide
@@ -200,6 +201,19 @@ class KotlinGamesTest {
     fun `untangle is registered but the app still uses C`() {
         assertEquals(Untangle, KotlinGames.gameFor(UNTANGLE))
         assertFalse(KotlinGames.handles(UNTANGLE))
+    }
+
+    @Test
+    fun `mines is registered but the app still uses C`() {
+        assertEquals(Mines, KotlinGames.gameFor(MINES))
+        assertFalse(KotlinGames.handles(MINES))
+    }
+
+    @Test
+    fun `the mines generator matches the frozen save`() {
+        val expected = File(testdata, "saves/initial/mines/9x9n10.sgtp").readText()
+        val actual = KotlinGames.generate(MINES, "9x9n10", "12345")
+        assertEquals(expected, actual)
     }
 
     @Test

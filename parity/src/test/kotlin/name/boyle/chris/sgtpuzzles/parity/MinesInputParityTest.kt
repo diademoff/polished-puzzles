@@ -58,6 +58,7 @@ class MinesInputParityTest {
     @Test(timeout = 120_000)
     fun `a real click at a non-default tile size matches the oracle`() =
         OracleClient().use { oracle ->
+            val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
             val save = oracle.newGame("mines", "9x9n10", SEED).state
             for (tileSize in listOf(20, 48, 63, 82, 100)) {
                 val board = Mines.computeSize(Mines.decodeParams("9x9n10"), tileSize)
@@ -67,6 +68,7 @@ class MinesInputParityTest {
                     points,
                     width = board.width,
                     height = board.height,
+                    recordTrace = true,
                 )
                 val midend = Midend.fromSave(Mines, SgtpSave.parse(save))
                 apply(midend, points, tileSize)
@@ -78,9 +80,21 @@ class MinesInputParityTest {
                 )
                 assertEquals("tile $tileSize states", 2, midend.stateCount)
                 assertEquals("tile $tileSize status", expected.state.status, midend.status())
+                assertEquals("tile $tileSize UI", "D0", midend.serialise().value("UI"))
+                assertEquals("tile $tileSize TIME", "0", midend.serialise().value("TIME"))
                 assertFalse(
                     "tile $tileSize board changed",
                     midend.textFormat().all { it == '?' || it == '\n' },
+                )
+                val actualTrace = TraceNormalizer.normalize(
+                    KotlinTraceSink.stateTrace(midend, tileSize),
+                    upstream,
+                )
+                val expectedTrace = TraceNormalizer.normalize(expected.trace!!, upstream)
+                assertEquals(
+                    "tile $tileSize final trace",
+                    expectedTrace.trimEnd('\n'),
+                    actualTrace.trimEnd('\n'),
                 )
             }
         }
@@ -122,6 +136,71 @@ class MinesInputParityTest {
     }
 
     @Test(timeout = 120_000)
+    fun `a letterbox at every preset tile size matches the oracle`() =
+        OracleClient().use { oracle ->
+            val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+            val save = oracle.newGame("mines", "9x9n10", SEED).state
+
+            for (tileSize in listOf(48, 63, 82, 100)) {
+                val board = Mines.computeSize(Mines.decodeParams("9x9n10"), tileSize)
+                // Four pixels larger than the board in each direction, so
+                // the largest fitting tile is still `tileSize` and the
+                // origin is two pixels on both axes.
+                val viewWidth = board.width + 4
+                val viewHeight = board.height + 4
+                val midend = Midend.newGame(Mines, "9x9n10", SEED)
+                val geometry = midend.geometryFor(viewWidth, viewHeight)
+                assertEquals("tile $tileSize", tileSize, geometry.tileSize)
+                assertEquals("origin x at tile $tileSize", 2, geometry.originX)
+                assertEquals("origin y at tile $tileSize", 2, geometry.originY)
+
+                val gx = 2 * tileSize + 8 + tileSize / 2
+                val gy = 5 * tileSize + 8 + tileSize / 2
+                val viewPoints = listOf(
+                    OracleClient.Point(gx + 2, gy + 2, Buttons.LEFT_BUTTON),
+                    OracleClient.Point(gx + 2, gy + 2, Buttons.LEFT_RELEASE),
+                )
+                val expected = oracle.pointsSized(
+                    save,
+                    viewPoints,
+                    width = viewWidth,
+                    height = viewHeight,
+                    recordTrace = true,
+                )
+                val before = midend.textFormat()
+                apply(midend, clickPoints(2, 5, tileSize), tileSize)
+
+                assertEquals("tile $tileSize id", expected.state.id, midend.id())
+                assertEquals(
+                    "tile $tileSize canonical",
+                    expected.state.state,
+                    midend.serialise().serialise(),
+                )
+                assertEquals("tile $tileSize status", expected.state.status, midend.status())
+                assertEquals("tile $tileSize states", 2, midend.stateCount)
+                assertNotEquals("tile $tileSize board changed", before, midend.textFormat())
+                assertEquals("tile $tileSize UI", "D0", midend.serialise().value("UI"))
+                assertEquals("tile $tileSize TIME", "0", midend.serialise().value("TIME"))
+                assertEquals(
+                    "tile $tileSize PRIVDESC",
+                    "m" + midend.desc.substringAfter(",m"),
+                    midend.serialise().value("PRIVDESC"),
+                )
+
+                val actualTrace = TraceNormalizer.normalize(
+                    KotlinTraceSink.stateTrace(midend, tileSize),
+                    upstream,
+                )
+                val expectedTrace = TraceNormalizer.normalize(expected.trace!!, upstream)
+                assertEquals(
+                    "tile $tileSize final trace",
+                    expectedTrace.trimEnd('\n'),
+                    actualTrace.trimEnd('\n'),
+                )
+            }
+        }
+
+    @Test(timeout = 120_000)
     fun `the flag toggles and the flag moves match the oracle`() =
         OracleClient().use { oracle ->
             val start = oracle.newGame("mines", "9x9n10", SEED).state
@@ -139,7 +218,12 @@ class MinesInputParityTest {
                 height = 196,
             )
             val midend = Midend.fromSave(Mines, SgtpSave.parse(clicked))
+            val beforeFlag = (midend.state as Mines.State).grid.copyOf()
             apply(midend, rightPoints(0, 0, tile), tile)
+            assertFalse(
+                "the flag changes the board",
+                (midend.state as Mines.State).grid.contentEquals(beforeFlag),
+            )
             assertEquals(expectedFlag.state.state, midend.serialise().serialise())
             assertEquals(3, midend.stateCount)
 
@@ -179,10 +263,41 @@ class MinesInputParityTest {
             height = 196,
         )
         val midend = Midend.fromSave(Mines, SgtpSave.parse(flagged))
+        val beforeChord = (midend.state as Mines.State).grid.copyOf()
+        val beforeStates = midend.stateCount
         apply(midend, middlePoints(1, 0, tile), tile)
         assertEquals(expectedChord.state.id, midend.id())
         assertEquals(expectedChord.state.state, midend.serialise().serialise())
         assertEquals("C1,0", midend.serialise().values("MOVE").last())
+        assertEquals("the chord adds one state", beforeStates + 1, midend.stateCount)
+        // This chord is correct and every covered neighbour is already
+        // flagged, so C accepts `C1,0` and opens nothing. The board
+        // stays equal, as the oracle's save says.
+        assertTrue((midend.state as Mines.State).grid.contentEquals(beforeChord))
+
+        // A wrong flag makes the chord open the mine, so the board
+        // really changes and the death counter rises.
+        val wrongFlag = Midend.fromSave(Mines, SgtpSave.parse(clicked))
+        apply(wrongFlag, rightPoints(0, 0, tile) + rightPoints(0, 2, tile), tile)
+        val wrongSave = wrongFlag.serialise().serialise()
+        val wrongExpected = oracle.pointsSized(
+            wrongSave,
+            middlePoints(1, 1, tile),
+            width = 196,
+            height = 196,
+        )
+        val boardBeforeWrong = (wrongFlag.state as Mines.State).grid.copyOf()
+        val statesBeforeWrong = wrongFlag.stateCount
+        apply(wrongFlag, middlePoints(1, 1, tile), tile)
+        assertEquals(wrongExpected.state.id, wrongFlag.id())
+        assertEquals(wrongExpected.state.state, wrongFlag.serialise().serialise())
+        assertFalse(
+            "the wrong-flag chord changes the board",
+            (wrongFlag.state as Mines.State).grid.contentEquals(boardBeforeWrong),
+        )
+        assertEquals(statesBeforeWrong + 1, wrongFlag.stateCount)
+        assertEquals(1, (wrongFlag.ui as Mines.Ui).deaths)
+        assertEquals("O0,1", wrongFlag.serialise().values("MOVE").last())
 
         // A right press on the same open cell chords too.
         val rightChord = oracle.pointsSized(

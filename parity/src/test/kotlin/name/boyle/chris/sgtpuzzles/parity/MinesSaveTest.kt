@@ -156,6 +156,117 @@ class MinesSaveTest {
             assertEquals(played.id(), oracle.id(without.serialise()).id)
         }
 
+    @Test(timeout = 120_000)
+    fun `every history shape round-trips in both directions`() =
+        OracleClient().use { oracle ->
+            val cases = LinkedHashMap<String, Pair<Midend, String>>()
+
+            val opened = Midend.newGame(Mines, "9x9n10", SEED)
+            click(opened, 4, 4)
+            cases["open"] = opened to "O4,4"
+
+            val flagged = Midend.newGame(Mines, "9x9n10", SEED)
+            click(flagged, 4, 4)
+            rightClick(flagged, 0, 0)
+            cases["flag"] = flagged to "F0,0"
+
+            val chord = Midend.newGame(Mines, "9x9n10", SEED)
+            click(chord, 4, 4)
+            rightClick(chord, 0, 0)
+            rightClick(chord, 0, 1)
+            middleClick(chord, 1, 0)
+            cases["chord"] = chord to "C1,0"
+
+            val dead = Midend.newGame(Mines, "9x9n10", SEED)
+            click(dead, 4, 4)
+            click(dead, 0, 0)
+            assertTrue((dead.state as Mines.State).dead)
+            cases["death"] = dead to "O0,0"
+
+            val won = Midend.newGame(Mines, "4x4n1", "7")
+            click(won, 0, 0)
+            click(won, 0, 3)
+            assertTrue((won.state as Mines.State).won)
+            cases["win"] = won to "O0,3"
+
+            for ((name, pair) in cases) {
+                val (midend, lastMove) = pair
+                val text = midend.serialise().serialise()
+                val save = SgtpSave.parse(text)
+                assertEquals("$name last move", lastMove, save.values("MOVE").last())
+                // The record order after a click: DESC, PRIVDESC, UI,
+                // TIME, then the history.
+                val keys = save.records.map { it.key }
+                if (name == "win") {
+                    assertEquals("$name PARAMS", "4x4n1", save.value("PARAMS"))
+                    assertEquals("$name CPARAMS", "4x4n1", save.value("CPARAMS"))
+                } else {
+                    assertEquals("$name PARAMS", "9x9n8", save.value("PARAMS"))
+                    assertEquals("$name CPARAMS", "9x9n10", save.value("CPARAMS"))
+                }
+                assertTrue("$name PRIVDESC", save.value("PRIVDESC")!!.startsWith("m"))
+                assertEquals(
+                    "$name UI",
+                    when (name) {
+                        "win" -> "D0C"
+                        "death" -> "D1"
+                        else -> "D0"
+                    },
+                    save.value("UI"),
+                )
+                assertEquals("$name TIME", "0", save.value("TIME"))
+                assertTrue(
+                    "$name PRIVDESC before UI",
+                    keys.indexOf("PRIVDESC") < keys.indexOf("UI"),
+                )
+                assertTrue(
+                    "$name TIME after UI",
+                    keys.indexOf("UI") < keys.indexOf("TIME"),
+                )
+
+                val expected = oracle.id(text)
+                assertEquals("$name id", midend.id(), expected.id)
+                assertEquals("$name status", midend.status(), expected.status)
+                assertTrue("$name can undo", expected.canUndo)
+                assertFalse("$name can redo", expected.canRedo)
+                assertEquals("$name canonical", text, expected.state)
+                assertEquals("$name text", oracle.text(text), midend.textFormat())
+                assertEquals(
+                    "$name status text",
+                    oracleStatus(oracle, text),
+                    midend.statusText(),
+                )
+
+                val reloaded = Midend.fromSave(Mines, save)
+                assertEquals("$name reload", text, reloaded.serialise().serialise())
+                assertEquals("$name reload UI", save.value("UI"), reloaded.serialise().value("UI"))
+                assertEquals("$name reload TIME", "0", reloaded.serialise().value("TIME"))
+            }
+
+            // The live redo branch: undo after the chord, save, and the
+            // branch must stay redoable in both engines.
+            val redoable = Midend.newGame(Mines, "9x9n10", SEED)
+            click(redoable, 4, 4)
+            rightClick(redoable, 0, 0)
+            assertTrue(redoable.undo())
+            val redoText = redoable.serialise().serialise()
+            val redoSave = SgtpSave.parse(redoText)
+            assertEquals("redo STATEPOS", "2", redoSave.value("STATEPOS"))
+            assertEquals("redo NSTATES", "3", redoSave.value("NSTATES"))
+            assertTrue("redo branch", oracle.id(redoText).canRedo)
+            assertTrue("redo branch", Midend.fromSave(Mines, redoSave).canRedo)
+
+            // A restart after the first click appends the public desc.
+            val restarted = Midend.newGame(Mines, "9x9n10", SEED)
+            click(restarted, 4, 4)
+            assertTrue(restarted.restart())
+            assertEquals(
+                "restart record",
+                "4,4,m9eed07198e89048f2e4d0",
+                restarted.serialise().value("RESTART"),
+            )
+        }
+
     @Test
     fun `an undone position keeps a live redo branch`() = OracleClient().use { oracle ->
         val midend = Midend.newGame(Mines, "9x9n10", SEED)
@@ -253,8 +364,11 @@ class MinesSaveTest {
         val vectors = listOf(
             "D0", "D0C", "C", "D3x", "D-3", "D3Cjunk", "D+3C", "D 3C",
             " D3", "D3 C", "", "D", "DD3", "D007",
-            // `%d` overflow is C undefined behavior; the port pins its
-            // own saturation in MinesTest instead of matching glibc.
+            // glibc reads `%d` through a `long` and keeps the low 32
+            // bits; these vectors pin that wrap.
+            "D2147483647", "D2147483648", "D4294967296", "D99999999999",
+            "D-2147483649", "D-4294967297", "D99999999999999999999999",
+            "D-99999999999999999999999",
         )
         for (vector in vectors) {
             val save = SgtpSave.of(
@@ -308,7 +422,12 @@ class MinesSaveTest {
         click(played, 4, 4)
         val template = played.serialise()
 
-        for (time in listOf("0", "3.5", "61.25", "59.999", "1000000", "1e6", "0.0001", "abc")) {
+        for (time in listOf(
+            "0", "3.5", "61.25", "59.999", "1000000", "1e6", "0.0001", "abc",
+            // `atof` takes the numeric prefix of a hand-written record.
+            "3.5junk", "61.25x", " 3.5", "1e2junk", ".5junk", "-2.5junk",
+            "0x10", "0x1.8p1",
+        )) {
             val save = SgtpSave.of(
                 template.records.map {
                     if (it.key == "TIME") SaveRecord("TIME", time) else it
@@ -320,6 +439,26 @@ class MinesSaveTest {
             assertEquals("TIME '$time' canonical", expected.state, midend.serialise().serialise())
             assertEquals("TIME '$time' id", expected.id, midend.id())
             assertEquals("TIME '$time' status text", oracleStatus(oracle, text), midend.statusText())
+        }
+
+        // A non-finite clock is a hand-written record: `%g` of a finite
+        // elapsed cannot produce one. The save text still round-trips,
+        // but the C `(int)me->elapsed` in the status prefix is undefined
+        // for it, so the status text is a defined Kotlin result pinned
+        // in `MinesTest`, not a C comparison.
+        for (time in listOf("inf", "-infinity", "nan", "1e999")) {
+            val save = SgtpSave.of(
+                template.records.map {
+                    if (it.key == "TIME") SaveRecord("TIME", time) else it
+                },
+            )
+            val text = save.serialise()
+            val midend = Midend.fromSave(Mines, SgtpSave.parse(text))
+            assertEquals(
+                "TIME '$time' canonical",
+                oracle.id(text).state,
+                midend.serialise().serialise(),
+            )
         }
 
         // The absence of TIME loads at zero and the writer restores it.
@@ -410,6 +549,20 @@ class MinesSaveTest {
         val py = y * tile + 8 + tile / 2
         midend.processKey(px, py, Buttons.LEFT_BUTTON, tile)
         midend.processKey(px, py, Buttons.LEFT_RELEASE, tile)
+    }
+
+    private fun rightClick(midend: Midend, x: Int, y: Int) {
+        val px = x * tile + 8 + tile / 2
+        val py = y * tile + 8 + tile / 2
+        midend.processKey(px, py, Buttons.RIGHT_BUTTON, tile)
+        midend.processKey(px, py, Buttons.RIGHT_RELEASE, tile)
+    }
+
+    private fun middleClick(midend: Midend, x: Int, y: Int) {
+        val px = x * tile + 8 + tile / 2
+        val py = y * tile + 8 + tile / 2
+        midend.processKey(px, py, Buttons.MIDDLE_BUTTON, tile)
+        midend.processKey(px, py, Buttons.MIDDLE_RELEASE, tile)
     }
 
     private fun oracleStatus(oracle: OracleClient, state: String): String =
