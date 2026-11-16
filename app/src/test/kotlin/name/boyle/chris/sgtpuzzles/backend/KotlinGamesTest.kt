@@ -218,6 +218,12 @@ class KotlinGamesTest {
     }
 
     @Test
+    fun `the platform seed is 16 bytes`() {
+        val seed = platformSeed()
+        assertEquals(16, seed.size)
+    }
+
+    @Test
     fun `a fresh seed is printable`() {
         val seed = KotlinGames.newSeed()
         assertTrue(seed.isNotEmpty())

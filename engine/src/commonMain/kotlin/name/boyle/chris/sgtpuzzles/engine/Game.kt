@@ -205,6 +205,18 @@ interface Game {
     fun newUi(state: State): Ui = NoUi
 
     /**
+     * `new_ui` with the frontend random seed.
+     *
+     * [platformSeed] is the bytes the frontend `get_random_seed`
+     * returns, not the game seed. The C game takes them from the
+     * frontend to create a random state that is independent of the
+     * board (`net.c:2061-2085`), so it cannot come from `Midend.seed`.
+     * The platform seed is never saved. The default ignores it and
+     * calls [newUi], so every game that does not need it is unchanged.
+     */
+    fun newUi(state: State, platformSeed: ByteArray): Ui = newUi(state)
+
+    /**
      * `encode_ui`: the value of the save file's `UI` record, or null
      * when this game has no such record. The value must be printable
      * ASCII, so the writer rejects anything else instead of writing a
@@ -220,6 +232,18 @@ interface Game {
      * [newUi].
      */
     fun decodeUi(state: State, text: String): Ui = newUi(state)
+
+    /**
+     * `decode_ui` with the UI that [newUi] created for the save.
+     *
+     * [base] is the fresh UI from [newUi] with the platform seed, as C
+     * keeps `data.ui` from `new_ui` and passes it to `decode_ui`
+     * (`midend.c:2669-2673`). A game that stores frontend random state
+     * in the UI keeps it across a load because the record does not
+     * contain it. The default calls the two-argument [decodeUi], so a
+     * game that does not need the base is unchanged.
+     */
+    fun decodeUi(state: State, text: String, base: Ui): Ui = decodeUi(state, text)
 
     fun setCursorVisible(ui: Ui, visible: Boolean) {}
 

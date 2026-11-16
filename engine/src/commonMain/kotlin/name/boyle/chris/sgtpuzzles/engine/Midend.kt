@@ -26,6 +26,7 @@ class Midend private constructor(
     private val entries: MutableList<Entry>,
     var statePos: Int,
     initialUi: Game.Ui? = null,
+    private val platformSeed: ByteArray = byteArrayOf(0),
 ) {
 
     enum class MoveType { NEWGAME, MOVE, SOLVE, RESTART }
@@ -39,8 +40,12 @@ class Midend private constructor(
      * [State], the history, [id], [status], or [textFormat]. A game
      * that provides `encodeUi` stores it in the save file's `UI`
      * record; a load restores it through `decodeUi`.
+     *
+     * [platformSeed] is the frontend `get_random_seed` value, not the
+     * game seed. It is not saved and does not reach [id], [desc], or
+     * [serialise].
      */
-    var ui: Game.Ui = initialUi ?: game.newUi(state)
+    var ui: Game.Ui = initialUi ?: game.newUi(state, platformSeed)
         private set
 
     /**
@@ -588,8 +593,22 @@ class Midend private constructor(
     }
 
     companion object {
+        /**
+         * The oracle's frontend seed: one NUL byte
+         * (`tools/oracle/oracle.c:101-107`). A seed source that has no
+         * clock, such as a test or a parity run, uses it so the
+         * frontend random state is deterministic and the Jumble move
+         * of `net` matches the oracle.
+         */
+        private val DEFAULT_PLATFORM_SEED = byteArrayOf(0)
+
         /** Creates a new game and generates its description from [seed]. */
-        fun newGame(game: Game, paramsText: String, seed: String): Midend {
+        fun newGame(
+            game: Game,
+            paramsText: String,
+            seed: String,
+            platformSeed: ByteArray = DEFAULT_PLATFORM_SEED,
+        ): Midend {
             val effective = if (paramsText.isEmpty()) {
                 game.encodeParams(game.defaultParams(), false)
             } else {
@@ -613,11 +632,16 @@ class Midend private constructor(
                 auxInfo = generated.auxInfo,
                 entries = mutableListOf(Entry(state, null, MoveType.NEWGAME)),
                 statePos = 1,
+                platformSeed = platformSeed,
             )
         }
 
         /** Builds a game from `params:desc`, as a game ID does. */
-        fun fromGameId(game: Game, gameId: String): Midend {
+        fun fromGameId(
+            game: Game,
+            gameId: String,
+            platformSeed: ByteArray = DEFAULT_PLATFORM_SEED,
+        ): Midend {
             val colon = gameId.indexOf(':')
             require(colon >= 0) { "game ID has no colon: $gameId" }
             val paramsText = gameId.substring(0, colon)
@@ -641,11 +665,16 @@ class Midend private constructor(
                     Entry(game.newState(currentParams, desc), null, MoveType.NEWGAME),
                 ),
                 statePos = 1,
+                platformSeed = platformSeed,
             )
         }
 
         /** Reads a save file. The game must already be known. */
-        fun fromSave(game: Game, save: SgtpSave): Midend {
+        fun fromSave(
+            game: Game,
+            save: SgtpSave,
+            platformSeed: ByteArray = DEFAULT_PLATFORM_SEED,
+        ): Midend {
             require(save.value("GAME") == game.name) {
                 "save file is from a different game: ${save.value("GAME")}"
             }
@@ -702,6 +731,11 @@ class Midend private constructor(
                 entries += Entry(next, record.value, type)
             }
 
+            // C creates the fresh UI from the first state before it
+            // reads the record (`midend.c:2669`), then `decode_ui`
+            // overlays the record on that same UI with the current
+            // state. A save without the record keeps the base UI.
+            val baseUi = game.newUi(entries[0].state, platformSeed)
             return Midend(
                 game = game,
                 params = params,
@@ -711,13 +745,10 @@ class Midend private constructor(
                 auxInfo = save.value("AUXINFO")?.let { AuxInfo.decode(it) },
                 entries = entries,
                 statePos = statePos,
-                // C creates a fresh UI, then lets `decode_ui` update it
-                // from the record and the current state. The seam folds
-                // both steps into `decodeUi`, and a save without the
-                // record keeps the fresh UI.
                 initialUi = save.value("UI")?.let {
-                    game.decodeUi(entries[statePos - 1].state, it)
-                },
+                    game.decodeUi(entries[statePos - 1].state, it, baseUi)
+                } ?: baseUi,
+                platformSeed = platformSeed,
             )
         }
 

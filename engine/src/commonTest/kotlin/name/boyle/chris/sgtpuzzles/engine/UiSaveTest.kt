@@ -56,6 +56,8 @@ class UiSaveTest {
 
         override fun newUi(state: Game.State): Game.Ui = TestUi()
 
+        override fun newUi(state: Game.State, platformSeed: ByteArray): Game.Ui = TestUi()
+
         override fun encodeUi(ui: Game.Ui): String? =
             if (writeUi) (ui as TestUi).encode() else null
 
@@ -63,6 +65,9 @@ class UiSaveTest {
             decodedState = state
             return TestUi.decode(text)
         }
+
+        override fun decodeUi(state: Game.State, text: String, base: Game.Ui): Game.Ui =
+            decodeUi(state, text)
 
         override fun interpretMove(
             state: Game.State,

@@ -46,9 +46,25 @@ import name.boyle.chris.sgtpuzzles.engine.Untangle
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.MenuEntry
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+
+/**
+ * The frontend `get_random_seed` bytes for the Android shell.
+ *
+ * The C frontend fills the seed from the clock (`android.c`), and the
+ * oracle returns one NUL byte (`tools/oracle/oracle.c:101-107`) so its
+ * output is deterministic. This helper is the app side of that
+ * callback: 16 bytes from two clock readings, so the frontend random
+ * state of a game is fresh on every start. It is not the game seed and
+ * it is never saved.
+ */
+internal fun platformSeed(): ByteArray = ByteBuffer.allocate(16)
+    .putLong(System.nanoTime())
+    .putLong(System.currentTimeMillis())
+    .array()
 
 /**
  * The C `htmlhelp_topic` of a Kotlin game.
@@ -160,7 +176,10 @@ object KotlinGames {
     /** The save file that the C generator would have produced. */
     fun generate(backend: BackendName, params: String, seed: String): String {
         val game = requireNotNull(gameFor(backend)) { "no Kotlin backend for $backend" }
-        return Midend.newGame(game, params, seed).serialise().serialise()
+        // The frontend seed reaches only frontend state, so it cannot
+        // change the board or the records that the oracle writes. It
+        // uses the app value here, as the C frontend does.
+        return Midend.newGame(game, params, seed, platformSeed()).serialise().serialise()
     }
 
     /** A fresh printable seed, used when the chooser did not provide one. */
@@ -676,8 +695,13 @@ class KotlinGameEngine private constructor(
             }
             val midend = try {
                 when {
-                    launch.saved != null -> Midend.fromSave(game, SgtpSave.parse(launch.saved))
-                    launch.gameID != null -> Midend.fromGameId(game, launch.gameID)
+                    launch.saved != null -> Midend.fromSave(
+                        game,
+                        SgtpSave.parse(launch.saved),
+                        platformSeed(),
+                    )
+
+                    launch.gameID != null -> Midend.fromGameId(game, launch.gameID, platformSeed())
                     else -> throw IllegalArgumentException("launch has neither a save nor a game ID")
                 }
             } catch (e: IllegalArgumentException) {

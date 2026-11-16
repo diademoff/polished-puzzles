@@ -418,3 +418,46 @@ callback. This change adds the seam operation, not the game.
 4. **No ported game calls it.** Every frozen trace stays byte for byte
    the same, and the parity suite pins that. The `undead` port remains a
    separate change with its own parity matrix.
+
+## Amendment: the platform random seed (S7)
+
+- **Date:** 2026-11-16
+
+`midend_new` asks the frontend for a random seed before it builds
+anything (`midend.c:172-181`). `net.c` uses that seed in `new_ui` to
+create `ui->rs`, and `ui->rs` drives the Jumble move
+(`net.c:2074-2075`, `net.c:2433`). It is not the game seed: it is
+frontend state that no record stores. The seam had no way to supply
+it, so a net port could not reach the oracle.
+
+1. **The platform seed is a midend argument, not a game seed.**
+   `Midend.newGame`, `Midend.fromGameId`, and `Midend.fromSave` take
+   `platformSeed: ByteArray`. The midend passes it to
+   `Game.newUi(state, platformSeed)` and uses it for no other purpose.
+   A save that has no `UI` record keeps that UI.
+
+2. **The default is one NUL byte.** The oracle returns one NUL byte
+   from `get_random_seed` (`tools/oracle/oracle.c:101-107`), so the
+   default keeps every parity run and every existing test
+   deterministic. A test that ignores the argument still compiles,
+   because the two-argument `newUi` defaults to the one-argument
+   `newUi`. `PlatformSeedTest` pins both the default and an explicit
+   value.
+
+3. **The app supplies a real seed.** `KotlinGameEngine` calls
+   `platformSeed()`, which returns 16 bytes from `System.nanoTime()`
+   and `System.currentTimeMillis()`. The helper lives in the app
+   module, never in the engine common code, so the engine has no
+   clock and the parity module cannot read one. `KotlinGames.generate`
+   passes the same value to `newGame`, as the C frontend does.
+
+4. **The seed stays out of the save file.** It does not enter
+   `State`, the history, `id()`, `DESC`, `AUXINFO`, `UI`, or
+   `serialise()`. A game that encodes random frontend state would be
+   a deviation from the record contract and needs its own ADR; no
+   ported game does. `PlatformSeedTest` pins that two platform seeds
+   produce the same save text and the same game ID.
+
+S7 is done with this change. The `net` port remains a separate change
+and needs the game-level `newUi` and `decodeUi` overrides; the seam
+only guarantees the bytes.

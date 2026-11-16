@@ -94,3 +94,45 @@ Negative:
 3. **Enable slant globally with `KotlinGames.ENABLED`.** Rejected: that
    switches fifteen and slant together and bypasses the two-release
    rule.
+
+## Amendment: the UI decode receives the fresh UI
+
+- **Date:** 2026-11-16
+
+C creates the UI from the first state, then overlays the `UI` record
+on that same object:
+
+```
+data.ui = me->ourgame->new_ui(data.states[0].state);
+if (data.uistr && me->ourgame->decode_ui)
+    me->ourgame->decode_ui(data.ui, data.uistr,
+                           data.states[data.statepos-1].state);
+```
+
+(`midend.c:2669-2673`). The earlier seam folded both steps into
+`decodeUi(state, text)`, so a game could not read what `newUi` created
+from the platform seed. Decision 1 is therefore amended:
+
+1. **The midend calls `Game.newUi(state, platformSeed)` first.** The
+   base UI comes from the first state, as C does, with the frontend
+   seed from S7 (ADR 0007). A save without a `UI` record keeps that
+   base UI and does not call `decodeUi`.
+
+2. **`Game.decodeUi(state, text, base)` receives the base.** [state] is
+   the current state, `states[statepos-1].state`, and [base] is the UI
+   that `newUi` returned. The game may keep any field that the record
+   does not store, such as the frontend random state of `net`. The
+   two-argument `decodeUi` remains, and the three-argument default
+   calls it, so every existing game and every existing save is
+   unchanged.
+
+`PlatformSeedTest` pins the order: the base is created with the
+supplied seed, the record overrides one field, and the other field
+survives the load. The UI still does not enter the state, the history,
+`id()`, or the `.sgtp` state payload, and the `UI` record keeps its
+place after `AUXINFO` and before `NSTATES`.
+
+A test double that implements `Game` by delegation forwards the new
+default methods to its delegate, so it must override the overloads it
+uses. `UiSaveTest.UiFifteen` does; a real game overrides `newUi` and
+`decodeUi` directly and needs no extra method.
