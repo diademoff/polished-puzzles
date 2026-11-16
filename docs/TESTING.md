@@ -2375,7 +2375,13 @@ aggressive 100x100 latency is an enablement debt:
     solve is compared from the initial state and after a real move,
     because C solves `states[0]` and diffs the current state. Undo and
     redo are compared across a rotation, a lock, and a Jumble, and a
-    new move after an undo truncates the redo branch.
+    new move after an undo truncates the redo branch. Two save-replay
+    cases pin the status branches: a lock completes the solved board
+    and a later rotation or lock keeps `completed` and the
+    `COMPLETED!` banner (`COMPLETED! ` or `COMPLETED! Active: 1/25`
+    against the oracle), and a solve after the broken board reaches
+    the `Auto-solved. Active: 1/25` branch. A port that recomputed
+    completion would fail both.
   - `NetSaveTest` is strict for the save text and semantic for the
     state. It reads all nine corpus saves, rewrites them byte for byte,
     and compares id, status, undo, redo, text, `AUXINFO`, and `UI` with
@@ -2388,19 +2394,24 @@ aggressive 100x100 latency is an enablement debt:
     history covers a rotation, a lock, a Jumble at the oracle's NUL
     platform seed, an undone position with a live redo branch, a
     `SOLVE`, and a `RESTART`. A save without a `UI` record keeps the
-    base UI and its Jumble continues from the platform seed.
+    base UI and its Jumble continues from the platform seed. A crafted
+    `AUXINFO` record that decodes to a non-hex byte is a defined,
+    reachable solve refusal in Kotlin, and the oracle loads the same
+    save (D-011).
   - `NetTraceTest` is strict. It compares the eight frozen traces and
     the oracle `traceNew` for every preset, the eight-role palette,
     the clipped edge tiles, a zero-size `rect 4 4 0 0 2`, the float
     endpoint box, sized cold traces at tiles 48, 63, 82, and 100, the
-    411x702 letterbox at tile 80 with origin (1,146), the
+    412x702 letterbox at tile 80 with origin (1,146), the
     `unlocked-loops` preference, and the warm lock frame that emits no
     unchanged status. A warm drag and release is compared from the
     reloaded moved save, because the oracle's own frame after a
-    rotation is the animation-start frame. No trace contains a
-    blitter, a thick primitive, or a text operation.
+    rotation is the animation-start frame. The input's own frame
+    draws exactly the one locked cell, while the cold first draw
+    draws all 49 cells. No trace contains a blitter, a thick
+    primitive, or a text operation.
   - `NetInputParityTest` is semantic. It compares the layout at tiles
-    48, 63, 82, and 100 and the 411x702 letterbox, then sends real
+    48, 63, 82, and 100 and the 412x702 letterbox, then sends real
     release-committed rotations and real middle locks at all five
     views, the four drag quadrants at the four tiles, a circular drag
     at tiles 32, 48, and 100, and the keyboard `a`, `s`, `d`, `f`, and
@@ -2417,13 +2428,14 @@ aggressive 100x100 latency is an enablement debt:
     same test.
   - `NetTest` is the engine test. It pins the presets, the state
     decoder, wrapping re-derived from the barriers, the move grammar
-    including a trailing `;`, the sticky completion, the completion
-    event, undo and redo, the status patterns, the solve with and
-    without `AUXINFO`, every preset and a real move, the unsolvable
-    board, `requestKeys`, `currentKeyLabel`, the `UI` record on the
-    base object, `newUi`, the platform seed, the empty text form, the
-    origin and source moves, the real-input invariants, the no-op
-    Jumble, and the geometry and palette.
+    including a trailing `;`, the sticky completion before and after a
+    move, the completion event, undo and redo, the status patterns,
+    the solve with and without `AUXINFO`, every preset and a real
+    move, the unsolvable board, the non-rotation and non-hex
+    `AUXINFO` paths, `requestKeys`, `currentKeyLabel`, the `UI` record
+    on the base object, `newUi`, the platform seed, the empty text
+    form, the origin and source moves, the real-input invariants, the
+    no-op Jumble, and the geometry and palette.
   - The solver order is part of the description contract. `net_solver`
     is both the uniqueness gate and the fallback solve, and its to-do
     list is a FIFO ring with a `deadendmax` array indexed by direction.
@@ -2448,10 +2460,15 @@ aggressive 100x100 latency is an enablement debt:
   - D-010: `5x5bNaN` passes C `validate_params` and aborts on the
     `(int)` cast at `net.c:1533`; Kotlin returns
     `Barrier probability must be a number` before allocation or
-    generation. D-011: the description `123456789` with the auxiliary
-    text `000000000` trips `assert(tt == ft)` at `net.c:1862`; Kotlin
+    generation. The scope note records that the Kotlin NaN test runs
+    before the 2-wide wrapping test, so only a `Params` value built in
+    code sees the message order difference. D-011: the description
+    `123456789` with the auxiliary text `000000000` trips
+    `assert(tt == ft)` at `net.c:1862`, and a non-hex `AUXINFO` byte
+    leaves the C tile uninitialised (`net.c:1814-1820`); Kotlin
     returns no move and
-    `The auxiliary answer is not a rotation of the description`.
+    `The auxiliary answer is not a rotation of the description` for a
+    non-hex byte on a non-blank cell, and reads the byte as zero.
     Neither test sends the aborting input to the oracle. Valid
     parameters and auxiliary answers are unchanged.
   - Enablement debt. S8 needs the five-field configuration dialog

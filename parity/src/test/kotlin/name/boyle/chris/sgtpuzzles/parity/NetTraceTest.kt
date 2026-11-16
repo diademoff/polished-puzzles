@@ -15,7 +15,7 @@ import java.io.File
  * Level: strict. Game: net.
  *
  * The eight frozen first-draw traces, the palette, the clipped edge
- * tiles, sized draws at four tile sizes, the 411x702 letterbox, and
+ * tiles, sized draws at four tile sizes, the 412x702 letterbox, and
  * warm frames after a press, a drag, a release, and a source move.
  */
 class NetTraceTest {
@@ -344,16 +344,32 @@ class NetTraceTest {
                 actual.lines().count { it.startsWith("clip ") },
             )
 
-            // The input's own frame draws only the changed cells, not
-            // the whole (width+2)*(height+2) grid. The oracle cannot
-            // record this frame, so the count is pinned directly.
+            // The input's own frame draws only the one changed cell,
+            // not the whole (width+2)*(height+2) grid that the cold
+            // first draw emits. The oracle has no operation for this
+            // frame, so both counts are pinned directly.
             val inputFrame = KotlinTraceSink.warmFrame(
                 Midend.fromSave(Net, SgtpSave.parse(save)),
                 listOf(point),
             )
             val inputLines = TraceNormalizer.normalize(inputFrame, upstream())
-            val clips = inputLines.lines().count { it.startsWith("clip ") }
-            assertTrue("input frame clips $clips cells", clips in 1 until 49)
+            assertEquals(
+                "the lock frame draws the locked cell only",
+                1,
+                inputLines.lines().count { it.startsWith("clip ") },
+            )
+            val coldLines = TraceNormalizer.normalize(
+                KotlinTraceSink.stateTrace(
+                    Midend.fromSave(Net, SgtpSave.parse(save)),
+                    TILE,
+                ),
+                upstream(),
+            )
+            assertEquals(
+                "the cold first draw draws every cell",
+                49,
+                coldLines.lines().count { it.startsWith("clip ") },
+            )
         }
 
     @Test

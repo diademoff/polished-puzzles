@@ -208,6 +208,38 @@ class NetSaveTest {
         }
 
     @Test
+    fun `a non-hex AUXINFO byte is a defined solve refusal`() =
+        OracleClient().use { oracle ->
+            // The record decodes to "z681ec17cb2157695c1c3c35e": the
+            // first byte is not a hex digit. C reads that tile from
+            // uninitialised memory (net.c:1814-1820), so its result is
+            // not reproducible; see D-011. The record itself is
+            // reachable, and the oracle loads the save.
+            val solved = "1681ec17cb2157695c1c3c35e"
+            val craftedAux = "0793bc8fb2d66ef80fc3ea151b38e3ccd1f9b77d0064cb1f10"
+            val save = replaceRecord(
+                replaceRecord(
+                    File(testdata, "saves/initial/net/5x5w.sgtp").readText(),
+                    "DESC",
+                    solved,
+                ),
+                "AUXINFO",
+                craftedAux,
+            )
+            assertEquals("5x5w:$solved", oracle.id(save).id)
+
+            val midend = Midend.fromSave(Net, SgtpSave.parse(save))
+            assertEquals("5x5w:$solved", midend.id())
+            assertEquals(craftedAux, midend.serialise().value("AUXINFO"))
+            // The port defines the byte as zero, so the first cell is
+            // not a rotation of the description and the solve is
+            // refused.
+            assertFalse(midend.solve())
+            assertEquals(1, midend.stateCount)
+            assertFalse(midend.serialise().records.any { it.key == "SOLVE" })
+        }
+
+    @Test
     fun `the id short form drops the barrier and the flag`() =
         OracleClient().use { oracle ->
             val midend = Midend.newGame(Net, "5x5b0.5a", SEED)

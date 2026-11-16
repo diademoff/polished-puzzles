@@ -1376,7 +1376,7 @@ Notes:
   save without a `UI` record keeps the base UI.
 
   `NetInputParityTest` sends real release-committed rotations and real
-  middle locks at tiles 48, 63, 82, and 100 and at the 411x702
+  middle locks at tiles 48, 63, 82, and 100 and at the 412x702
   letterbox, the four drag quadrants and a circular drag, the keyboard
   keys, a real Jumble, the cursor and select pair, and the origin and
   source keys. Every real rotation, lock, or Jumble changes the board
@@ -1390,14 +1390,23 @@ Notes:
 
   `NetTraceTest` compares the eight frozen traces and `traceNew` for
   every preset, sized cold traces at tiles 48, 63, 82, and 100, the
-  411x702 letterbox at tile 80 with origin (1,146), the warm lock, the
+  412x702 letterbox at tile 80 with origin (1,146), the warm lock, the
   warm drag and release, the `unlocked-loops` preference, and the
   zero-size grid rectangles. No trace contains a blitter, a thick
   primitive, or a text operation.
 
+  `NetGameTest` also pins the sticky `completed` flag from a save
+  replay: a lock completes the solved board, and a later rotation or
+  lock keeps status 1 and the banner even though the network is
+  broken. A separate save reaches the `Auto-solved. Active: a/n2`
+  branch, where a solve follows a completed-then-broken board, and
+  compares the exact text with the oracle.
+
   D-010 rejects a NaN barrier rate instead of aborting at the C `int`
   cast, and D-011 returns a solve error instead of tripping the C
-  `AUXINFO` assertion. Valid parameters, descriptions, and
+  `AUXINFO` assertion. Both entries carry a scope note: the NaN test
+  runs before the 2-wide wrapping test, and a non-hex `AUXINFO`
+  character reads as zero. Valid parameters, descriptions, and
   auxiliary answers are unchanged. Enablement debt. S8 needs the
   five-field configuration dialog (Width, Height, `Walls wrap around`,
   `Barrier probability`, `Ensure unique solution`), the

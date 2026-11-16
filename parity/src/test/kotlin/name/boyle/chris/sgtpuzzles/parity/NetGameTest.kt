@@ -3,11 +3,13 @@ package name.boyle.chris.sgtpuzzles.parity
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.Net
+import name.boyle.chris.sgtpuzzles.engine.SaveRecord
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Level: semantic. Game: net.
@@ -24,10 +26,45 @@ class NetGameTest {
         const val TILE = 32
         const val FIVE = "5x5:1863151ea86e7e3c7abc21a32"
         const val WRAP = "5x5w:8642ec1e6b11ae6cac23c395b"
+
+        /** The decoded `AUXINFO` of the frozen `5x5w` save: a solution. */
+        const val SOLVED_DESC = "1681ec17cb2157695c1c3c35e"
     }
+
+    private val testdata = File(
+        System.getProperty("testdata") ?: error("testdata system property is not set"),
+    )
 
     private fun newSave(params: String = "5x5", seed: String = SEED): String =
         Midend.newGame(Net, params, seed).serialise().serialise()
+
+    /**
+     * The frozen `5x5w` save with the solved description and a move
+     * history. The source stays at the `newUi` centre (2,2).
+     */
+    private fun solvedSave(vararg moves: String): String {
+        val base = File(testdata, "saves/initial/net/5x5w.sgtp").readText()
+        val records = SgtpSave.parse(base).records.map {
+            when (it.key) {
+                "DESC" -> SaveRecord("DESC", SOLVED_DESC)
+                "NSTATES" -> SaveRecord("NSTATES", (moves.size + 1).toString())
+                "STATEPOS" -> SaveRecord("STATEPOS", (moves.size + 1).toString())
+                else -> it
+            }
+        } + moves.map { SaveRecord("MOVE", it) }
+        return SgtpSave.of(records).serialise()
+    }
+
+    /** The one `status` text of the oracle's cold trace of [save]. */
+    private fun oracleStatus(oracle: OracleClient, save: String): Pair<Int, String> {
+        val state = oracle.id(save)
+        val trace = oracle.trace(state.state)
+        val text = (trace.field("ops") as JsonValue.Arr).items
+            .map { it as JsonValue.Obj }
+            .first { it.string("op") == "status" }
+            .string("text")
+        return state.status to text
+    }
 
     private fun kotlin(save: String): Midend =
         Midend.fromSave(Net, SgtpSave.parse(save))
@@ -282,6 +319,55 @@ class NetGameTest {
         assertEquals(solvedStatus, kotlin(solvedSave).statusText())
         assertEquals("Auto-solved. ", solvedStatus)
     }
+
+    /**
+     * The sticky `completed` flag, as a save replay. The first lock
+     * completes the solved board. A later rotation breaks the network,
+     * but C keeps the flag because `execute_move` only sets it
+     * (`net.c:2532-2555`) and `dup_game` copies it. A port that
+     * recomputed completion would report status 0 and no banner.
+     */
+    @Test
+    fun `completion stays set after a win, a rotation, and a lock`() =
+        OracleClient().use { oracle ->
+            for ((moves, status, text) in listOf(
+                Triple(listOf("L0,0"), 1, "COMPLETED! "),
+                Triple(listOf("L0,0", "A2,2"), 1, "COMPLETED! Active: 1/25"),
+                Triple(listOf("L0,0", "A2,2", "L1,1"), 1, "COMPLETED! Active: 1/25"),
+                Triple(listOf("L0,0", "A0,0"), 1, "COMPLETED! Active: 24/25"),
+            )) {
+                val save = solvedSave(*moves.toTypedArray())
+                val (oracleStatus, oracleText) = oracleStatus(oracle, save)
+                assertEquals("$moves oracle status", status, oracleStatus)
+                assertEquals("$moves oracle text", text, oracleText)
+
+                val midend = Midend.fromSave(Net, SgtpSave.parse(save))
+                assertEquals("$moves status", oracleStatus, midend.status())
+                assertEquals("$moves text", oracleText, midend.statusText())
+            }
+        }
+
+    /**
+     * The `Auto-solved. Active: a/n2` branch. A save can carry the
+     * moves that reach it: a lock completes the board, a rotation
+     * breaks the network without clearing `completed`, and a bare `S`
+     * sets `used_solve` without changing the board. The source tile is
+     * not blank and `a < n2`, so the counter is appended to the
+     * banner.
+     */
+    @Test
+    fun `a save reaches the auto-solved counter branch`() =
+        OracleClient().use { oracle ->
+            val save = solvedSave("L0,0", "A2,2", "S")
+            val (status, text) = oracleStatus(oracle, save)
+            assertEquals(1, status)
+            assertEquals("Auto-solved. Active: 1/25", text)
+
+            val midend = Midend.fromSave(Net, SgtpSave.parse(save))
+            assertEquals("S", midend.serialise().values("MOVE").last())
+            assertEquals(1, midend.status())
+            assertEquals(text, midend.statusText())
+        }
 
     @Test
     fun `solve from the initial state and after real moves matches the oracle`() =

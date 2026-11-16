@@ -5,6 +5,7 @@ import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.engine.RandomState
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -116,11 +117,16 @@ class NetDescTest {
 
     @Test(timeout = 120_000)
     fun `retry fixtures match the oracle`() = OracleClient().use { oracle ->
-        // Each seed reaches a distinct generator retry branch:
-        // `5x5` 6 and `4x4` 178 call `perturb`; `7x7` 9 and `5x5w` 2
-        // restart at `begin_generation`; `7x7` 247 retries the full
-        // shuffle. The descriptions are pinned so a change to a retry
-        // condition is visible even if the oracle is rebuilt.
+        // The ids are pinned so a change to a retry condition changes a
+        // fixture. The retry paths are internal, so the branch names
+        // below come from a temporary instrumented run, reverted after
+        // the measurement: `5x5` 6 and `4x4` 178 call `perturb` only;
+        // `7x7` 9 and `5x5w` 2 call `perturb` and restart at
+        // `begin_generation`; `4x4w` 4 does both several times; `7x7`
+        // 247 takes one loop-repair reshuffle. Temporary mutations
+        // confirm the fixture is sensitive: `prevn <= n` -> `<`
+        // changes `7x7` seed 9, and removing the `+ 1` from the
+        // loop-cut draw changes `5x5` seed 6.
         for ((params, seed, expected) in listOf(
             Triple("5x5", "6", "5x5:3c6594ae283bbe49e6e449234"),
             Triple("7x7", "9", "7x7:41a9272518dd74d38db32b7572e34a879214e513779e415a9"),
@@ -220,6 +226,25 @@ class NetDescTest {
         for (text in listOf("5x5b0", "5x5b0.5", "5x5b1")) {
             assertEquals("'$text'", null, Net.validateParams(Net.decodeParams(text), true))
         }
+
+        // The message order is part of the deviation. The Kotlin NaN
+        // test runs after the area test and before the negative,
+        // greater-than-1, and 2-wide wrapping tests, so a `Params`
+        // value that carries a NaN rate and `unique = true` on a
+        // 2-wide wrapping board gets this message where C returns the
+        // wrapping message. A parameter string cannot reach that
+        // combination: every `strtod` NaN spelling contains an `a`,
+        // which clears `unique` in `decode_params`.
+        val wide = Net.decodeParams("2x2wbNaN") as Net.Params
+        assertFalse("2x2wbNaN clears unique through the 'a'", wide.unique)
+        assertEquals("Barrier probability must be a number", Net.validateParams(wide, true))
+        assertEquals(
+            "Barrier probability must be a number",
+            Net.validateParams(
+                Net.Params(2, 2, wrapping = true, unique = true, barrierProbability = Float.NaN),
+                true,
+            ),
+        )
     }
 
     @Test

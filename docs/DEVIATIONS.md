@@ -370,12 +370,25 @@ Anything not listed here is a bug.
   No valid parameter set changes its seed, `DESC`, `AUXINFO`, or save
   text, because every finite rate is untouched and the presets have a
   zero rate.
+- **Scope note:** the Kotlin check runs after the area test and before
+  the negative, greater-than-1, and 2-wide wrapping tests
+  (`Net.kt:245-256`), while C has no NaN test at all. A `Params` value
+  that carries a NaN rate and `unique = true` on a 2-wide wrapping
+  board therefore gets `Barrier probability must be a number` where C
+  returns `No wrapping puzzle with a width or height of 2 can have a
+  unique solution` (`net.c:376-378`). A decoded parameter string
+  cannot reach that combination: every `strtod` NaN spelling contains
+  an `a`, and `decode_params` clears `unique` on an `a`
+  (`net.c:245-247`). `2x2wbNaN` is therefore `unique = false`, so C
+  passes `validate_params` and aborts in generation like any other
+  NaN (verified: SIGABRT, exit 134). Only a `Params` value built in
+  code observes the order difference, and no valid input changes.
 - **Test:**
   `parity/src/test/kotlin/.../NetDescTest.kt::a NaN barrier rate is rejected instead of aborting`
-  pins the NaN field, the message, the `Midend.newGame` rejection, and
-  the unchanged valid rates. The test does not run the C abort, because
-  it would kill the oracle process; a separate one-off oracle process
-  aborts with the assertion above.
+  pins the NaN field, the message, the `Midend.newGame` rejection, the
+  unchanged valid rates, and the message order above. The test does
+  not run the C abort, because it would kill the oracle process; a
+  separate one-off oracle process aborts with the assertion above.
 - **Review:** the owner should review this entry before `net` is
   enabled in the app.
 - **Scope:** `net`
@@ -398,15 +411,33 @@ Anything not listed here is a bug.
   returns null and `Midend.solve` returns false. The
   game-id and save paths keep the C validation, so every generated
   board and every real hint is unchanged.
+- **Scope note:** a non-hex `AUXINFO` character is a second path to the
+  same comparison. C assigns the tile only for a hex digit and then ORs
+  in `LOCKED` (`net.c:1814-1822`), so any other byte keeps the
+  uninitialised `snew` value and `tt` becomes a random low nibble. The
+  Kotlin port reads a non-hex character as zero (`Net.kt:1258-1262`),
+  so the result is deterministic: a non-zero cell in the `DESC` gives
+  the error above, and a blank cell gives a defined `A` rotation and
+  lock. C cannot be pinned here: the same crafted save produced a
+  finished `S` move in one oracle process and
+  `solve_game: Assertion 'tt == ft' failed.` (SIGABRT) in another. The
+  record is reachable through the `.sgtp` `AUXINFO` field, which is
+  decoded from hex without a digit-class check, and the oracle loads
+  such a save.
 - **Why:** a crash is not acceptable in the app, and the error is
   deterministic and keeps the C message style. The assertion is a
   debug check, not a game rule: a description and an `AUXINFO` that C
   considers valid produce the same `SOLVE` string as C.
 - **Test:**
   `engine/src/commonTest/kotlin/.../NetTest.kt::a non-rotation AUXINFO is defined, not an abort`
-  pins the exact text, the null move, and the short-`AUXINFO` read. The
-  test does not run the C abort; a separate one-off oracle process
-  aborts with the assertion above.
+  pins the exact text, the null move, and the short-`AUXINFO` read.
+  `engine/src/commonTest/kotlin/.../NetTest.kt::a non-hex AUXINFO character is defined as zero`
+  pins the non-hex character paths through a loaded save. The parity
+  test
+  `NetSaveTest.kt::a non-hex AUXINFO byte is a defined solve refusal`
+  pins a reachable save that the oracle loads. The tests do not call
+  the oracle solve, because the C result is uninitialised memory; the
+  one-off oracle runs above are the evidence for the abort.
 - **Review:** the owner should review this entry before `net` is
   enabled in the app.
 - **Scope:** `net`

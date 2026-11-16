@@ -172,6 +172,36 @@ class NetTest {
     }
 
     @Test
+    fun `the completion flag stays set after the board breaks`() {
+        // The decoded AUXINFO of the frozen 5x5w save is a solution.
+        val desc = "1681ec17cb2157695c1c3c35e"
+        val solved = state("5x5w", desc)
+        // The same rotation on a board that never completed is not a
+        // win, so a port that recomputes the flag would differ here.
+        val neverWon = move(solved, "A2,2")!!
+        assertFalse(neverWon.completed)
+        assertEquals(0, Net.status(neverWon))
+
+        // A lock completes the solved board. Every later move keeps
+        // the flag: C only ever sets it (net.c:2532-2555) and copies
+        // it in `dup_game`, so a rotation that breaks the network and
+        // a lock that changes nothing both stay complete.
+        val won = move(solved, "L0,0")!!
+        assertTrue(won.completed)
+        assertEquals(1, Net.status(won))
+
+        val rotated = move(won, "A2,2")!!
+        assertTrue(rotated.completed)
+        assertEquals(1, Net.status(rotated))
+        assertEquals("COMPLETED! Active: 1/25", Net.statusText(rotated, Net.newUi(rotated)))
+
+        val locked = move(rotated, "L1,1")!!
+        assertTrue(locked.completed)
+        assertEquals(1, Net.status(locked))
+        assertEquals("COMPLETED! Active: 1/25", Net.statusText(locked, Net.newUi(locked)))
+    }
+
+    @Test
     fun `the completion event fires once, and not for a solve`() {
         val desc = AuxInfo.decode("4c93bc8fb2d66ef80fc3ea157428c5fd2bcf4226645e5ba945")
         val midend = Midend.fromSave(Net, SgtpSave.parse(saveText("5x5w", desc)))
@@ -338,6 +368,42 @@ class NetTest {
         assertNull(short.error)
         assertTrue(short.move!!.startsWith("S"))
         assertEquals(9, short.move.count { it == 'L' })
+    }
+
+    @Test
+    fun `a non-hex AUXINFO character is defined as zero`() {
+        // C reads `tiles[i]` only for a hex digit (net.c:1814-1822), so
+        // any other byte keeps the uninitialised `snew` value and the
+        // later `tt == ft` test compares a random low nibble (D-011).
+        // The port reads the character as zero.
+        val solvedAux = AuxInfo.decode("4c93bc8fb2d66ef80fc3ea157428c5fd2bcf4226645e5ba945")
+        val garbled = "z" + solvedAux.drop(1)
+        val s = state("5x5w", solvedAux)
+        val attempt = Net.solveAttempt(s, garbled)
+        assertNull(attempt.move)
+        assertEquals(
+            "The auxiliary answer is not a rotation of the description",
+            attempt.error,
+        )
+
+        // The reachable shape: a save whose AUXINFO decodes to a
+        // non-hex byte. A load keeps the record and refuses the solve.
+        val text = saveText("5x5w", solvedAux, aux = AuxInfo.encode(garbled))
+        val midend = Midend.fromSave(Net, SgtpSave.parse(text))
+        assertEquals(AuxInfo.encode(garbled), midend.serialise().value("AUXINFO"))
+        assertFalse(midend.solve())
+        assertEquals(1, midend.stateCount)
+
+        // On a blank description cell, zero is a rotation of zero, so
+        // the defined result is the `A` rotation and lock of that cell
+        // rather than an error.
+        val blank = state("3x3", "123406789")
+        val zeroed = Net.solveAttempt(blank, "1234z6789")
+        assertEquals(
+            "S;L0,0;L1,0;L2,0;L0,1;A1,1;L1,1;L2,1;L0,2;L1,2;L2,2",
+            zeroed.move,
+        )
+        assertNull(zeroed.error)
     }
 
     @Test
@@ -665,6 +731,7 @@ class NetTest {
         desc: String,
         moves: List<String> = emptyList(),
         seed: String = "12345",
+        aux: String? = null,
     ): String {
         val records = listOf(
             SaveRecord("SAVEFILE", SgtpSave.MAGIC),
@@ -674,6 +741,7 @@ class NetTest {
             SaveRecord("CPARAMS", params),
             SaveRecord("SEED", seed),
             SaveRecord("DESC", desc),
+        ) + listOfNotNull(aux?.let { SaveRecord("AUXINFO", it) }) + listOf(
             SaveRecord("NSTATES", (moves.size + 1).toString()),
             SaveRecord("STATEPOS", (moves.size + 1).toString()),
         ) + moves.map { SaveRecord("MOVE", it) }
