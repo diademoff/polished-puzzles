@@ -1571,7 +1571,12 @@ items:
   (`L`, `C`, `X`, `S`, `H`, signs, leading zeros, trailing junk, and
   junk text), the number and colour chaining, the `DSF` loop refusal,
   undo and redo, the solve, and both solver error strings
-  (`Puzzle is impossible.` and `Unable to solve puzzle.`).
+  (`Puzzle is impossible.` and `Unable to solve puzzle.`). One 2x2
+  board pins the `numsi` clear bound: the loop stops at `n-1`, so
+  `check_completion` reads a stale `numsi[n]` and links number `n-1` to
+  the removed cell again; the text after one more move is the C
+  comparison. The text form is compared at 99 cells on `11x9` and at
+  100 cells on `10x10`.
 - `SignpostSaveTest` is strict for the save text. It reads the seven
   corpus saves, rewrites them byte for byte, and reloads them in C
   with the same id, status, undo, redo, and text. A Kotlin save for
@@ -1587,13 +1592,16 @@ items:
   `blitter_new`. Cold traces run at tiles 48, 63, 82, and 100 and at
   the 411x702 letterboxes (tile 82, origin (0,146) for `4x4c`; tile
   51, origin (2,147) for `7x7c`). The warm path compares a press, a
-  mid-drag frame, a release, and a link frame. The blitter cache is
-  the guard: every warm frame erases the old sprite with
-  `blitter_load` and its update, a live drag adds `blitter_save` and
-  the indicator polygon, and the release frame has no save. A cut
-  preview with the pointer outside the grid, and a keyboard drag that
-  moves the ring and the sprite together, are compared too. No trace
-  has a flash or a status line.
+  mid-drag frame, the frame after a release, and a link frame. The
+  blitter cache is the guard: the warm frames pin `blitter_load` with
+  its update before a changed drag frame, a live drag adds
+  `blitter_save` and the indicator polygon, and the frame after a
+  release has no save. `traceWarm` records only the final redraw, so the
+  erase on the release frame itself is pinned Kotlin-only: the engine
+  test records that frame and asserts `blitter_load`, its update, and no
+  save. A cut preview with the pointer outside the grid, and a keyboard
+  drag that moves the ring and the sprite together, are compared too.
+  No trace has a flash or a status line.
 - `SignpostInputParityTest` is semantic and `ui`. It compares the
   layout at phone, tablet, landscape, small, and the four exact fits.
   Real press-drag-release links run at tiles 48, 63, 82, and 100 and
@@ -1613,10 +1621,15 @@ items:
 - `SignpostTest` is the engine test. It pins the parameters and six
   presets, the decode and encode quirks, the validation order, the
   goldens, the fill and strip retry counts, the description grammar,
-  the state fields, the move grammar, chaining, completion, the text
-  form, `currentKeyLabel`, `changedState` including the null guard,
-  `requestKeys`, `cursorLocation`, the palette, `computeSize`, and
-  the drawstate blitter.
+  the state fields, the stale `numsi[n]` read, the move grammar,
+  chaining, completion, the text form including the 99-cell and
+  100-cell boundary, `currentKeyLabel`, `changedState` including the
+  null guard, `requestKeys`, `cursorLocation`, the palette,
+  `computeSize`, the drawstate blitter, the release-frame erase, and
+  the current-then-initial solve order. The solve order has no
+  two-success fixture, because a board that the solver completes has
+  one forced solution; the test attaches a different solved board as
+  the fallback and checks that it is never used.
 - The two-state solve is measured C behavior. `solve_game` tries the
   current state first and the decoded initial state second. The seam
   gives `Game.solve` only the current state, so `State` carries the

@@ -1139,10 +1139,16 @@ Notes:
 
   `SignpostGameTest` compares the move grammar through a save replay,
   the `L`, `C`, `X`, `S`, and `H` forms, the number and colour chaining,
-  undo, redo, completion, and both solver errors. The seam gives the
+  undo, redo, completion, and both solver errors. A 2x2 board pins the
+  `numsi` clear bound: the loop stops at `n-1`, the completion check
+  reads a stale `numsi[n]`, and the removed cell is linked and numbered
+  again; the text after one more move matches C. The seam gives the
   game only the current state, so `State` carries the initial board and
   `solveAttempt` tries the current state and then the initial one, as
-  C does; a link that breaks the current board pins the fallback.
+  C does; a link that breaks the current board pins the fallback. A
+  board that the solver completes has one forced solution, so two
+  successful but different payloads cannot occur; the order is pinned
+  Kotlin-only with a different solved board as the fallback.
 
   `SignpostInputParityTest` sends real press-drag-release links at
   tiles 48, 63, 82, and 100 and the letterboxed 7x7c view at origin
@@ -1155,9 +1161,12 @@ Notes:
   `SignpostTraceTest` compares the six frozen traces, cold traces at
   tiles 48, 63, 82, and 100, the two 411x702 letterboxes, and the warm
   path. One `T x T` blitter is allocated in the drawstate, before the
-  first `start_draw`; the warm trace pins the `blitter_load` and its
-  update, the mid-drag `blitter_save`, and the release frame with no
-  save. No frame has a flash or a status line.
+  first `start_draw`. The warm trace pins the `blitter_load` and its
+  update, the mid-drag `blitter_save`, and the frame after a release
+  with no save. `traceWarm` records only the final redraw, so the erase
+  on the release frame is not in a compared trace; the engine test
+  records that frame itself and asserts the erase. No frame has a flash
+  or a status line.
 
   The text form keeps the C `state->h` column bound. For `w > h` the
   last columns are dropped and that is reproduced. For `w < h` C reads

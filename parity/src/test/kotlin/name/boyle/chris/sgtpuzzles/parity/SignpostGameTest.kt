@@ -201,6 +201,41 @@ class SignpostGameTest {
     }
 
     @Test
+    fun `the numsi n clear bound matches C`() = OracleClient().use { oracle ->
+        // The only immutable number is 3. The link numbers the second cell
+        // 4, the cut removes it, and the clear loop stops at n-1, so
+        // numsi[4] stays stale. check_completion reads it and links 3 to
+        // the stale cell again.
+        val desc = "3ceaa"
+        val cut = saveText(
+            params = "2x2",
+            cparams = "2x2",
+            desc = desc,
+            moves = listOf("L0,0-1,0", "C1,0"),
+        )
+        val cutState = Midend.fromSave(Signpost, SgtpSave.parse(cut)).state as Signpost.State
+        assertEquals(1, cutState.numsi[4])
+        assertEquals(1, cutState.next[0])
+        assertEquals(0, cutState.prev[1])
+        assertEquals(0, cutState.nums[1])
+        assertTrue("the reused cell is marked", cutState.isError(1, 0))
+
+        // One more move renumbers the stale cell. The text is the exact C
+        // comparison: a clear that also covered n would leave it blank.
+        val moved = saveText(
+            params = "2x2",
+            cparams = "2x2",
+            desc = desc,
+            moves = listOf("L0,0-1,0", "C1,0", "L0,1-0,0"),
+        )
+        val midend = Midend.fromSave(Signpost, SgtpSave.parse(moved))
+        assertEquals(oracle.text(moved), midend.textFormat())
+        val movedState = midend.state as Signpost.State
+        assertEquals(4, movedState.nums[1])
+        assertEquals(1, movedState.numsi[4])
+    }
+
+    @Test
     fun `undo and redo match the oracle`() = OracleClient().use { oracle ->
         val save = saveText(moves = listOf("L0,0-1,1"))
         val midend = Midend.fromSave(Signpost, SgtpSave.parse(save))
@@ -315,6 +350,23 @@ class SignpostGameTest {
         val text = tall.textFormat()
         assertEquals(5, text.split("\n\n").size - 1)
         assertEquals(20, text.lines().first().length)
+
+        // 99 cells is the last size that formats. `11x9` keeps the C `h`
+        // column bound deterministic, so the oracle is asked.
+        val desc99 = "a".repeat(99)
+        val almost = saveText(params = "11x9", cparams = "11x9", desc = desc99)
+        val almostText = Midend.fromSave(Signpost, SgtpSave.parse(almost)).textFormat()
+        assertTrue("99 cells still format", almostText.isNotEmpty())
+        assertEquals(oracle.text(almost), almostText)
+        // `9x11` is taller than wide: C reads past its arrays there, so the
+        // oracle is not asked and the engine test pins the definition.
+        val tall99 = Midend.fromSave(
+            Signpost,
+            SgtpSave.parse(saveText(params = "9x11", cparams = "9x11", desc = desc99)),
+        )
+        val tallState = tall99.state as Signpost.State
+        assertEquals(99, tallState.n)
+        assertEquals(11, tall99.textFormat().split("\n\n").size - 1)
 
         // At 100 cells, `can_format_as_text_now` is false and the seam
         // has no hook, so the method returns the empty string. The

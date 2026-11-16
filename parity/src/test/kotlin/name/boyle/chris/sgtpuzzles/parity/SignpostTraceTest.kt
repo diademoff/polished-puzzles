@@ -17,9 +17,11 @@ import java.io.File
  * the frozen traces, including the 78-colour palette and the op counts
  * of `signpost.c`. Sized cold traces run at tiles 48, 63, 82, and 100
  * and in a letterboxed 411x702 viewport. The warm path covers a press,
- * a drag, a release, a valid-move frame, a preview cut, and a keyboard
- * drag: the blitter erase and save, the dim flags, and the changed tiles
- * are the cache-exactness guards. No frame has a flash or a status line.
+ * a drag, a release, and a keyboard drag: the blitter erase and save, the
+ * dim flags, and the changed tiles are the cache-exactness guards.
+ * `traceWarm` records only the final redraw, so the erase on the release
+ * frame is not in a compared trace; the engine test records that frame
+ * itself. No frame has a flash or a status line.
  */
 class SignpostTraceTest {
 

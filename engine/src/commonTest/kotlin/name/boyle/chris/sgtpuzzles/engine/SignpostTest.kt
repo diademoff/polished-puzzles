@@ -282,6 +282,33 @@ class SignpostTest {
     }
 
     @Test
+    fun `update_numbers keeps a stale numsi n for the completion check`() {
+        // A 2x2 board whose only immutable number is 3. The first link
+        // numbers the second cell 4 through the chain walk, so numsi[4]
+        // points at it. The cut removes the cell, but the clear loop stops
+        // at n-1, so numsi[4] stays stale. check_completion reads it and
+        // links 3 to the stale cell again.
+        val loaded = state("2x2", "3ceaa")
+        val linked = Signpost.executeMove(loaded, "L0,0-1,0") as Signpost.State
+        assertEquals(1, linked.numsi[4])
+        assertEquals(4, linked.nums[1])
+
+        val cut = Signpost.executeMove(linked, "C1,0") as Signpost.State
+        assertEquals(1, cut.numsi[4])
+        assertEquals(1, cut.next[0])
+        assertEquals(0, cut.prev[1])
+        assertEquals(0, cut.nums[1])
+        assertEquals(Signpost.FLAG_ERROR, cut.flags[1] and Signpost.FLAG_ERROR)
+
+        // A later move renumbers the stale cell. If the clear covered n,
+        // check_completion would see numsi[4] as missing and the cell
+        // would stay isolated with no number.
+        val moved = Signpost.executeMove(cut, "L0,1-0,0") as Signpost.State
+        assertEquals(4, moved.nums[1])
+        assertEquals(1, moved.numsi[4])
+    }
+
+    @Test
     fun `the state fields match the decoded description`() {
         val s = state()
         assertEquals(4, s.w)
@@ -557,6 +584,39 @@ class SignpostTest {
         assertNull(Signpost.solveAttempt(state("2x2", "aaaa"), null).move)
     }
 
+    @Test
+    fun `the solve tries the current state before the fallback`() {
+        // A real game cannot have two successful but different payloads.
+        // A board that the solver completes has one forced solution, so a
+        // later state either shares that solution or fails. The order is
+        // therefore pinned with a different solved board attached as the
+        // fallback: it must never be used while the current state solves.
+        val currentBoard = state("3x1", "1c2c3g")
+        val otherBoard = state("3x1", "1c2c3c")
+        val currentPayload = Signpost.solveAttempt(currentBoard, null).move
+        val otherPayload = Signpost.solveAttempt(otherBoard, null).move
+        assertEquals("S1c2c3g", currentPayload)
+        assertEquals("S1c2c3c", otherPayload)
+        assertNotEquals(currentPayload, otherPayload)
+
+        val withFallback = Signpost.State(
+            currentBoard.w,
+            currentBoard.h,
+            currentBoard.dirs,
+            currentBoard.nums,
+            currentBoard.flags,
+            currentBoard.next,
+            currentBoard.prev,
+            currentBoard.dsf,
+            currentBoard.numsi,
+            currentBoard.completed,
+            currentBoard.usedSolve,
+            currentBoard.impossible,
+            otherBoard,
+        )
+        assertEquals(currentPayload, Signpost.solveAttempt(withFallback, null).move)
+    }
+
     /** A tiny wrapper so the two error strings are compared verbatim. */
     private data class SolveAttemptString(val value: String?)
 
@@ -591,6 +651,16 @@ class SignpostTest {
         // An in-array wrap keeps the C read: row y, column 4 is the first
         // cell of row y+1.
         assertEquals(lines[3].substring(0, 2), lines[0].substring(16, 18))
+
+        // 99 cells is the last size that formats. `9x11` is taller than
+        // wide, so it is the Kotlin-only defined out-of-range read;
+        // `11x9` is deterministic in C and is compared in
+        // `SignpostGameTest`.
+        val ninetyNine = state("9x11", "a".repeat(99))
+        assertEquals(99, ninetyNine.n)
+        assertNotEquals("", Signpost.textFormat(ninetyNine))
+        assertEquals(11, Signpost.textFormat(ninetyNine).split("\n\n").size - 1)
+        assertEquals(44, Signpost.textFormat(ninetyNine).lines().first().length)
 
         // 100 cells: `can_format_as_text_now` is false; the seam returns
         // the empty string, as the oracle prints NULL.
@@ -643,8 +713,6 @@ class SignpostTest {
         u.cy = 1
         assertEquals("Cancel", Signpost.currentKeyLabel(u, s, Buttons.CURSOR_SELECT))
         assertEquals("Cancel", Signpost.currentKeyLabel(u, s, Buttons.CURSOR_SELECT2))
-
-        assertTrue(Signpost.currentKeyLabel(u, s, Buttons.CURSOR_SELECT).isEmpty() == false)
     }
 
     @Test
@@ -794,6 +862,40 @@ class SignpostTest {
         assertFalse(sink.ops.contains("update:0:0:240:240"))
         assertTrue(sink.ops.contains("update:24:24:48:48"))
         assertTrue(sink.ops.size < 60)
+    }
+
+    /**
+     * The release frame itself is not in any compared `traceWarm`: the
+     * oracle helper records only the final redraw, and the release frame
+     * is one of the frames it draws while recording is off. This sink
+     * records that frame, so the sprite erase cannot be dropped.
+     */
+    @Test
+    fun `the release frame erases the drag sprite`() {
+        val midend = Midend.newGame(Signpost, "4x4c", SEED)
+        val sink = OpSink()
+        midend.recordNewGameTrace(sink)
+
+        // A press on cell (0,0) and a drag to (1,1) leave a sprite at the
+        // press point, which is the top-left corner for tile 48.
+        sink.ops.clear()
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(24, 24, Buttons.LEFT_BUTTON, TILE))
+        midend.recordRedraw(sink)
+        assertTrue(sink.ops.contains("blitter_save:1:0:0"))
+
+        // The release makes the move and clears `ui->dragging`, so the
+        // next frame erases the old sprite and saves no new one.
+        sink.ops.clear()
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(72, 72, Buttons.LEFT_RELEASE, TILE))
+        midend.recordRedraw(sink)
+        assertEquals("start_draw", sink.ops[0])
+        assertEquals("blitter_load:1:0:0", sink.ops[1])
+        assertEquals("update:0:0:48:48", sink.ops[2])
+        assertFalse(sink.ops.any { it.startsWith("blitter_save") })
+        assertFalse(sink.ops.contains("rect:0:0:240:240:0"))
+        assertFalse(sink.ops.contains("update:0:0:240:240"))
+        assertEquals("end_draw", sink.ops.last())
+        assertEquals(listOf("L0,0-1,1"), midend.serialise().values("MOVE"))
     }
 
     private class OpSink : DrawSink {

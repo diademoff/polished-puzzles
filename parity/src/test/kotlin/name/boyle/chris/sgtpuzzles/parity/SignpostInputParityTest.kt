@@ -437,7 +437,11 @@ class SignpostInputParityTest {
                 expected.state,
                 midend.serialise().serialise(),
             )
-            assertEquals("'$sequence' count", expected.state, midend.serialise().serialise())
+            assertEquals(
+                "'$sequence' count",
+                requireNotNull(SgtpSave.parse(expected.state).value("NSTATES")).toInt(),
+                midend.stateCount,
+            )
             assertTrue("'$sequence' has an outcome", outcomes.isNotEmpty())
             assertEquals("'$sequence' status", expected.status, midend.status())
 

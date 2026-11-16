@@ -133,7 +133,7 @@ class SignpostDescTest {
         }
     }
 
-    @Test
+    @Test(timeout = 180_000)
     fun `a numeric sweep pins the generator stream`() = OracleClient().use { oracle ->
         for ((params, seeds) in listOf(
             "4x4" to 0..60,
@@ -153,7 +153,7 @@ class SignpostDescTest {
 
     @Test
     fun `the retry fixtures are pinned`() = OracleClient().use { oracle ->
-        // `4x4` seed 3 needs two fills: the first fill fails, the second
+        // `4x4` seed 3 needs three fills: the first two fail and the third
         // succeeds on the same stream. Hoisting the free-ends pair out of
         // the fill loop changes this id.
         val generation = Signpost.newDescWithAttempts(
