@@ -7,6 +7,7 @@ import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Tracks
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -214,14 +215,22 @@ class TracksGameTest {
             assertTrue(completed.sflags.none { it and 4 != 0 })
 
             val id = Midend.fromGameId(Tracks, "8x8:$desc")
-            val save = withMove(id.serialise().serialise(), "")
+            val openSave = id.serialise().serialise()
+            val open = oracle.id(openSave)
+            assertEquals("C status before the empty move", 0, open.status)
+            assertEquals(
+                "C text before the empty move",
+                oracle.text(openSave),
+                Tracks.textFormat(initial),
+            )
+            val save = withMove(openSave, "")
             val loaded = oracle.id(save)
             assertEquals("C status", 1, loaded.status)
             assertEquals("C text", oracle.text(save), Tracks.textFormat(completed))
-            assertEquals(
-                "the C state survives the empty move",
-                Tracks.textFormat(initial),
-                Tracks.textFormat(completed),
+            assertNotEquals(
+                "the empty move sets the completion flag",
+                open.status,
+                loaded.status,
             )
         }
 

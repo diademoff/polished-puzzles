@@ -206,10 +206,11 @@ class TracksTraceTest {
             val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
             val save = oracle.newGame("tracks", "8x8dt", SEED).state
             val tileSize = Midend.newGame(Tracks, "8x8dt", SEED).tileSize
-            // The cursor starts hidden at (1,1). Two right presses move
-            // it to (3,1), a cell centre; one down press reaches (3,2),
-            // a horizontal edge. A left press from there is (2,2), a
-            // corner, which the keys skip.
+            // The cursor starts hidden at (1,1). The first right press
+            // only shows it; the second moves it to (2,1), a vertical
+            // edge. One down press skips the corner (2,2) and reaches
+            // (2,3), another vertical edge. A left press from there is
+            // (1,3), a cell centre.
             val sequences = listOf(
                 emptyList(),
                 listOf(Buttons.CURSOR_RIGHT),

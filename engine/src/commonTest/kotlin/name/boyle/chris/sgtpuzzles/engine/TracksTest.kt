@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
  *
  * The port of `tracks.c`, driven directly and through [Midend]. The
  * descriptions, the retry counters, the move grammar, the solver
- * attempts, the text form, the palette, and the two C undefined-behavior
+ * attempts, the text form, the palette, and the three C undefined-behavior
  * definitions are pinned here.
  */
 class TracksTest {
@@ -507,6 +507,33 @@ class TracksTest {
     }
 
     @Test(timeout = 120_000)
+    fun `an off-grid drag after an off-grid press is an empty move`() {
+        val midend = Midend.newGame(Tracks, "8x8dt", SEED)
+        val ui = midend.ui as Tracks.Ui
+        // The press is in the left border strip at tile 63, so both drag
+        // ends stay at -1.
+        assertEquals(
+            KeyOutcome.Unused,
+            midend.processKey(1, centeredCoord(2, 63), Buttons.LEFT_BUTTON, 63),
+        )
+        assertEquals(-1, ui.dragSx)
+        assertEquals(-1, ui.dragSy)
+        // A horizontal drag in the off-grid top row keeps `dragging` true
+        // with distinct ends. C reads `sflags[-1*w+x]` there, which is
+        // undefined; the port skips the off-grid cells and returns the
+        // empty move that C observes.
+        midend.processKey(centeredCoord(5, 63), 1, Buttons.LEFT_DRAG, 63)
+        assertTrue(ui.dragging, "the drag is live")
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(centeredCoord(5, 63), 1, Buttons.LEFT_RELEASE, 63),
+        )
+        assertEquals(2, midend.stateCount, "one empty move")
+        assertEquals(listOf(""), midend.serialise().values("MOVE"))
+        assertEquals(0, Tracks.status(midend.state))
+    }
+
+    @Test(timeout = 120_000)
     fun `an outer track edge reaches the solver safely`() {
         val midend = Midend.newGame(Tracks, "8x8dt", SEED)
         val state = Tracks.executeMove(midend.state, "S;TU0,0") as Tracks.State
@@ -537,6 +564,14 @@ class TracksTest {
         assertTrue(after.usedSolve)
         assertFalse(Tracks.changedState(midend.ui, midend.state, after))
         assertEquals(1, Tracks.status(after))
+    }
+
+    /** `CENTERED_COORD(k)` at the given tile size. */
+    private fun centeredCoord(k: Int, tileSize: Int): Int {
+        val tile = (tileSize / 6) * 6
+        val maxBorder = tile / 8
+        val border = if (maxBorder <= 5) minOf(tileSize % 6, maxBorder) else maxBorder
+        return (k + 1) * tile + border + tile / 2
     }
 
     private fun fullPathDesc(

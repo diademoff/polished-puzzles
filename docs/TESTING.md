@@ -2572,7 +2572,8 @@ aggressive 100x100 latency is an enablement debt:
 - `TracksGameTest` is semantic. It compares the solve payloads and the
   fallback to the captured initial board, the loose move grammar,
   completion and error marking, the text form for every preset and a
-  moved state, undo and redo, and the completion event. The text form
+  moved state, undo and redo, the completion event, and `requestKeys`
+  (arrow mode 3 without the full-cursor hint, 1 with it). The text form
   ends with the C newline after the final `B` line, and the tests pin
   that byte. D-012 is pinned here: the save with
   `MOVE    :7:S;TU0,0` aborts the C solver, while Kotlin returns
@@ -2600,20 +2601,23 @@ aggressive 100x100 latency is an enablement debt:
   63, 82, and 100, the 411x702 letterbox with origin (21,167), right and
   middle clicks and drags, and a click on an error-marked board. State,
   id, status, and the final frame with `pointsSized` are compared for
-  every real gesture, including a multi-item drag move. Every real track
-  change alters the board and adds one move; an inert letterbox, border,
-  clue, diagonal, off-grid press/release, or modified-arrow event
-  changes neither, each with a positive control. The keyboard test
-  covers the corner skip, the clamp, a clue centre, both selects, and
-  `requestKeys` (arrow mode 3 without the full-cursor hint, 1 with it).
+  every real gesture that records a trace, including a multi-item drag
+  move; the four edge-band clicks compare the move, the id, and the
+  history size only. Every real track change alters the board and adds
+  one move; an inert letterbox, border, clue, diagonal, off-grid
+  press/release, or modified-arrow event changes neither, each with a
+  positive control. An off-grid drag after an off-grid press adds one
+  empty move, as in C. The keyboard test covers the corner skip, the
+  clamp, a clue centre, and both selects.
 - `TracksTest` is the engine test. It pins the RNG state after
   generation, both retry paths, the shared clue block, the description
   grammar, the move grammar and flip strings, the solver attempts, the
   exact text form, the palette, the float geometry, the cursor, the key
-  labels, and the two C undefined-behavior definitions: the off-grid
-  press leaves the click origin at 0, and `atoi` and the move `%d` scan
-  saturate. C `check_completion` indices are unreachable from a
-  validated description. D-012 is the one deviation for this game.
+  labels, and the three C undefined-behavior definitions: the off-grid
+  press leaves the click origin at 0, an off-grid drag skips the
+  off-grid cells and returns one empty move, and `atoi` and the move
+  `%d` scan saturate. C `check_completion` indices are unreachable from
+  a validated description. D-012 is the one deviation for this game.
   Enablement debt: S8 is the four-field configuration schema (Width,
   Height, `:Easy:Tricky:Hard`, `Disallow consecutive 1 clues`), the
   status-text gate, the solve message, generation off the UI thread, an

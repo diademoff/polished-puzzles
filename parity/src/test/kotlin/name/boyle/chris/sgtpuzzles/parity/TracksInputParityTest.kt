@@ -214,6 +214,39 @@ class TracksInputParityTest {
         assertEquals("no move after the inert release", 1, midend.stateCount)
     }
 
+    @Test(timeout = 120_000)
+    fun `a drag that starts off grid is an empty move`() = OracleClient().use { oracle ->
+        val save = oracle.newGame("tracks", "8x8dt", SEED).state
+        val geom = geometry(63)
+        // The press is in the left border strip, so both drag ends stay
+        // at -1. The drag then runs along the off-grid top row, and the
+        // release sees distinct ends. C reads `sflags[-1*w+x]` there,
+        // which is undefined; the port skips the off-grid cells. The
+        // observable result is the empty move below.
+        val points = listOf(
+            OracleClient.Point(1, geom.cy(2), Buttons.LEFT_BUTTON),
+            OracleClient.Point(geom.cx(5), 1, Buttons.LEFT_DRAG),
+            OracleClient.Point(geom.cx(5), 1, Buttons.LEFT_RELEASE),
+        )
+        val expected = oracle.pointsSized(
+            save,
+            points,
+            width = geom.size,
+            height = geom.size,
+        )
+        val midend = Midend.fromSave(Tracks, SgtpSave.parse(save))
+        apply(midend, points, geom.tileSize)
+        assertEquals("off-grid drag id", expected.state.id, midend.id())
+        assertEquals(
+            "off-grid drag save",
+            expected.state.state,
+            midend.serialise().serialise(),
+        )
+        assertEquals("off-grid drag status", expected.state.status, midend.status())
+        assertEquals("one empty move", 2, midend.stateCount)
+        assertEquals("the move is empty", "", moveOf(midend))
+    }
+
     @Test(timeout = 300_000)
     fun `real drags match the oracle at every tile size`() = OracleClient().use { oracle ->
         val save = oracle.newGame("tracks", "8x8dt", SEED).state
