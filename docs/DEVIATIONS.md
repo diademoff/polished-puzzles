@@ -747,6 +747,53 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-019: Pearl defines two upstream buffer overruns
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** two C writes go past an allocation:
+  - the drag path. `ui->dragcoords` holds `sz` ints
+    (`pearl.c:1939`), and `update_ui_drag` writes
+    `dragcoords[ndragcoords]` in the loop-drag branch
+    (`pearl.c:2129`). A drag that visits every cell reaches
+    `ndragcoords == sz`. The port allocates `sz + 1` entries. The
+    extra entry holds the start cell during the degree check. The
+    release emits the `ndragcoords - 1` ordinary path edges, so a
+    serpentine drag over a `5x5` board commits a 24-edge path and adds
+    one state; the extra entry is not part of the move text.
+  - the clue-removal buffer. `cluespace` holds `w*h` ints
+    (`pearl.c:1351-1357`), and the second scan fills the corner list
+    with the straight positions too (`pearl.c:1359-1361`). A board with
+    more than `w*h/2` straight clues writes past the allocation. The
+    port allocates `2*w*h` ints and checks the write. An all-straight
+    `5x5` clue array needs 50 entries; the C capacity is 25.
+- **Why:** an out-of-bounds write is undefined behavior and can corrupt
+  the heap. The guards depend only on the board and the drag path, so
+  the same input always gives the same result. No generated board
+  reaches the clue-list overflow: a maximal clue array has at most one
+  straight clue per cell, and the measured presets stay far below half.
+  The drag overflow needs a path that visits every cell and returns to
+  the start; the result is deterministic and pinned by the engine test.
+- **Cost note:** `validate_params` accepts any area up to
+  `INT_MAX / h` (`pearl.c:290`). Generation is the C algorithm and has
+  the C cost: `13x13de` takes 1.4 to 14.6 seconds at the measured
+  seeds, and `14x14` and larger do not finish in 25 seconds. The Kotlin
+  generator has the same bound and the same cost. The app must run
+  generation off the UI thread; a size limit is an owner decision, not
+  a port decision, so this entry adds none.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../PearlTest.kt::a drag that visits every cell keeps the extra entry and stays defined`
+  pins the extra entry, the 24-edge committed path, and the state
+  count. `...::the clue removal list repeats the straights and the
+  buffer covers it` pins the doubled capacity, the `w*h/2` overflow
+  boundary, and the repeated straight list. The oracle is not asked
+  about either path, because the unmodified C build overflows its heap.
+- **Review:** the owner should review this entry before `pearl` is
+  enabled in the app.
+- **Scope:** `pearl`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

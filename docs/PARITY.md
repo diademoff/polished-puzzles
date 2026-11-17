@@ -174,7 +174,7 @@ C wins.
 | `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid` | parity: `engine/Grid.kt`, `engine/Penrose.kt`, `engine/Hat.kt`, `engine/Spectre.kt`, strict differential tests | C behavior |
-| `loopgen` | C until the first game consumer (ADR 0006) | C |
+| `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest`; `pearl` is the first consumer | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
 | games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, and `singles` are `dual-run`, the other games are `C` | the game inventory below |
@@ -216,7 +216,7 @@ submenu entries when a game groups its presets.
 | `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
 | `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `dual-run` |
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `dual-run` |
-| `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `C` |
+| `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `dual-run` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
@@ -1829,6 +1829,37 @@ Notes:
   tested helper because the Android shell has no call site (S9).
   `SINGLES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(SINGLES)` is false.
+
+- `pearl` is `dual-run`. Its parameters and eight presets, the decode
+  quirks and validation order, the `DESC` grammar, the loopgen bias,
+  the solver-gated generation with the upstream clue-removal bugs, the
+  state, the loose move grammar and drag model, the deduction solver,
+  the hint, the text form, the palette, drawing, layout, input,
+  `currentKeyLabel`, and `requestKeys` pass the matrix in
+  `PearlDescTest`, `PearlGameTest`, `PearlSaveTest`, `PearlTraceTest`,
+  `PearlInputParityTest`, and the engine `PearlTest` and
+  `PearlBiasTest`. The bias is pinned by comparing its incremental
+  context with a from-scratch recomputation on every call of a real
+  generation, because the oracle has no pearl bias operation.
+
+  The generator is the C order: `generate_loop` on a square grid of
+  `w-1` by `h-1` faces, the maximal clue array, the two solver gates,
+  and the clue-removal list. That list is filled with the straight
+  positions twice and read from `straights` for both counters; the
+  second shuffle still consumes its RNG draws. The port reproduces both
+  bugs because they decide every description. Two upstream
+  out-of-bounds writes are defined and pinned: the drag path gets one
+  extra entry, and the clue-removal buffer is `2*w*h` (D-019). The
+  oracle is not asked about either path.
+
+  `pearl` is not in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  the app stays on C and `handles(PEARL)` is false. The `appearance`
+  preference is a `Ui` field read by the UI-aware `computeSize` and by
+  drawing; it is not serialized and not in the drawstate. Generation
+  keeps the C cost and the C parameter bound: a `13x13` board takes
+  seconds and `14x14` or larger does not finish in the measured
+  budget, so the app must generate off the UI thread. A size limit is
+  an owner decision (D-019).
 
 ## 8. Goldens
 
