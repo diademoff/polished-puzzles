@@ -327,6 +327,22 @@ class KotlinGameEngine private constructor(
             )
         }
 
+        override fun thickPoly(
+            points: IntArray,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {
+            viewCallbacks.drawPoly(
+                thickness,
+                points,
+                geometry.originX,
+                geometry.originY,
+                outlineColour,
+                fillColour,
+            )
+        }
+
         override fun text(
             x: Int,
             y: Int,

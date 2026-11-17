@@ -682,3 +682,49 @@ operation, not the game.
 rounding, and the position inside the draw pair, and
 `KotlinGameEngineThickCircleTest` pins the origin offset and the
 callback argument order.
+
+## Amendment: the thick polygon primitive
+
+- **Date:** 2026-11-17
+
+`solo` draws a polygon with `draw_thick_polygon` (`solo.c:5622` and
+`5624`). The oracle already records the primitive,
+`TraceNormalizer` already accepts `thick_poly`, and the Android
+`drawing_api` already has the callback. This change adds the seam
+operation, not the game.
+
+1. **`DrawSink.thickPoly(points, thickness, fillColour,
+   outlineColour)`** keeps the point list and the two colours of
+   `DrawSink.poly`, so a game that has both primitives reads them the
+   same way. The points are the flat `x0, y0, x1, y1, ...` array. The
+   thickness follows the points in the seam; upstream
+   `draw_thick_polygon(thickness, coords, npoints, fill, outline)` and
+   the Android callback take it first, so each sink places it there.
+
+2. **The trace sink copies `tr_draw_thick_polygon`**
+   (`oracle.c:497-511`) field for field:
+   `{"op":"thick_poly","t":round(thickness*1000),"pts":[..],"fill":..,
+   "outline":..}`. The thickness is in thousandths, as `tc_milli`
+   produces, and it rounds to the nearest thousandth as `lroundf` does.
+   Upstream passes integer coordinates, so the seam points are integers
+   and their trace fields are exact. The field order and the names are
+   the oracle's, which differ from `poly`: `pts` comes before the two
+   colours. `TraceNormalizer` maps them to
+   `thick_poly t fill outline npoints coords`.
+
+3. **The engine forwards the primitive unchanged.** It calls
+   `viewCallbacks.drawPoly(thickness, points, originX, originY,
+   outlineColour, fillColour)`, which is the call that
+   `android.c:198-207` makes through JNI. The origin reaches the
+   callback as a separate argument, as C passes `fe->ox` and `fe->oy`,
+   and the outline precedes the fill. The thickness and the points are
+   not scaled by the origin or by the zoom.
+
+4. **No ported game calls it.** Every frozen trace stays byte for byte
+   the same, and the parity suite pins that. The `solo` port remains a
+   separate change with its own parity matrix.
+
+`ThickPolyTraceTest` pins the field order, the thousandths, the
+rounding, the normalizer line, and the position inside the draw pair,
+and `KotlinGameEngineThickPolyTest` pins the origin and the callback
+argument order.

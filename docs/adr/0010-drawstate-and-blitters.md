@@ -232,3 +232,15 @@ takes float coordinates. It remains a drawing operation, not a
 drawstate or blitter operation, so the lifecycle rules in the decision
 above are unchanged. The rounding rule and the callers are in
 `docs/adr/0007-kotlin-game-seam.md`.
+
+## Amendment: the thick polygon primitive
+
+- **Date:** 2026-11-17
+
+`DrawSink.thickPoly(...)` is a drawing primitive, not a drawstate or
+blitter operation. It neither reads nor changes the drawstate, allocates
+no blitter, and does not affect the first-draw clear. A game may call it
+inside any draw between `start_draw` and `end_draw`, and the cache rules
+in the decision above apply unchanged. The seam definition, the trace
+format, and the callback order are in
+`docs/adr/0007-kotlin-game-seam.md`.

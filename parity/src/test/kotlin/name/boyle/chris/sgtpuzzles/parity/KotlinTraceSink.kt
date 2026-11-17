@@ -148,6 +148,28 @@ class KotlinTraceSink : DrawSink {
         )
     }
 
+    /**
+     * `tr_draw_thick_polygon` (`oracle.c:497-511`) records `t` first with
+     * the thickness in thousandths, then the points, then the two
+     * colours. The oracle converts the thickness with `tc_milli`, which
+     * is `lroundf(value * 1000)`. The seam points are integers in game
+     * coordinates, so the oracle writes them unchanged.
+     */
+    override fun thickPoly(
+        points: IntArray,
+        thickness: Float,
+        fillColour: Int,
+        outlineColour: Int,
+    ) {
+        record(
+            "op" to JsonValue.Str("thick_poly"),
+            "t" to num(milli(thickness)),
+            "pts" to JsonValue.Arr(points.map { num(it) }),
+            "fill" to num(fillColour),
+            "outline" to num(outlineColour),
+        )
+    }
+
     override fun text(
         x: Int,
         y: Int,

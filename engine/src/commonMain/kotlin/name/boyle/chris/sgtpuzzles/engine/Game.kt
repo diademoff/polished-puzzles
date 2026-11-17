@@ -490,6 +490,24 @@ interface DrawSink {
     )
 
     fun poly(points: IntArray, fillColour: Int, outlineColour: Int)
+
+    /**
+     * `draw_thick_polygon`: a polygon with a [thickness] pixel outline.
+     * The points are the flat `x0, y0, x1, y1, ...` list of [poly], and
+     * the two colours keep the order of [poly]. Upstream
+     * `draw_thick_polygon(thickness, coords, npoints, fill, outline)`
+     * takes the thickness first and the two colours last, so the sink
+     * places them there. The trace stores the thickness in thousandths
+     * and rounds it with the oracle's `tc_milli` rule; the integer
+     * coordinates are stored as they are.
+     */
+    fun thickPoly(
+        points: IntArray,
+        thickness: Float,
+        fillColour: Int,
+        outlineColour: Int,
+    )
+
     fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String)
     fun clip(x: Int, y: Int, width: Int, height: Int)
     fun unclip()

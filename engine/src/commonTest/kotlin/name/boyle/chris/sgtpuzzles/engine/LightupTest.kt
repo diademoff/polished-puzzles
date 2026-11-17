@@ -499,6 +499,12 @@ class LightupTest {
             fillColour: Int,
             outlineColour: Int,
         ) {}
+        override fun thickPoly(
+            points: IntArray,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {}
 
         override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {
             ops += "poly $fillColour $outlineColour 4 " + points.joinToString(" ")

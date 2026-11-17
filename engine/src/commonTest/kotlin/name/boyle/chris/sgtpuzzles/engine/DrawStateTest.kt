@@ -341,6 +341,12 @@ class DrawStateTest {
             fillColour: Int,
             outlineColour: Int,
         ) {}
+        override fun thickPoly(
+            points: IntArray,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {}
         override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {}
         override fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String) {}
         override fun clip(x: Int, y: Int, width: Int, height: Int) {}
