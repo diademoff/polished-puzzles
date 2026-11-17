@@ -882,9 +882,10 @@ class Midend private constructor(
          * uses as the starting point for a descriptive id
          * (`midend.c:1878-1881`) and for a bare description. The app
          * passes its current parameters; a caller without a midend can
-         * keep the default. A parameter string in [text] is decoded from
-         * scratch, as [fromGameId] does, because the seam's decoders
-         * start from the defaults.
+         * keep the default. A parameter string in [text] is decoded over
+         * [baseParams] for a descriptive id, so a field that the text
+         * omits keeps the base value, and from the defaults for a
+         * parameter-only id (`midend.c:1890-1907`).
          */
         fun validateGameId(
             game: Game,

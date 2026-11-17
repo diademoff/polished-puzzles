@@ -68,11 +68,12 @@ class GameIdTest {
      * would validate the wrong grid and reject a triangular
      * description.
      *
-     * Loopy is the case where the base changes validation. The decoders
-     * of `solo`, `keen`, `lightup`, `unequal`, and `map` write every
-     * field their `validate_desc` reads, so a base cannot change their
-     * answer; a game that keeps a base field outside the short encoding
-     * reads it after `encode_params`, not in `validate_desc`.
+     * Loopy and cube are the cases where the base changes validation.
+     * Loopy keeps the grid type; cube keeps the solid. The decoders of
+     * `solo`, `keen`, `lightup`, `unequal`, and `map` write every field
+     * their `validate_desc` reads, so a base cannot change their answer;
+     * a game that keeps a base field outside the short encoding reads
+     * it after `encode_params`, not in `validate_desc`.
      */
     @Test
     fun `a descriptive id decodes its parameters over the base`() {
@@ -91,6 +92,40 @@ class GameIdTest {
         // The short encoding carries the type, so a full id agrees too.
         assertNull(
             Midend.validateGameId(Loopy, "5x5t1:$desc", isSeed = false, baseParams = base),
+        )
+    }
+
+    /**
+     * `cube.c:294-302` keeps `ret->solid` when the parameter text has no
+     * `t`/`c`/`o`/`i` letter, and `validate_desc` reads it through
+     * `solids[params->solid]` (`cube.c:877`). C therefore validates a
+     * descriptive cube id over the midend's solid
+     * (`midend.c:1890-1897`).
+     */
+    @Test
+    fun `a cube descriptive id keeps the base solid`() {
+        val base = Cube.Params(Cube.TETRAHEDRON, 4, 4)
+        val desc = Cube.newDesc(base, RandomState.fromSeed(SEED)).text
+
+        assertNull(
+            Midend.validateGameId(Cube, "4x4:$desc", isSeed = false, baseParams = base),
+            "the base solid must reach validate_desc",
+        )
+        assertNotNull(
+            Midend.validateGameId(Cube, "4x4:$desc", isSeed = false),
+            "the default cube solid must not accept a tetrahedron description",
+        )
+
+        // A description for the default cube is a real cube-only
+        // description; over the tetrahedron base the area differs, so C
+        // rejects it too.
+        val cubeDesc = Cube.newDesc(
+            Cube.Params(Cube.CUBE, 4, 4),
+            RandomState.fromSeed(SEED),
+        ).text
+        assertNotNull(
+            Midend.validateGameId(Cube, "4x4:$cubeDesc", isSeed = false, baseParams = base),
+            "a cube description must not validate over a tetrahedron base",
         )
     }
 

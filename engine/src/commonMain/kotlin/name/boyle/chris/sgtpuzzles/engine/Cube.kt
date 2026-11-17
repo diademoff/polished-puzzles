@@ -336,8 +336,20 @@ object Cube : Game {
      * `d2` start as one `atoi` value, and the `x` form replaces `d2`.
      * The rest of the string is ignored.
      */
-    override fun decodeParams(text: String): Game.Params {
-        var solid = CUBE
+    override fun decodeParams(text: String): Game.Params = decodeFrom(text, CUBE)
+
+    /**
+     * C decodes into the caller's parameters (`cube.c:294-302`), so an
+     * absent solid letter keeps the base solid. `validate_desc` reads
+     * `solid` (`cube.c:877`), and a descriptive id decodes over the
+     * midend's parameters (`midend.c:1890-1897`), so the base decides
+     * which description is valid.
+     */
+    override fun decodeParams(text: String, base: Game.Params): Game.Params =
+        decodeFrom(text, (base as Params).solid)
+
+    private fun decodeFrom(text: String, defaultSolid: Int): Game.Params {
+        var solid = defaultSolid
         var index = 0
         if (text.isNotEmpty()) {
             when (text[0]) {

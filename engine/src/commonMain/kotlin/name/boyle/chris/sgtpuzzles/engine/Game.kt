@@ -98,7 +98,8 @@ interface Game {
      * "over a base" without knowing its fields. It is correct for a game
      * whose `decode_params` writes every field it later reads. A game
      * that keeps a base field and whose short encoding carries it
-     * overrides this, as `loopy` does for its grid type.
+     * overrides this, as `loopy` does for its grid type and `cube` for
+     * its solid.
      */
     fun decodeParams(text: String, base: Params): Params = decodeParams(text)
 
