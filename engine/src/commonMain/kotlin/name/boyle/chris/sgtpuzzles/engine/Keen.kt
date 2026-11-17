@@ -491,6 +491,44 @@ object Keen : Game {
         return null
     }
 
+    /** `game_configure` (`keen.c:187-212`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Grid size", p.w.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Normal:Hard:Extreme:Unreasonable",
+                null,
+                p.diff,
+            ),
+            ConfigItem.Bool("Multiplication only", p.multiplicationOnly),
+        )
+    }
+
+    /** `custom_params` (`keen.c:214-223`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            cAtoi((items[0] as ConfigItem.Text).value, 0),
+            (items[1] as ConfigItem.Choices).selected,
+            (items[2] as ConfigItem.Bool).value,
+        )
+
+    /** `get_prefs` (`keen.c:1578-1594`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Keep cursor after changing numbers",
+                true,
+                "pencil-keep-highlight",
+            ),
+        )
+
+    /** `set_prefs` (`keen.c:1596-1599`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).pencilKeepHighlight = prefs.bool("pencil-keep-highlight")
+    }
+
     /**
      * `new_game_desc`, `keen.c:897-1298`.
      *
@@ -1244,20 +1282,31 @@ object Keen : Game {
      * everything. Both solver errors return null, because the seam has no
      * error out-parameter.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveOutcome(state, auxInfo).move
+
+    /** `solve_game` with the two C error strings (`keen.c:1480-1513`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
+        solveOutcome(state, auxInfo)
+
+    private fun solveOutcome(state: Game.State, auxInfo: String?): SolveOutcome {
         val s = state as State
-        if (auxInfo != null) return auxInfo
+        if (auxInfo != null) return SolveOutcome(auxInfo, null)
 
         val a = s.a
         val soln = IntArray(a)
         val ret = solver(s.w, s.shared.dsf, s.shared.clues, soln, DIFFCOUNT - 1)
-        if (ret == LatinSolver.DIFF_IMPOSSIBLE) return null
-        if (ret == LatinSolver.DIFF_AMBIGUOUS) return null
+        if (ret == LatinSolver.DIFF_IMPOSSIBLE) {
+            return SolveOutcome(null, "No solution exists for this puzzle")
+        }
+        if (ret == LatinSolver.DIFF_AMBIGUOUS) {
+            return SolveOutcome(null, "Multiple solutions exist for this puzzle")
+        }
 
         val out = StringBuilder(a + 1)
         out.append('S')
         for (i in 0 until a) out.append(('0'.code + soln[i]).toChar())
-        return out.toString()
+        return SolveOutcome(out.toString(), null)
     }
 
     /**

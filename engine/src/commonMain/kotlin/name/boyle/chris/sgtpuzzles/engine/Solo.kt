@@ -2656,6 +2656,76 @@ object Solo : Game {
     /** The C singleton merge would write past a killer cage row. */
     private class KillerCageOverflow : RuntimeException()
 
+    /** `game_configure` (`solo.c:450-495`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Columns of sub-blocks", p.c.toString()),
+            ConfigItem.Text("Rows of sub-blocks", p.r.toString()),
+            ConfigItem.Bool(
+                "\"X\" (require every number in each main diagonal)",
+                p.xtype,
+            ),
+            ConfigItem.Bool(
+                "Jigsaw (irregularly shaped sub-blocks)",
+                p.r == 1,
+            ),
+            ConfigItem.Bool("Killer (digit sums)", p.killer),
+            ConfigItem.Choices(
+                "Symmetry",
+                ":None:2-way rotation:4-way rotation:2-way mirror:" +
+                    "2-way diagonal mirror:4-way mirror:4-way diagonal mirror:" +
+                    "8-way mirror",
+                null,
+                p.symm,
+            ),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Trivial:Basic:Intermediate:Advanced:Extreme:Unreasonable",
+                null,
+                p.diff,
+            ),
+        )
+    }
+
+    /**
+     * `custom_params` (`solo.c:497-514`). Ticking Jigsaw folds the rows
+     * into the columns and sets the rows to one; `kdiff` is always
+     * `DIFF_KINTERSECT` and has no dialog field.
+     */
+    override fun customParams(items: List<ConfigItem>): Game.Params {
+        var c = atoi((items[0] as ConfigItem.Text).value, 0)
+        var r = atoi((items[1] as ConfigItem.Text).value, 0)
+        val xtype = (items[2] as ConfigItem.Bool).value
+        if ((items[3] as ConfigItem.Bool).value) {
+            c *= r
+            r = 1
+        }
+        return Params(
+            c,
+            r,
+            (items[5] as ConfigItem.Choices).selected,
+            (items[6] as ConfigItem.Choices).selected,
+            xtype,
+            (items[4] as ConfigItem.Bool).value,
+        )
+    }
+
+    /** `get_prefs` (`solo.c:4613-4629`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Keep cursor after changing numbers",
+                true,
+                "pencil-keep-highlight",
+            ),
+        )
+
+    /** `set_prefs` (`solo.c:4631-4634`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).pencilKeepHighlight = prefs.bool("pencil-keep-highlight")
+    }
+
     /**
      * `new_game_desc`, `solo.c:3656-3896`.
      *

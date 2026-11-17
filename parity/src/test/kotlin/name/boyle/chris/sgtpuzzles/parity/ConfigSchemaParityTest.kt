@@ -3,6 +3,7 @@ package name.boyle.chris.sgtpuzzles.parity
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
 import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.Cube
+import name.boyle.chris.sgtpuzzles.engine.Dominosa
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Filling
@@ -11,8 +12,10 @@ import name.boyle.chris.sgtpuzzles.engine.Galaxies
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
+import name.boyle.chris.sgtpuzzles.engine.Keen
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Loopy
+import name.boyle.chris.sgtpuzzles.engine.Map as MapGame
 import name.boyle.chris.sgtpuzzles.engine.Magnets
 import name.boyle.chris.sgtpuzzles.engine.Mines
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
@@ -25,9 +28,13 @@ import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.Rect
 import name.boyle.chris.sgtpuzzles.engine.Signpost
+import name.boyle.chris.sgtpuzzles.engine.Singles
+import name.boyle.chris.sgtpuzzles.engine.Solo
 import name.boyle.chris.sgtpuzzles.engine.Tents
+import name.boyle.chris.sgtpuzzles.engine.Towers
 import name.boyle.chris.sgtpuzzles.engine.Tracks
 import name.boyle.chris.sgtpuzzles.engine.Undead
+import name.boyle.chris.sgtpuzzles.engine.Unequal
 import name.boyle.chris.sgtpuzzles.engine.Untangle
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
@@ -84,6 +91,13 @@ class ConfigSchemaParityTest {
         Scheme(Undead, "undead"),
         Scheme(Untangle, "untangle"),
         Scheme(Tracks, "tracks"),
+        Scheme(Dominosa, "dominosa"),
+        Scheme(MapGame, "map"),
+        Scheme(Keen, "keen"),
+        Scheme(Towers, "towers"),
+        Scheme(Unequal, "unequal"),
+        Scheme(Singles, "singles"),
+        Scheme(Solo, "solo"),
     )
 
     @Test
@@ -329,6 +343,44 @@ class ConfigSchemaParityTest {
             /* atol, narrowed to int: 4294967306 is 10. */
             listOf(Edit(0, "4294967306", "4294967306")),
             listOf(Edit(2, "false", false)),
+        ),
+        "dominosa" to listOf(
+            listOf(Edit(0, "3", "3")),
+            listOf(Edit(1, "0", 0)),
+            listOf(Edit(1, "4", 4)),
+        ),
+        "map" to listOf(
+            listOf(Edit(2, "25", "25")),
+            listOf(Edit(3, "0", 0)),
+            listOf(Edit(3, "3", 3)),
+        ),
+        "keen" to listOf(
+            listOf(Edit(0, "7", "7")),
+            listOf(Edit(1, "0", 0)),
+            listOf(Edit(1, "4", 4)),
+            listOf(Edit(2, "true", true)),
+        ),
+        "towers" to listOf(
+            listOf(Edit(0, "6", "6")),
+            listOf(Edit(1, "1", 1)),
+            listOf(Edit(1, "3", 3)),
+        ),
+        "unequal" to listOf(
+            listOf(Edit(0, "1", 1)),
+            listOf(Edit(1, "5", "5")),
+            listOf(Edit(2, "4", 4)),
+        ),
+        "singles" to listOf(
+            listOf(Edit(2, "1", 1)),
+        ),
+        "solo" to listOf(
+            /* The jigsaw field folds c and r; it is not stored. */
+            listOf(Edit(0, "3", "3"), Edit(1, "3", "3"), Edit(3, "true", true)),
+            listOf(Edit(2, "true", true)),
+            listOf(Edit(4, "true", true)),
+            listOf(Edit(5, "0", 0)),
+            listOf(Edit(5, "7", 7)),
+            listOf(Edit(6, "5", 5)),
         ),
         "mines" to listOf(
             /* A percent of the area, with C integer division. */

@@ -1166,6 +1166,44 @@ object Singles : Game {
         return chosen
     }
 
+    /** `game_configure` (`singles.c:225-251`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Tricky",
+                null,
+                p.diff,
+            ),
+        )
+    }
+
+    /** `custom_params` (`singles.c:253-262`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            cAtoi((items[0] as ConfigItem.Text).value, 0),
+            cAtoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Choices).selected,
+        )
+
+    /** `get_prefs` (`singles.c:1474-1489`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Show numbers on black squares",
+                false,
+                "show-black-nums",
+            ),
+        )
+
+    /** `set_prefs` (`singles.c:1491-1494`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).showBlackNums = prefs.bool("show-black-nums")
+    }
+
     override fun newDesc(params: Game.Params, random: RandomState): Description =
         generateWithStats(params as Params, random).description
 

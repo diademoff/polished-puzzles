@@ -4,7 +4,9 @@ import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Keen
 import name.boyle.chris.sgtpuzzles.engine.Lightup
+import name.boyle.chris.sgtpuzzles.engine.Map as MapGame
 import name.boyle.chris.sgtpuzzles.engine.Loopy
 import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.engine.Palisade
@@ -12,7 +14,11 @@ import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Prefs
 import name.boyle.chris.sgtpuzzles.engine.PrefsException
 import name.boyle.chris.sgtpuzzles.engine.Signpost
+import name.boyle.chris.sgtpuzzles.engine.Singles
+import name.boyle.chris.sgtpuzzles.engine.Solo
+import name.boyle.chris.sgtpuzzles.engine.Towers
 import name.boyle.chris.sgtpuzzles.engine.Undead
+import name.boyle.chris.sgtpuzzles.engine.Unequal
 import name.boyle.chris.sgtpuzzles.engine.Untangle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -45,6 +51,12 @@ class PrefsSchemaParityTest {
         Scheme(Signpost, "signpost"),
         Scheme(Undead, "undead"),
         Scheme(Untangle, "untangle"),
+        Scheme(MapGame, "map"),
+        Scheme(Keen, "keen"),
+        Scheme(Towers, "towers"),
+        Scheme(Unequal, "unequal"),
+        Scheme(Singles, "singles"),
+        Scheme(Solo, "solo"),
     )
 
     private val testdata = File(

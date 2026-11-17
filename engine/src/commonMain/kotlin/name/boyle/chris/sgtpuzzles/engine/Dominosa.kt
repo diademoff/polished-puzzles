@@ -300,6 +300,27 @@ object Dominosa : Game {
         return null
     }
 
+    /** `game_configure` (`dominosa.c:215-236`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Maximum number on dominoes", p.n.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Trivial:Basic:Hard:Extreme:Ambiguous",
+                null,
+                p.diff,
+            ),
+        )
+    }
+
+    /** `custom_params` (`dominosa.c:238-246`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            cAtoi((items[0] as ConfigItem.Text).value, 0),
+            (items[1] as ConfigItem.Choices).selected,
+        )
+
     // ------------------------------------------------------------------
     // Generation.
     // ------------------------------------------------------------------

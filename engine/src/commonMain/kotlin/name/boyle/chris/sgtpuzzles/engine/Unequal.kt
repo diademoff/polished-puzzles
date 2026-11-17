@@ -442,6 +442,49 @@ object Unequal : Game {
             throw IllegalArgumentException(e.message)
         }
 
+    /** `game_configure` (`unequal.c:229-255`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Choices(
+                "Mode",
+                ":Unequal:Adjacent",
+                null,
+                p.mode,
+            ),
+            ConfigItem.Text("Size (s*s)", p.order.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Trivial:Easy:Tricky:Extreme:Recursive",
+                null,
+                p.diff,
+            ),
+        )
+    }
+
+    /** `custom_params` (`unequal.c:257-266`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            cAtoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Choices).selected,
+            (items[0] as ConfigItem.Choices).selected,
+        )
+
+    /** `get_prefs` (`unequal.c:1494-1510`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Keep cursor after changing numbers",
+                true,
+                "pencil-keep-highlight",
+            ),
+        )
+
+    /** `set_prefs` (`unequal.c:1512-1515`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).pencilKeepHighlight = prefs.bool("pencil-keep-highlight")
+    }
+
     // ------------------------------------------------------------------
     // Generation, `unequal.c:949-1288`.
     // ------------------------------------------------------------------

@@ -373,6 +373,65 @@ object Map : Game {
         require(n <= MAX_REGIONS) { REGIONS_TOO_LARGE }
     }
 
+    /** `game_configure` (`map.c:218-249`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Text("Regions", p.n.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Normal:Hard:Unreasonable",
+                null,
+                p.difficulty,
+            ),
+        )
+    }
+
+    /** `custom_params` (`map.c:251-261`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            cAtoi((items[0] as ConfigItem.Text).value, 0),
+            cAtoi((items[1] as ConfigItem.Text).value, 0),
+            cAtoi((items[2] as ConfigItem.Text).value, 0),
+            (items[3] as ConfigItem.Choices).selected,
+        )
+
+    /** `get_prefs` (`map.c:2366-2398`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Choices(
+                "Victory flash effect",
+                ":Cyclic:Each to white:All to white",
+                ":cyclic:each-white:all-white",
+                0,
+                "flash-type",
+            ),
+            ConfigItem.Choices(
+                "Label regions",
+                ":None:Region labels:Colour labels",
+                ":none:regions:colours",
+                0,
+                "show-labels",
+            ),
+            ConfigItem.Choices(
+                "Display style for stipple marks",
+                ":Small:Large",
+                ":small:large",
+                0,
+                "stipple-style",
+            ),
+        )
+
+    /** `set_prefs` (`map.c:2400-2405`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        val u = ui as Ui
+        u.flashType = prefs.choice("flash-type")
+        u.showLabels = prefs.choice("show-labels")
+        u.largeStipples = prefs.choice("stipple-style") == 1
+    }
+
     // ------------------------------------------------------------------
     // Description.
     // ------------------------------------------------------------------
@@ -1462,6 +1521,12 @@ object Map : Game {
 
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveAttempt(state, auxInfo).move
+
+    /** `solve_game` with the two C error strings (`map.c:2241-2299`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val attempt = solveAttempt(state, auxInfo)
+        return SolveOutcome(attempt.move, attempt.error)
+    }
 
     /**
      * `solve_game` with the C error string. With [auxInfo] the answer is
