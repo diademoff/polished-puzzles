@@ -666,6 +666,45 @@ class OracleClient(
         )
     }
 
+    /** One `generate_loop` run: face colours, generator state, bias calls. */
+    data class LoopGenerated(
+        val faces: List<Int>,
+        val state: String,
+        val biasCalls: Int,
+    )
+
+    /**
+     * `generate_loop` on a grid built from the same fields as `gridNew`.
+     * [bias] is `none` or `count`; `count` is the deterministic test
+     * heuristic in the oracle, not a game heuristic.
+     */
+    fun loopgen(
+        type: String,
+        w: Int,
+        h: Int,
+        bias: String,
+        desc: String? = null,
+        seed: String? = null,
+        state: String? = null,
+    ): LoopGenerated {
+        val fields = linkedMapOf<String, Any>(
+            "op" to "loopgen",
+            "type" to type,
+            "w" to w,
+            "h" to h,
+            "bias" to bias,
+        )
+        if (desc != null) fields["desc"] = desc
+        if (seed != null) fields["seed"] = seed
+        if (state != null) fields["state"] = state
+        val response = request(fields)
+        return LoopGenerated(
+            faces = response.numberList("faces").map { it.toInt() },
+            state = response.string("state"),
+            biasCalls = response.number("biasCalls").toInt(),
+        )
+    }
+
     /** `random_bits` from a seed or from an encoded generator state. */
     fun randomBits(
         bits: Int,

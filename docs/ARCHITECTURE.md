@@ -183,12 +183,15 @@ loop, the recursion and context copy protocol, and the first-solution
 write-back. `LatinParityTest` compares generation, the encoded RNG
 state, and the solver difficulty at every `maxdiff` with the oracle;
 `keen` is the first game consumer of its callback layer.
+`Loopgen.kt` ports `loopgen.c`, including the candidate order, the bias
+calls, and the two flip passes. `LoopgenParityTest` compares the board
+and the encoded RNG state with the `loopgen` oracle op; `loopy` and
+`pearl` will be the game consumers.
 `Game`, `Midend`, and `Fifteen` are the first Phase 4 slice; see
-`docs/adr/0007-kotlin-game-seam.md`. `grid` and `loopgen`
-stay in C until their first game consumer, because their behavior is
-only observable through a game. The semantic midend is in Kotlin; the
-shell parts of the C midend stay in C until the app uses a Kotlin
-game.
+`docs/adr/0007-kotlin-game-seam.md`. `grid` and `loopgen` are ported to
+Kotlin and compared with the oracle before `loopy` and `pearl` consume
+them. The semantic midend is in Kotlin; the shell parts of the C midend
+stay in C until the app uses a Kotlin game.
 
 `engine/SgtpSave.kt` is a lossless container for the same text. It
 keeps repeated moves and unknown records in order and writes canonical

@@ -46,6 +46,7 @@
  *   {"op":"latin","kind":"generateRect","w":4,"h":6,"seed":"12345"}
  *   {"op":"latin","kind":"solve","o":5,"grid":"1 0 0 0 0 ...","maxdiff":3}
  *   {"op":"latin","kind":"check","o":3,"grid":"1 2 3 2 3 1 3 1 2"}
+ *   {"op":"loopgen","type":"square","w":5,"h":5,"bias":"none","seed":"12345"}
  *   {"op":"tdq","n":10,"ops":"a 3 a 1 r f"}
  *   {"op":"sort","values":"5 3 9 1","mode":"asc"}
  *   {"op":"combi","r":2,"n":5}
@@ -80,6 +81,7 @@
 #include "matching.h"
 #include "tree234.h"
 #include "grid.h"
+#include "loopgen.h"
 
 struct frontend {
     midend *me;
@@ -2077,6 +2079,120 @@ static void do_grid(const jobject *req)
     put_error("unknown grid kind");
 }
 
+/* ------------------------------------------------------------------ */
+/* Loop generation.                                                   */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The deterministic bias used by the loopgen operation. It rates a
+ * half-finished board by the number of white neighbours of the face,
+ * and it prefers a face that is white right now:
+ *
+ *     score = 7 * white neighbours + (face is white ? 1 : 0)
+ *
+ * The second term makes the temporary assignment observable: the
+ * generator sets a candidate to the proposed colour before the first
+ * call and puts it back to grey before the second call. The function
+ * depends only on the grid and the board, so the Kotlin port can
+ * reproduce it exactly. It is a test heuristic, not a loopy heuristic,
+ * and no game uses it.
+ */
+struct loopgen_bias_ctx {
+    grid *g;
+    int calls;
+};
+
+static int loopgen_count_bias(void *ctx, char *board, int face_index)
+{
+    struct loopgen_bias_ctx *bc = (struct loopgen_bias_ctx *)ctx;
+    grid_face *face = bc->g->faces[face_index];
+    int i, white = 0;
+
+    bc->calls++;
+    for (i = 0; i < face->order; i++) {
+        grid_edge *e = face->edges[i];
+        grid_face *f = (e->face1 == face) ? e->face2 : e->face1;
+        if (FACE_COLOUR(f) == FACE_WHITE)
+            white++;
+    }
+    return 7 * white + (board[face_index] == FACE_WHITE ? 1 : 0);
+}
+
+/*
+ * generate_loop from loopgen.c. A request carries the grid fields, a
+ * bias name (none or count), and either a seed or an encoded state.
+ * The response carries the face colours in index order (0 white,
+ * 1 grey, 2 black), the encoded state after the call, and the number
+ * of bias calls. A completed loop has no grey faces.
+ *
+ * The operation is deterministic: the same request gives the same
+ * response, and the bias has no state outside the board.
+ *
+ * A grid with a single face is rejected. Upstream generate_loop never
+ * finishes can_colour_face on such a grid: every dot has only the test
+ * face and the infinite face, and the walk cannot return to its start.
+ * The consumers of loopgen reject those sizes before they get here, so
+ * a loud error is better than a hang.
+ */
+static void do_loopgen(const jobject *req)
+{
+    const char *bias_name = field_string(req, "bias");
+    const char *seed = field_string(req, "seed");
+    const char *state = field_string(req, "state");
+    random_state *rs;
+    grid *g;
+    char *board;
+    char *encoded;
+    struct loopgen_bias_ctx ctx;
+    bool count_bias;
+    int i;
+
+    if (!bias_name ||
+        (strcmp(bias_name, "none") && strcmp(bias_name, "count"))) {
+        put_error("loopgen needs a bias of none or count");
+        return;
+    }
+    if (!seed && !state) {
+        put_error("loopgen needs a seed or a state");
+        return;
+    }
+
+    g = grid_from_request(req);
+    if (!g)
+        return;
+    if (g->num_faces < 2) {
+        put_error("loopgen needs a grid with at least two faces");
+        grid_free(g);
+        return;
+    }
+
+    if (state)
+        rs = random_state_decode(state);
+    else
+        rs = random_new(seed, (int)strlen(seed));
+
+    count_bias = !strcmp(bias_name, "count");
+    board = snewn(g->num_faces, char);
+    ctx.g = g;
+    ctx.calls = 0;
+    generate_loop(g, board, rs,
+                  count_bias ? loopgen_count_bias : NULL,
+                  count_bias ? &ctx : NULL);
+    encoded = random_state_encode(rs);
+
+    fputs("{\"ok\":true,\"faces\":[", stdout);
+    for (i = 0; i < g->num_faces; i++)
+        printf("%s%d", i ? "," : "", (int)board[i]);
+    fputs("],\"state\":", stdout);
+    put_json_string(encoded);
+    printf(",\"biasCalls\":%d}\n", ctx.calls);
+
+    sfree(board);
+    sfree(encoded);
+    random_free(rs);
+    grid_free(g);
+}
+
 static void do_latin(const jobject *req)
 {
     const char *kind = field_string(req, "kind");
@@ -3340,6 +3456,8 @@ int main(int argc, char **argv)
             do_grid(&req);
         } else if (!strcmp(op, "latin")) {
             do_latin(&req);
+        } else if (!strcmp(op, "loopgen")) {
+            do_loopgen(&req);
         } else if (!strcmp(op, "tdq")) {
             do_tdq(&req);
         } else if (!strcmp(op, "sort")) {

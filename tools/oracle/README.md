@@ -68,7 +68,15 @@ Requests:
 {"op":"randomUpto","state":"...","limit":6,"count":10}
 {"op":"sort","values":"5 3 9 1","mode":"asc"}
 {"op":"combi","r":2,"n":5}
+{"op":"loopgen","type":"square","w":5,"h":5,"bias":"count","seed":"12345"}
 ```
+
+`loopgen` runs `generate_loop` and returns the face colours in index
+order (0 white, 1 grey, 2 black), the encoded generator state, and the
+number of bias calls. `bias` is `none` or `count`; `count` is the
+deterministic test heuristic in `oracle.c`, not a loopy heuristic. A
+grid with fewer than two faces is rejected, because upstream never
+finishes on such a grid.
 
 `keys` replays a whole key sequence inside one midend. The cursor of a
 cursor game lives in the frontend state, not in the save file, so a

@@ -126,19 +126,19 @@ and the porting method are in
 remains oracle-backed until Phase 4 ports each generator; the existing
 `GoldenDescTest` is green.
 
-`grid` is now an exception to that order: `engine/Grid.kt` and the
-aperiodic tiling helpers are ported and pinned by `GridParityTest`
-before `pearl` and `loopy` consume them. `loopgen` stays deferred until
-the first game consumer.
+`grid` and `loopgen` are now exceptions to that order: `engine/Grid.kt`,
+the aperiodic tiling helpers, and `engine/Loopgen.kt` are ported and
+pinned by `GridParityTest` and `LoopgenParityTest` before `pearl` and
+`loopy` consume them. The loop generator is differential-tested with a
+test-only bias, so it does not need a game to be verified.
 
 ## Phase 4 — Games
 
 One game at a time, in dual-run mode, behind a feature flag.
 
 Phase 4 also ports the libraries deferred from Phase 3 with their first
-consumer: `midend` with fifteen, `loopgen` with loopy or pearl, and
-`latin` with keen, towers, unequal, or singles. `grid` is ported
-already. Neither
+consumer: `midend` with fifteen, and `latin` with keen, towers, unequal,
+or singles. `grid` and `loopgen` are ported already. Neither
 `slant` nor `mines` includes `grid.h` in this pinned upstream. See
 `docs/adr/0006-port-libraries-with-consumer.md`.
 
