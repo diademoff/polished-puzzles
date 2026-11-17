@@ -225,19 +225,21 @@ The app adapter is covered on the JVM, without an Android runtime:
 - `GameGeneratorTest` checks the shared worker submission: success,
   a `RuntimeException` mapped to the failure callback, and a cancelled
   task that leaves no callback.
-- `KotlinGamesTest` checks that `handles` is true only for `fifteen`,
-  that the engine registry `PortedGames` covers every `BackendName` and
-  resolves through `gameFor`, that the prefs gate rejects a game with C
-  preferences but no schema (and a stray schema), that
-  `defaultParams` is the engine's full default for every known
-  game, and that the `fifteen` generator is a pure function of its
-  arguments.
+- `KotlinGamesTest` checks that `handles` is true for exactly the
+  enabled set (`fifteen`, `samegame`, `flood`, and `pegs`) and false for
+  every other backend, that the engine registry `PortedGames` covers
+  every `BackendName` and resolves through `gameFor`, that the prefs
+  gate rejects a game with C preferences but no schema (and a stray
+  schema), that `defaultParams` is the engine's full default for every
+  known game, that each enabled generator writes its frozen save and
+  reloads it through `Midend` with the same backend, and that the
+  `fifteen` generator is a pure function of its arguments.
 - `ConfigNameIndexTest` checks that a duplicate display name in an open
   dialog resolves to the first item, as `configItemWithName`
   (`android.c:402-414`) does.
 
 The instrumented `GamePlayParameterizedTest` still covers the real tap,
-swipe, and key paths for the enabled game on a device or emulator.
+swipe, and key paths for every enabled game on a device or emulator.
 
 The instrumented adapter tests cover the shell seams that a JVM test
 cannot reach:
@@ -248,6 +250,19 @@ cannot reach:
   preference and checks that the size follows, then sends a real tap and
   a real swipe at cell centres computed from `originX`, `originY`, and
   the tile size. Each gesture must add exactly one move.
+- `FirstWaveTileSizeInputTest` is the shared device test for the first
+  enablement wave. One parameterized case per game (`samegame`,
+  `flood`, `pegs`) launches the game, reads the live `BoardGeometry`,
+  sends a real tap at the default `limitDpi`, changes `limitDpi` to
+  `off`, checks that the tile changed and is not the preferred one, and
+  sends a real swipe at cell centres computed from the second geometry.
+  It asserts `KotlinGameEngine`, the move count before and after each
+  gesture, that the save text changes exactly when a move was applied,
+  and the status line. The shell's `dragMode` decides the gestures:
+  `samegame` and `flood` are `PREVENT`, so their swipe is ignored and
+  their move gesture is a tap (`samegame` needs two, select then
+  remove); `pegs` is `REVERT_OFF_SCREEN`, so its tap cancels and its
+  swipe moves a peg.
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
@@ -3334,8 +3349,9 @@ aggressive 100x100 latency is an enablement debt:
   the trace of the same state without a sequence.
 - `KotlinGamesTest` pins the app-side selection and checks that the
   generated save is the frozen oracle save.
-- `GamePlayParameterizedTest` asserts that the running `fifteen` engine
-  is `KotlinGameEngine`, then completes the 2x2 game through the real
+- `GamePlayParameterizedTest` asserts that the running engine is
+  `KotlinGameEngine` for every enabled backend (`fifteen`, `samegame`,
+  `flood`, and `pegs`), then completes the 2x2 game through the real
   shell on the emulator. The fifteen cases cover a hardware key, a tap,
   and a swipe, so tap and drag coordinate mapping is covered, not only
   key input. Parameter names include the index, so two cases with the
@@ -3390,6 +3406,30 @@ Device run on the Pixel 4a 5G (physical), 2026-11-18, Android 16 / API 36:
   TalkBack, contrast, font scale 200%, and performance. A physical phone
   cannot replace the reference AVD for the goldens, and a debug build is
   not a performance baseline.
+
+First enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 /
+API 36, at the first-wave code commit `58c7b52e`:
+
+- The enabled set is `fifteen`, `samegame`, `flood`, and `pegs`.
+  `KotlinGames.handles` returns true for exactly these four and false
+  for every other backend.
+- `:app:connectedDebugAndroidTest` ran 70 cases: 64 passed, 0 failed,
+  6 skipped. The skips are the same six as the earlier run (three
+  fastlane screenshot producers and three chooser goldens). The suite
+  took 2 min 6 s on the phone. The three new cases are
+  `FirstWaveTileSizeInputTest[samegame]`, `[flood]`, and `[pegs]`.
+- `:engine:jvmTest` -> 1123 tests, 0 failures; `:parity:test` -> 1885
+  tests, 0 failures; `:app:testDebugUnitTest` -> 107 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings.
+- This run proves the first wave on a device: each new game launches on
+  `KotlinGameEngine`, accepts a real tap and a real swipe at two
+  distinct tile sizes, and the move count and save text change only
+  when the game applies a move. The per-game gestures are the ones the
+  shell allows: `samegame` and `flood` are `PREVENT` drag games, so the
+  tap is their move and the swipe is deliberately inert; `pegs` moves
+  on the swipe and its tap cancels the drag.
+- These rows stay manual: the pixel goldens on the reference AVD,
+  TalkBack, contrast, font scale 200%, and performance.
 
 Device run on the API 36 emulator, 2026-11-14:
 

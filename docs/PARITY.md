@@ -177,13 +177,19 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `rect`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18), then `slant`, `sixteen`, `flip`, `twiddle`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `rect`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
 app has no runtime C path for the game. The vendored C may remain as
 the oracle, chooser metadata, and saved-game identification. Removing
 the C source is not required for `kotlin`; see ADR 0008.
+
+The owner waived the two-release wait for the ported games on
+2026-11-18 (decision 1a). A ported game still becomes `kotlin` only in
+an enablement wave (`docs/adr/0011-enable-games-in-waves.md`), so the
+older "two-release wait" sentences in the per-game notes name the gate
+that the waiver replaced; they do not enable a game.
 
 ### Game inventory
 
@@ -201,7 +207,7 @@ submenu entries when a game groups its presets.
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `dual-run` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `dual-run` |
-| `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `dual-run` |
+| `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `kotlin` |
 | `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `dual-run` |
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `dual-run` |
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
@@ -217,10 +223,10 @@ submenu entries when a game groups its presets.
 | `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `dual-run` |
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `dual-run` |
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `dual-run` |
-| `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `dual-run` |
+| `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `kotlin` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `dual-run` |
-| `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
+| `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `kotlin` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `dual-run` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `dual-run` |
@@ -271,16 +277,36 @@ Notes:
   `SlantTraceTest` pins the cursor frame against the oracle. The seams
   are `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
-- `samegame` is `dual-run`. Its generator, state, moves, score,
+- `samegame` is `kotlin` (first enablement wave, 2026-11-18). Its
+  generator, state, moves, score,
   selection, status text, save file, drawing, layout, and pointer input
   pass the matrix in `SameGameDescTest`, `SameGameGameTest`,
   `SameGameSaveTest`, `SameGameTraceTest`, and
   `SameGameInputParityTest`. The pointer test uses the oracle's
   `pointsSized` operation, so a select and a remove run in one C midend
   and are compared with the Kotlin `processKey` path.
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-release wait is open. The seam is
-  `docs/adr/0007-kotlin-game-seam.md`.
+  `KotlinGames.gameFor` knows the Kotlin game and `KotlinGames.handles`
+  selects it for the app. The game has no preference page (C
+  `get_prefs` is NULL) and no deviation entry. `KotlinGamesTest` pins the
+  enabled set and the generated save; `FirstWaveTileSizeInputTest`
+  sends a real tap and a real swipe at two tile sizes on the Pixel 4a 5G.
+  The seam is `docs/adr/0007-kotlin-game-seam.md`, and the wave policy
+  is `docs/adr/0011-enable-games-in-waves.md`.
+- `flood` is `kotlin` (first enablement wave, 2026-11-18). Its
+  generator, solver, state, moves, move limit, completion, status text,
+  save file, drawing, layout, pointer input, and keyboard input pass the
+  matrix in `FloodDescTest`, `FloodGameTest`, `FloodSaveTest`,
+  `FloodTraceTest`, and `FloodInputParityTest`. `FloodSaveTest` pins the
+  `PARAMS`/`CPARAMS` asymmetry of the short form: the id is `12x12`,
+  `PARAMS` is `12x12c6m5`, and only `CPARAMS` keeps the chosen colours.
+  `KotlinGames.gameFor` knows the Kotlin game and `KotlinGames.handles`
+  selects it for the app. The game has no preference page (C
+  `get_prefs` is NULL) and no deviation entry. `KotlinGamesTest` pins
+  the enabled set and the generated save;
+  `FirstWaveTileSizeInputTest` sends a real tap and a real swipe at two
+  tile sizes on the Pixel 4a 5G. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`, and the wave policy is
+  `docs/adr/0011-enable-games-in-waves.md`.
 - `sixteen` is `dual-run`. Its generator, state, moves, loose move
   bounds, cursor modes, keypad null move, status text, solver, save
   file, drawing, layout, and pointer input pass the matrix in
@@ -309,7 +335,8 @@ Notes:
   move in a live midend. `KotlinGames.gameFor` knows the Kotlin game,
   but the app still uses C: the two-release wait is open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
-- `pegs` is `dual-run`. Its parameters, generator, state, moves, drag
+- `pegs` is `kotlin` (first enablement wave, 2026-11-18). Its
+  parameters, generator, state, moves, drag
   and keyboard input, status, text, save file, drawing, layout, and the
   warm redraw pass the matrix in `PegsDescTest`, `PegsGameTest`,
   `PegsSaveTest`, `PegsTraceTest`, and `PegsInputParityTest`.
@@ -324,9 +351,14 @@ Notes:
   (`e3e08f00`). One narrow difference remains: C decodes a descriptive
   id over the previous parameters and Kotlin starts from the defaults,
   so `currentParams.type` can differ; the description, the state, and
-  the id do not. `KotlinGames.gameFor` knows the Kotlin game, but the
-  app still uses C: the two-release wait is open. The seam is
-  `docs/adr/0007-kotlin-game-seam.md`.
+  the id do not. `KotlinGames.gameFor` knows the Kotlin game and
+  `KotlinGames.handles` selects it for the app. The game has no
+  preference page (C `get_prefs` is NULL) and no deviation entry.
+  `KotlinGamesTest` pins the enabled set and the generated save;
+  `FirstWaveTileSizeInputTest` sends a real tap and the real drag at two
+  tile sizes on the Pixel 4a 5G. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`, and the wave policy is
+  `docs/adr/0011-enable-games-in-waves.md`.
 - `guess` is `dual-run`. Its parameters, generator, loose move and UI
   grammars, state, hints, drag, hold, clear and keyboard input, the
   reveal, status, save file, palette, drawing, and layout pass the

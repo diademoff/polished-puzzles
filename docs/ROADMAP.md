@@ -166,10 +166,11 @@ For each game, use the matrix from `PARITY.md`:
 - strict trace;
 - UI screenshots.
 
-Status: `fifteen` is `kotlin` (2026-11-14). `slant` is `dual-run`
-(2026-11-14): `SlantGeneration` and `Slant` are in `engine/` and pass
-the matrix, but the app still uses C. The remaining slant work is
-enablement: the two-release wait. The configuration dialog comes from
+Status: `fifteen` is `kotlin` (2026-11-14). `samegame`, `flood`, and
+`pegs` are `kotlin` since 2026-11-18 (the first enablement wave).
+`slant` is `dual-run` (2026-11-14): `SlantGeneration` and `Slant` are
+in `engine/` and pass the matrix, but the app still uses C. The
+remaining slant work is enablement. The configuration dialog comes from
 the schema declared in `Game.configure`, and the cursor is drawn
 (`Slant.kt` uses `COL_CURSOR`; `SlantTraceTest` pins the cursor frame
 against the oracle). The Kotlin `Game` seam, the semantic midend,
@@ -184,18 +185,52 @@ new game, moves, undo and redo, `completed`, `requestKeys`, `presets`,
 trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
 `FifteenSaveTest`, and `FifteenTraceTest`.
 
-The app selects `KotlinGameEngine` for `fifteen` and bypasses the C
-generator. It does not select it for `slant`; the per-game enable set in
-`KotlinGames` keeps slant in dual-run. `KotlinGamesTest` pins the
-selection and the generated saves for both games;
-`GamePlayParameterizedTest` asserts that the running engine is
-`KotlinGameEngine` and completes a game on the emulator. The C game
-stays in the vendored tree as the oracle and for chooser metadata, but
-it is not reachable as a gameplay backend.
+The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
+and `pegs`, and bypasses the C generator for them. It does not select it
+for `slant`; the per-game enable set in `KotlinGames` keeps slant in
+dual-run. `KotlinGamesTest` pins the enabled set and the generated
+saves; `GamePlayParameterizedTest` asserts that the running engine is
+`KotlinGameEngine` for every enabled game, and
+`FirstWaveTileSizeInputTest` sends a real tap and a real swipe at two
+tile sizes for the first wave. The C games stay in the vendored tree as
+the oracle and for chooser metadata, but they are not reachable as
+gameplay backends.
 
-The owner waived the two-release wait on 2026-11-14 for this game. The
-two-release rule stays in force for the next games. UI screenshots are
+The owner waived the two-release wait on 2026-11-14 for `fifteen` and
+on 2026-11-18 for the ported games (decision 1a). UI screenshots are
 still local only (D-04).
+
+### Enablement waves (2026-11-18)
+
+The owner waived the two-release wait for the ported games on
+2026-11-18 (decision 1a) and chose enablement in waves. The waiver
+covers the wait only. It does not waive the per-game checks, and it
+does not enable every game.
+
+Rules for a wave:
+
+- a game is enabled only after its parity matrix is green, its device
+  test passes, and `KotlinGames.handles` returns true for it;
+- before a game is added to `KotlinGames.APP_GAMES`, check that
+  `docs/DEVIATIONS.md` has no entry for it with a `Review:` line, that
+  `docs/PARITY.md` lists no open size or retry debt the owner must
+  decide, and that its preference schema is declared exactly when the
+  C table has a non-NULL `get_prefs`; a game with any of these stays
+  on C;
+- a `Review:` deviation still needs the owner's review before that game
+  is enabled, even inside a wave;
+- the enabled set is per game and evidence-based. `APP_GAMES` is the
+  per-game switch; `KotlinGames.ENABLED` stays the emergency switch for
+  all games;
+- goldens stay local (decision 4a);
+- size limits stay warning-only (decision 2b); no wave adds a hard cap.
+
+First wave, 2026-11-18: `samegame`, `flood`, and `pegs` are enabled
+with `fifteen`. Each device test is green at two tile sizes on the
+Pixel 4a 5G (Android 16 / API 36), and each of the three has no
+`Review:` deviation, no flagged size or retry debt, and no preference
+page (C `get_prefs` is NULL). The other ported games stay `dual-run` on
+C. The policy is `docs/adr/0011-enable-games-in-waves.md`.
 
 Exit criteria per game:
 

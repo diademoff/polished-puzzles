@@ -2,6 +2,8 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-14
+- **Superseded in part by:** `docs/adr/0011-enable-games-in-waves.md`,
+  which waives the two-release wait for the later ported games.
 
 ## Context
 
