@@ -51,7 +51,6 @@ class KotlinGameEngineThickCircleTest {
             BackendName::class.java,
             GameEngine.ActivityCallbacks::class.java,
             GameEngine.ViewCallbacks::class.java,
-            String::class.java,
         )
         constructor.isAccessible = true
         return constructor.newInstance(
@@ -60,7 +59,6 @@ class KotlinGameEngineThickCircleTest {
             FIFTEEN,
             activity,
             view,
-            null,
         )
     }
 

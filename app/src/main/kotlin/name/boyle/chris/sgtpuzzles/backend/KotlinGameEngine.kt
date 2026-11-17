@@ -13,6 +13,7 @@ import name.boyle.chris.sgtpuzzles.config.CustomDialogBuilder
 import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
 import name.boyle.chris.sgtpuzzles.engine.Bridges
+import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.Cube
 import name.boyle.chris.sgtpuzzles.engine.Dominosa
 import name.boyle.chris.sgtpuzzles.engine.DrawSink
@@ -200,10 +201,30 @@ object KotlinGames {
         else -> null
     }
 
-    fun handles(backend: BackendName): Boolean =
-        ENABLED && backend in APP_GAMES && gameFor(backend) != null
+    fun handles(backend: BackendName): Boolean {
+        if (!ENABLED || backend !in APP_GAMES) return false
+        val game = gameFor(backend) ?: return false
+        return game.configure(game.defaultParams()) != null
+    }
 
-    /** The save file that the C generator would have produced. */
+    /**
+     * `encode_params(default_params(), true)`, the call that
+     * `android.c:966-977` makes. A later enablement uses this instead of
+     * the C external, so no dialog depends on C for a Kotlin backend.
+     */
+    fun defaultParams(backend: BackendName): String {
+        val game = requireNotNull(gameFor(backend)) { "no Kotlin backend for $backend" }
+        return game.encodeParams(game.defaultParams(), true)
+    }
+
+    /**
+     * The save file that the C generator would have produced.
+     *
+     * This is the only Kotlin entry point that may run on a worker
+     * thread. It creates its own [Midend] and returns a `String`; it
+     * touches no activity, view, or shared engine state. The caller owns
+     * the result and posts it to the UI thread.
+     */
     fun generate(backend: BackendName, params: String, seed: String): String {
         val game = requireNotNull(gameFor(backend)) { "no Kotlin backend for $backend" }
         // The frontend seed reaches only frontend state, so it cannot
@@ -221,10 +242,20 @@ object KotlinGames {
  * the drawing primitives to [GameEngine.ViewCallbacks], the same seam
  * the C engine uses.
  *
- * The shell-facing behavior is intentionally small: the game has no
- * timer, no configuration beyond width and height, and no custom
- * serialisation. The dialog and preference methods exist so the shell
- * does not need a special case for this backend.
+ * The settings, seed, game-ID, and preference dialogs come from the
+ * game's engine schema ([Game.configure] and [Game.prefs]), so this
+ * class has no field of one game's parameters. A game that declares no
+ * schema is never enabled: [KotlinGames.handles] requires `configure`.
+ *
+ * Ordering and threading: this class, its [Midend], its [Game], the game
+ * UI, and the draw state are not thread-safe and are used on the UI
+ * thread only. The one exception is [KotlinGames.generate], which may
+ * run on a worker because it returns a `String` and touches none of
+ * them. The stored preferences reach the [Midend] factory
+ * ([KotlinGameEngine.fromLaunch]), so they are applied before the first
+ * geometry ([BoardGeometry.preferred]) and before the first resize.
+ * A preference dialog applies each edit to the midend before
+ * [savePrefs] writes the stored text.
  */
 class KotlinGameEngine private constructor(
     private val game: Game,
@@ -232,26 +263,32 @@ class KotlinGameEngine private constructor(
     private val backend: BackendName,
     private val activityCallbacks: GameEngine.ActivityCallbacks,
     private var viewCallbacks: GameEngine.ViewCallbacks,
-    initialPrefs: String?,
 ) : GameEngine, ConfigBuilder.EngineCallbacks {
 
     private enum class ConfigMode { SETTINGS, SEED, DESC, PREFS }
 
     private val state: Game.State get() = midend.state
 
+    /**
+     * The initial geometry. The factory applied the stored preferences
+     * to the midend before this object exists, so a preference that
+     * changes [Game.computeSize] is already in the UI here.
+     */
     private var geometry = BoardGeometry.preferred(game, midend.params, midend.ui)
     private var viewWidth = 1
     private var viewHeight = 1
     private var sized = false
-    private var invertCursor = false
 
     /** The clock reading of the previous timer tick, in nanoseconds. */
     private var timerBaselineNanos = System.nanoTime()
 
     private var configMode: ConfigMode? = null
-    private val configValues = HashMap<String, String>()
-    private var configParams: Fifteen.Params =
-        game.decodeParams(game.encodeParams(midend.currentParams, true)) as Fifteen.Params
+
+    /** The items of the open dialog, in C order. */
+    private var configItems: List<ConfigItem> = emptyList()
+
+    /** Name to index in [configItems]; C assumes unique names. */
+    private var configIndex: kotlin.collections.Map<String, Int> = emptyMap()
 
     private val sink = object : DrawSink {
         override fun changedState(canUndo: Boolean, canRedo: Boolean) {
@@ -431,7 +468,6 @@ class KotlinGameEngine private constructor(
         // `activate_timer` and `deactivate_timer`. The setter syncs the
         // shell with the state of the loaded game immediately.
         midend.timerCallback = { on -> activityCallbacks.requestTimer(on) }
-        applyPrefs(initialPrefs)
         Log.d(TAG, "using the Kotlin backend for ${game.backendName}")
     }
 
@@ -459,121 +495,146 @@ class KotlinGameEngine private constructor(
     }
 
     override fun configEvent(whichEvent: Int, builder: ConfigBuilder) {
-        configValues.clear()
-        configParams =
-            game.decodeParams(game.encodeParams(midend.currentParams, true)) as Fifteen.Params
-        configMode = when (ConfigBuilder.Event.fromJNI(whichEvent)) {
+        val mode = when (ConfigBuilder.Event.fromJNI(whichEvent)) {
             ConfigBuilder.Event.CFG_SETTINGS -> ConfigMode.SETTINGS
             ConfigBuilder.Event.CFG_SEED -> ConfigMode.SEED
             ConfigBuilder.Event.CFG_DESC -> ConfigMode.DESC
             ConfigBuilder.Event.CFG_PREFS -> ConfigMode.PREFS
         }
+        configMode = mode
 
-        when (configMode) {
-            ConfigMode.SETTINGS -> {
-                builder.setTitle("${game.name} configuration")
-                builder.addString(whichEvent, "Width", "Width", configParams.width.toString())
-                builder.addString(whichEvent, "Height", "Height", configParams.height.toString())
+        /*
+         * C uses the long-term parameters for the settings dialog
+         * (`me->params`, `midend.c:1737`) and the current parameters for
+         * the seed and game-ID dialogs (`me->curparams`,
+         * `midend.c:1772-1795`).
+         */
+        val items = when (mode) {
+            ConfigMode.SETTINGS -> game.configure(midend.params) ?: return
+            ConfigMode.SEED -> listOf(
+                ConfigItem.Text(
+                    "Seed",
+                    game.encodeParams(midend.currentParams, true) + "#" + (midend.seed ?: ""),
+                ),
+            )
+
+            ConfigMode.DESC -> listOf(
+                ConfigItem.Text("Game ID", shortParams() + ":" + midend.desc),
+            )
+
+            ConfigMode.PREFS -> midend.prefItems
+        }
+        configItems = items
+        configIndex = items.withIndex().associate { it.value.name to it.index }
+
+        val title = when (mode) {
+            ConfigMode.SETTINGS -> "${game.name} configuration"
+            ConfigMode.SEED -> "${game.name} random selection"
+            ConfigMode.DESC -> "${game.name} game selection"
+            ConfigMode.PREFS -> "${game.name} preferences"
+        }
+        val isPrefs = mode == ConfigMode.PREFS
+        builder.setTitle(title)
+        for (item in items) {
+            /*
+             * `android.c:492-512`: a settings item passes its display
+             * name as the keyword, and a preference item passes its
+             * real keyword. A settings choice has no keyword list, so
+             * C passes the choice names in its place
+             * (`android.c:505-508`).
+             */
+            val kw = if (isPrefs) item.kw else item.name
+            when (item) {
+                is ConfigItem.Text -> builder.addString(whichEvent, kw, item.name, item.value)
+                is ConfigItem.Bool -> builder.addBoolean(whichEvent, kw, item.name, item.value)
+                is ConfigItem.Choices -> {
+                    val keywords = if (isPrefs) item.keywords ?: item.choices else item.choices
+                    builder.addChoices(
+                        whichEvent,
+                        kw,
+                        item.name,
+                        item.choices,
+                        keywords,
+                        item.selected,
+                    )
+                }
             }
-
-            ConfigMode.SEED -> {
-                builder.setTitle("${game.name} random selection")
-                val params = game.encodeParams(midend.currentParams, true)
-                builder.addString(whichEvent, "Seed", "Seed", params + "#" + (midend.seed ?: ""))
-            }
-
-            ConfigMode.DESC -> {
-                builder.setTitle("${game.name} game selection")
-                builder.addString(whichEvent, "Game ID", "Game ID", shortParams() + ":" + midend.desc)
-            }
-
-            ConfigMode.PREFS -> {
-                builder.setTitle("${game.name} preferences")
-                builder.addChoices(
-                    whichEvent,
-                    "arrow-semantics",
-                    "Sense of arrow keys",
-                    ":Move the tile:Move the gap",
-                    ":tile:gap",
-                    if (invertCursor) 1 else 0,
-                )
-            }
-
-            null -> return
         }
         builder.dialogShow()
     }
 
     override fun configSetString(itemPtr: String, s: String, isPrefs: Boolean) {
-        configValues[itemPtr] = s
-        if (isPrefs) applyPrefs("arrow-semantics=$s")
+        replaceConfigItem(itemPtr) {
+            (it as ConfigItem.Text).copy(value = s)
+        }
+        applyPrefsIfRequested(isPrefs)
     }
 
     override fun configSetBool(itemPtr: String, selected: Boolean, isPrefs: Boolean) {
-        configValues[itemPtr] = selected.toString()
-        if (isPrefs) applyPrefs("$itemPtr=$selected")
+        replaceConfigItem(itemPtr) {
+            (it as ConfigItem.Bool).copy(value = selected)
+        }
+        applyPrefsIfRequested(isPrefs)
     }
 
     override fun configSetChoice(itemPtr: String, selected: Int, isPrefs: Boolean) {
-        configValues[itemPtr] = selected.toString()
-        if (isPrefs) {
-            invertCursor = selected == 1
-            applyPrefs("arrow-semantics=${if (invertCursor) "gap" else "tile"}")
+        replaceConfigItem(itemPtr) {
+            (it as ConfigItem.Choices).copy(selected = selected)
         }
+        applyPrefsIfRequested(isPrefs)
     }
 
     override fun configCancel() {
-        configValues.clear()
+        configItems = emptyList()
+        configIndex = emptyMap()
         configMode = null
     }
 
-    override fun configOK(): String {
-        when (configMode) {
-            ConfigMode.SETTINGS -> {
-                val width = if (configValues.containsKey("Width")) {
-                    configValues["Width"]?.toIntOrNull() ?: 0
-                } else {
-                    configParams.width
-                }
-                val height = if (configValues.containsKey("Height")) {
-                    configValues["Height"]?.toIntOrNull() ?: 0
-                } else {
-                    configParams.height
-                }
-                val params = Fifteen.Params(width, height)
-                Fifteen.validateParams(params, true)?.let { throw IllegalArgumentException(it) }
-                return Fifteen.encodeParams(params, true)
-            }
+    override fun configOK(): String = when (configMode) {
+        ConfigMode.SETTINGS -> {
+            // `midend_config_to_encoded_params`: custom_params, the full
+            // validation, then the full encoding (`midend.c:2031-2042`).
+            val params = game.customParams(configItems)
+            game.validateParams(params, true)?.let { throw IllegalArgumentException(it) }
+            game.encodeParams(params, true)
+        }
 
-            ConfigMode.SEED -> return fullSeedFromDialog
-            ConfigMode.DESC -> return fullGameIDFromDialog
-            ConfigMode.PREFS, null -> {
-                configMode = null
-                return shortParams()
+        ConfigMode.SEED -> {
+            val full = fullSeed
+            Midend.validateGameId(game, full, isSeed = true, midend.params)?.let {
+                throw IllegalArgumentException(it)
             }
+            full
+        }
+
+        ConfigMode.DESC -> {
+            val full = fullGameId
+            Midend.validateGameId(game, full, isSeed = false, midend.params)?.let {
+                throw IllegalArgumentException(it)
+            }
+            full
+        }
+
+        ConfigMode.PREFS, null -> {
+            configMode = null
+            shortParams()
         }
     }
 
-    override val fullGameIDFromDialog: String
-        get() {
-            val value = configValues["Game ID"] ?: ""
-            return if (value.contains(':')) value else shortParams() + ":" + value
-        }
+    override val fullGameIDFromDialog: String get() = fullGameId
 
-    override val fullSeedFromDialog: String
-        get() {
-            val value = configValues["Seed"] ?: ""
-            val params = game.encodeParams(midend.currentParams, true)
-            return if (value.contains('#')) value else params + "#" + value
-        }
+    override val fullSeedFromDialog: String get() = fullSeed
 
     override fun savePrefs(context: Context) {
-        val text = "arrow-semantics=${if (invertCursor) "gap" else "tile"}\n"
-        GameEngineImpl.savePrefs(context, backend, text)
+        // The prefs dialog applies every edit with configSet* before it
+        // calls this, so the stored text is the new state.
+        GameEngineImpl.savePrefs(context, backend, midend.serialisePrefs())
     }
 
     override fun loadPrefs(context: Context) {
-        applyPrefs(GameEngineImpl.getPrefs(context, backend))
+        // `android.c:648-656` ignores a parse error; the stored values
+        // stay as they were.
+        midend.applyPrefs(GameEngineImpl.getPrefs(context, backend))
     }
 
     override fun requestKeys(
@@ -612,7 +673,8 @@ class KotlinGameEngine private constructor(
     }
 
     override fun solveEvent() {
-        if (!midend.solve()) throw IllegalArgumentException("This game does not support Solve")
+        val error = midend.solveAttempt()
+        if (error != null) throw IllegalArgumentException(error)
         afterStateChange()
     }
 
@@ -726,14 +788,49 @@ class KotlinGameEngine private constructor(
     // Internals
     // ------------------------------------------------------------------
 
-    private fun applyPrefs(text: String?) {
-        if (text == null) return
-        for (line in text.lineSequence()) {
-            if (line.startsWith("arrow-semantics=")) {
-                invertCursor = line.substringAfter('=').trim() == "gap"
-            }
+    private fun applyPrefsIfRequested(isPrefs: Boolean) {
+        if (isPrefs) {
+            /*
+             * `midend_set_config(CFG_PREFS)` applies every edit at once
+             * (`android.c:425-441`). The prefs builder then calls
+             * `savePrefs`, so the stored text is the new state.
+             */
+            midend.applyPrefs(configItems)
         }
     }
+
+    /** Replaces one open-dialog item by its display name, as C does. */
+    private fun replaceConfigItem(name: String, update: (ConfigItem) -> ConfigItem) {
+        val index = configIndex[name] ?: error("no config item named '$name'")
+        val next = configItems.toMutableList()
+        next[index] = update(next[index])
+        configItems = next
+    }
+
+    /** The first text item, which seed and game-ID dialogs always have. */
+    private fun firstTextValue(): String =
+        (configItems.firstOrNull { it is ConfigItem.Text } as? ConfigItem.Text)?.value ?: ""
+
+    private val fullGameId: String
+        get() {
+            val value = firstTextValue()
+            val full = if (value.contains(':')) value else shortParams() + ":" + value
+            Midend.validateGameId(game, full, isSeed = false, midend.params)?.let {
+                throw IllegalArgumentException(it)
+            }
+            return full
+        }
+
+    private val fullSeed: String
+        get() {
+            val value = firstTextValue()
+            val params = game.encodeParams(midend.currentParams, true)
+            val full = if (value.contains('#')) value else params + "#" + value
+            Midend.validateGameId(game, full, isSeed = true, midend.params)?.let {
+                throw IllegalArgumentException(it)
+            }
+            return full
+        }
 
     private fun shortParams(): String = game.encodeParams(midend.currentParams, false)
 
@@ -760,7 +857,10 @@ class KotlinGameEngine private constructor(
             )
         }
         game.redraw(state, midend.ui, drawState, sink, geometry.tileSize)
-        activityCallbacks.setStatus(midend.statusText())
+        // `game_redraw` calls `status_bar` only when the game wants one
+        // (`Game.wantsStatusBar`), so the shell keeps the previous line
+        // for a game without a status bar.
+        if (game.wantsStatusBar) activityCallbacks.setStatus(midend.statusText())
         viewCallbacks.endDraw()
     }
 
@@ -776,15 +876,30 @@ class KotlinGameEngine private constructor(
             val game = requireNotNull(KotlinGames.gameFor(launch.whichBackend)) {
                 "no Kotlin backend for ${launch.whichBackend}"
             }
+            /*
+             * The stored preferences go to the factory, which applies
+             * them after it builds the UI. They are therefore in place
+             * before this engine reads its first geometry and before the
+             * first resize, as `midend_load_prefs` precedes
+             * `midend_size` in C.
+             */
+            val prefs = GameEngineImpl.getPrefs(context, launch.whichBackend)
             val midend = try {
                 when {
                     launch.saved != null -> Midend.fromSave(
                         game,
                         SgtpSave.parse(launch.saved),
                         platformSeed(),
+                        prefs,
                     )
 
-                    launch.gameID != null -> Midend.fromGameId(game, launch.gameID, platformSeed())
+                    launch.gameID != null -> Midend.fromGameId(
+                        game,
+                        launch.gameID,
+                        platformSeed(),
+                        prefs,
+                    )
+
                     else -> throw IllegalArgumentException("launch has neither a save nor a game ID")
                 }
             } catch (e: IllegalArgumentException) {
@@ -798,7 +913,6 @@ class KotlinGameEngine private constructor(
                 backend = launch.whichBackend,
                 activityCallbacks = activityCallbacks,
                 viewCallbacks = viewCallbacks,
-                initialPrefs = GameEngineImpl.getPrefs(context, launch.whichBackend),
             )
         }
     }

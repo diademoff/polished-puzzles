@@ -47,7 +47,6 @@ class KotlinGameEngineInertiaFollowTest {
             BackendName::class.java,
             GameEngine.ActivityCallbacks::class.java,
             GameEngine.ViewCallbacks::class.java,
-            String::class.java,
         )
         constructor.isAccessible = true
         return constructor.newInstance(
@@ -56,7 +55,6 @@ class KotlinGameEngineInertiaFollowTest {
             FIFTEEN,
             activity,
             view,
-            null,
         )
     }
 

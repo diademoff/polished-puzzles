@@ -853,6 +853,74 @@ class Midend private constructor(
             "one-key-shortcuts",
         )
 
+        /**
+         * The `one-key-shortcuts` item that every preferences page shows
+         * first. It is midend state, not a [Game.prefs] entry, but a page
+         * that edits the stored text without a midend needs the same
+         * item and the same name.
+         */
+        val ONE_KEY_SHORTCUTS_ITEM: ConfigItem get() = ONE_KEY_SHORTCUTS
+
+        /**
+         * `midend_game_id_int(..., validate_only = true)`: null when
+         * [text] is a valid game ID or random-seed text, else the C
+         * error message. [isSeed] selects `DEF_SEED`; false selects
+         * `DEF_DESC`.
+         *
+         * [baseParams] is the midend's long-term parameter set, which C
+         * uses as the starting point for a descriptive id
+         * (`midend.c:1878-1881`) and for a bare description. The app
+         * passes its current parameters; a caller without a midend can
+         * keep the default. A parameter string in [text] is decoded from
+         * scratch, as [fromGameId] does, because the seam's decoders
+         * start from the defaults.
+         */
+        fun validateGameId(
+            game: Game,
+            text: String,
+            isSeed: Boolean,
+            baseParams: Game.Params = game.defaultParams(),
+        ): String? {
+            val hash = text.indexOf('#')
+            val colon = text.indexOf(':')
+            var paramsText: String? = null
+            var desc: String? = null
+            var seed: String? = null
+            when {
+                colon >= 0 && (hash < 0 || colon < hash) -> {
+                    paramsText = text.substring(0, colon)
+                    desc = text.substring(colon + 1)
+                }
+
+                hash >= 0 && (colon < 0 || hash < colon) -> {
+                    paramsText = text.substring(0, hash)
+                    seed = text.substring(hash + 1)
+                }
+
+                isSeed -> seed = text
+                else -> desc = text
+            }
+
+            var newParams = baseParams
+            if (paramsText != null) {
+                val current = game.decodeParams(paramsText)
+                // C validates a seed or a parameter-only id with the full
+                // rule, and a descriptive id with the short rule, because
+                // the description can determine a parameter that the
+                // short form leaves out (`midend.c:1886`).
+                game.validateParams(current, desc == null)?.let { return it }
+                newParams = if (seed != null || desc != null) {
+                    game.decodeParams(game.encodeParams(current, false))
+                } else {
+                    current
+                }
+            }
+            if (desc != null) {
+                game.validateDesc(newParams, desc)?.let { return it }
+            }
+            return null
+        }
+
         /** Creates a new game and generates its description from [seed]. */
         fun newGame(
             game: Game,

@@ -50,7 +50,6 @@ class KotlinGameEngineThickPolyTest {
             BackendName::class.java,
             GameEngine.ActivityCallbacks::class.java,
             GameEngine.ViewCallbacks::class.java,
-            String::class.java,
         )
         constructor.isAccessible = true
         return constructor.newInstance(
@@ -59,7 +58,6 @@ class KotlinGameEngineThickPolyTest {
             FIFTEEN,
             activity,
             view,
-            null,
         )
     }
 

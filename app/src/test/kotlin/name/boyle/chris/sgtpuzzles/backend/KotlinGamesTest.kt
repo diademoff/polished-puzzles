@@ -352,6 +352,39 @@ class KotlinGamesTest {
     }
 
     @Test
+    fun `only fifteen is handled and every other game stays on C`() {
+        for (backend in BackendName.all) {
+            assertEquals(
+                "$backend must stay on the C backend",
+                backend === FIFTEEN,
+                KotlinGames.handles(backend),
+            )
+        }
+    }
+
+    @Test
+    fun `defaultParams is the engine full default for every known game`() {
+        var known = 0
+        for (backend in BackendName.all) {
+            val game = KotlinGames.gameFor(backend) ?: continue
+            known++
+            assertEquals(
+                backend.toString(),
+                game.encodeParams(game.defaultParams(), true),
+                KotlinGames.defaultParams(backend),
+            )
+        }
+        assertEquals(40, known)
+    }
+
+    @Test
+    fun `the fifteen generator is a pure function of its arguments`() {
+        val first = KotlinGames.generate(FIFTEEN, "4x4", "12345")
+        val second = KotlinGames.generate(FIFTEEN, "4x4", "12345")
+        assertEquals(first, second)
+    }
+
+    @Test
     fun `the platform seed is 16 bytes`() {
         val seed = platformSeed()
         assertEquals(16, seed.size)

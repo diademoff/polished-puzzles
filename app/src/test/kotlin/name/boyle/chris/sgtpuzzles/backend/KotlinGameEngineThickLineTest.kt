@@ -70,7 +70,6 @@ class KotlinGameEngineThickLineTest {
             BackendName::class.java,
             GameEngine.ActivityCallbacks::class.java,
             GameEngine.ViewCallbacks::class.java,
-            String::class.java,
         )
         constructor.isAccessible = true
         return constructor.newInstance(
@@ -79,7 +78,6 @@ class KotlinGameEngineThickLineTest {
             FIFTEEN,
             activity,
             view,
-            null,
         )
     }
 
