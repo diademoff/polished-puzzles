@@ -90,6 +90,42 @@ interface Game {
     fun validateParams(params: Params, full: Boolean): String?
 
     /**
+     * `game_configure`: the settings dialog for [params], in C item
+     * order. The default null means the game has not declared a schema
+     * yet, and the app must not enable it. The non-null return is the
+     * gate that makes [customParams] meaningful.
+     */
+    fun configure(params: Params): List<ConfigItem>? = null
+
+    /**
+     * `custom_params`: the parameters that the edited settings items
+     * describe. A game that returns a non-null [configure] must
+     * implement this; the default throws instead of hiding a missing
+     * implementation behind a crash in a dialog.
+     */
+    fun customParams(items: List<ConfigItem>): Params =
+        throw UnsupportedOperationException(
+            "$backendName declares no configuration schema; " +
+                "implement customParams with configure",
+        )
+
+    /**
+     * `get_prefs` for a fresh UI: the schema and the compile-time
+     * defaults, with no [Ui] and no generation. Empty when C has a NULL
+     * `get_prefs`, which is most games.
+     *
+     * The list is static on purpose. `midend_get_prefs` with no live UI
+     * calls `new_ui(NULL)` and reads only the compile-time fields
+     * (`midend.c:2986-3003`), so a static list equals
+     * `get_prefs(new_ui(NULL))`, which is exactly what the preferences
+     * page needs.
+     */
+    val prefs: List<ConfigItem> get() = emptyList()
+
+    /** `set_prefs`: applies [prefs] to a live UI. */
+    fun setPrefs(ui: Ui, prefs: Prefs) {}
+
+    /**
      * Generates a description and, when the game has one, the auxiliary
      * solution text that upstream stores in `AUXINFO`.
      */
@@ -102,6 +138,15 @@ interface Game {
 
     /** The move that solves the state, or null when the game cannot solve. */
     fun solve(state: State, auxInfo: String? = null): String?
+
+    /**
+     * `solve` with the error channel of `midend_solve`
+     * (`midend.c:2096-2123`). A game that has a solver message returns
+     * it in [SolveOutcome.error]; the default wraps [solve] and has no
+     * message, so every existing game is unchanged.
+     */
+    fun solveGame(state: State, auxInfo: String? = null): SolveOutcome =
+        SolveOutcome(solve(state, auxInfo), null)
 
     /** Applies one move, or returns null when the move is invalid. */
     fun executeMove(state: State, move: String): State?
@@ -378,6 +423,13 @@ interface Game {
 data class Preset(val title: String, val params: String)
 
 data class Description(val text: String, val auxInfo: String? = null)
+
+/**
+ * The result of `game.solve`: the move, or the C error message when the
+ * game has no move and knows why. [Midend.solveAttempt] turns a null
+ * move into the `midend_solve` text.
+ */
+data class SolveOutcome(val move: String?, val error: String?)
 
 data class Size(val width: Int, val height: Int)
 

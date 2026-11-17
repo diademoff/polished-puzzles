@@ -111,6 +111,54 @@ object Slant : Game {
     override fun validateParams(params: Game.Params, full: Boolean): String? =
         SlantGeneration.validateParams(params as SlantGeneration.Params, full)
 
+    /** `game_configure` (`slant.c:190-216`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as SlantGeneration.Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Choices(
+                name = "Difficulty",
+                choices = ":Easy:Hard",
+                keywords = null,
+                selected = p.difficulty,
+            ),
+        )
+    }
+
+    /** `custom_params` (`slant.c:218-227`): `atoi` and the selected index. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        SlantGeneration.Params(
+            atoi(text(items, "Width")),
+            atoi(text(items, "Height")),
+            (items.lastOrNull { it.name == "Difficulty" } as? ConfigItem.Choices)?.selected
+                ?: 0,
+        )
+
+    /** `get_prefs` (`slant.c:1705-1728`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Choices(
+                name = "Mouse button order",
+                choices = ":Left \\, right /:Left /, right \\",
+                keywords = ":\\:/",
+                selected = 0,
+                kw = "left-button",
+            ),
+            ConfigItem.Bool(
+                "Fade grounded components",
+                false,
+                "fade-grounded",
+            ),
+        )
+
+    /** `set_prefs` (`slant.c:1730-1734`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        val u = ui as Ui
+        u.swapButtons = prefs.choice("left-button") == 1
+        u.fadeGrounded = prefs.bool("fade-grounded")
+    }
+
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val generated = SlantGeneration.newDesc(params as SlantGeneration.Params, random)
         return Description(generated.text, generated.auxInfo)
@@ -429,6 +477,29 @@ object Slant : Game {
 
     private fun fromCoord(value: Int, tileSize: Int): Int =
         (value - tileSize + tileSize) / tileSize - 1
+
+    /** The value of the named settings text item. */
+    private fun text(items: List<ConfigItem>, name: String): String =
+        (items.lastOrNull { it.name == name } as? ConfigItem.Text)?.value
+            ?: error("no text setting named '$name'")
+
+    /** C `atoi`: leading whitespace, an optional sign, then decimal digits. */
+    private fun atoi(text: String): Int {
+        var index = 0
+        while (index < text.length && text[index].isWhitespace()) index++
+        var sign = 1
+        if (index < text.length && (text[index] == '+' || text[index] == '-')) {
+            if (text[index] == '-') sign = -1
+            index++
+        }
+        var value = 0L
+        while (index < text.length && text[index] in '0'..'9') {
+            value = value * 10 + (text[index] - '0')
+            if (value > Int.MAX_VALUE) return if (sign < 0) Int.MIN_VALUE else Int.MAX_VALUE
+            index++
+        }
+        return sign * value.toInt()
+    }
 
     override fun colours(): FloatArray =
         colours(floatArrayOf(0.8f, 0.8f, 0.8f))

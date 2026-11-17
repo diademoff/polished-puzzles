@@ -60,6 +60,15 @@ object Fifteen : Game {
             31 * (31 * tiles.contentHashCode() + gapPos) + completed
     }
 
+    /** `game_ui`: the arrow-key preference of this game. */
+    data class Ui(
+        /**
+         * `arrow-semantics=gap`: the arrow key moves the gap instead of
+         * a tile. It is the `invert_cursor` field of `fifteen.c:485`.
+         */
+        var invertCursor: Boolean = false,
+    ) : Game.Ui
+
     override val name: String = "Fifteen"
     override val backendName: String = "fifteen"
     override val preferredTileSize: Int = PREFERRED_TILE_SIZE
@@ -98,6 +107,41 @@ object Fifteen : Game {
         }
         return null
     }
+
+    /** `game_configure` (`fifteen.c:128-149`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+        )
+    }
+
+    /** `custom_params` (`fifteen.c:151-159`): `atoi` of both fields. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi(text(items, "Width"), 0),
+            atoi(text(items, "Height"), 0),
+        )
+
+    /** `get_prefs` (`fifteen.c:513-531`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Choices(
+                name = "Sense of arrow keys",
+                choices = ":Move the tile:Move the gap",
+                keywords = ":tile:gap",
+                selected = 0,
+                kw = "arrow-semantics",
+            ),
+        )
+
+    /** `set_prefs` (`fifteen.c:533-536`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).invertCursor = prefs.choice("arrow-semantics") == 1
+    }
+
+    override fun newUi(state: Game.State): Game.Ui = Ui()
 
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
@@ -444,6 +488,13 @@ object Fifteen : Game {
 
             Buttons.isCursorMove(key) -> {
                 key = flipCursor(key)
+                /*
+                 * `fifteen.c:793-797`: the default flip makes the arrow
+                 * move a tile, and the preference flips it back so the
+                 * arrow moves the gap. A delegated test UI has no
+                 * preference and keeps the default.
+                 */
+                if ((ui as? Ui)?.invertCursor == true) key = flipCursor(key)
                 val dx = when (key) {
                     Buttons.CURSOR_UP -> 0
                     Buttons.CURSOR_DOWN -> 0
@@ -710,6 +761,11 @@ object Fifteen : Game {
         val border = tileSize / 2
         return (value - border + tileSize) / tileSize - 1
     }
+
+    /** The value of the named settings text item. */
+    private fun text(items: List<ConfigItem>, name: String): String =
+        (items.lastOrNull { it.name == name } as? ConfigItem.Text)?.value
+            ?: error("no text setting named '$name'")
 
     /** C `atoi`: leading whitespace, an optional sign, then decimal digits. */
     private fun atoi(text: String, start: Int): Int {

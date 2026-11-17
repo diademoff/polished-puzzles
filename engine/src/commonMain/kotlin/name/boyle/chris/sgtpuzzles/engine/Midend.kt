@@ -10,7 +10,9 @@ package name.boyle.chris.sgtpuzzles.engine
  * same public flags.
  *
  * The shell-facing parts of upstream `midend.c` (menus, timers, size
- * negotiation, preferences, animations) are not here yet. They have no
+ * negotiation, animations) are not here yet. Preferences are: the
+ * midend owns `one-key-shortcuts` and the game's [Game.prefs], applies
+ * them to the UI, and writes the same file text as C. They have no
  * meaning without the Android shell and they do not affect a saved
  * state. `ADR 0006` records that the midend is ported with its first
  * game, and that the semantic subset is the part the parity matrix
@@ -69,6 +71,81 @@ class Midend private constructor(
      */
     var ui: Game.Ui = initialUi ?: game.newUi(state, platformSeed)
         private set
+
+    /**
+     * The preferences of this midend, the counterpart of `me->be_prefs`.
+     * It holds `one-key-shortcuts` first and the [Game.prefs] items in
+     * schema order, with the values that were last applied. A new midend
+     * starts at the schema defaults, as `midend_new` does
+     * (`midend.c:240`), and the factories apply their `prefs` argument
+     * after the UI exists.
+     */
+    private var prefs: Prefs = Prefs.defaults(
+        listOf(ONE_KEY_SHORTCUTS) + game.prefs,
+    )
+
+    /**
+     * `me->one_key_shortcuts`: true when the bare letters `n`, `u`,
+     * `r`, and `q` act as shortcuts. The `*`, `#`, control-character,
+     * and `UI_*` aliases are always active, as in
+     * `midend.c:1006-1034`.
+     */
+    var oneKeyShortcuts: Boolean
+        get() = prefs.bool(ONE_KEY_SHORTCUTS.kw)
+        set(value) {
+            prefs = prefs.withValues(listOf(ONE_KEY_SHORTCUTS.copy(value = value)))
+        }
+
+    /**
+     * `one-key-shortcuts` followed by [Game.prefs], with the applied
+     * values. This is what the preferences dialog shows.
+     */
+    val prefItems: List<ConfigItem> get() = prefs.items
+
+    /**
+     * Parses and applies preferences text. Returns the C error text, or
+     * null when the text was applied. A null text changes nothing, as
+     * `midend_load_prefs` does. On an error the stored values stay as
+     * they were, because C does not call `midend_set_prefs` after a
+     * parse error (`midend.c:3289-3290`).
+     */
+    fun applyPrefs(text: String?): String? {
+        if (text == null) return null
+        val parsed = try {
+            /* The loader starts from the current values. */
+            Prefs.parse(prefItems, text)
+        } catch (e: PrefsException) {
+            return e.message
+        }
+        prefs = parsed
+        game.setPrefs(ui, prefs)
+        return null
+    }
+
+    /**
+     * Applies edited preference items, as `midend_set_config(CFG_PREFS)`
+     * does. The `one-key-shortcuts` item is midend state; every other
+     * item is a [Game.prefs] value and reaches the game through
+     * [Game.setPrefs].
+     */
+    fun applyPrefs(items: List<ConfigItem>) {
+        prefs = prefs.withValues(items)
+        game.setPrefs(ui, prefs)
+    }
+
+    /** The C preferences file text, one `kw=value` line per item. */
+    fun serialisePrefs(): String = prefs.encode()
+
+    /**
+     * Applies the optional `prefs` argument of a factory. The value is
+     * the frontend's stored blob, which C asserts is valid; a caller
+     * that supplies a bad one gets the C message as an error instead of
+     * a silent default.
+     */
+    private fun applyInitialPrefs(text: String?) {
+        val error = applyPrefs(text) ?: return
+        throw IllegalArgumentException(error)
+    }
 
     /**
      * The drawing cache, mirroring upstream `me->drawstate`. The midend
@@ -341,11 +418,21 @@ class Midend private constructor(
     /** Drops the redo branch, as `midend_purge_states`. */
     fun purgeStates() = purgeRedo()
 
-    /** The `SOLVE` history entry, or false when the game cannot solve. */
-    fun solve(): Boolean {
+    /**
+     * `midend_solve`: appends the `SOLVE` entry and returns null, or
+     * returns the C message. The messages are the three branches of
+     * `midend.c:2096-2123`: no solver, no move (with the game's text when
+     * it has one), and a move that `execute_move` rejects.
+     */
+    fun solveAttempt(): String? {
+        if (!game.canSolve) {
+            return "This game does not support the Solve operation"
+        }
         val previous = state
-        val move = game.solve(state, auxInfo) ?: return false
-        val solved = game.executeMove(state, move) ?: return false
+        val outcome = game.solveGame(previous, auxInfo)
+        val move = outcome.move ?: return outcome.error ?: "Solve operation failed"
+        val solved = game.executeMove(previous, move)
+            ?: return "Solve unavailable (already solved?)"
         purgeRedo()
         entries += Entry(solved, move, MoveType.SOLVE)
         statePos++
@@ -353,8 +440,11 @@ class Midend private constructor(
         // the return value, so a solve never raises the completion event.
         game.changedState(ui, previous, solved)
         refreshTimer()
-        return true
+        return null
     }
+
+    /** The `SOLVE` history entry, or false when the solve failed. */
+    fun solve(): Boolean = solveAttempt() == null
 
     /**
      * Applies one frontend key, as `midend_process_key`.
@@ -499,8 +589,10 @@ class Midend private constructor(
 
     /**
      * The shortcut chain of `midend_really_process_key`, in C order:
-     * new game, undo, redo, solve, quit. `one_key_shortcuts` is not a
-     * seam preference and is always on, as the C default.
+     * new game, undo, redo, solve, quit. The bare letters `n`, `u`,
+     * `r`, and `q` are gated by [oneKeyShortcuts]; `*`, `#`, control
+     * characters, and `UI_*` keys are always active, as in
+     * `midend.c:1006-1034`.
      *
      * The shell owns the new game and quit actions, so their keys have
      * no engine action here. They return [KeyOutcome.Unused] instead of
@@ -508,11 +600,14 @@ class Midend private constructor(
      */
     private fun applyShortcut(button: Int): KeyOutcome = when (button) {
         'n'.code, 'N'.code, 0x0E, Buttons.UI_NEWGAME -> KeyOutcome.Unused
-        'u'.code, 'U'.code, '*'.code, 0x1A, 0x1F, Buttons.UI_UNDO ->
-            if (undo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
+        'u'.code, 'U'.code ->
+            if (oneKeyShortcuts) undoOutcome() else KeyOutcome.Unused
 
-        'r'.code, 'R'.code, '#'.code, 0x12, 0x19, Buttons.UI_REDO ->
-            if (redo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
+        '*'.code, 0x1A, 0x1F, Buttons.UI_UNDO -> undoOutcome()
+        'r'.code, 'R'.code ->
+            if (oneKeyShortcuts) redoOutcome() else KeyOutcome.Unused
+
+        '#'.code, 0x12, 0x19, Buttons.UI_REDO -> redoOutcome()
 
         // C sets SOME_EFFECT before it tries the solver, so a solvable
         // game reports an effect even when the solver returns null.
@@ -525,6 +620,12 @@ class Midend private constructor(
         'q'.code, 'Q'.code, 0x11, Buttons.UI_QUIT -> KeyOutcome.Unused
         else -> KeyOutcome.Unused
     }
+
+    private fun undoOutcome(): KeyOutcome =
+        if (undo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
+
+    private fun redoOutcome(): KeyOutcome =
+        if (redo()) KeyOutcome.SomeEffect else KeyOutcome.NoEffect
 
     /**
      * `midend_supersede_game_desc` for a move: a game can resolve a
@@ -741,12 +842,24 @@ class Midend private constructor(
          */
         private val DEFAULT_PLATFORM_SEED = byteArrayOf(0)
 
+        /**
+         * `midend_get_prefs` always prepends this item
+         * (`midend.c:3007-3028`). It is midend state, not a game
+         * preference.
+         */
+        private val ONE_KEY_SHORTCUTS = ConfigItem.Bool(
+            "Keyboard shortcuts without Ctrl",
+            true,
+            "one-key-shortcuts",
+        )
+
         /** Creates a new game and generates its description from [seed]. */
         fun newGame(
             game: Game,
             paramsText: String,
             seed: String,
             platformSeed: ByteArray = DEFAULT_PLATFORM_SEED,
+            prefs: String? = null,
         ): Midend {
             val effective = if (paramsText.isEmpty()) {
                 game.encodeParams(game.defaultParams(), false)
@@ -771,7 +884,7 @@ class Midend private constructor(
             // fails to encode a play-time parameter in its short form
             // then shows the behavior at play time. `midend.c:611-628`.
             val state = game.newState(params, generated.text)
-            return Midend(
+            val midend = Midend(
                 game = game,
                 params = params,
                 currentParams = currentParams,
@@ -782,6 +895,8 @@ class Midend private constructor(
                 statePos = 1,
                 platformSeed = platformSeed,
             )
+            midend.applyInitialPrefs(prefs)
+            return midend
         }
 
         /** Builds a game from `params:desc`, as a game ID does. */
@@ -789,6 +904,7 @@ class Midend private constructor(
             game: Game,
             gameId: String,
             platformSeed: ByteArray = DEFAULT_PLATFORM_SEED,
+            prefs: String? = null,
         ): Midend {
             val colon = gameId.indexOf(':')
             require(colon >= 0) { "game ID has no colon: $gameId" }
@@ -804,7 +920,7 @@ class Midend private constructor(
             // C validates the description with the filtered `newparams`
             // (`midend.c:1931`), the same set the state is built from.
             game.validateDesc(params, desc)?.let { error(it) }
-            return Midend(
+            val midend = Midend(
                 game = game,
                 params = params,
                 currentParams = currentParams,
@@ -817,6 +933,8 @@ class Midend private constructor(
                 statePos = 1,
                 platformSeed = platformSeed,
             )
+            midend.applyInitialPrefs(prefs)
+            return midend
         }
 
         /** Reads a save file. The game must already be known. */
@@ -824,6 +942,7 @@ class Midend private constructor(
             game: Game,
             save: SgtpSave,
             platformSeed: ByteArray = DEFAULT_PLATFORM_SEED,
+            prefs: String? = null,
         ): Midend {
             require(save.value("GAME") == game.name) {
                 "save file is from a different game: ${save.value("GAME")}"
@@ -905,7 +1024,7 @@ class Midend private constructor(
             // overlays the record on that same UI with the current
             // state. A save without the record keeps the base UI.
             val baseUi = game.newUi(entries[0].state, platformSeed)
-            return Midend(
+            val midend = Midend(
                 game = game,
                 params = params,
                 currentParams = currentParams,
@@ -924,6 +1043,8 @@ class Midend private constructor(
                 } ?: baseUi,
                 platformSeed = platformSeed,
             )
+            midend.applyInitialPrefs(prefs)
+            return midend
         }
 
         private fun decodeHexSeed(text: String): String {
