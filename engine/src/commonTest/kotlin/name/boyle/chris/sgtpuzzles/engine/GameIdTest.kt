@@ -67,6 +67,12 @@ class GameIdTest {
      * `validate_desc` reads it. Starting from the compile-time default
      * would validate the wrong grid and reject a triangular
      * description.
+     *
+     * Loopy is the case where the base changes validation. The decoders
+     * of `solo`, `keen`, `lightup`, `unequal`, and `map` write every
+     * field their `validate_desc` reads, so a base cannot change their
+     * answer; a game that keeps a base field outside the short encoding
+     * reads it after `encode_params`, not in `validate_desc`.
      */
     @Test
     fun `a descriptive id decodes its parameters over the base`() {
