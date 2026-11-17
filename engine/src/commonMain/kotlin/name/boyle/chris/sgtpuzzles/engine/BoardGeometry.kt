@@ -32,9 +32,17 @@ data class BoardGeometry(
 
     companion object {
 
-        /** The board at the preferred tile size, before the first resize. */
-        fun preferred(game: Game, params: Game.Params): BoardGeometry {
-            val size = game.computeSize(params, game.preferredTileSize)
+        /**
+         * The board at the preferred tile size, before the first resize.
+         *
+         * [ui] is required because the size of the board can depend on
+         * frontend state: upstream `game_compute_size` takes the UI, and
+         * `pearl` picks its border from the appearance preference. The
+         * caller has no state to build a fresh UI from, so it passes the
+         * UI of the midend.
+         */
+        fun preferred(game: Game, params: Game.Params, ui: Game.Ui): BoardGeometry {
+            val size = game.computeSize(params, ui, game.preferredTileSize)
             return BoardGeometry(game.preferredTileSize, 0, 0, size.width, size.height)
         }
     }

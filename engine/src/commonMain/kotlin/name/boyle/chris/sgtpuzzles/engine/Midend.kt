@@ -161,7 +161,7 @@ class Midend private constructor(
     /** The tile size the oracle reports for a large window. */
     val tileSize: Int get() = game.preferredTileSize
 
-    val size: Size get() = game.computeSize(params, tileSize)
+    val size: Size get() = game.computeSize(params, ui, tileSize)
 
     /**
      * `midend_size(..., user_size = true)`: the largest tile size that
@@ -171,14 +171,14 @@ class Midend private constructor(
     fun largestTileFor(width: Int, height: Int): Int {
         var maximum = 1
         while (true) {
-            val candidate = game.computeSize(params, maximum)
+            val candidate = game.computeSize(params, ui, maximum)
             if (candidate.width > width || candidate.height > height) break
             maximum *= 2
         }
         var minimum = 1
         while (maximum - minimum > 1) {
             val middle = (maximum + minimum) / 2
-            val candidate = game.computeSize(params, middle)
+            val candidate = game.computeSize(params, ui, middle)
             if (candidate.width <= width && candidate.height <= height) {
                 minimum = middle
             } else {
@@ -194,7 +194,7 @@ class Midend private constructor(
      */
     fun geometryFor(viewWidth: Int, viewHeight: Int): BoardGeometry {
         val tile = largestTileFor(viewWidth, viewHeight)
-        val board = game.computeSize(params, tile)
+        val board = game.computeSize(params, ui, tile)
         return BoardGeometry(
             tileSize = tile,
             originX = (viewWidth - board.width) / 2,

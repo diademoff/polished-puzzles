@@ -202,6 +202,22 @@ interface Game {
     /** The physical size of the board for a tile size. */
     fun computeSize(params: Params, tileSize: Int): Size
 
+    /**
+     * The physical size of the board for a tile size and the current
+     * frontend state.
+     *
+     * Upstream `game_compute_size` takes the UI because a game can pick
+     * its border from a preference. `pearl.c:2446-2447` uses
+     * `BORDER`, which is `TILE_SIZE/8` in the Loopy appearance and
+     * `TILE_SIZE/2` in the Masyu appearance
+     * (`pearl.c:2008`). The size is therefore not a function of the
+     * parameters and the tile size alone. The default calls the
+     * two-argument form, so a game whose geometry does not read the UI
+     * declares nothing and keeps its arithmetic.
+     */
+    fun computeSize(params: Params, ui: Ui, tileSize: Int): Size =
+        computeSize(params, tileSize)
+
     /** The palette as RGB triples in 0..1, using the default background. */
     fun colours(): FloatArray
 

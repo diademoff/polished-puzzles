@@ -728,3 +728,53 @@ operation, not the game.
 rounding, the normalizer line, and the position inside the draw pair,
 and `KotlinGameEngineThickPolyTest` pins the origin and the callback
 argument order.
+
+## Amendment: the UI-aware compute size
+
+- **Date:** 2026-11-17
+
+Upstream `game_compute_size` takes a `const game_ui *ui` argument
+(`puzzles.h`). The seam declared only `computeSize(params, tileSize)`,
+which assumes that the board size is a function of the parameters and
+the tile size alone. That is false for `pearl`:
+`game_compute_size` uses `BORDER` (`pearl.c:2446-2447`), and `BORDER`
+is `TILE_SIZE/8` for the Loopy appearance and `TILE_SIZE/2` for the
+Masyu appearance (`pearl.c:2008`). The preference lives in the UI
+(`ui->gui_style`), so a game that reads it cannot express its size
+through the old signature. A size computed with the wrong appearance
+would also be wrong for the size search, the centred origin, and the
+input mapping, because all of them read the same geometry.
+
+1. **`Game.computeSize(params, ui, tileSize)`** is the seam operation.
+   The two-argument form stays abstract, because every ported game
+   already implements it, and the new three-argument form is a default
+   that calls it. A game whose geometry reads the UI overrides the
+   three-argument form; every other game declares nothing and keeps its
+   arithmetic and its tests.
+
+2. **The midend passes its current UI.** `Midend.size`,
+   `Midend.largestTileFor`, and `Midend.geometryFor` call the
+   three-argument form with `Midend.ui`. Their public signatures do not
+   change, so the size search and the geometry keep one source of UI
+   state. The C midend reads `me->ui` in the same place, because
+   `midend_size` calls `game_compute_size` with it.
+
+3. **`BoardGeometry.preferred` takes the UI.** The value is part of the
+   geometry that drawing, input, the cursor, and size negotiation share.
+   There is no two-argument overload: `Game.newUi` needs a state, and the
+   preferred geometry is built before the caller has one, so a default
+   UI would be a guess that can differ from the loaded UI. The app passes
+   `midend.ui` both for the initial geometry field and for
+   `suggestDensity`, and it does not create a second UI.
+
+The UI stays frontend state. It does not enter `Params`, the seed,
+`DESC`, `PRIVDESC`, `AUXINFO`, `UI`, or `.sgtp`, and a save created
+under one appearance loads unchanged under another. The rule only says
+which UI the size calculation reads.
+
+`UiComputeSizeTest` pins a test-only game whose three-argument
+`computeSize` returns a different shape per UI flag, and checks
+`Midend.size`, `largestTileFor`, `geometryFor`, and
+`BoardGeometry.preferred` against it. It also pins that a game which
+does not override the three-argument form answers exactly as before, so
+the existing game size and geometry tests stay unchanged.

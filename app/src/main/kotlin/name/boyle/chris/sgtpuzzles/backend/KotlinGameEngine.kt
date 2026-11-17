@@ -228,7 +228,7 @@ class KotlinGameEngine private constructor(
 
     private val state: Game.State get() = midend.state
 
-    private var geometry = BoardGeometry.preferred(game, midend.params)
+    private var geometry = BoardGeometry.preferred(game, midend.params, midend.ui)
     private var viewWidth = 1
     private var viewHeight = 1
     private var sized = false
@@ -676,7 +676,7 @@ class KotlinGameEngine private constructor(
         }
 
     override fun suggestDensity(x: Int, y: Int): Float {
-        val size = game.computeSize(midend.params, game.preferredTileSize)
+        val size = game.computeSize(midend.params, midend.ui, game.preferredTileSize)
         val widthRatio = floor(x.toDouble() / size.width).toFloat()
         val heightRatio = floor(y.toDouble() / size.height).toFloat()
         return max(1.0f, min(widthRatio, heightRatio))
