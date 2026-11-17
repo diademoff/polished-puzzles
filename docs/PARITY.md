@@ -1996,7 +1996,7 @@ Notes:
   redo, a real completion at tile 63 with one event, and a non-vacuous
   post-click frame.
 
-  One C assertion in `generate_pass` (`galaxies.c:1428`) is kept as a
+  One C assertion in `generate_pass` (`galaxies.c:1386`) is kept as a
   defensive skip: `dot_is_possible` rejects every dot whose adjacent
   tiles would have an off-grid or associated opposite, so no generated
   dot reaches the failing `solver_obvious_dot`. The port leaves such a

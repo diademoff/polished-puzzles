@@ -20,7 +20,7 @@ import kotlin.math.sqrt
  */
 object Galaxies : Game {
 
-    // Palette, `galaxies.c:88-98`.
+    // Palette, `galaxies.c:119-131`.
     private const val COL_BACKGROUND = 0
     private const val COL_WHITEBG = 1
     private const val COL_BLACKBG = 2
@@ -32,11 +32,11 @@ object Galaxies : Game {
     private const val COL_CURSOR = 8
     private const val NCOLOURS = 9
 
-    /** `DIFFLIST`, `galaxies.c:100-104`. */
+    /** `DIFFLIST`, `galaxies.c:134-136`. */
     private const val DIFF_NORMAL = 0
     private const val DIFF_UNREASONABLE = 1
 
-    // Solver grades, `galaxies.c:110-111`.
+    // Solver grades, `galaxies.c:143-144`.
     private const val DIFF_IMPOSSIBLE = 2
     private const val DIFF_AMBIGUOUS = 3
     private const val DIFF_UNFINISHED = 4
@@ -44,7 +44,7 @@ object Galaxies : Game {
     private val diffChars = charArrayOf('n', 'u')
     private val diffNames = arrayOf("Normal", "Unreasonable")
 
-    // Space flags, `galaxies.c:120-130`.
+    // Space flags, `galaxies.c:157-168`.
     private const val F_DOT = 1
     private const val F_EDGE_SET = 2
     private const val F_TILE_ASSOC = 4
@@ -54,12 +54,12 @@ object Galaxies : Game {
     private const val F_MULTIPLE = 128
     private const val F_DOT_HOLD = 256
 
-    // Space types, `galaxies.c:117`.
+    // Space types, `galaxies.c:154`.
     private const val S_TILE = 0
     private const val S_EDGE = 1
     private const val S_VERTEX = 2
 
-    /** `PREFERRED_TILE_SIZE`, `galaxies.c:3442`. */
+    /** `PREFERRED_TILE_SIZE`, `galaxies.c:2718`. */
     private const val PREFERRED_TILE_SIZE = 32
 
     /** `FLASH_TIME`; the seam has no flash clock. */
@@ -74,7 +74,7 @@ object Galaxies : Game {
     private const val IMPOSSIBLE_QUITS = 1
 
 
-    // Draw flags, `galaxies.c:3556-3571`.
+    // Draw flags, `galaxies.c:3540-3555`.
     private const val DRAW_EDGE_L = 0x0001
     private const val DRAW_EDGE_R = 0x0002
     private const val DRAW_EDGE_U = 0x0004
@@ -92,7 +92,7 @@ object Galaxies : Game {
     private const val DOT_WHITE = 1L
     private const val DOT_BLACK = 2L
 
-    /** `struct game_params`, `galaxies.c:113-118`. */
+    /** `struct game_params`, `galaxies.c:148-152`. */
     data class Params(
         val w: Int,
         val h: Int,
@@ -102,7 +102,7 @@ object Galaxies : Game {
     }
 
     /**
-     * The space array, `galaxies.c:132-138`. The arrays are indexed
+     * The space array, `galaxies.c:167-181`. The arrays are indexed
      * `y * sx + x`, which is the C `SPACE` macro.
      */
     class Board internal constructor(val sx: Int, val sy: Int) {
@@ -154,7 +154,7 @@ object Galaxies : Game {
         }
     }
 
-    /** `struct game_state`, `galaxies.c:140-149`. */
+    /** `struct game_state`, `galaxies.c:183-190`. */
     class State internal constructor(
         val w: Int,
         val h: Int,
@@ -217,7 +217,7 @@ object Galaxies : Game {
         }
     }
 
-    /** `struct game_ui`, `galaxies.c:3259-3269`. */
+    /** `struct game_ui`, `galaxies.c:2682-2716`. */
     class Ui internal constructor() : Game.Ui {
         var dragging: Boolean = false
         var dragX: Int = 0
@@ -231,7 +231,7 @@ object Galaxies : Game {
         var curVisible: Boolean = false
     }
 
-    /** `struct game_drawstate`, `galaxies.c:3452-3470`. */
+    /** `struct game_drawstate`, `galaxies.c:2733-2757`. */
     class DrawState internal constructor(val w: Int, val h: Int) : Game.DrawState {
         var started: Boolean = false
         var tileSize: Int = 0
@@ -253,7 +253,7 @@ object Galaxies : Game {
     }
 
     // ------------------------------------------------------------------
-    // Identity and parameters, `galaxies.c:153-314`.
+    // Identity and parameters, `galaxies.c:220-345`.
     // ------------------------------------------------------------------
 
     override val name: String = "Galaxies"
@@ -281,7 +281,7 @@ object Galaxies : Game {
     }
 
     /**
-     * `decode_params`, `galaxies.c:196-213`. The difficulty letter is
+     * `decode_params`, `galaxies.c:261-280`. The difficulty letter is
      * matched against `galaxies_diffchars`, and one character after a
      * `d` is always consumed.
      */
@@ -308,7 +308,7 @@ object Galaxies : Game {
         return Params(w, h, diff)
     }
 
-    /** `encode_params`, `galaxies.c:215-222`. */
+    /** `encode_params`, `galaxies.c:281-288`. */
     override fun encodeParams(params: Game.Params, full: Boolean): String {
         val p = params as Params
         val out = StringBuilder("${p.w}x${p.h}")
@@ -319,7 +319,7 @@ object Galaxies : Game {
         return out.toString()
     }
 
-    /** `validate_params`, `galaxies.c:268-285`, in C order. */
+    /** `validate_params`, `galaxies.c:329-345`, in C order. */
     override fun validateParams(params: Game.Params, full: Boolean): String? {
         val p = params as Params
         if (p.w < 3 || p.h < 3) {
@@ -340,7 +340,7 @@ object Galaxies : Game {
     }
 
     // ------------------------------------------------------------------
-    // Board helpers, `galaxies.c:290-393`.
+    // Board helpers, `galaxies.c:351-760`.
     // ------------------------------------------------------------------
 
     private fun inGrid(state: State, x: Int, y: Int): Boolean =
@@ -405,12 +405,14 @@ object Galaxies : Game {
 
         val colours = IntArray(state.w * state.h)
         checkComplete(state, null, colours)
-        if (colours[((b.dotY[tile] - 1) / 2) * state.w + (b.dotX[tile] - 1) / 2] != 0) {
-            return false
-        }
-        if (colours[((b.dotY[opposite] - 1) / 2) * state.w + (b.dotX[opposite] - 1) / 2] != 0) {
-            return false
-        }
+        // C reads the space coordinates, not the associated dot
+        // (`galaxies.c:421-424`). The index encodes them.
+        val tileX = (tile % b.sx - 1) / 2
+        val tileY = (tile / b.sx - 1) / 2
+        val oppositeX = (opposite % b.sx - 1) / 2
+        val oppositeY = (opposite / b.sx - 1) / 2
+        if (colours[tileY * state.w + tileX] != 0) return false
+        if (colours[oppositeY * state.w + oppositeX] != 0) return false
         return true
     }
 
@@ -438,7 +440,7 @@ object Galaxies : Game {
         return b.index(b.dotX[index], b.dotY[index])
     }
 
-    /** `space_opposite_dot`, `galaxies.c:595-609`. Returns -1 for off grid. */
+    /** `space_opposite_dot`, `galaxies.c:648-664`. Returns -1 for off grid. */
     private fun spaceOppositeDot(state: State, space: Int, dot: Int): Int {
         val b = state.board
         val sx = b.sx
@@ -476,7 +478,7 @@ object Galaxies : Game {
     }
 
     /**
-     * `adjacencies`, `galaxies.c:649-673`. Writes the four edges and the
+     * `adjacencies`, `galaxies.c:685-710`. Writes the four edges and the
      * four opposite tiles; -1 means off grid.
      */
     private fun adjacencies(
@@ -524,7 +526,7 @@ object Galaxies : Game {
         }
     }
 
-    /** `outline_tile_fordot`, `galaxies.c:675-708`. */
+    /** `outline_tile_fordot`, `galaxies.c:711-744`. */
     private fun outlineTileFordot(state: State, tile: Int, mark: Boolean): Boolean {
         val b = state.board
         check(b.type[tile] == S_TILE) { "not a tile" }
@@ -602,10 +604,10 @@ object Galaxies : Game {
     }
 
     // ------------------------------------------------------------------
-    // State creation and descriptions, `galaxies.c:1000-1300`.
+    // State creation and descriptions, `galaxies.c:913-1065`.
     // ------------------------------------------------------------------
 
-    /** `blank_game`, `galaxies.c:957-997`. */
+    /** `blank_game`, `galaxies.c:913-952`. */
     private fun blankGame(w: Int, h: Int): State {
         val sx = 2 * w + 1
         val sy = 2 * h + 1
@@ -631,7 +633,7 @@ object Galaxies : Game {
         return state
     }
 
-    /** `game_update_dots`, `galaxies.c:999-1014`. */
+    /** `game_update_dots`, `galaxies.c:953-970`. */
     private fun updateDots(state: State) {
         val b = state.board
         var count = 0
@@ -646,7 +648,7 @@ object Galaxies : Game {
         state.dots = dots
     }
 
-    /** `clear_game`, `galaxies.c:1016-1029`. */
+    /** `clear_game`, `galaxies.c:971-986`. */
     private fun clearGame(state: State, cleardots: Boolean) {
         val b = state.board
         for (x in 1 until state.sx - 1) {
@@ -662,7 +664,7 @@ object Galaxies : Game {
         if (cleardots) updateDots(state)
     }
 
-    /** `dup_game`, `galaxies.c:1031-1048`. */
+    /** `dup_game`, `galaxies.c:987-1004`. */
     private fun dupGame(state: State): State {
         val ret = State(
             state.w,
@@ -676,7 +678,7 @@ object Galaxies : Game {
         return ret
     }
 
-    /** `encode_game`, `galaxies.c:1065-1095`. */
+    /** `encode_game`, `galaxies.c:1020-1065`. */
     private fun encodeGame(state: State): String {
         val b = state.board
         val out = StringBuilder()
@@ -700,7 +702,7 @@ object Galaxies : Game {
         return out.toString()
     }
 
-    /** `dot_is_possible`, `galaxies.c:791-851`. */
+    /** `dot_is_possible`, `galaxies.c:845-912`. */
     private fun dotIsPossible(state: State, space: Int, allowAssoc: Boolean): Boolean {
         val b = state.board
         val sx = b.sx
@@ -744,7 +746,7 @@ object Galaxies : Game {
     }
 
     // ------------------------------------------------------------------
-    // Generation, `galaxies.c:1301-1690`.
+    // Generation, `galaxies.c:1066-1715`.
     // ------------------------------------------------------------------
 
     private fun shuffle(array: IntArray, count: Int, random: RandomState) {
@@ -759,7 +761,7 @@ object Galaxies : Game {
         }
     }
 
-    /** `movedot_cb`, `galaxies.c:1099-1153`. */
+    /** `movedot_cb`, `galaxies.c:1066-1123`. */
     private fun movedotCb(
         state: State,
         tile: Int,
@@ -790,7 +792,7 @@ object Galaxies : Game {
     }
 
     /**
-     * `dot_expand_or_move`, `galaxies.c:1155-1300`. Expands the dot to
+     * `dot_expand_or_move`, `galaxies.c:1124-1270`. Expands the dot to
      * cover the tiles, or moves it to their centre of gravity.
      */
     private fun dotExpandOrMove(state: State, dot: Int, toadd: IntArray, nadd: Int): Boolean {
@@ -858,7 +860,7 @@ object Galaxies : Game {
         return true
     }
 
-    /** `generate_try_block`, `galaxies.c:1310-1367`. */
+    /** `generate_try_block`, `galaxies.c:1271-1332`. */
     private fun generateTryBlock(
         state: State,
         random: RandomState,
@@ -920,7 +922,7 @@ object Galaxies : Game {
         return false
     }
 
-    /** `generate_pass`, `galaxies.c:1377-1434`. */
+    /** `generate_pass`, `galaxies.c:1333-1409`. */
     private fun generatePass(
         state: State,
         random: RandomState,
@@ -972,7 +974,7 @@ object Galaxies : Game {
         }
     }
 
-    /** `is_wiggle` and `measure_wiggliness`, `galaxies.c:1456-1491`. */
+    /** `is_wiggle` and `measure_wiggliness`, `galaxies.c:1410-1445`. */
     private fun isWiggle(state: State, x: Int, y: Int, dx: Int, dy: Int): Boolean {
         val b = state.board
         val x1 = x + 2 * dx
@@ -1006,7 +1008,7 @@ object Galaxies : Game {
         return nwiggles
     }
 
-    /** `new_game_desc`, `galaxies.c:1497-1679`. */
+    /** `new_game_desc`, `galaxies.c:1446-1703`. */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         var state = blankGame(p.w, p.h)
@@ -1049,13 +1051,13 @@ object Galaxies : Game {
         }
     }
 
-    /** `dots_too_close`, `galaxies.c:1681-1691`. */
+    /** `dots_too_close`, `galaxies.c:1704-1715`. */
     private fun dotsTooClose(state: State): Boolean {
         val tmp = dupGame(state)
         return solverObvious(tmp) == -1
     }
 
-    /** `load_game`, `galaxies.c:1693-1740`. */
+    /** `load_game`, `galaxies.c:1716-1763`. */
     private fun loadGame(p: Params, desc: String): State {
         val state = blankGame(p.w, p.h)
         val b = state.board
@@ -1108,7 +1110,7 @@ object Galaxies : Game {
         loadGame(params as Params, desc)
 
     // ------------------------------------------------------------------
-    // Solver, `galaxies.c:1746-2480`.
+    // Solver, `galaxies.c:1807-2633`.
     // ------------------------------------------------------------------
 
     private class SolverContext(state: State) {
@@ -1621,10 +1623,10 @@ object Galaxies : Game {
         solverStateInner(state, maxdiff, 0)
 
     // ------------------------------------------------------------------
-    // Moves and solve, `galaxies.c:2482-2600`.
+    // Moves and solve, `galaxies.c:2634-3426`.
     // ------------------------------------------------------------------
 
-    /** `diff_game`, `galaxies.c:710-788`. */
+    /** `diff_game`, `galaxies.c:761-844`. */
     private fun diffGame(src: State, dest: State, issolve: Boolean): String {
         val out = StringBuilder()
         if (issolve) out.append('S')
@@ -1663,23 +1665,55 @@ object Galaxies : Game {
     }
 
     /**
-     * `solve_game`, `galaxies.c:3049-3088`. The stored answer is applied
-     * first; otherwise the current state and then the initial state are
-     * offered to the solver. Associations are cleared from the result,
-     * so the move only carries the edges.
+     * The initial state of the current history entry: the loaded board
+     * with every player edge and association cleared. The seam passes
+     * only the current state to [solve], while C passes `states[0]`
+     * separately (`midend.c:2105-2109`); the clues and dots never change
+     * during play, so this rebuild is the same board.
+     */
+    private fun initialState(state: State): State {
+        val ret = dupGame(state)
+        val b = ret.board
+        for (i in 0 until b.sx * b.sy) {
+            b.flags[i] = b.flags[i] and (F_EDGE_SET or F_TILE_ASSOC).inv()
+            b.dotX[i] = 0
+            b.dotY[i] = 0
+            b.nassoc[i] = 0
+        }
+        for (x in 0 until b.sx) {
+            for (y in 0 until b.sy) {
+                if ((x % 2 == 0 || y % 2 == 0) &&
+                    (x == 0 || y == 0 || x == b.sx - 1 || y == b.sy - 1)
+                ) {
+                    b.flags[b.index(x, y)] = b.flags[b.index(x, y)] or F_EDGE_SET
+                }
+            }
+        }
+        ret.completed = false
+        ret.usedSolve = false
+        updateDots(ret)
+        return ret
+    }
+
+    /**
+     * `solve_game`, `galaxies.c:2634-2675`. The stored answer is applied
+     * to the initial state first; otherwise the current state and then
+     * the initial state are offered to the solver. Associations are
+     * cleared from the result, so the move only carries the edges.
      */
     override fun solve(state: Game.State, auxInfo: String?): String? {
         val s = state as State
+        val initial = initialState(s)
         val tosolve: State
         if (auxInfo != null) {
-            tosolve = executeMove(s, auxInfo) as State? ?: return null
+            tosolve = executeMove(initial, auxInfo) as State? ?: return null
         } else {
             var attempt = dupGame(s)
             var diff = solverState(attempt, DIFF_UNREASONABLE)
             if (diff != DIFF_UNFINISHED && diff != DIFF_IMPOSSIBLE) {
                 tosolve = attempt
             } else {
-                attempt = dupGame(s)
+                attempt = dupGame(initial)
                 diff = solverState(attempt, DIFF_UNREASONABLE)
                 if (diff == DIFF_UNFINISHED || diff == DIFF_IMPOSSIBLE) return null
                 tosolve = attempt
@@ -1738,7 +1772,7 @@ object Galaxies : Game {
         return Scan(out, i)
     }
 
-    /** `execute_move`, `galaxies.c:2968-3138`. */
+    /** `execute_move`, `galaxies.c:3256-3426`. */
     override fun executeMove(state: Game.State, move: String): Game.State? {
         val ret = dupGame(state as State)
         val b = ret.board
@@ -1832,7 +1866,7 @@ object Galaxies : Game {
     }
 
     // ------------------------------------------------------------------
-    // Completion check, `galaxies.c:2830-2985`.
+    // Completion check, `galaxies.c:3077-3255`.
     // ------------------------------------------------------------------
 
     private fun checkComplete(state: State, dsfIn: Dsf?, colours: IntArray?): Boolean {
@@ -1937,7 +1971,7 @@ object Galaxies : Game {
     }
 
     // ------------------------------------------------------------------
-    // Text, `galaxies.c:454-519`.
+    // Text, `galaxies.c:470-540`.
     // ------------------------------------------------------------------
 
     override fun canFormatAsTextNow(params: Game.Params): Boolean = true
@@ -1979,7 +2013,7 @@ object Galaxies : Game {
     }
 
     // ------------------------------------------------------------------
-    // UI and input, `galaxies.c:3260-3420`.
+    // UI and input, `galaxies.c:2682-3076`.
     // ------------------------------------------------------------------
 
     private fun coordRoundToEdge(x: Float, y: Float, out: IntArray) {
@@ -2024,7 +2058,7 @@ object Galaxies : Game {
             !(oldState as State).completed
     }
 
-    /** `current_key_label`, `galaxies.c:3377-3399`, as a tested helper. */
+    /** `current_key_label`, `galaxies.c:2846-2872`, as a tested helper. */
     fun currentKeyLabel(ui: Game.Ui, state: Game.State, button: Int): String {
         val u = ui as Ui
         val s = state as State
@@ -2220,7 +2254,7 @@ object Galaxies : Game {
         (value - tileSize) / tileSize
 
     /**
-     * The `dropped` label of `interpret_move`, `galaxies.c:3377-3410`.
+     * The `dropped` label of `interpret_move`, `galaxies.c:2873-3076`.
      * A release and a keyboard select share it.
      */
     private fun dropArrow(
@@ -2260,7 +2294,7 @@ object Galaxies : Game {
         )
 
     // ------------------------------------------------------------------
-    // Geometry, palette, and drawing, `galaxies.c:3140-3610`.
+    // Geometry, palette, and drawing, `galaxies.c:3415-4120`.
     // ------------------------------------------------------------------
 
     override fun computeSize(params: Game.Params, tileSize: Int): Size {
@@ -2688,7 +2722,7 @@ object Galaxies : Game {
         }
     }
 
-    /** `game_flash_length`, `galaxies.c:3915-3924`; the seam has no clock. */
+    /** `game_flash_length`, `galaxies.c:3890-3899`; the seam has no clock. */
     @Suppress("unused")
     private fun flashLength(oldState: State, newState: State): Float =
         if (!oldState.completed && newState.completed && !newState.usedSolve) {

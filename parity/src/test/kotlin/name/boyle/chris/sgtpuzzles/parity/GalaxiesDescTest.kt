@@ -224,6 +224,21 @@ class GalaxiesDescTest {
     }
 
     @Test
+    fun `a black dot description matches the oracle`() = OracleClient().use { oracle ->
+        // A black dot is encoded with an uppercase letter. The text form
+        // and the save must carry the flag through the parser.
+        val desc = "Azx"
+        val save = saveWithDesc("7x7dn", desc)
+        val expected = oracle.id(save)
+        val midend = Midend.fromGameId(Galaxies, "7x7dn:$desc")
+        assertEquals("black id", expected.id, midend.id())
+        assertEquals("black save", expected.state, midend.serialise().serialise())
+        assertEquals("black text", oracle.text(save), midend.textFormat())
+        val state = midend.state as Galaxies.State
+        assertTrue("a dot exists", state.hasDot(1, 1))
+    }
+
+    @Test
     fun `two seeds give different descriptions`() {
         val p = Galaxies.decodeParams("7x7dn")
         val first = Galaxies.newDesc(p, RandomState.fromSeed("12345"))

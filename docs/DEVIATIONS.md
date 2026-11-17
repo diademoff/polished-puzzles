@@ -924,15 +924,19 @@ Anything not listed here is a bug.
 - **Status:** active
 - **What differs:** `galaxies` has two paths that only a
   hand-made `Params` value reaches. First, `validate_params` ends with
-  `assert(params->diff <= DIFF_UNREASONABLE)` (`galaxies.c:281`), which
-  aborts the shipped C build for a difficulty outside `0..1`. The port
-  returns `Unknown difficulty level`. Second, `encode_params` reads
-  `galaxies_diffchars[params->diff]` (`galaxies.c:220`) with no range
-  test. The array is `"nu"` followed by the terminator, so a difficulty
-  of 2 writes a bare `d` (the NUL ends the string), and a difficulty
-  above 2 reads past the array in C. The port writes a bare `d` for
-  every value outside `0..1`, which reproduces the difficulty-2 text and
-  defines the larger values.
+  `assert(params->diff <= DIFF_UNREASONABLE)` (`galaxies.c:342`), which
+  aborts the shipped C build for a difficulty above 1. A negative
+  difficulty passes the assert; C then reads
+  `galaxies_diffchars[params->diff]` with a negative index in
+  `encode_params` (`galaxies.c:286`), which is undefined behavior. The
+  port returns `Unknown difficulty level` for every value outside
+  `0..1`, which is a defined result for both the abort and the
+  undefined read. Second, the encoder has no range test. The array is
+  `"nu"` followed by the terminator, so a difficulty of 2 writes a bare
+  `d` (the NUL ends the string), and a difficulty above 2 reads past the
+  array in C. The port writes a bare `d` for every value outside
+  `0..1`, which reproduces the difficulty-2 text and defines the larger
+  values.
 - **Why:** an abort is not acceptable in the app, and the app only
   builds parameters through `decode_params` or `custom_params`, which
   never produce a difficulty outside `0..1`. The check and the encoder

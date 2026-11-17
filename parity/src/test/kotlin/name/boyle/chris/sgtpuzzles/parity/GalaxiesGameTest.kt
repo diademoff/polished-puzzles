@@ -128,6 +128,14 @@ class GalaxiesGameTest {
             assertEquals("'${move.take(20)}' status", expected.status, Galaxies.status(state!!))
             val loaded = Midend.fromSave(Galaxies, SgtpSave.parse(save))
             assertEquals("'${move.take(20)}' reload", state, loaded.state)
+            // Galaxies stores only DESC and the move history, so the
+            // save text is move-invariant; the text form carries the
+            // resulting board.
+            assertEquals(
+                "'${move.take(20)}' text",
+                oracle.text(save),
+                loaded.textFormat(),
+            )
         }
     }
 
@@ -217,6 +225,59 @@ class GalaxiesGameTest {
             assertNull("$params no stored answer", midend.auxInfo)
             assertEquals("$params solved by the solver", expected, Galaxies.solve(midend.state, null))
         }
+    }
+
+    @Test
+    fun `associations on a partial board match the oracle`() = OracleClient().use { oracle ->
+        // Remove one edge from the stored answer, then associate tiles
+        // from several dots. The colour test reads the space
+        // coordinates, so a wrong index changes the board (or throws).
+        val base = oracle.newGame("galaxies", "7x7dn", SEED)
+        val solve = SgtpSave.parse(oracle.solve(base.state).state).value("SOLVE")!!
+        val solved = appendMove(base.state, solve)
+        val partial = appendMove(solved, "E1,2")
+        val dots = (Midend.fromSave(Galaxies, SgtpSave.parse(partial)).state as Galaxies.State)
+            .dotPositions()
+            .take(4)
+        var checked = 0
+        for (y in 1..12) {
+            for (x in 1..12) {
+                for ((dx, dy) in dots.take(6)) {
+                val move = "A$x,$y,$dx,$dy"
+                val save = appendMove(partial, move)
+                val expected = oracle.id(save)
+                val loaded = Midend.fromSave(Galaxies, SgtpSave.parse(save))
+                assertEquals("'$move' text", oracle.text(save), loaded.textFormat())
+                checked++
+                }
+            }
+        }
+        assertTrue("enough associations", checked >= 300)
+    }
+
+    @Test
+    fun `the solver uses the initial state`() = OracleClient().use { oracle ->
+        val base = oracle.newGame("galaxies", "7x7dn", SEED)
+        val moved = appendMove(base.state, "E2,1")
+        val expected = oracle.solve(moved)
+        val payload = SgtpSave.parse(expected.state).value("SOLVE")!!
+        val midend = Midend.fromSave(Galaxies, SgtpSave.parse(moved))
+        assertEquals("moved payload", payload, Galaxies.solve(midend.state, midend.auxInfo))
+        assertTrue("solves the moved board", midend.solve())
+        assertEquals("moved solved save", expected.state, midend.serialise().serialise())
+        assertEquals("moved solved status", expected.status, midend.status())
+
+        // Without the stored answer the solver tries the current state,
+        // then the initial one; both runs are compared to C.
+        val noAux = withoutRecord(moved, "AUXINFO")
+        val expectedNoAux = oracle.solve(noAux)
+        val noAuxMidend = Midend.fromSave(Galaxies, SgtpSave.parse(noAux))
+        assertNull("no stored answer", noAuxMidend.auxInfo)
+        assertEquals(
+            "no-aux payload",
+            SgtpSave.parse(expectedNoAux.state).value("SOLVE"),
+            Galaxies.solve(noAuxMidend.state, null),
+        )
     }
 
     @Test
@@ -321,6 +382,15 @@ class GalaxiesGameTest {
             assertEquals("solved status", 1, midend.status())
             assertFalse("solved event", midend.takeCompletedEvent())
             assertTrue((midend.state as Galaxies.State).usedSolve)
+
+            // A second solve starts from the initial state and diffs
+            // against the completed board, so it is the bare `S` mark
+            // and toggles nothing.
+            val second = oracle.solve(midend.serialise().serialise())
+            assertEquals("second payload", "S", SgtpSave.parse(second.state).value("SOLVE"))
+            assertTrue("second solve", midend.solve())
+            assertEquals("second save", second.state, midend.serialise().serialise())
+            assertEquals("second status", 1, midend.status())
 
             // A completed state is sticky across another move.
             val after = Galaxies.executeMove(midend.state, "E2,1") as Galaxies.State
