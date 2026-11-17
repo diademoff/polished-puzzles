@@ -35,6 +35,26 @@ class KotlinGameEngineThickLineTest {
     }
 
     /**
+     * `draw_thick_line` replaces a thickness below one pixel with
+     * `1.0F` before the drawing API (`drawing.c:117-118`), so the view
+     * receives the clamped width and not `0.0625`.
+     */
+    @Test
+    fun `the engine forwards the clamped thickness`() {
+        val activity = Mockito.mock(GameEngine.ActivityCallbacks::class.java)
+        val view = Mockito.mock(GameEngine.ViewCallbacks::class.java)
+
+        Mockito.mockStatic(Log::class.java).use {
+            val engine = engineFor(activity, view)
+            setGeometry(engine, BoardGeometry(24, 7, 11, 100, 100))
+
+            sinkOf(engine).thickLine(10f, 20f, 30f, 40f, 0.0625f, 3)
+        }
+
+        Mockito.verify(view).drawLine(1f, 17f, 31f, 37f, 51f, 3)
+    }
+
+    /**
      * Builds the engine through its private constructor. `fromLaunch`
      * also needs a `Context` and stored preferences, which a JVM unit
      * test does not have. The initializer logs one line, so the caller

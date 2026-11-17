@@ -160,6 +160,20 @@ interface Game {
      */
     val canFormatAsText: Boolean get() = true
 
+    /**
+     * The params-aware gate of `can_format_as_text_now`, the second half
+     * of `midend_can_format_as_text_now` (`midend.c:2079-2085`).
+     * [canFormatAsText] mirrors the static `can_format_as_text_ever`; a
+     * game can also reject the text form for one parameter set, as
+     * `loopy` does for a non-square grid (`loopy.c:1144-1149`).
+     * [Midend.textFormat] asks both before it calls [textFormat].
+     *
+     * The default returns [canFormatAsText], so every ported game keeps
+     * its behavior and a game without a text form still answers false
+     * for every parameter set.
+     */
+    fun canFormatAsTextNow(params: Params): Boolean = canFormatAsText
+
     fun textFormat(state: State): String
 
     /**
@@ -470,6 +484,18 @@ object Buttons {
  * the same commit as the game that needs the primitive.
  */
 interface DrawSink {
+    companion object {
+        /**
+         * `draw_thick_line`: the thickness floor. Upstream replaces a
+         * thickness below one pixel with `1.0F` before it calls the
+         * drawing API (`drawing.c:117-118`), and the oracle records the
+         * clamped value. Every sink applies this rule, so the trace and
+         * the view see what C passes and not the raw argument.
+         */
+        fun clampThickness(thickness: Float): Float =
+            if (thickness < 1.0f) 1.0f else thickness
+    }
+
     fun changedState(canUndo: Boolean, canRedo: Boolean)
     fun startDraw()
     fun endDraw()
@@ -484,7 +510,9 @@ interface DrawSink {
      * each value with the oracle's `tc_milli` rule, so an integer
      * coordinate converts exactly. The upstream `drawing_api` and the
      * Android `ViewCallbacks.drawLine` callback take the thickness
-     * first.
+     * first, and both receive [clampThickness] of the argument, because
+     * `draw_thick_line` clamps a value below one pixel
+     * (`drawing.c:117-118`).
      */
     fun thickLine(x1: Float, y1: Float, x2: Float, y2: Float, thickness: Float, colour: Int)
 

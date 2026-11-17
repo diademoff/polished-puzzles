@@ -47,17 +47,35 @@ class ThickLineTraceTest {
 
     @Test
     fun `the thousandths round like tc_milli`() {
-        // `TILESIZE/16` is 3 at the upstream 48-pixel tile. `0.0625`
-        // scales to 62.5, and `tc_milli` rounds a half away from zero.
-        // A fractional endpoint must be rounded, not truncated.
+        // The endpoints scale to 59250, 3125, 62.5, and -62.5, and
+        // `tc_milli` rounds a half away from zero. A fractional endpoint
+        // must be rounded, not truncated.
         val sink = KotlinTraceSink()
-        sink.thickLine(59.25f, 3.125f, 0.0625f, -0.0625f, 0.0625f, 1)
+        sink.thickLine(59.25f, 3.125f, 0.0625f, -0.0625f, 3.125f, 1)
 
-        assertEquals(63L, (sink.ops[0].fields["t"] as JsonValue.Num).value)
+        assertEquals(3125L, (sink.ops[0].fields["t"] as JsonValue.Num).value)
         assertEquals(59250L, (sink.ops[0].fields["x1"] as JsonValue.Num).value)
         assertEquals(3125L, (sink.ops[0].fields["y1"] as JsonValue.Num).value)
         assertEquals(63L, (sink.ops[0].fields["x2"] as JsonValue.Num).value)
         assertEquals(-63L, (sink.ops[0].fields["y2"] as JsonValue.Num).value)
+    }
+
+    /**
+     * `draw_thick_line` replaces a thickness below one pixel with `1.0F`
+     * before it calls the drawing API (`drawing.c:117-118`), so the
+     * oracle records `1000` and never the raw `0.0625`.
+     */
+    @Test
+    fun `a thickness below one pixel is clamped before the trace`() {
+        val sink = KotlinTraceSink()
+        sink.startDraw()
+        sink.thickLine(59.25f, 3.125f, 0.0625f, -0.0625f, 0.0625f, 1)
+        sink.endDraw()
+
+        assertEquals(1000L, (sink.ops[1].fields["t"] as JsonValue.Num).value)
+
+        val lines = TraceNormalizer.normalize(trace(sink.ops)).lines()
+        assertTrue(lines.contains("thick_line 1000 59250 3125 63 -63 1"))
     }
 
     @Test

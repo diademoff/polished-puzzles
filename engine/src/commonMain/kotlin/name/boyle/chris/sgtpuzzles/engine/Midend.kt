@@ -265,13 +265,19 @@ class Midend private constructor(
      * `midend_text_format`: the state as text.
      *
      * C returns NULL for a game that cannot format as text
-     * (`can_format_as_text_ever` is false), so the seam uses the empty
-     * string for that case and does not call the game's `textFormat`.
-     * A caller that must tell "no text form" from "an empty board"
-     * checks [Game.canFormatAsText] before it calls this.
+     * (`can_format_as_text_ever` is false) and for a game whose
+     * params-aware gate rejects the current parameters
+     * (`can_format_as_text_now`, `midend.c:2087-2094`), so the seam uses
+     * the empty string for both cases and does not call the game's
+     * `textFormat`. A caller that must tell "no text form" from "an
+     * empty board" checks [Game.canFormatAsTextNow] with the current
+     * parameters before it calls this.
      */
     fun textFormat(): String =
-        if (game.canFormatAsText) game.textFormat(state) else ""
+        if (game.canFormatAsText && game.canFormatAsTextNow(currentParams))
+            game.textFormat(state)
+        else
+            ""
 
     /**
      * Consumes the "the last transition completed the game" event. The

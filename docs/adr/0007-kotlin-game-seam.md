@@ -778,3 +778,43 @@ which UI the size calculation reads.
 `BoardGeometry.preferred` against it. It also pins that a game which
 does not override the three-argument form answers exactly as before, so
 the existing game size and geometry tests stay unchanged.
+
+## Amendment: the params-aware text gate and the thick-line floor
+
+- **Date:** 2026-11-17
+
+Two operations that `loopy` needs were missing from the seam. Neither
+changes a game rule, a save record, or a frozen trace.
+
+1. **`Game.canFormatAsTextNow(params)`, default
+   `canFormatAsText`.** It mirrors `can_format_as_text_now`, the
+   params-aware half of `midend_can_format_as_text_now`
+   (`midend.c:2079-2085`). `Midend.textFormat` calls the game only when
+   both `canFormatAsText` and the params gate are true, because
+   `midend_text_format` requires
+   `can_format_as_text_ever && can_format_as_text_now(me->params)`
+   (`midend.c:2087-2094`). `loopy` is the first upstream game whose
+   answer depends on the parameters: `game_can_format_as_text_now`
+   rejects a grid whose type is not the square type
+   (`loopy.c:1144-1149`). A rejected parameter set yields the empty
+   string, so the app and the tests need no null check, and a caller
+   that must tell "no text form" from "an empty board" asks the gate
+   with the current parameters. Every ported game keeps its behavior,
+   because the default answers the static flag, which is what the
+   midend checked before. `TextFormatGateTest` pins a test-only game
+   whose gate rejects `5x5` and accepts `4x4`, and asserts that the
+   formatter is not called for the rejected set.
+
+2. **`DrawSink.clampThickness(thickness)` is the `draw_thick_line`
+   floor.** C replaces a thickness below `1.0F` with `1.0F` before it
+   calls the drawing API (`drawing.c:117-118`). Both sinks apply the
+   same helper: `KotlinTraceSink` records the clamped value with
+   `tc_milli`, so the trace matches the oracle, and `KotlinGameEngine`
+   passes the clamped value to `ViewCallbacks.drawLine`, so the view
+   draws the same width. The seam signature does not change. A game
+   passes the thickness it computes, as a C game does, and the floor
+   stays in the delivery path where upstream puts it. A value of
+   `1.0` or more is unchanged, so every current caller, which passes at
+   least `1.0`, keeps its trace byte for byte. `ThickLineTraceTest`
+   pins `0.0625` to `1000` and the rounding of `3.125` to `3125`;
+   `KotlinGameEngineThickLineTest` pins the forwarded `1.0`.

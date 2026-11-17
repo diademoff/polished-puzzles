@@ -82,6 +82,9 @@ class KotlinTraceSink : DrawSink {
      * `tc_milli`, which is `lroundf(value * 1000)`. The endpoints are
      * floats because upstream takes floats, so a fractional endpoint is
      * rounded and not truncated. An integer endpoint converts exactly.
+     * `draw_thick_line` clamps a thickness below one pixel before the
+     * callback (`drawing.c:117-118`), so the trace stores the clamped
+     * value and not the raw argument.
      */
     override fun thickLine(
         x1: Float,
@@ -93,7 +96,7 @@ class KotlinTraceSink : DrawSink {
     ) {
         record(
             "op" to JsonValue.Str("thick_line"),
-            "t" to num(milli(thickness)),
+            "t" to num(milli(DrawSink.clampThickness(thickness))),
             "x1" to num(milli(x1)),
             "y1" to num(milli(y1)),
             "x2" to num(milli(x2)),

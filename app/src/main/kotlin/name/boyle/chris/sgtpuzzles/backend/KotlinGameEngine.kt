@@ -282,7 +282,7 @@ class KotlinGameEngine private constructor(
             colour: Int,
         ) {
             viewCallbacks.drawLine(
-                thickness,
+                DrawSink.clampThickness(thickness),
                 x1 + geometry.originX.toFloat(),
                 y1 + geometry.originY.toFloat(),
                 x2 + geometry.originX.toFloat(),
