@@ -3373,7 +3373,7 @@ Device run on the Pixel 4a 5G (physical), 2026-11-18, Android 16 / API 36:
   need the `device_type` argument. The other three are the chooser
   goldens: the phone captures 1080x2340 at 420 dpi, not the 1080x2400
   reference in `tools/perf/baseline.md`.
-- At the same HEAD (`5695e5dc`) the JVM suites reported unit 102 from
+- At the same HEAD (`ac01604e`) the JVM suites reported unit 106 from
   `:app:testDebugUnitTest`, engine 1123 from `:engine:jvmTest`, and
   parity 1885 from `:parity:test` against the host oracle.
   `:app:lintDebug` reported 0 errors and 547 warnings.
