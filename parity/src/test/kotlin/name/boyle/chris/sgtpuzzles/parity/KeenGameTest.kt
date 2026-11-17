@@ -7,6 +7,7 @@ import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -32,6 +33,23 @@ class KeenGameTest {
 
     private fun save(params: String = "6dn", seed: String = SEED): String =
         Midend.newGame(Keen, params, seed).serialise().serialise()
+
+    private fun handSave(desc: String): String {
+        val records = listOf(
+            "SAVEFILE" to "Simon Tatham's Portable Puzzle Collection",
+            "VERSION" to "1",
+            "GAME" to "Keen",
+            "PARAMS" to "3dn",
+            "CPARAMS" to "3dn",
+            "SEED" to "1",
+            "DESC" to desc,
+            "NSTATES" to "1",
+            "STATEPOS" to "1",
+        )
+        return records.joinToString("") { (key, value) ->
+            "${key.padEnd(8)}:${value.length}:$value\n"
+        }
+    }
 
     private fun assertSameState(what: String, expected: String, midend: Midend) {
         val loaded = SgtpSave.parse(expected)
@@ -247,6 +265,35 @@ class KeenGameTest {
                     }
                 }
             }
+        }
+
+    @Test(timeout = 120_000)
+    fun `the clue with the operation bit that aborts the C solver is defined`() =
+        OracleClient().use { oracle ->
+            // The last cell is its own block. Its clue is 2^30, which is
+            // the C_SUB operation bit, so the addition clue becomes a
+            // subtraction clue with value 0 on a one-cell block. C loads
+            // this save, then aborts in `solver_common` (`keen.c:377`,
+            // `assert(n == 2)`) when the solve runs. The port returns
+            // impossible. D-016.
+            val desc = "_13," + "a1".repeat(8) + "a1073741824"
+            val text = handSave(desc)
+
+            // C accepts the description and reports the same id.
+            val loaded = oracle.status(text)
+            assertEquals("3:$desc", loaded.id)
+            assertEquals(0, loaded.status)
+
+            val midend = Midend.fromSave(Keen, SgtpSave.parse(text))
+            assertEquals(loaded.id, midend.id())
+            assertEquals(loaded.state, midend.serialise().serialise())
+            assertNull(midend.auxInfo)
+
+            // The solve is defined: no move, no history, status 0.
+            assertNull(Keen.solve(midend.state, null))
+            assertFalse(midend.solve())
+            assertEquals(0, midend.status())
+            assertEquals(1, midend.stateCount)
         }
 
     @Test(timeout = 120_000)

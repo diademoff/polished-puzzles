@@ -1514,8 +1514,8 @@ Notes:
   forcing, recursive, ambiguous, invalid, and impossible grids.
   `KeenDescTest` then pins Keen's own callback layer: the box order by
   class minimum, the transposed cube indexing, the ADD/MUL odometer,
-  the Hard early return, the validator, and the five difficulty slots
-  `0, 2, 3, 3, 4`.
+  the Hard early return, and the validator. The engine `KeenTest` pins
+  the five difficulty slots `0, 2, 3, 3, 4`.
 
   The save matrix reads all eleven corpus saves (`default` plus the ten
   presets), rewrites them byte for byte, and compares id, status,
@@ -1561,6 +1561,12 @@ Notes:
   validated parameter set, a validated description, or a generated
   move. The `SOLVE` values come from `AUXINFO` when present, so every
   generated save solves with the stored answer.
+
+  One C assertion is reachable from a validated description. A clue
+  value that includes an operation bit can turn a larger block into a
+  subtraction or division block, and C then aborts at
+  `assert(n == 2)` in `solver_common` (`keen.c:377`). D-016 defines the
+  Kotlin result as `DIFF_IMPOSSIBLE`; no generated game reaches it.
 
   Enablement debt. S8 must build the four-field configuration schema
   (`Grid size`, `Difficulty` with

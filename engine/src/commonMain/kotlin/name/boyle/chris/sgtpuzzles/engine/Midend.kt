@@ -752,7 +752,12 @@ class Midend private constructor(
             val params = game.decodeParams(game.encodeParams(currentParams, false))
             val random = RandomState.fromSeed(seed)
             val generated = game.newDesc(currentParams, random)
-            game.validateDesc(currentParams, generated.text)?.let {
+            // C validates the generated description with the filtered
+            // `newparams`, not with `curparams` (`midend.c:1931`). No
+            // ported game reads a parameter in `validateDesc` that its
+            // short encoding drops, so the two sets give the same result
+            // for every port; the filtered set is the C input.
+            game.validateDesc(params, generated.text)?.let {
                 throw IllegalArgumentException(it)
             }
             // `midend_new_game` builds the state from the long-term
@@ -789,8 +794,10 @@ class Midend private constructor(
             // parameter out on purpose: the description then determines
             // it, so only the full validation belongs to a new game.
             game.validateParams(currentParams, false)?.let { error(it) }
-            game.validateDesc(currentParams, desc)?.let { error(it) }
             val params = game.decodeParams(game.encodeParams(currentParams, false))
+            // C validates the description with the filtered `newparams`
+            // (`midend.c:1931`), the same set the state is built from.
+            game.validateDesc(params, desc)?.let { error(it) }
             return Midend(
                 game = game,
                 params = params,

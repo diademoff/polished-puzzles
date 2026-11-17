@@ -2833,12 +2833,12 @@ aggressive 100x100 latency is an enablement debt:
   `6dm`, `6d`, `6dq`, `2`, `10`, and `+5`), the validation order and
   messages, and the `3x3` difficulty downgrade. It also pins
   the `PARAMS ...dn` / `CPARAMS ...dem` split, the new-game short state
-  and the load full state, the generator attempt diagnostics, and the
-  `AUXINFO` answer. The generator draws one Latin square, one order
-  shuffle, one `random_upto(4)` per domino-capable singleton, a second
-  order shuffle, and then the two solver gates; the clue choice draws
-  nothing. A missing or reordered draw changes every id, so the goldens
-  and sweeps are the guard.
+  and the load full state, the retry fixture ids (the engine test pins
+  the attempt count), and the `AUXINFO` answer. The generator draws one
+  Latin square, one order shuffle, one `random_upto(4)` per
+  domino-capable singleton, a second order shuffle, and then the two
+  solver gates; the clue choice draws nothing. A missing or reordered
+  draw changes every id, so the goldens and sweeps are the guard.
 - `KeenGameTest` is semantic and strict where a frame is compared. It
   compares every preset's `SOLVE`, key sequences including the Android
   pencil branches and modified keys, undo and redo after a digit and a
@@ -2846,7 +2846,9 @@ aggressive 100x100 latency is an enablement debt:
   full-cursor modes, and the absent text form. A dedicated regression
   pins the `Midend` state-params rule: a new `5dem` game gets the
   short-form value (no flag, operator drawn), and a load of the same
-  save gets the full-form value (flag on, no operator).
+  save gets the full-form value (flag on, no operator). A D-016
+  regression loads a save whose clue value carries the SUB operation
+  bit and aborts the C solve, and pins the defined Kotlin refusal.
 - `KeenSaveTest` is strict for the save text and semantic for the
   state. It reads all eleven corpus saves, rewrites them byte for byte,
   and compares id, status, undo, redo, text, `textFormat`, and
@@ -2856,11 +2858,12 @@ aggressive 100x100 latency is an enablement debt:
   `SOLVE`, and a `RESTART`. No save has a `UI`, `TIME`, `PRIVDESC`, or
   `HEXSEED` record, and a save without `AUXINFO` solves from the clues.
 - `KeenTraceTest` is strict. It compares the ten frozen traces, the
-  loaded multiplication-only saves, sized frames at tiles 48, 63, 82,
-  and 100, the 411x702 letterbox, the cursor and pencil triangle, a
-  digit and a pencil mark, both error colours, a completed board, and
-  the warm path with its block polygons. Every Keen frame is
-  blitter-free and carries one `thick_poly` per block.
+  loaded multiplication-only saves, sized loaded-save frames at tiles
+  48, 63, 82, and 100, the same sizes for a fresh game, the 411x702
+  letterbox, the cursor and pencil triangle, a digit and a pencil mark,
+  both error colours, a completed board, and the warm path with its
+  block polygons. Every Keen frame is blitter-free and carries one
+  `thick_poly` per block.
 - `KeenInputParityTest` is semantic and ui. It compares the layout at
   six viewports, real presses and digits at tiles 48, 63, 82, and 100,
   a pencil mark and its toggle, `M` at every tile and at the letterbox,
@@ -2874,9 +2877,11 @@ aggressive 100x100 latency is an enablement debt:
 - `KeenTest` is the engine test. It pins the decode and validation
   tables, the plain `d` for an out-of-range difficulty, the saturating
   move parse, the block-structure bounds, the move grammar and the
-  sticky completion, `changedState`, the two solve errors, the solver
-  difficulty slots, the palette and size search, `currentKeyLabel`, and
-  the UI default. Keen enablement debt is the S8 configuration schema,
+  sticky completion, `changedState`, the two solve errors, the shared
+  `Shared` instance of a copied state, the five solver slots
+  `0, 2, 3, 3, 4`, the D-016 clue assert, the palette and size search,
+  `currentKeyLabel`, and the UI default. Keen enablement debt is the S8
+  configuration schema,
   `pencil-keep-highlight` applied after `newUi` and `fromSave`, the
   status gate on `wantsStatusBar`, the two solve messages, generation
   off the UI thread, and the two-release wait. S9 is a tested

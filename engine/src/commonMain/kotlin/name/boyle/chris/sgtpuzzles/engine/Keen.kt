@@ -799,6 +799,25 @@ object Keen : Game {
 
     private fun transpose(index: Int, w: Int): Int = (index % w) * w + (index / w)
 
+    // The five `latin_solver` strategy slots, `keen.c:734-737`, in
+    // argument order: simple, set-0, set-1, forcing, recursive.
+    // `DIFF_HARD` (2) is the first set level, and `DIFF_EXTREME` (3) is
+    // both the second set level and the forcing level. The same values
+    // gate generation, so a renumbering changes every description.
+    private const val SLOT_SIMPLE = DIFF_EASY
+    private const val SLOT_SET_0 = DIFF_HARD
+    private const val SLOT_SET_1 = DIFF_EXTREME
+    private const val SLOT_FORCING = DIFF_EXTREME
+    private const val SLOT_RECURSIVE = DIFF_UNREASONABLE
+
+    /**
+     * The five strategy slots, so a test can pin the literal values.
+     * They are `latin_solver` arguments, not game state, and nothing
+     * reads this value during play.
+     */
+    internal fun solverSlots(): IntArray =
+        intArrayOf(SLOT_SIMPLE, SLOT_SET_0, SLOT_SET_1, SLOT_FORCING, SLOT_RECURSIVE)
+
     /**
      * `solver`, `keen.c:690-747`: builds the box context and calls the
      * Latin solver with Keen's difficulty slots. The solution is written
@@ -858,11 +877,11 @@ object Keen : Game {
             soln,
             w,
             maxDiff,
-            DIFF_EASY,
-            DIFF_HARD,
-            DIFF_EXTREME,
-            DIFF_EXTREME,
-            DIFF_UNREASONABLE,
+            SLOT_SIMPLE,
+            SLOT_SET_0,
+            SLOT_SET_1,
+            SLOT_FORCING,
+            SLOT_RECURSIVE,
             KEEN_SOLVERS,
             KEEN_VALIDATOR,
             ctx,
@@ -966,10 +985,11 @@ object Keen : Game {
             when (op) {
                 C_SUB, C_DIV -> {
                     // `validate_desc` makes a subtraction or division
-                    // clue a domino. An overflowed clue value can still
-                    // move the operation bits after validation, so a
+                    // clue a domino. A clue value that carries an
+                    // operation bit can still turn a larger block into
+                    // subtraction or division after validation, so a
                     // non-domino here is an impossible board and not an
-                    // abort.
+                    // abort. D-016 in `docs/DEVIATIONS.md`.
                     if (n != 2) return -1
                     for (i in 1..w) {
                         val j = if (op == C_SUB) i + value else i * value

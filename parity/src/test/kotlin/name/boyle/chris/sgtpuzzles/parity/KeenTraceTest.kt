@@ -122,7 +122,7 @@ class KeenTraceTest {
         }
 
     @Test(timeout = 600_000)
-    fun `the sized fresh traces match the oracle`() = OracleClient().use { oracle ->
+    fun `the sized loaded-save traces match the oracle`() = OracleClient().use { oracle ->
         val save = saveFor("6dn")
         for (tile in listOf(48, 63, 82, 100)) {
             val board = Keen.computeSize(Keen.decodeParams("6dn"), tile)
@@ -169,6 +169,33 @@ class KeenTraceTest {
             actual.lines().contains("size ${geometry.width} ${geometry.height}"),
         )
     }
+
+    @Test(timeout = 600_000)
+    fun `a fresh game matches the oracle at every tile size`() =
+        OracleClient().use { oracle ->
+            // `traceNew` has no viewport, so the oracle side loads the
+            // save of a newly generated game. The Kotlin side is a fresh
+            // `Midend`, not a state loaded from a save.
+            val state = oracle.newGame("keen", "6dn", SEED).state
+            for (tile in listOf(48, 63, 82, 100)) {
+                val board = Keen.computeSize(Keen.decodeParams("6dn"), tile)
+                val expected = oracle.pointsSized(
+                    state,
+                    emptyList(),
+                    width = board.width,
+                    height = board.height,
+                    recordTrace = true,
+                )
+                val midend = Midend.newGame(Keen, "6dn", SEED)
+                val actual = normalize(KotlinTraceSink.stateTrace(midend, tile))
+                assertLines("fresh tile $tile", normalize(expected.trace!!), actual)
+                assertEquals("fresh tile $tile state count", 1, midend.stateCount)
+                assertTrue(
+                    "fresh tile $tile has no blitter",
+                    actual.lines().none { it.startsWith("blitter_") },
+                )
+            }
+        }
 
     @Test(timeout = 300_000)
     fun `the warm frames keep the block polygons and the full update`() =

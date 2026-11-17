@@ -1,10 +1,13 @@
 package name.boyle.chris.sgtpuzzles.engine
 
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
@@ -203,6 +206,25 @@ class KeenTest {
     }
 
     @Test
+    fun `the clue assert of the C solver is a defined impossible result`() {
+        // Every cell is its own block, and the last clue is 2^30, which
+        // is the C_SUB operation bit. The addition clue therefore
+        // becomes a subtraction clue with value 0 on a one-cell block.
+        // C aborts in `solver_common` (`keen.c:377`, `assert(n == 2)`);
+        // the port returns impossible instead. D-016 in
+        // `docs/DEVIATIONS.md`.
+        val desc = "_13," + "a1".repeat(8) + "a1073741824"
+        assertNull(Keen.validateDesc(params("3dn"), desc))
+
+        val s = state3(desc)
+        assertEquals(1, s.shared.dsf.size(8))
+        assertEquals(0x40000000L, s.shared.clues[8] and 0x60000000L)
+
+        assertEquals(LatinSolver.DIFF_IMPOSSIBLE, Keen.solveResult(s, 4))
+        assertNull(Keen.solve(s, null))
+    }
+
+    @Test
     fun `a huge block-structure count is too much data, not a hang`() {
         assertEquals(
             "Too much data in block structure specification",
@@ -309,6 +331,11 @@ class KeenTest {
     }
 
     @Test
+    fun `the five Latin solver slots are the C values`() {
+        assertContentEquals(intArrayOf(0, 2, 3, 3, 4), Keen.solverSlots())
+    }
+
+    @Test
     fun `solver errors are distinguishable and solve returns null`() {
         val impossible = state3("_baa_3a,a0s1m3a3")
         assertEquals(LatinSolver.DIFF_IMPOSSIBLE, Keen.solveResult(impossible, 4))
@@ -361,6 +388,19 @@ class KeenTest {
         }
         assertEquals(4, blocks)
         assertEquals(3, s.shared.dsf.size(0))
+    }
+
+    @Test
+    fun `a copied state shares the blocks and copies the board`() {
+        val s = state3()
+        val moved = Keen.executeMove(s, "R0,0,1") as Keen.State
+        val copy = moved.copy() as Keen.State
+        assertSame(moved.shared, copy.shared)
+        assertSame(s.shared, copy.shared)
+        assertNotSame(moved.grid, copy.grid)
+        assertNotSame(moved.pencil, copy.pencil)
+        copy.grid[0] = 2
+        assertEquals(1, moved.grid[0])
     }
 
     @Test

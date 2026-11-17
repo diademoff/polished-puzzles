@@ -613,6 +613,48 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-016: Keen defines the solver clue assert as an impossible board
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_desc` does not check a clue value
+  (`keen.c:1332-1351`), so the 3x3 description
+  `_13,a1a1a1a1a1a1a1a1a1073741824` is valid. Every cell is its own
+  block. The last clue is the letter `a` and the value `2^30`
+  (1073741824), which is the `C_SUB` operation bit, so the addition
+  clue becomes a subtraction clue with value 0 on a one-cell block.
+  When the solve runs, C reaches `assert(n == 2)` in `solver_common`
+  (`keen.c:377`) and the shipped build aborts with
+  `solver_common: Assertion 'n == 2' failed.` (SIGABRT, exit 134). The
+  Kotlin `solverCommon` returns `-1` for the non-domino, which the Latin
+  solver reads as `DIFF_IMPOSSIBLE`. `Keen.solve` returns null,
+  `Midend.solve` returns false and adds no history, and the status stays
+  0.
+- **Why:** an abort is not acceptable in the app. C does not validate a
+  clue value, so a hand-written description can reach the assertion,
+  and a defined impossible result is deterministic: the same
+  description always gives the same result. A generated clue value is a
+  sum or a product of at most six digits, so it never sets an operation
+  bit and never reaches the guard. Every seed, `DESC`, `AUXINFO`,
+  golden, and `.sgtp` file of a generated game is unchanged.
+- **Scope note:** the path is reachable through a hand-written `.sgtp`
+  `DESC` or a game id. C accepts the description, reports the same id,
+  and keeps status 0 until the solve aborts.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../KeenTest.kt::the clue assert of the C solver is a defined impossible result`
+  pins the accepted description, the one-cell block, the operation
+  bits, `DIFF_IMPOSSIBLE`, and the null solve. The parity test
+  `parity/src/test/kotlin/.../KeenGameTest.kt::the clue with the operation bit that aborts the C solver is defined`
+  pins that C loads the same save with the same id and that
+  `Midend.solve` returns false. The tests do not call the oracle solve,
+  because it would kill the oracle process; a separate one-off oracle
+  run is the abort evidence above.
+- **Review:** the owner should review this entry before `keen` is
+  enabled in the app.
+- **Scope:** `keen`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

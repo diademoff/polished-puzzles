@@ -14,8 +14,10 @@ import org.junit.Test
  * `draw_thick_polygon` is an upstream `drawing_api` primitive. The
  * oracle records it as `{"op":"thick_poly","t":..,"pts":[..],"fill":..,
  * "outline":..}` (`oracle.c:497-511`) and expresses the thickness in
- * thousandths. No ported game draws a thick polygon yet, so the tests
- * call the sink directly and wrap `fifteen` for the in-draw order.
+ * thousandths. Keen is the ported game that draws one; the live oracle
+ * comparison for the operation is in `KeenTraceTest`, which compares
+ * every frozen frame with `traceNew`. The tests here call the sink
+ * directly and wrap `fifteen` for the in-draw order.
  */
 class ThickPolyTraceTest {
 

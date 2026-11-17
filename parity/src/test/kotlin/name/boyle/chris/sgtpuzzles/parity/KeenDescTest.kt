@@ -155,7 +155,7 @@ class KeenDescTest {
     }
 
     @Test(timeout = 600_000)
-    fun `the retry fixtures match the oracle and reach more than one attempt`() =
+    fun `the retry fixtures match the oracle`() =
         OracleClient().use { oracle ->
             // The engine test pins the attempt count for these seeds.
             val fixtures = listOf(
