@@ -81,6 +81,45 @@ class SolveOutcomeTest {
         assertTrue(Midend.newGame(Fifteen, "4x4", SEED).solve())
     }
 
+    @Test
+    fun `a game with a C error string keeps it`() {
+        val params = Untangle.decodeParams("10")
+        val state = Untangle.newState(
+            params,
+            Untangle.newDesc(params, RandomState.fromSeed(SEED)).text,
+        )
+        assertEquals(
+            SolveOutcome(null, "Solution not known for this puzzle"),
+            Untangle.solveGame(state, null),
+        )
+    }
+
+    @Test
+    fun `mines reports an unstarted game`() {
+        val params = Mines.decodeParams("9x9n10")
+        val state = Mines.newState(
+            params,
+            Mines.newDesc(params, RandomState.fromSeed(SEED)).text,
+        )
+        assertEquals(
+            SolveOutcome(null, "Game has not been started yet"),
+            Mines.solveGame(state, null),
+        )
+    }
+
+    @Test
+    fun `pearl reports a bad aux character`() {
+        val params = Pearl.decodeParams("6x6de")
+        val state = Pearl.newState(
+            params,
+            Pearl.newDesc(params, RandomState.fromSeed(SEED)).text,
+        )
+        assertEquals(
+            SolveOutcome(null, "invalid char in aux"),
+            Pearl.solveGame(state, "X"),
+        )
+    }
+
     private companion object {
         const val SEED = "12345"
     }

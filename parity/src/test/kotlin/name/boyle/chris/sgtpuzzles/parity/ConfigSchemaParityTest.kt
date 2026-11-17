@@ -109,6 +109,17 @@ class ConfigSchemaParityTest {
     }
 
     @Test
+    fun `default params match the oracle`() = OracleClient().use { oracle ->
+        for (scheme in games) {
+            assertEquals(
+                scheme.backend,
+                oracle.defaultParams(scheme.backend),
+                scheme.game.encodeParams(scheme.game.defaultParams(), true),
+            )
+        }
+    }
+
+    @Test
     fun `every preset configuration matches the oracle`() = OracleClient().use { oracle ->
         for (scheme in games) {
             for (preset in oracle.presets(scheme.backend)) {
