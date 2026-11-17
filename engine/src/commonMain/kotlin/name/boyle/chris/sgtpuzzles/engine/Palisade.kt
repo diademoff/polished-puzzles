@@ -289,6 +289,9 @@ object Palisade : Game {
             atoi((items[2] as ConfigItem.Text).value, 0),
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`palisade.c:928-952`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

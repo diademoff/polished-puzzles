@@ -528,6 +528,9 @@ object Loopy : Game {
             (items[2] as ConfigItem.Choices).selected,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`loopy.c:967-990`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

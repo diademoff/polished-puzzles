@@ -122,6 +122,19 @@ interface Game {
      */
     val prefs: List<ConfigItem> get() = emptyList()
 
+    /**
+     * True when the C backend has a non-NULL `get_prefs`, so this game
+     * must return a non-empty [prefs] and implement [setPrefs].
+     *
+     * The default is false, which matches the 21 ported backends whose C
+     * table passes NULL for both `get_prefs` and `set_prefs`. A game
+     * with the C function sets `true` in the same commit that ports its
+     * schema. This is the second half of the [KotlinGames] gate: a
+     * `configure` schema alone must not enable a backend whose C
+     * preferences page would silently disappear.
+     */
+    val declaresPrefs: Boolean get() = false
+
     /** `set_prefs`: applies [prefs] to a live UI. */
     fun setPrefs(ui: Ui, prefs: Prefs) {}
 

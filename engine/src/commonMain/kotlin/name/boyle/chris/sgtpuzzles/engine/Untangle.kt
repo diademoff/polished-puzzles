@@ -359,6 +359,9 @@ object Untangle : Game {
     override fun customParams(items: List<ConfigItem>): Game.Params =
         Params(atoi((items[0] as ConfigItem.Text).value, 0))
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`untangle.c:1201-1228`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

@@ -470,6 +470,9 @@ object Unequal : Game {
             (items[0] as ConfigItem.Choices).selected,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`unequal.c:1494-1510`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

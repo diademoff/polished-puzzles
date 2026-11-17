@@ -383,6 +383,9 @@ object Undead : Game {
             (items[2] as ConfigItem.Choices).selected,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`undead.c:1692-1715`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

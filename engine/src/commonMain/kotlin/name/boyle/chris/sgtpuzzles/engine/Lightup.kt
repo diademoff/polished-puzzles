@@ -451,6 +451,9 @@ object Lightup : Game {
             (items[4] as ConfigItem.Choices).selected,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`lightup.c:1875-1890`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

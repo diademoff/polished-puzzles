@@ -2711,6 +2711,9 @@ object Solo : Game {
         )
     }
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`solo.c:4613-4629`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

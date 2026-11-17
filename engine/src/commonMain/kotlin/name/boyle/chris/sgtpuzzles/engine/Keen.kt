@@ -514,6 +514,9 @@ object Keen : Game {
             (items[2] as ConfigItem.Bool).value,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`keen.c:1578-1594`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

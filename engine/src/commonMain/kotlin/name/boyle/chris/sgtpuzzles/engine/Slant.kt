@@ -135,6 +135,9 @@ object Slant : Game {
                 ?: 0,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`slant.c:1705-1728`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

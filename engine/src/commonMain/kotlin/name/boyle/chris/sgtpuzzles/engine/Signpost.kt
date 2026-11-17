@@ -468,6 +468,9 @@ object Signpost : Game {
             (items[2] as ConfigItem.Bool).value,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`signpost.c:1472-1490`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

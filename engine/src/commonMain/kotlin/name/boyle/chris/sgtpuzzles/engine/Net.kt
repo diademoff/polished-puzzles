@@ -276,6 +276,9 @@ object Net : Game {
             cAtof((items[3] as ConfigItem.Text).value),
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`net.c:2129-2145`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

@@ -124,6 +124,9 @@ object Fifteen : Game {
             atoi(text(items, "Height"), 0),
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`fifteen.c:513-531`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

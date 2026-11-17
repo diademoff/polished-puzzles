@@ -384,6 +384,9 @@ object Guess : Game {
             (items[4] as ConfigItem.Bool).value,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`guess.c:452-467`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

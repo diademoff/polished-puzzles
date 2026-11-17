@@ -357,6 +357,9 @@ object Pearl : Game {
             (items[3] as ConfigItem.Bool).value,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`pearl.c:1960-1977`). */
     override val prefs: List<ConfigItem>
         get() = listOf(

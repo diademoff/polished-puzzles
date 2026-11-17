@@ -398,6 +398,9 @@ object Map : Game {
             (items[3] as ConfigItem.Choices).selected,
         )
 
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
     /** `get_prefs` (`map.c:2366-2398`). */
     override val prefs: List<ConfigItem>
         get() = listOf(
