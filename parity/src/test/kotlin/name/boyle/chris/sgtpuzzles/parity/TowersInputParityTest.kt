@@ -544,6 +544,74 @@ class TowersInputParityTest {
             )
         }
 
+    @Test(timeout = 600_000)
+    fun `a real click in the lower-right triangle selects the tower cell`() =
+        OracleClient().use { oracle ->
+            // Two height-3 towers at (0,0) and (1,0). The tower at
+            // (0,0) protrudes into the bottom-right triangle, and its
+            // top face ends one pixel above the click, so only that
+            // triangle can select the tower.
+            val towers = oracle.keys(
+                save,
+                listOf(
+                    Buttons.CURSOR_UP, '3'.code,
+                    Buttons.CURSOR_RIGHT, '3'.code,
+                ),
+            ).state
+            val inside = listOf(
+                OracleClient.Point(103, 96, Buttons.LEFT_BUTTON),
+                OracleClient.Point(103, 96, Buttons.LEFT_RELEASE),
+            )
+            val clicked = Midend.fromSave(Towers, SgtpSave.parse(towers))
+            apply(clicked, inside)
+            assertEquals(
+                "the lower-right triangle selects the tower cell",
+                Game.CursorRect(54, 54, 48, 48),
+                clicked.cursorLocation(48),
+            )
+
+            // The digit is the observable difference: the oracle applies
+            // it to (0,0), while the geometric cell would be (1,0).
+            val withDigit = inside + OracleClient.Point(0, 0, '2'.code)
+            val expected = oracle.pointsSized(towers, withDigit, 348, 348)
+            val midend = Midend.fromSave(Towers, SgtpSave.parse(towers))
+            apply(midend, withDigit)
+            assertSame("lower-right triangle", expected.state, midend)
+            assertEquals(
+                "the lower-right triangle move",
+                "R0,0,2",
+                midend.serialise().values("MOVE").last(),
+            )
+            assertEquals(
+                "the tower cell takes the digit",
+                2,
+                (midend.state as Towers.State).grid[0],
+            )
+
+            // One pixel below the triangle is outside it and selects
+            // the geometric cell (1,0).
+            val outside = listOf(
+                OracleClient.Point(105, 96, Buttons.LEFT_BUTTON),
+                OracleClient.Point(105, 96, Buttons.LEFT_RELEASE),
+            )
+            val outsideMidend = Midend.fromSave(Towers, SgtpSave.parse(towers))
+            apply(outsideMidend, outside)
+            assertEquals(
+                "the point below the triangle selects the geometric cell",
+                Game.CursorRect(102, 54, 48, 48),
+                outsideMidend.cursorLocation(48),
+            )
+            val outsideDigit = outside + OracleClient.Point(0, 0, '2'.code)
+            val outsideExpected = oracle.pointsSized(towers, outsideDigit, 348, 348)
+            apply(outsideMidend, listOf(OracleClient.Point(0, 0, '2'.code)))
+            assertSame("outside the lower-right triangle", outsideExpected.state, outsideMidend)
+            assertEquals(
+                "the geometric cell move",
+                "R1,0,2",
+                outsideMidend.serialise().values("MOVE").last(),
+            )
+        }
+
     @Test(timeout = 300_000)
     fun `the clue bands, the border and an absent clue match the oracle`() =
         OracleClient().use { oracle ->

@@ -2921,13 +2921,16 @@ aggressive 100x100 latency is an enablement debt:
   411x702 letterbox, the warm empty frames after a click, a pencil
   toggle, a digit, and `M`, a cold frame with the two tower faces and
   the digit, `M` and `D` marks in one frame, the `COL_ERROR` digits, a
-  completed board with no flash, the 2D `appearance` frame, and the
-  `pencil-keep-highlight=false` frame. Every frame is blitter-free.
+  completed board with no flash, the 2D `appearance` frame, a cursor
+  frame where `pencil-keep-highlight=false` is the C no-op, and the
+  mouse frame where the same preference hides the pencil highlight.
+  Every frame is blitter-free.
 - `TowersInputParityTest` is semantic and ui. It compares the layout at
   five viewports and tiles 48, 63, 82, and 100, real presses, pencil
   toggles, and real number entries at those four tiles and at the
   411x702 letterbox (tile 56, origin (2,148)), the 3D hit test on a
-  board with tall towers, all four clue bands and an absent clue, the
+  board with tall towers, including a click in the lower-right triangle
+  and one pixel outside it, all four clue bands and an absent clue, the
   cursor, a duplicate-digit error frame, and the border, drag,
   release, middle press, hidden-digit, and pencil-on-filled cases.
   State, id, status, undo, redo, and the final frame with

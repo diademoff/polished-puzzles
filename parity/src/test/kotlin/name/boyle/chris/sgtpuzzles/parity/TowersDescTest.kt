@@ -5,7 +5,6 @@ import name.boyle.chris.sgtpuzzles.engine.RandomState
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Towers
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -340,20 +339,23 @@ class TowersDescTest {
                 assertEquals("accepted '$desc' text", oracle.text(save), midend.textFormat())
             }
 
+            // C reports only the generic load error, so the game message
+            // is pinned here against the engine, and the engine test
+            // pins the same strings in C order.
             val rejected = listOf(
-                "",
-                "1/1",
-                "1/1/1/1/1/1/1/1/1/1/1x",
-                "4/1/1/1/1/1/1/1/1/1/1/1",
-                "1/1/1/1/1/1/1/1/1/1/1/1/",
-                "1/1/1/1/1/1/1/1/1/1/1/1x",
-                "///////////,aaaaaaaa",
-                "///////////,aaaaaaaaaa",
-                "///////////,aaaaaaaa0",
-                "///////////,11aaaaaaa",
-                "///////////,",
+                "" to "Too few clues for grid size",
+                "1/1" to "Too few clues for grid size",
+                "1/1/1/1/1/1/1/1/1/1/1x" to "Expected commas between clues",
+                "4/1/1/1/1/1/1/1/1/1/1/1" to "Clue number out of range",
+                "1/1/1/1/1/1/1/1/1/1/1/1/" to "Too many clues for grid size",
+                "1/1/1/1/1/1/1/1/1/1/1/1x" to "Rubbish at end of game description",
+                "///////////,aaaaaaaa" to "Not enough data to fill grid",
+                "///////////,aaaaaaaaaa" to "Too much data to fit in grid",
+                "///////////,aaaaaaaa0" to "Invalid character in game description",
+                "///////////,11aaaaaaa" to "Out-of-range number in grid description",
+                "///////////," to "Not enough data to fill grid",
             )
-            for (desc in rejected) {
+            for ((desc, message) in rejected) {
                 val oracleRejected = try {
                     oracle.status(handSave(desc))
                     false
@@ -361,15 +363,10 @@ class TowersDescTest {
                     true
                 }
                 assertTrue("C rejects '$desc'", oracleRejected)
-                assertNotNull(
-                    "Kotlin rejects '$desc'",
-                    Towers.validateDesc(Towers.decodeParams("3de"), desc),
-                )
-                // C reports only the generic load error, so the exact
-                // game message is pinned by the engine test.
-                assertFalse(
+                assertEquals(
                     "Kotlin message for '$desc'",
-                    Towers.validateDesc(Towers.decodeParams("3de"), desc).isNullOrEmpty(),
+                    message,
+                    Towers.validateDesc(Towers.decodeParams("3de"), desc),
                 )
             }
         }

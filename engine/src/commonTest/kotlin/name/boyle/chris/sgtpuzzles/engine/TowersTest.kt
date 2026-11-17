@@ -240,27 +240,34 @@ class TowersTest {
     }
 
     @Test(timeout = 600_000)
-    fun `retry fixtures reach more than one attempt`() {
+    fun `retry fixtures pin the attempt counts and the cause`() {
         // Every preset except 6de has a seed that retries. 6de cannot
         // retry: its w > 5, so it has no empty-grid pre-check, and every
         // accepted cell removal was solvable at level 0, so the final
         // gate on the same grid is also level 0. Pin that fact below.
+        // The counts are the measured engine diagnostics, so a draw
+        // order change that keeps the description cannot pass.
         val fixtures = listOf(
-            "4de" to "6",
-            "5de" to "1",
-            "5dh" to "16",
-            "6dh" to "535",
-            "6dx" to "0",
-            "6du" to "1",
+            Triple("4de", "6", 3),
+            Triple("5de", "1", 3),
+            Triple("5dh", "16", 2),
+            Triple("6dh", "535", 2),
+            Triple("6dx", "0", 6),
+            Triple("6du", "1", 3),
         )
-        for ((paramsText, seed) in fixtures) {
+        for ((paramsText, seed, attempts) in fixtures) {
             val g = Towers.generateWithStats(
                 params(paramsText),
                 RandomState.fromSeed(seed),
             )
+            assertEquals(
+                attempts,
+                g.stats.attempts,
+                "$paramsText seed $seed attempt count",
+            )
             assertTrue(
-                g.stats.attempts > 1,
-                "$paramsText seed $seed should retry, got ${g.stats.attempts}",
+                attempts > 1,
+                "$paramsText seed $seed should retry",
             )
             assertTrue(
                 g.stats.emptyGridRejects + g.stats.exactGateRejects > 0,

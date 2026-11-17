@@ -6,6 +6,7 @@ import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Towers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -420,7 +421,7 @@ class TowersTraceTest {
         }
 
     @Test(timeout = 300_000)
-    fun `the pencil-keep-highlight preference is accepted in a cold frame`() =
+    fun `a cursor highlight survives pencil-keep-highlight false`() =
         OracleClient().use { oracle ->
             val save = saveFor("5de")
             val sequence = listOf(Buttons.CURSOR_UP, Buttons.CURSOR_SELECT, '3'.code)
@@ -432,12 +433,61 @@ class TowersTraceTest {
             for (key in sequence) midend.processKey(0, 0, key, 48)
             val actual = normalize(KotlinTraceSink.stateTrace(midend))
             assertLines("keep-highlight", expected, actual)
-            // A keyboard entry is a cursor highlight, so the preference
-            // does not hide it; the pencil triangle is still drawn.
+            // This frame is the C no-op: a keyboard entry sets
+            // `hcursor`, so the preference cannot hide the highlight
+            // and the pencil triangle is still drawn. The mouse frame
+            // below is the discriminating case.
             assertTrue(
                 "the pencil triangle",
                 actual.lines().any { it.startsWith("poly 3 3 3 ") },
             )
+        }
+
+    @Test(timeout = 600_000)
+    fun `pencil-keep-highlight false hides a mouse pencil highlight`() =
+        OracleClient().use { oracle ->
+            val save = saveFor("5de")
+            // Two real clicks make a mouse pencil highlight, then a
+            // digit enters a pencil mark. The highlight is not a cursor,
+            // so the preference decides whether it survives.
+            val points = pressAndRelease(0, 0) + pressAndRelease(0, 0) +
+                listOf(OracleClient.Point(0, 0, '3'.code))
+
+            // The default preference keeps the highlight, so the frame
+            // must match the oracle, which also defaults to true.
+            val expected = oracle.pointsSized(save, points, 348, 348, recordTrace = true)
+            val kept = Midend.fromSave(Towers, SgtpSave.parse(save))
+            for (point in points) kept.processKey(point.x, point.y, point.button, 48)
+            val keptFrame = normalize(KotlinTraceSink.stateTrace(kept, 48))
+            assertLines("kept", normalize(expected.trace!!), keptFrame)
+            assertTrue(
+                "the kept frame draws the pencil triangle",
+                keptFrame.lines().any { it.startsWith("poly 3 3 3 ") },
+            )
+
+            // The same input with the preference off hides the mouse
+            // highlight, so the frame loses the triangle. The pencil
+            // mark itself stays, so the difference is the preference.
+            val hidden = Midend.fromSave(Towers, SgtpSave.parse(save))
+            (hidden.ui as Towers.Ui).pencilKeepHighlight = false
+            for (point in points) hidden.processKey(point.x, point.y, point.button, 48)
+            val hiddenFrame = normalize(KotlinTraceSink.stateTrace(hidden, 48))
+            assertFalse(
+                "the hidden frame has no pencil triangle",
+                hiddenFrame.lines().any { it.startsWith("poly 3 3 3 ") },
+            )
+            assertTrue(
+                "the same pencil move is still drawn",
+                hiddenFrame.lines().any {
+                    it.startsWith("text ") && it.endsWith(" 5 \"3\"")
+                },
+            )
+            assertNotEquals(
+                "the preference changes the frame",
+                keptFrame.lines(),
+                hiddenFrame.lines(),
+            )
+            assertEquals("P0,0,3", hidden.serialise().values("MOVE").last())
         }
 
     private companion object {
