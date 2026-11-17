@@ -243,14 +243,15 @@ The instrumented adapter tests cover the shell seams that a JVM test
 cannot reach:
 
 - `FifteenTileSizeInputTest` reads the live board geometry, checks that
-  the tile size is not the preferred one, changes the `limitDpi`
+  the tile size is not the preferred one (a viewport that yields the
+  preferred tile reports a skip), changes the `limitDpi`
   preference and checks that the size follows, then sends a real tap and
   a real swipe at cell centres computed from `originX`, `originY`, and
   the tile size. Each gesture must add exactly one move.
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
-  and keeps the old game.
+  and keeps the old engine for a bounded settle window.
 - `FifteenGameIdDialogTest` checks that the game-ID dialog is prefilled
   with the current ID and that a valid ID becomes the new game with
   `Moves: 0`.
@@ -377,8 +378,12 @@ Shell tests:
   the AVD in `tools/perf/baseline.md` (1080x2400, 420 dpi), so the
   class skips itself with a message when the display size or density
   does not match. It reports a skip, not a failure, on a physical
-  device. The skip message is in the UTP log
-  (`androidTest-results/.../utp.0.log`); the JUnit XML records only
+  device. The one exception is the reference size and density with the
+  sides swapped: that is the reference display left in landscape, so it
+  fails with the observed size instead of hiding a real regression. The
+  three cases are decided by the pure `ReferenceCaptureGate`, tested on
+  the JVM in `ReferenceCaptureGateTest`. The skip message is in the UTP
+  log (`androidTest-results/.../utp.0.log`); the JUnit XML records only
   that the test was skipped.
 - `ChooserScreenshotsTest` runs the chooser under fastlane only: it
   skips itself when the `device_type` argument is absent. It is a
@@ -3360,6 +3365,31 @@ aggressive 100x100 latency is an enablement debt:
   proves that the renderer model represents every primitive of every
   game and preset without a device. The Compose half is checked by the
   instrumentation suite and visually on fifteen, galaxies, and map.
+
+Device run on the Pixel 4a 5G (physical), 2026-11-18, Android 16 / API 36:
+
+- `:app:connectedDebugAndroidTest` ran 67 cases: 61 passed, 0 failed,
+  6 skipped. Three skips are the fastlane screenshot producers, which
+  need the `device_type` argument. The other three are the chooser
+  goldens: the phone captures 1080x2340 at 420 dpi, not the 1080x2400
+  reference in `tools/perf/baseline.md`.
+- At the same HEAD (`5695e5dc`) the JVM suites reported unit 102 from
+  `:app:testDebugUnitTest`, engine 1123 from `:engine:jvmTest`, and
+  parity 1885 from `:parity:test` against the host oracle.
+  `:app:lintDebug` reported 0 errors and 547 warnings.
+- This run proves these definition-of-done rows: a real tap and swipe
+  (`GamePlayParameterizedTest`, `FifteenTileSizeInputTest`,
+  `GamePlayLandscapeInputTest`), input at a non-default tile size
+  (`FifteenTileSizeInputTest`), the letterbox origin
+  (`GamePlayLandscapeInputTest`), the settings, seed, and game-ID
+  dialogs (`FifteenSettingsDialogTest`, `FifteenSeedDialogTest`,
+  `FifteenGameIdDialogTest`), the real preferences activity
+  (`PrefsActivityTest`), and the chooser launch
+  (`FifteenChooserLaunchTest`).
+- These rows stay manual: the pixel goldens on the reference AVD,
+  TalkBack, contrast, font scale 200%, and performance. A physical phone
+  cannot replace the reference AVD for the goldens, and a debug build is
+  not a performance baseline.
 
 Device run on the API 36 emulator, 2026-11-14:
 
