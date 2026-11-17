@@ -225,7 +225,7 @@ submenu entries when a game groups its presets.
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `dual-run` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
-| `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `dual-run` |
+| `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `dual-run` (D-025, no parity) |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `dual-run` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `dual-run` |
@@ -2021,13 +2021,15 @@ Notes:
   call site. The seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `solo` is `dual-run`. Its parameters and sixteen presets, the
-  `c x r`/`jigsaw`/`X`/killer grammar, the decode and validation order,
-  the whole generator chain, the deduction solver, the `P`/`R`/`M`/`S`
-  moves, the text form, the cursor and pencil highlight, the save file,
-  palette, drawing, layout, and input pass the matrix in
-  `SoloDescTest`, `SoloGameTest`, `SoloSaveTest`, `SoloTraceTest`,
-  `SoloInputParityTest`, and the engine `SoloTest`. The generator chain
+- `solo` is `dual-run` in the engine, with **no parity claim** for the
+  killer overflow (D-025, owner decision 2026-11-17). Its parameters
+  and sixteen presets, the `c x r`/`jigsaw`/`X`/killer grammar, the
+  decode and validation order, the generator chain, the deduction
+  solver, the `P`/`R`/`M`/`S` moves, the text form, the cursor and
+  pencil highlight, the save file, palette, drawing, layout, and input
+  are covered by `SoloDescTest`, `SoloGameTest`, `SoloSaveTest`,
+  `SoloTraceTest`, `SoloInputParityTest`, and the engine `SoloTest`,
+  except for the D-025 seeds described below. The generator chain
   is the `divvy` partition for a jigsaw, the killer cages, the
   randomized backtracking fill with its step cap, the symmetry classes,
   the clue removal loop, and the solver gate at the requested
@@ -2035,10 +2037,10 @@ Notes:
   four killer techniques, rows, columns, diagonals, numeric
   elimination, intersection, set elimination, positional set
   elimination, forcing chains, and recursion. `SoloDescTest` compares
-  every preset with eight seeds and their full saves, the seventeen
-  frozen descriptions at seed 12345, the decode quirks, the exact
-  validation messages, the grid/jigsaw/killer suffix grammar, and eight
-  symmetry values.
+  every preset with eight seeds and their full saves except the D-025
+  killer seeds, the seventeen frozen descriptions at seed 12345, the
+  decode quirks, the exact validation messages, the grid/jigsaw/killer
+  suffix grammar, and eight symmetry values.
 
   The vendored `merge_some_cages` writes each adjacent pair but never
   increments `npairs` (`solo.c:3487-3494`), so its list is always empty
@@ -2047,19 +2049,28 @@ Notes:
   cage-merge loop is dead code. The port reproduces the vendored
   behavior exactly, and the killer `DESC` and `AUXINFO` goldens pin it.
   A literal fix (`npairs++`) changes the killer description, so the
-  frozen `3x3ka` entry and the oracle comparison fail. One separate C
-  out-of-bounds write is D-025: the singleton remover can merge into a
-  full cage row and corrupt the generated cages. The port detects that
-  case, abandons the attempt, and retries from the advanced RNG state,
-  so it returns a valid description with a different cage layout.
+  frozen `3x3ka` entry and the oracle comparison fail. D-025 is a
+  deliberate, owner-approved exception: C lets the singleton remover
+  merge into a full cage row, which writes into the next row of
+  `blocks_data` (in bounds for a non-last row, undefined for the last
+  row), continues the singleton loop, and runs `gridgen` on the
+  corrupted cages. The port detects the overflow, abandons the attempt,
+  and retries from the advanced RNG state, so for those seeds it
+  returns a different, valid killer `DESC`. The observed seeds include
+  `2x2k` 1/3/4, `3jka` 1/6/8/9, and `2x2xka` 1; `3x3ka` at seeds 1-10
+  does not overflow. No parity is claimed for these cases.
 
   `solve_game` reads `state->grid`, which C fills from `states[0]`, not
   from the current board. The port keeps the initial clue grid on a
   shared object, so a solve after a wrong move still returns the
   original `S` answer; `SoloGameTest` and `SoloTest` pin the moved,
   no-`AUXINFO`, and second-solve cases. A stored `AUXINFO` is returned
-  unchanged, as C does. The generator writes the solved grid as
-  `AUXINFO`, so every generated save matches C byte for byte.
+  unchanged, as C does. Open gap: a legal `RESTART` with a different
+  description still solves from the current entry's grid, because the
+  seam gives `solve` only the current state. This is not parity-tested
+  and is part of the no-parity decision for `solo`. The generator
+  writes the solved grid as `AUXINFO`, so every generated save outside
+  D-025 matches C byte for byte.
 
   `SoloSaveTest` reads all seventeen corpus saves, rewrites them byte
   for byte, and compares id, status, undo, redo, text, and the C reload;

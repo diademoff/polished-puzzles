@@ -359,12 +359,14 @@ class SoloDescTest {
     fun `a killer singleton merge that overflows the C row is retried`() =
         OracleClient().use { oracle ->
             // With these inputs the C singleton remover merges into a
-            // full cr-square cage and writes past the end of the block
-            // row (`solo.c:3594-3607`). The C build happens to return a
-            // reloadable description from the corrupted rows; the port
-            // abandons the attempt and retries, so it returns a
-            // different, valid description (D-025).
-            for ((params, seed) in listOf("3jka" to "1", "2x2xka" to "1")) {
+            // full cr-square cage and writes past the row end
+            // (`solo.c:3437-3439`, `:3599-3621`). For a non-last row
+            // the write lands in the next row of `blocks_data`; for the
+            // last row it is undefined. C continues and runs `gridgen`
+            // on the corrupted cages. The port abandons the attempt and
+            // retries, so it returns a different, valid description
+            // (D-025, owner-approved).
+            for ((params, seed) in listOf("3jka" to "1", "2x2k" to "1", "2x2xka" to "1")) {
                 val c = oracle.newGame("solo", params, seed)
                 assertEquals("$params C save reloads", c.id, oracle.id(c.state).id)
                 val midend = Midend.newGame(Solo, params, seed)

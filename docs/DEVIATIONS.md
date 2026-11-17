@@ -1024,45 +1024,47 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
-### D-025: `solo` retries a killer singleton merge that overflows the C row
+### D-025: `solo` retries a killer singleton merge that overflows a C cage row
 
 - **Area:** behavior
 - **Status:** active
 - **What differs:** `gen_killer_cages` removes single-square cages
-  with `merge_blocks` (`solo.c:3611-3621`) and never checks the combined
-  size against the cage row capacity `b->max_nr_squares`, which is
-  `cr`. When the randomly selected neighbour is already a full
-  `cr`-square cage, `merge_blocks` writes
-  `b->blocks[n][b->max_nr_squares]` and increments `nr_squares[n]` to
-  `cr + 1`. In C that slot is the first entry of the next block row in
-  `blocks_data`, so the write is out of bounds and corrupts the cage
-  rows; the generated description is produced from whatever the
-  corrupted rows contain. For `3jka` seed `1` and `2x2xka` seed `1` the
-  C build still returns a description that reloads, but the write is
-  undefined behavior and depends on the allocator layout. The Kotlin
-  `genKillerCages` detects the overflow before the write, abandons that
-  generation attempt, and retries the outer loop from the advanced RNG
-  state. The result is a valid description with a different killer cage
-  layout. The `3x3ka` preset at the tested seeds and every other preset
-  are unchanged.
-- **Why:** an out-of-bounds write is undefined behavior and can corrupt
-  the heap. The overflow depends only on the current cage sizes and the
-  selected neighbour, so the retry is deterministic. Every valid
-  generated description, save, and `.sgtp` file is accepted; only the
-  corrupt path is replaced by a valid puzzle.
+  with `merge_blocks` (`solo.c:3599-3621`). `merge_blocks` copies the
+  neighbour's squares into the row of the singleton with a plain
+  `memcpy` (`solo.c:3437-3439`) and increments `nr_squares` without a
+  capacity test. When the neighbour is already a full `cr`-square cage,
+  the copy writes `blocks[n][max_nr_squares]`. For a non-last row this
+  slot is the first entry of the next row in `blocks_data`, so the
+  write stays inside the allocation but corrupts that row; for the last
+  row it writes past the allocation, which is undefined behavior. C
+  continues the singleton loop and then calls `gridgen` on the
+  corrupted cages (`solo.c:3726`), consuming RNG draws before the next
+  attempt. The Kotlin `genKillerCages` detects the overflow, abandons
+  the attempt, and retries the outer loop from the advanced RNG state,
+  so it skips the rest of the singleton loop and the `gridgen` call.
+  The resulting description is a valid killer puzzle with a different
+  cage layout. The observed seeds include `2x2k` seeds 1, 3, and 4,
+  `3jka` seeds 1, 6, 8, and 9, and `2x2xka` seed 1; `3x3ka` at seeds
+  1-10 does not overflow. The C description is stable for the oracle
+  build and reloads, but it is produced from corrupted rows.
+- **Why:** the owner accepted this difference on 2026-11-17 and waived
+  parity for `solo`. The alternative was to reproduce the row-stride
+  corruption and the following `gridgen`, including a write past the
+  allocation on the last row. The retry is deterministic for a seed,
+  produces a valid and reloadable puzzle, and keeps the `.sgtp` format
+  unchanged. The app still uses C, so no user receives the different
+  description through the Kotlin backend.
 - **Test:**
   `parity/src/test/kotlin/.../SoloDescTest.kt::a killer singleton merge that overflows the C row is retried`
-  pins the C save reload, the different port description, the port
-  validation, and the C reload of the port save;
+  pins the C save reload, the different port description for `3jka`
+  seed 1, `2x2k` seed 1, and `2x2xka` seed 1, the port validation, and
+  the C reload of the port save;
   `engine/src/commonTest/kotlin/.../SoloTest.kt::a killer singleton overflow is retried`
   pins the valid description, determinism for the same seed, and the
   engine reload. The tests do not reproduce the C write; they ask the
-  oracle only for the output it happens to return.
-- **Review:** the owner should review this entry before `solo` is
-  enabled in the app. The guard runs for every killer generation; the
-  tested `3x3ka` seeds and every other preset do not change. A killer
-  board with a small `cr` can reach it, so the retry is the intended
-  app behavior.
+  oracle only for the output it returns.
+- **Review:** owner decision 2026-11-17: accepted as a deviation; no
+  parity is claimed for `solo`, and the app stays on C.
 - **Scope:** `solo`
 - **Upstream:** none known
 - **Date:** 2026-11-17
