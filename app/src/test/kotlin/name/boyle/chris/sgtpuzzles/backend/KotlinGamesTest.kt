@@ -31,6 +31,7 @@ import name.boyle.chris.sgtpuzzles.engine.Towers
 import name.boyle.chris.sgtpuzzles.engine.Tracks
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
 import name.boyle.chris.sgtpuzzles.engine.Undead
+import name.boyle.chris.sgtpuzzles.engine.Unequal
 import name.boyle.chris.sgtpuzzles.engine.Unruly
 import name.boyle.chris.sgtpuzzles.engine.Untangle
 import org.junit.Assert.assertEquals
@@ -242,6 +243,12 @@ class KotlinGamesTest {
     fun `towers is registered but the app still uses C`() {
         assertEquals(Towers, KotlinGames.gameFor(TOWERS))
         assertFalse(KotlinGames.handles(TOWERS))
+    }
+
+    @Test
+    fun `unequal is registered but the app still uses C`() {
+        assertEquals(Unequal, KotlinGames.gameFor(UNEQUAL))
+        assertFalse(KotlinGames.handles(UNEQUAL))
     }
 
     @Test

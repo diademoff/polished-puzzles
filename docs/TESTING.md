@@ -2970,6 +2970,113 @@ aggressive 100x100 latency is an enablement debt:
   `APP_GAMES`, so `KotlinGames.handles(TOWERS)` is false and the app
   uses C.
 
+- `UnequalDescTest` is semantic. It compares the twelve presets and the
+  default with the oracle, the thirteen golden descriptions at the
+  shared seed, nine seed strings and a numeric sweep per preset, the
+  decode quirks (`4`, `4a`, `4dxx`, `4q`, `+4de`, `-4de`, ` 4de`,
+  `04de`, `4ade`), the validation order and the three messages, the
+  description grammar including the run-length form and every
+  rejection, the retry fixtures, the `AUXINFO` answer, and the
+  generator state after the call. The generator draws one Latin square,
+  one shuffle of the number codes, one shuffle of the four inequality
+  codes, and then the solver-gated assembly and strip; the scratch list
+  is built once and re-shuffled across retries, so a retry permutes the
+  previous permutation. The clue choice reads the transposed cube
+  slice, `hints[loc*order + j]`, because `loc` is the row-major cell
+  index while `hints` is the Latin cube layout. Only the descriptions
+  and the sweeps catch a tidied read, because a "correct" read still
+  generates valid puzzles.
+- `UnequalGameTest` is semantic and strict where a frame is compared.
+  It compares the new game and its two array layouts, every preset's
+  `SOLVE`, the move grammar `R`/`P`/`F`/`M`/`H`/`S` and its `sscanf`
+  quirks, real clicks and keys at tiles 48, 63, 82, and 100, the four
+  clue bands, the 411x702 letterbox, the cursor and its clamp, the
+  modified-arrow clue cycle, completion and the sticky status,
+  `changedState`, undo and redo, the hint on a duplicate board, the
+  text form in both modes, the palette, the size table, `requestKeys`,
+  `currentKeyLabel`, and `cursorLocation`. The Adjacent validator
+  skips the last row and the last column as sources, as `unequal.c`
+  does, so a board that is wrong only there is accepted.
+- `UnequalSaveTest` is strict for the save text and semantic for the
+  state. It reads all thirteen corpus saves, rewrites them byte for
+  byte, and compares id, status, undo, redo, text, `textFormat`, and
+  the raw `AUXINFO` with C. A Kotlin save for every preset and nine
+  seeds loads in C with the same id, text, status, and `AUXINFO`.
+  `PARAMS` is the short form decoded over the defaults and `CPARAMS`
+  keeps the request: `5dk` writes `5de`, `5adk` writes `5ade`, and the
+  short id keeps `a` but drops `d`. In-memory history covers number
+  entry, a pencil mark, a real clue band cycle (spend and clear), a
+  spent `F` toggle, `M`, `H`, an undone position with a live redo
+  branch, a `SOLVE`, and a `RESTART`. No save has a `UI`, `TIME`,
+  `PRIVDESC`, or `HEXSEED` record, a hand-written `AUXINFO` round-trips
+  and the solve returns it, and a corrupt move is rejected on load.
+- `UnequalTraceTest` is strict. It compares the twelve frozen traces,
+  sized loaded-save frames at tiles 48, 63, 82, and 100, the 411x702
+  letterbox, the warm empty frames after a click, a digit, `M`, `H`,
+  and `F`, a cold pencil-highlight frame, the spent and error clue
+  colours, a duplicate-digit frame, a completed board with no flash,
+  and the hint marks with their computed size. Every frame is
+  blitter-free and has no clip.
+- `UnequalInputParityTest` is semantic and ui. It compares the layout
+  at five viewports and four exact tiles, real presses, pencil toggles,
+  number entries, and the clue band cycle at tiles 48, 63, 82, and 100
+  and at the 411x702 letterbox (tile 51 for `5de`, origin (3,148)), the
+  keyboard in both modes, the cursor and its clamp, a duplicate-digit
+  error frame and its positive control, and the border, gap, drag,
+  release, middle, hidden-digit, and pencil-on-filled cases. State, id,
+  status, undo, redo, and the final frame with `pointsSized` are
+  compared. Every real number or clue change alters the board and adds
+  one move; an inert event changes neither. `requestKeys` is compared
+  on every preset and with the full-cursor hint: arrow mode 2, the
+  labels `1`..`order`, `Clear`, `Mark`, and `Mark/Hints`, and
+  `needsArrows` false for every key.
+- `UnequalTest` is the engine test. It pins the decode and validation
+  tables, the plain `d` for an out-of-range difficulty, the saturating
+  `atoi` and `%d` parses, the two array layouts, the move grammar and
+  the sticky completion, `changedState`, the five solver slots, the
+  transposed clue slice through the retry attempt counts, the 50-try
+  fallback, the partial cube of a failed `latin_solver_alloc` on a
+  duplicate board, the order-10 key off-by-one, the `h`/`m` digit
+  shadowing, `currentKeyLabel`, `cursorLocation`, the UI default, the
+  palette, the size search, and the drawstate arrays.
+- The `H` hint needs the partial cube. `latin_solver_alloc` fills the
+  cube and returns false as soon as a digit cannot be placed
+  (`latin.c:566-597`), and `solver_state` copies the cube into
+  `state->hints` even on failure (`unequal.c:898-913`). `LatinSolver`
+  now exposes the partially built solver, `alloc` keeps its old
+  contract, and `Unequal.solverState` copies the cube in both cases.
+  A duplicate digit followed by `H` therefore draws the C frame.
+- `pencil-keep-highlight` is the only Unequal preference. It is read in
+  `interpret_move` and changes the same-digit no-op and the post-entry
+  highlight cancel. It is not serialised, because `encode_ui` and
+  `decode_ui` are `NULL`, so a load keeps the default true. The
+  keyboard path sets `hcursor`, so the preference cannot change it and
+  the oracle agrees for both values. The oracle `pointsSized` and
+  `traceWarm` operations have no `prefs` field, so the pointer path is
+  pinned engine-side and by the Kotlin `warmFrame` helper.
+- Unequal C undefined behavior is defined by the port and pinned
+  without a deviation entry: `encode_params` writes a plain `d` for a
+  difficulty outside `0..4` instead of reading past
+  `unequal_diffchars`, the `atoi` and move `%d` parses saturate, and
+  `new_game` throws on an invalid description instead of asserting.
+  `interpret_move` reads `ds->order`, which is safe by construction in
+  the seam, and `game_changed_state` indexes `nums[hx,hy]` under the
+  clamped-cursor invariant, so the port keeps the invariant and adds no
+  guard. The `gg_best_clue` and `game_strip` asserts are unreachable
+  from a generated board. No Unequal abort is reachable beyond these
+  definitions.
+- Unequal enablement debt. S8 must build the three-field configuration
+  schema (`Mode` with `":Unequal:Adjacent"`, `Size (s*s)`, and
+  `Difficulty` with `":Trivial:Easy:Tricky:Extreme:Recursive"`), apply
+  `pencil-keep-highlight` to the live `Ui` after `newUi` and after
+  `Midend.fromSave` (there is no `UI` record), gate the status text on
+  `wantsStatusBar` (it is false), show `Solve operation failed` and
+  `Solve unavailable (already solved?)` instead of throwing, generate
+  off the UI thread, and wait two releases. S9 is a tested
+  `currentKeyLabel` helper with no Android call site. `UNEQUAL` is in
+  `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(UNEQUAL)` is false and the app uses C.
+
 - The `Midend` state-params rule is cross-cutting. `newGame` and
   `fromGameId` build state 0 from the short (long-term) params, as
   `midend_new_game` does, and `fromSave` builds it from `CPARAMS`.

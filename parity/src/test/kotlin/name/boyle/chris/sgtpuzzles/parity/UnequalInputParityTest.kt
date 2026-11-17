@@ -64,6 +64,32 @@ class UnequalInputParityTest {
         )
     }
 
+    /** The centre of the band to the right or below a cell. */
+    private fun band(x: Int, y: Int, tile: Int, right: Boolean): Pair<Int, Int> {
+        val border = tile / 2
+        val square = tile + border
+        val ox = border + x * square
+        val oy = border + y * square
+        return if (right) {
+            Pair(ox + tile + tile / 4, oy + tile / 2)
+        } else {
+            Pair(ox + tile / 2, oy + tile + tile / 4)
+        }
+    }
+
+    private fun press(x: Int, y: Int, button: Int, tile: Int): List<OracleClient.Point> {
+        val release = when (button) {
+            Buttons.LEFT_BUTTON -> Buttons.LEFT_RELEASE
+            Buttons.RIGHT_BUTTON -> Buttons.RIGHT_RELEASE
+            Buttons.MIDDLE_BUTTON -> Buttons.MIDDLE_RELEASE
+            else -> button
+        }
+        return listOf(
+            OracleClient.Point(x, y, button),
+            OracleClient.Point(x, y, release),
+        )
+    }
+
     private fun apply(
         midend: Midend,
         points: List<OracleClient.Point>,
@@ -178,11 +204,25 @@ class UnequalInputParityTest {
                 )
                 val midend = midend()
                 val points = ArrayList<OracleClient.Point>()
+                var before = midend.serialise().serialise()
                 for ((index, step) in steps.withIndex()) {
                     points += step
                     val expected = oracle.pointsSized(start, points, board, board)
                     val outcomes = apply(midend, step, tile)
                     assertSame("tile $tile step $index", expected.state, midend)
+                    if (index == 1 || index == 3 || index == 6) {
+                        assertNotEquals(
+                            "tile $tile step $index changes the board",
+                            before,
+                            midend.serialise().serialise(),
+                        )
+                        assertEquals(
+                            "tile $tile step $index keeps the status",
+                            0,
+                            midend.status(),
+                        )
+                    }
+                    before = midend.serialise().serialise()
                     if (step.size == 2) {
                         assertEquals(
                             "tile $tile step $index press",
@@ -301,6 +341,204 @@ class UnequalInputParityTest {
             assertSame("letterbox digit", expected.state, midend)
             assertEquals("R0,0,4", midend.serialise().values("MOVE").last())
             assertNotNull("the letterbox click shows the cursor", midend.cursorLocation(geometry.tileSize))
+        }
+
+    @Test(timeout = 600_000)
+    fun `the clue band cycle matches the oracle at every tile size`() =
+        OracleClient().use { oracle ->
+            val start = saveFor("5de")
+            for (tile in listOf(48, 63, 82, 100)) {
+                val board = Unequal.computeSize(Unequal.decodeParams("5de"), tile).width
+                val (rightX, rightY) = band(2, 2, tile, right = true)
+                val (downX, downY) = band(1, 0, tile, right = false)
+                val steps = listOf(
+                    press(rightX, rightY, Buttons.LEFT_BUTTON, tile),
+                    press(rightX, rightY, Buttons.LEFT_BUTTON, tile),
+                    press(rightX, rightY, Buttons.MIDDLE_BUTTON, tile),
+                    press(downX, downY, Buttons.RIGHT_BUTTON, tile),
+                )
+                val moves = listOf("F2,2,2048", "F2,2,2048", "F2,2,2048", "F1,0,4096")
+                val midend = midend()
+                val points = ArrayList<OracleClient.Point>()
+                for ((index, step) in steps.withIndex()) {
+                    points += step
+                    val expected = oracle.pointsSized(start, points, board, board)
+                    val outcomes = apply(midend, step, tile)
+                    assertSame("tile $tile band $index", expected.state, midend)
+                    assertEquals(
+                        "tile $tile band $index press",
+                        KeyOutcome.SomeEffect,
+                        outcomes.first(),
+                    )
+                    assertEquals(
+                        "tile $tile band $index release",
+                        KeyOutcome.Unused,
+                        outcomes.last(),
+                    )
+                    assertEquals(
+                        "tile $tile band $index move",
+                        moves[index],
+                        midend.serialise().values("MOVE").last(),
+                    )
+                    assertEquals(
+                        "tile $tile band $index count",
+                        index + 2,
+                        midend.stateCount,
+                    )
+                    val flags = (midend.state as Unequal.State).flags
+                    when (index) {
+                        0 -> assertNotEquals(
+                            "tile $tile the first click is spent",
+                            0,
+                            flags[2 * 5 + 2] and Unequal.F_SPENT_RIGHT,
+                        )
+
+                        1 -> assertEquals(
+                            "tile $tile the second click clears the spent bit",
+                            0,
+                            flags[2 * 5 + 2] and Unequal.F_SPENT_RIGHT,
+                        )
+
+                        2 -> assertNotEquals(
+                            "tile $tile the middle click spends again",
+                            0,
+                            flags[2 * 5 + 2] and Unequal.F_SPENT_RIGHT,
+                        )
+
+                        3 -> assertNotEquals(
+                            "tile $tile the down clue spends",
+                            0,
+                            flags[0 * 5 + 1] and Unequal.F_SPENT_DOWN,
+                        )
+                    }
+                    assertEquals("tile $tile band keeps the status", 0, midend.status())
+                }
+
+                val final = oracle.pointsSized(start, points, board, board, recordTrace = true)
+                assertLines(
+                    "tile $tile band final trace",
+                    normalize(final.trace!!),
+                    normalize(KotlinTraceSink.stateTrace(midend, tile)),
+                )
+            }
+        }
+
+    @Test(timeout = 300_000)
+    fun `a clue band in the letterbox view changes one move`() =
+        OracleClient().use { oracle ->
+            val start = saveFor("5de")
+            val midend = midend()
+            val geometry = midend.geometryFor(411, 702)
+            val (px, py) = band(2, 2, geometry.tileSize, right = true)
+            val points = press(
+                px + geometry.originX,
+                py + geometry.originY,
+                Buttons.LEFT_BUTTON,
+                geometry.tileSize,
+            )
+            val expected = oracle.pointsSized(start, points, 411, 702)
+            for (point in points) {
+                midend.processKey(
+                    point.x - geometry.originX,
+                    point.y - geometry.originY,
+                    point.button,
+                    geometry.tileSize,
+                )
+            }
+            assertSame("letterbox band", expected.state, midend)
+            assertEquals("F2,2,2048", midend.serialise().values("MOVE").last())
+            assertEquals(2, midend.stateCount)
+            assertEquals(0, midend.status())
+        }
+
+    @Test(timeout = 300_000)
+    fun `duplicate digits from real input mark both cells`() =
+        OracleClient().use { oracle ->
+            val start = saveFor("5de")
+            val tile = 48
+            val points = ArrayList<OracleClient.Point>()
+            val midend = midend()
+            val steps = listOf(
+                click(0, 0, tile),
+                listOf(OracleClient.Point(0, 0, '1'.code)),
+                click(0, 1, tile),
+                listOf(OracleClient.Point(0, 0, '1'.code)),
+            )
+            for ((index, step) in steps.withIndex()) {
+                points += step
+                val expected = oracle.pointsSized(start, points, 384, 384)
+                apply(midend, step, tile)
+                assertSame("error step $index", expected.state, midend)
+            }
+            assertEquals(3, midend.stateCount)
+            assertEquals(0, midend.status())
+            val state = midend.state as Unequal.State
+            assertEquals(1, state.nums[0])
+            assertEquals(1, state.nums[5])
+            assertNotEquals(0, state.flags[0] and Unequal.F_ERROR)
+            assertNotEquals(0, state.flags[5] and Unequal.F_ERROR)
+
+            val final = oracle.pointsSized(start, points, 384, 384, recordTrace = true)
+            assertLines(
+                "duplicate frame",
+                normalize(final.trace!!),
+                normalize(KotlinTraceSink.stateTrace(midend, tile)),
+            )
+
+            // The positive control: a different digit clears both marks.
+            val replaced = listOf(OracleClient.Point(0, 0, '2'.code))
+            points += replaced
+            val expected = oracle.pointsSized(start, points, 384, 384)
+            apply(midend, replaced, tile)
+            assertSame("the duplicate clears", expected.state, midend)
+            assertEquals(4, midend.stateCount)
+            val cleared = midend.state as Unequal.State
+            assertEquals(0, cleared.flags[0] and Unequal.F_ERROR)
+            assertEquals(0, cleared.flags[5] and Unequal.F_ERROR)
+        }
+
+    @Test(timeout = 300_000)
+    fun `the cursor and the keys match the oracle at every tile`() =
+        OracleClient().use { oracle ->
+            val start = saveFor("5de")
+            val sequence = listOf(
+                Buttons.CURSOR_DOWN,
+                Buttons.CURSOR_RIGHT,
+                '2'.code,
+            )
+            val expected = oracle.keys(start, sequence)
+            for (tile in listOf(48, 63, 82, 100)) {
+                val midend = midend()
+                for (key in sequence) midend.processKey(0, 0, key, tile)
+                assertSame("tile $tile keys", expected, midend)
+                val border = tile / 2
+                val square = tile + border
+                assertEquals(
+                    "tile $tile cursor rect",
+                    Game.CursorRect(border + square, border + square, tile, tile),
+                    midend.cursorLocation(tile),
+                )
+            }
+
+            // A hidden cursor becomes visible on the first move. At the
+            // top-left edge a visible cursor is a no-effect move.
+            val hidden = midend()
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                hidden.processKey(0, 0, Buttons.CURSOR_UP, 48),
+            )
+            assertNotNull("the cursor is shown", hidden.cursorLocation(48))
+            val before = hidden.serialise().serialise()
+            assertEquals(
+                KeyOutcome.NoEffect,
+                hidden.processKey(0, 0, Buttons.CURSOR_UP, 48),
+            )
+            assertEquals(before, hidden.serialise().serialise())
+            assertEquals(
+                "the clamped cursor stays in place",
+                Game.CursorRect(24, 24, 48, 48),
+                hidden.cursorLocation(48),
+            )
         }
 
     @Test(timeout = 600_000)
@@ -666,7 +904,8 @@ class UnequalInputParityTest {
     @Test(timeout = 300_000)
     fun `requestKeys match the oracle and the full cursor hint changes nothing`() =
         OracleClient().use { oracle ->
-            for (params in listOf("", "5de", "5adk", "7dx")) {
+            val presets = oracle.presets("unequal").map { it.params }
+            for (params in presets + "") {
                 val start = if (params.isEmpty()) {
                     saveFor("4de")
                 } else {
@@ -683,6 +922,11 @@ class UnequalInputParityTest {
                     assertEquals("$params/$fullCursor mode", 2, expected.arrowMode)
                     assertEquals("$params/$fullCursor enum", ArrowMode.ARROWS_LEFT, actual.arrowMode)
                     assertEquals("$params/$fullCursor count", expected.labels.size, actual.labels.size)
+                    assertEquals(
+                        "$params/$fullCursor count is order plus three",
+                        (decoded as Unequal.Params).order + 3,
+                        actual.labels.size,
+                    )
                     for (i in expected.labels.indices) {
                         assertEquals(
                             "$params/$fullCursor label $i",
@@ -693,6 +937,11 @@ class UnequalInputParityTest {
                             "$params/$fullCursor button $i",
                             expected.labels[i].button,
                             actual.labels[i].button,
+                        )
+                        assertEquals(
+                            "$params/$fullCursor arrows $i",
+                            expected.labels[i].needsArrows,
+                            actual.labels[i].needsArrows,
                         )
                         assertFalse(
                             "$params/$fullCursor arrows $i",

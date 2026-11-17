@@ -36,6 +36,13 @@ class UnequalSaveTest {
     private fun save(params: String = "5de", seed: String = SEED): String =
         Midend.newGame(Unequal, params, seed).serialise().serialise()
 
+    /** The centre of the band to the right of a cell at tile size 48. */
+    private fun rightBand(x: Int, y: Int): Pair<Int, Int> {
+        val border = 24
+        val square = 72
+        return Pair(border + x * square + 48 + 12, border + y * square + 24)
+    }
+
     private fun handSave(
         desc: String,
         params: String = "4de",
@@ -81,6 +88,12 @@ class UnequalSaveTest {
                 assertEquals("${file.name} text", oracle.text(text), midend.textFormat())
 
                 val save = SgtpSave.parse(text)
+                val rewritten = midend.serialise().serialise()
+                assertEquals(
+                    "${file.name} raw AUXINFO",
+                    save.value("AUXINFO"),
+                    SgtpSave.parse(rewritten).value("AUXINFO"),
+                )
                 assertNotNull("${file.name} AUXINFO", save.value("AUXINFO"))
                 assertTrue("${file.name} AUXINFO text", midend.auxInfo!!.startsWith("S"))
                 assertNull("${file.name} PRIVDESC", save.value("PRIVDESC"))
@@ -190,6 +203,18 @@ class UnequalSaveTest {
                 listOf(Buttons.MOD_CTRL or Buttons.CURSOR_RIGHT)
             history += oracle.keys(start, spentSequence).state
 
+            // A real clue band cycle: the first press spends the clue
+            // and the second clears the spent bit.
+            val (bandX, bandY) = rightBand(2, 2)
+            val bandClick = listOf(
+                OracleClient.Point(bandX, bandY, Buttons.LEFT_BUTTON),
+                OracleClient.Point(bandX, bandY, Buttons.LEFT_RELEASE),
+            )
+            val spentClick = oracle.pointsSized(start, bandClick, 384, 384).state
+            history += spentClick.state
+            val cycled = oracle.pointsSized(start, bandClick + bandClick, 384, 384).state
+            history += cycled.state
+
             // An M move, an H move, and a solve.
             history += oracle.keys(start, listOf('M'.code)).state
             history += oracle.keys(start, listOf('H'.code)).state
@@ -250,6 +275,22 @@ class UnequalSaveTest {
             assertEquals(spentText, oracle.id(spentText).state)
             assertTrue(
                 (spent.state as Unequal.State).flags[12] and Unequal.F_SPENT_RIGHT != 0,
+            )
+
+            val clicked = Midend.fromSave(Unequal, save)
+            for (point in bandClick) {
+                clicked.processKey(point.x, point.y, point.button, 48)
+            }
+            assertEquals("F2,2,2048", clicked.serialise().values("MOVE").last())
+            assertEquals(spentClick.state, clicked.serialise().serialise())
+            assertTrue(clicked.canUndo)
+            for (point in bandClick) {
+                clicked.processKey(point.x, point.y, point.button, 48)
+            }
+            assertEquals(cycled.state, clicked.serialise().serialise())
+            assertEquals(
+                0,
+                (clicked.state as Unequal.State).flags[12] and Unequal.F_SPENT_RIGHT,
             )
 
             val hinted = Midend.fromSave(Unequal, save)
