@@ -538,6 +538,81 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-014: Map refuses a board it cannot build
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_params` accepts an area up to
+  `INT_MAX / 2` cells and a region count up to `w*h`
+  (`map.c:263-274`). `new_game_desc` then allocates `n*n` ints for
+  the graph (`map.c:1430`) and `new_state` allocates `4*wh` ints for
+  the four quadrants (`map.c:1887-1888`). Both products overflow
+  `int` for a large accepted board, and the allocations exhaust the
+  heap long before that. The Kotlin `validateParams` keeps every C
+  message and the exact C boundary (`32767x32767` is accepted,
+  `32768x32768` is rejected, neither is allocated). The Kotlin
+  `newDesc`, `newState`, and `validateDesc` reject a board above
+  2^20 cells with `Width times height is too large for this build`,
+  and a board above 4096 regions with `Too many regions for this
+  build`, before any RNG draw or allocation.
+- **Why:** an integer overflow or an out-of-memory crash is worse
+  than a deterministic rejection. The guards depend only on the
+  parameters, so the same request always fails the same way. No
+  preset is near either limit: the largest is 30x25 with 75
+  regions. Every seed, `DESC`, `AUXINFO`, golden, and `.sgtp` file
+  of a valid game is unchanged.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../MapTest.kt::the generation guard rejects a board it cannot build`
+  pins both boundaries and the unchanged C validation messages;
+  `...::a refused generation draws no random number` pins that the
+  two guards run before the first draw;
+  `...::newState refuses a huge board before it allocates` pins the
+  same two messages on the load path. No test allocates a board of
+  that size.
+- **Review:** the owner should decide the final area and region
+  limits before `map` is enabled in the app.
+- **Scope:** `map`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
+### D-015: Map defines the C undefined and assert paths
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** four inputs reach C undefined behavior or an
+  assertion in `map.c`. First, `atoi` in `decode_params` and
+  `sscanf("%d")` in `execute_move` have undefined overflow. The port
+  saturates to `Int.MAX_VALUE` or `Int.MIN_VALUE`, as the other
+  ports do; the value then fails the range test and the move is
+  rejected. Second, `encode_params` reads `map_diffchars[diff]`
+  with no range test (`map.c:213`). The port writes a plain `d` when
+  the difficulty is outside 0..3, as `unruly` does for its own
+  case. Third, `execute_move` does not check `immutable`, so a
+  hand-written move can overwrite a clue, and `solve_game` then
+  asserts `!immutable[i]` (`map.c:2283`). The port starts the
+  solve from the captured clues, includes the changed immutable
+  region in the diff, and restores it; the C build aborts. Fourth,
+  the error-marker code asserts that every graph edge has a
+  canonical point inside the grid (`map.c:3126-3137`). The port
+  skips an edge whose stored point is missing or outside the grid.
+- **Why:** none of these paths is reachable from a generated game
+  or from the pointer and keyboard grammar. A defined result is
+  better than a crash for a hand-written save or an internal
+  invariant failure, and the result depends only on the input.
+  Every generated `DESC`, `AUXINFO`, and `.sgtp` file is unchanged.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../MapTest.kt::encode writes a plain d for an out-of-range difficulty`,
+  `...::the move grammar rejects the C NULL forms` (the saturating
+  overflow), `...::a clue overwritten by a move is restored by the solve diff`,
+  and `...::a missing canonical point is skipped instead of aborting`
+  pin the four results. `parity/src/test/kotlin/.../MapGameTest.kt::a clue overwritten by a hand-written move is repaired by the solve`
+  pins that the hand-written save still loads in the oracle.
+- **Review:** the owner should review this entry before `map` is
+  enabled in the app.
+- **Scope:** `map`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:
