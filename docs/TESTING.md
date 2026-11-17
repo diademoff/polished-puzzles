@@ -2994,9 +2994,15 @@ aggressive 100x100 latency is an enablement debt:
   modified-arrow clue cycle, completion and the sticky status,
   `changedState`, undo and redo, the hint on a duplicate board, the
   text form in both modes, the palette, the size table, `requestKeys`,
-  `currentKeyLabel`, and `cursorLocation`. The Adjacent validator
-  skips the last row and the last column as sources, as `unequal.c`
-  does, so a board that is wrong only there is accepted.
+  `currentKeyLabel`, and `cursorLocation`. A malformed `AUXINFO` fails
+  the solve and adds no history in both implementations. The Adjacent
+  validator skips the last row and the last column as sources, as
+  `unequal.c` does, so a wrong pair there is accepted by the Trivial
+  gate that `difficulty` reads, while a wrong interior pair is
+  rejected. The four fixtures are one Latin square with one unflagged
+  adjacent pair. A full solve runs at the Recursive level, where the
+  Latin set elimination catches the emptied candidate first, so C
+  rejects that board too.
 - `UnequalSaveTest` is strict for the save text and semantic for the
   state. It reads all thirteen corpus saves, rewrites them byte for
   byte, and compares id, status, undo, redo, text, `textFormat`, and

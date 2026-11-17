@@ -118,7 +118,7 @@ class UnequalSaveTest {
         }
 
     @Test(timeout = 120_000)
-    fun `the PARAMS and CPARAMS split pins every short form`() {
+    fun `the PARAMS and CPARAMS split and the short id follow the presets`() {
         val expected = mapOf(
             "4de" to "4de",
             "5de" to "5de",
@@ -134,11 +134,18 @@ class UnequalSaveTest {
             "7adk" to "7ade",
         )
         for ((params, shortForm) in expected) {
-            val save = SgtpSave.parse(save(params, SEED))
+            val midend = Midend.newGame(Unequal, params, SEED)
+            val save = SgtpSave.parse(midend.serialise().serialise())
             assertEquals("$params PARAMS", shortForm, save.value("PARAMS"))
             assertEquals("$params CPARAMS", params, save.value("CPARAMS"))
             assertTrue("$params AUXINFO", save.value("AUXINFO")!!.isNotEmpty())
-            assertFalse("$params has no d in the short id", save.value("PARAMS")!!.contains('d').not())
+            // The short id keeps the mode and drops the difficulty, so
+            // it has no `d` and no difficulty character.
+            assertEquals(
+                "$params short id drops d and keeps a",
+                shortForm.substringBefore('d'),
+                midend.id().substringBefore(':'),
+            )
         }
         // The short id keeps the mode but drops the difficulty.
         val adj = Midend.newGame(Unequal, "7adk", SEED)

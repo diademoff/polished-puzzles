@@ -40,6 +40,7 @@ class UnequalGameTest {
     private fun handSave(
         desc: String,
         params: String = "4de",
+        auxInfo: String? = null,
         history: List<Pair<String, String>> = emptyList(),
     ): String {
         val records = ArrayList<Pair<String, String>>()
@@ -50,6 +51,7 @@ class UnequalGameTest {
         records += "CPARAMS" to params
         records += "SEED" to "1"
         records += "DESC" to desc
+        if (auxInfo != null) records += "AUXINFO" to auxInfo
         records += "NSTATES" to (history.size + 1).toString()
         records += "STATEPOS" to (history.size + 1).toString()
         records += history
@@ -807,6 +809,113 @@ class UnequalGameTest {
             val impossibleMidend = Midend.fromSave(Unequal, SgtpSave.parse(impossible))
             assertNull(Unequal.solve(impossibleMidend.state, null))
             assertFalse(impossibleMidend.solve())
+        }
+
+    @Test(timeout = 300_000)
+    fun `the adjacent validator skips the last row and the last column as sources`() =
+        OracleClient().use { oracle ->
+            // A complete 5x5 cyclic Latin square. Every pair with
+            // adjacent values carries the reciprocal clue, except one
+            // pair that has adjacent values and no clue. An absent clue
+            // forbids adjacent values, so that pair is wrong.
+            //
+            // The wrong pair is at (1,4)-(2,4) in the last row of the
+            // first board, at (4,1)-(4,2) in the last column of the
+            // second, and at (1,1)-(2,1) inside the board of the third.
+            //
+            // `unequal_valid` reads its sources with `x+1 < o` and
+            // `y+1 < o`, so it never sees the last row or the last
+            // column. `difficulty` asks the solver at every level from
+            // Trivial up, and the Trivial level runs no game strategy,
+            // so the validator decides: the first two boards are
+            // accepted and the interior pair is rejected. A widened
+            // bound rejects the first two boards and fails here.
+            val base =
+                "1RD,2RDL,3RDL,4RDL,5L,2URD,3URDL,4URDL,5UL,1D," +
+                    "3URD,4URDL,5UL,1RD,2UDL,4URD,5UL,1RD,2URDL,3UDL," +
+                    "5U,1R,2URL,3URL,4UL,"
+            val lastRow =
+                "1RD,2RDL,3RDL,4RDL,5L,2URD,3URDL,4URDL,5UL,1D," +
+                    "3URD,4URDL,5UL,1RD,2UDL,4URD,5UL,1RD,2URDL,3UDL," +
+                    "5U,1,2UR,3URL,4UL,"
+            val lastColumn =
+                "1RD,2RDL,3RDL,4RDL,5L,2URD,3URDL,4URDL,5UL,1," +
+                    "3URD,4URDL,5UL,1RD,2DL,4URD,5UL,1RD,2URDL,3UDL," +
+                    "5U,1R,2URL,3URL,4UL,"
+            val interior =
+                "1RD,2RDL,3RDL,4RDL,5L,2URD,3UDL,4URD,5UL,1D," +
+                    "3URD,4URDL,5UL,1RD,2UDL,4URD,5UL,1RD,2URDL,3UDL," +
+                    "5U,1R,2URL,3URL,4UL,"
+
+            val params = Unequal.decodeParams("5adk")
+            for (desc in listOf(base, lastRow, lastColumn, interior)) {
+                assertNull("the board loads", Unequal.validateDesc(params, desc))
+            }
+            fun difficulty(desc: String): Int =
+                Unequal.difficulty(Unequal.newState(params, desc))
+
+            // `difficulty` returns the number of levels, 5, when no
+            // level solves the board.
+            assertEquals("the valid board is Trivial", 0, difficulty(base))
+            assertEquals("the last row is not validated", 0, difficulty(lastRow))
+            assertEquals("the last column is not validated", 0, difficulty(lastColumn))
+            assertEquals("an interior pair is rejected at every level", 5, difficulty(interior))
+
+            // A full solve runs at the Recursive level, where the
+            // generic Latin set elimination sees the emptied candidate
+            // cube before `unequal_valid` runs. C behaves the same way:
+            // `midend_solve` reports `Solve operation failed` for all
+            // three wrong boards, so the gap is pinned here by
+            // `difficulty`, not by `solve`.
+            for (desc in listOf(base, lastRow, lastColumn, interior)) {
+                val text = handSave(desc, "5adk")
+                val midend = Midend.fromSave(Unequal, SgtpSave.parse(text))
+                if (desc == base) {
+                    assertTrue("the valid board solves", midend.solve())
+                    assertSame("valid board", oracle.solve(text), midend)
+                } else {
+                    assertFalse("the wrong board does not solve", midend.solve())
+                    assertEquals("the solve adds no history", 1, midend.stateCount)
+                    assertTrue(
+                        "C rejects the same board",
+                        try {
+                            oracle.solve(text)
+                            false
+                        } catch (e: OracleException) {
+                            true
+                        },
+                    )
+                }
+            }
+        }
+
+    @Test(timeout = 120_000)
+    fun `a bad AUXINFO fails the solve and adds no history`() =
+        OracleClient().use { oracle ->
+            // The stored answer is returned unchanged, so it must be a
+            // real `S` move. The record `2d47` decodes to the two
+            // printable characters `XH`: `X` is not a move type, so
+            // `execute_move` rejects it.
+            val text = handSave(grid(4), "4de", auxInfo = "2d47")
+            val midend = Midend.fromSave(Unequal, SgtpSave.parse(text))
+            val aux = requireNotNull(midend.auxInfo)
+            assertNull(
+                "the stored answer is not a move",
+                Unequal.executeMove(midend.state, aux),
+            )
+            assertFalse("the solve fails", midend.solve())
+            assertEquals("the solve adds no state", 1, midend.stateCount)
+            assertFalse("the solve adds no undo", midend.canUndo)
+            assertNull("the save has no SOLVE", midend.serialise().value("SOLVE"))
+            assertTrue(
+                "C rejects the same save",
+                try {
+                    oracle.solve(text)
+                    false
+                } catch (e: OracleException) {
+                    true
+                },
+            )
         }
 
     @Test(timeout = 300_000)

@@ -602,4 +602,83 @@ class UnequalTest {
         assertTrue(Unequal.difficulty(forcedState) <= 1, "the forced board is at most Easy")
         assertTrue(forced.description.text.isNotEmpty(), "the forced description differs")
     }
+
+    // ------------------------------------------------------------------
+    // Solver slots and drawstate.
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `the five solver slots and the drawstate arrays are the C sizes`() {
+        // `latin_solver_main(solver, maxdiff, DIFF_LATIN, DIFF_SET,
+        // DIFF_EXTREME, DIFF_EXTREME, DIFF_RECURSIVE, ...)`: simple 0,
+        // set-0 2, set-1 3, forcing 3, recursive 4.
+        assertEquals(listOf(0, 2, 3, 3, 4), Unequal.solverSlots().toList())
+
+        // `blank_drawstate`: `nums` and `flags` hold `order^2` cells and
+        // `hints` holds the `order^3` Latin cube. All three start zeroed.
+        val s = state(grid(4))
+        val ds = Unequal.newDrawState(s, 48, NoOpSink) as Unequal.DrawState
+        assertEquals(48, ds.tileSize)
+        assertEquals(4, ds.order)
+        assertEquals(Unequal.MODE_UNEQUAL, ds.mode)
+        assertEquals(16, ds.nums.size)
+        assertEquals(16, ds.flags.size)
+        assertEquals(64, ds.hints.size)
+        assertTrue(ds.nums.all { it == 0 })
+        assertTrue(ds.flags.all { it == 0 })
+        assertTrue(ds.hints.all { !it })
+
+        // A redraw caches the state arrays, and `hints` keeps the cube
+        // layout `(x*order + y)*order + n`, not the row-major one.
+        val hinted = Unequal.executeMove(s, "H") as Unequal.State
+        assertTrue(hinted.hints.any { it }, "the hint cube has candidates")
+        Unequal.redraw(hinted, Unequal.newUi(hinted), ds, NoOpSink, 48)
+        assertTrue(ds.hints.any { it }, "the hint cube is cached")
+        assertEquals(hinted.nums.toList(), ds.nums.toList())
+        assertEquals(hinted.flags.toList(), ds.flags.toList())
+        assertEquals(hinted.hints.toList(), ds.hints.toList())
+    }
+
+    /** A drawing sink that discards every operation. */
+    private object NoOpSink : DrawSink {
+        override fun changedState(canUndo: Boolean, canRedo: Boolean) {}
+        override fun startDraw() {}
+        override fun endDraw() {}
+        override fun rect(x: Int, y: Int, width: Int, height: Int, colour: Int) {}
+        override fun line(x1: Int, y1: Int, x2: Int, y2: Int, colour: Int) {}
+        override fun thickLine(
+            x1: Float,
+            y1: Float,
+            x2: Float,
+            y2: Float,
+            thickness: Float,
+            colour: Int,
+        ) {}
+        override fun circle(cx: Int, cy: Int, radius: Int, fillColour: Int, outlineColour: Int) {}
+        override fun thickCircle(
+            cx: Int,
+            cy: Int,
+            radius: Int,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {}
+        override fun thickPoly(
+            points: IntArray,
+            thickness: Float,
+            fillColour: Int,
+            outlineColour: Int,
+        ) {}
+        override fun poly(points: IntArray, fillColour: Int, outlineColour: Int) {}
+        override fun text(x: Int, y: Int, font: Int, size: Int, align: Int, colour: Int, text: String) {}
+        override fun clip(x: Int, y: Int, width: Int, height: Int) {}
+        override fun unclip() {}
+        override fun update(x: Int, y: Int, width: Int, height: Int) {}
+        override fun status(text: String) {}
+        override fun inertiaFollow(isSolved: Boolean) {}
+        override fun blitterNew(width: Int, height: Int): Int = 0
+        override fun blitterFree(id: Int) {}
+        override fun blitterSave(id: Int, x: Int, y: Int) {}
+        override fun blitterLoad(id: Int, x: Int, y: Int) {}
+    }
 }
