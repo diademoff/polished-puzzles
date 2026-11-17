@@ -83,6 +83,26 @@ class SinglesTest {
         assertEquals(Singles.Params(5, 5, 0), params(" 5x5dk"))
         assertEquals(Singles.Params(0, 0, 0), params(""))
 
+        // C leaves an overflowing `atoi` undefined; the port saturates
+        // at the int limit, so the value reaches validation instead of
+        // wrapping. The digit skip still finds the height and the
+        // difficulty after a saturated width.
+        assertEquals(
+            Singles.Params(Int.MAX_VALUE, 5, 0),
+            params("99999999999999999999x5de"),
+        )
+        assertEquals(
+            Singles.Params(5, Int.MAX_VALUE, 1),
+            params("5x99999999999999999999dk"),
+        )
+        assertEquals(
+            "Puzzle is too large",
+            Singles.validateParams(
+                Singles.Params(Int.MAX_VALUE, 5, 0),
+                true,
+            ),
+        )
+
         assertEquals("5x5dk", Singles.encodeParams(params("5x5dk"), true))
         assertEquals("5x5", Singles.encodeParams(params("5x5dk"), false))
         assertEquals("5x5d", Singles.encodeParams(params("5x5d"), true))

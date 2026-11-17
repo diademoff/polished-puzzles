@@ -3101,16 +3101,20 @@ aggressive 100x100 latency is an enablement debt:
   seed, nine seed strings and a numeric sweep per preset, the decode
   quirks (`5`, `5dk`, `05x5dk`, `+5x5dk`, `" 5x5dk"`, `5x5dK`, `5d`,
   `5x`), the validation order and the three messages, the description
-  grammar, and the retry fixtures `2x20dk`, `2x30dk`, and `3x30dk`.
-  The generator draws one Latin rectangle of order `max(w, h)`, one
-  shuffle of the `w*h` cells, the black placement in the shuffled
-  order, and one `o`-element `best_black_col` shuffle per black cell in
-  increasing cell index. A failed solver gate reshuffles every black
-  cell only; the twenty-first failure returns to the Latin draw. The
-  solver order is `solve_sneaky` in the gate only, then `singlesep`,
-  `doubles`, `corners`, `offsetpair` at Tricky and above, then the
-  `allblackbutone`/`removesplits` loop with its `> 0` tests. A wrong
-  draw order still produces a valid-looking board, so only the
+  grammar, and the retry fixtures `2x20dk`, `2x30dk`, and `3x30dk`. It
+  also compares the largest accepted side (`61x2de` seed `3`) with the
+  oracle, loads a hand-written `62x2de` save whose description holds
+  `Z`, and pins that a pasted `5x5:DESC` id starts from the defaults,
+  so its later `CPARAMS` is `5x5de` where C keeps the previous
+  difficulty. The generator draws one Latin rectangle of order
+  `max(w, h)`, one shuffle of the `w*h` cells, the black placement in
+  the shuffled order, and one `o`-element `best_black_col` shuffle per
+  black cell in increasing cell index. A failed solver gate reshuffles
+  every black cell only; the twenty-first failure returns to the Latin
+  draw. The solver order is `solve_sneaky` in the gate only, then
+  `singlesep`, `doubles`, `corners`, `offsetpair` at Tricky and above,
+  then the `allblackbutone`/`removesplits` loop with its `> 0` tests.
+  A wrong draw order still produces a valid-looking board, so only the
   descriptions and the sweeps catch it.
 - `SinglesGameTest` is semantic and strict where a frame is compared.
   It compares the new game, the text form, the move grammar, the real
@@ -3137,12 +3141,13 @@ aggressive 100x100 latency is an enablement debt:
   behavior.
 - `SinglesTraceTest` is strict. It compares the ten frozen traces and
   `traceNew` for every preset, sized cold frames at tiles 48, 63, 82,
-  and 100, the 411x702 letterbox, the cursor ring, the `COL_ERROR`
-  marks, the `COL_BLACKNUM` preference frame, the two-digit text size,
-  the warm empty frame after a real input, the changed frame after a
-  real black and circle click at tile 48 and in the letterbox, and the
-  engine-only dirty frame after an undo. No frame has a blitter, a
-  clip, a thick primitive, flash, or a status bar.
+  and 100, the 411x702 letterbox, the cursor ring at the wrap of all
+  four edges, the `COL_ERROR` marks, the `COL_BLACKNUM` preference
+  frame, the two-digit text size, the warm empty frame after a real
+  input, the changed frame after a real black and circle click at tile
+  48 and in the letterbox, and the engine-only dirty frame after an
+  undo. No frame has a blitter, a clip, a thick primitive, flash, or a
+  status bar.
 - `SinglesInputParityTest` is semantic and ui. It compares the layout
   at five viewports and tiles 48, 63, 82, and 100, the black and circle
   cycles at those tiles and at the 411x702 letterbox (tile 68, origin
@@ -3162,7 +3167,8 @@ aggressive 100x100 latency is an enablement debt:
   in `APP_GAMES`.
 - `SinglesTest` is the engine test. It pins the parameter and decode
   quirks, the plain `d` for an out-of-range difficulty, the saturating
-  `atoi` and `%d` parses, the validation order, the description
+  `atoi` in `decodeParams` and the saturating `%d` in `executeMove`,
+  the validation order, the description
   messages, the `n2c`/`c2n` alphabet and the 62 hole, the move grammar
   and the empty move, the sticky completion, the three error rules, the
   solver diff, the `best_black_col` fallback, the two retry counters,
@@ -3183,9 +3189,11 @@ aggressive 100x100 latency is an enablement debt:
   `20` aborts; no `62` shape generated a description. The Kotlin
   `validateParams` still accepts `2..62`, and only `newDesc` rejects a
   side of 62 with `Puzzle is too large` before any draw. Every side
-  `2..61`, every preset, seed, and save text is unchanged. The engine
-  test pins seeds `1`, `5`, and `19` and the untouched generator state;
-  the parity test pins the same message through `Midend.newGame`.
+  `2..61`, every preset, seed, and save text is unchanged, and
+  `SinglesDescTest` compares the largest accepted side (`61x2de` seed
+  `3`) with the oracle. The engine test pins seeds `1` and `5` and the
+  untouched generator state; the parity test pins seeds `1`, `5`, and
+  `19` and the same message through `Midend.newGame`.
 
 - The `Midend` state-params rule is cross-cutting. `newGame` and
   `fromGameId` build state 0 from the short (long-term) params, as

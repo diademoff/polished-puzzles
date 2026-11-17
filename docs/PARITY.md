@@ -1777,21 +1777,31 @@ Notes:
   a live redo branch, a `SOLVE`, and a `RESTART` in both directions. No
   save has an `AUXINFO`, `PRIVDESC`, `UI`, or `TIME` record.
 
+  One narrow difference is inherited: C decodes a descriptive game id
+  over the previous long-term parameters, and Kotlin starts from the
+  defaults (`midend.c:1874-1898`; `Midend.kt:791`). A pasted
+  `5x5:DESC` therefore writes `CPARAMS 5x5de` even when the previous
+  game was `5x5dk`; the description, the state, the short id, and the
+  moves do not differ. This is the same shape as the `pegs` note above,
+  and `SinglesDescTest` pins the Kotlin result. The save loader keeps
+  `CPARAMS 5x5dk` for the same description.
+
   `SinglesInputParityTest` and `SinglesGameTest` send the real
   black/circle cycle at tiles 48, 63, 82, and 100 and at the 411x702
   letterbox (tile 68, origin (1,147)), so a left press is
   `empty -> black -> circle -> empty` and a right press is
   `empty -> circle -> black -> empty`. The letterbox band toggles
   `show-black-nums` and changes no state, with a click one cell inside
-  as the positive control. The cursor wraps at all four edges, a middle
-  press, drag, and release are inert, and an error pair is marked in
-  `COL_ERROR`. State, id, status, undo, redo, and the final frame with
-  `pointsSized` are compared. Every real black or circle change alters
-  the board and adds one move while the status stays 0; every inert
-  event changes neither the board nor the count. `requestKeys` is
-  compared on every preset: arrow mode 3 with no labels, and the
-  Android full-cursor hint gives the C midend's forced `ARROWS_ONLY`
-  (mode 1) with the same empty list.
+  as the positive control. The cursor wraps at all four edges, and
+  `SinglesTraceTest` compares the four wrap frames with the oracle; a
+  middle press, drag, and release are inert, and an error pair is
+  marked in `COL_ERROR`. State, id, status, undo, redo, and the final
+  frame with `pointsSized` are compared. Every real black or circle
+  change alters the board and adds one move while the status stays 0;
+  every inert event changes neither the board nor the count.
+  `requestKeys` is compared on every preset: arrow mode 3 with no
+  labels, and the Android full-cursor hint gives the C midend's forced
+  `ARROWS_ONLY` (mode 1) with the same empty list.
 
   `show-black-nums` is the only preference. C keeps it in the UI, where
   it changes the number drawn on a black cell and nothing else; it is
@@ -1803,7 +1813,10 @@ Notes:
   D-017 defines the 62 boundary. C accepts a side of 62, generates a
   description whose digit 62 is `[`, and aborts in `new_game`; the port
   rejects generation with `Puzzle is too large` before any draw and
-  keeps every side 2..61 and every preset byte-identical. Enablement
+  keeps every side 2..61 and every preset byte-identical. The largest
+  accepted side (`61x2de` seed `3`) is compared with the oracle, and a
+  hand-written `62x2de` save with `Z` still loads in both engines.
+  Enablement
   debt. S8 must build the three-field configuration schema (`Width`,
   `Height`, `Difficulty` with `":Easy:Tricky"`), apply
   `show-black-nums` after `newUi` and after `Midend.fromSave` with a

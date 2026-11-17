@@ -678,22 +678,31 @@ Anything not listed here is a bug.
   on the parameters, so the same request always fails the same way. No
   valid size changes: every side in `2..61`, every preset, every seed,
   `DESC`, and `.sgtp` text keeps the C stream and the C output. The
-  game writes no `AUXINFO`, so there is no auxiliary answer to change.
+  largest accepted side (`61x2de`) is compared with the oracle in
+  `SinglesDescTest`. The game writes no `AUXINFO`, so there is no
+  auxiliary answer to change.
 - **Scope note:** the rejection is at generation only. The validator
   and `validateDesc` keep the C behavior: a hand-written `62x2de` save
   whose description holds `Z` (61) loads, and one whose description
   holds `[` is rejected with `Invalid character in game description`
   before `new_game`. Only a generated description reaches the C abort.
+  `SinglesDescTest` loads the `Z` save in both engines.
 - **Test:**
   `engine/src/commonTest/kotlin/.../SinglesTest.kt::the 62 boundary is rejected before the generator runs`
-  pins the message, the untouched generator state for seeds `1`, `5`,
-  and `19`, and the accepted validator;
+  pins the message, the untouched generator state for seeds `1` and
+  `5`, and the accepted validator;
   `parity/src/test/kotlin/.../SinglesDescTest.kt::a side of 62 is rejected before any draw`
-  pins the `Midend.newGame` message for the same seeds and the accepted
-  `61x2de` and `2x61de` boundary. The tests do not call the oracle
-  generation, because the `62` shapes either abort the process or do
-  not finish in the measured budget; the one-off oracle runs above are
-  the abort evidence.
+  pins the `Midend.newGame` message for seeds `1`, `5`, and `19` and
+  the accepted `61x2de` and `2x61de` boundary;
+  `...::the largest valid side generates the C description` compares
+  `61x2de` seed `3` (the measured fast seed) with the oracle;
+  `...::the description grammar accepts and rejects the C strings`
+  loads the hand-written `62x2de` save with `Z`; and
+  `...::a pasted id starts from the defaults, so CPARAMS is Easy`
+  pins the shared descriptive-id difference. The tests do not call
+  the oracle generation for the `62` shapes, because they either abort
+  the process or do not finish in the measured budget; the one-off
+  oracle runs above are the abort evidence.
 - **Review:** the owner should review this entry before `singles` is
   enabled in the app.
 - **Scope:** `singles`

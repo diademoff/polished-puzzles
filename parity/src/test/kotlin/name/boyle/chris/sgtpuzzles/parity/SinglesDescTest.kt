@@ -326,8 +326,19 @@ class SinglesDescTest {
                 )
             }
             // For 62x2 the bound is o = 62, so 'Z' (61) loads and '['
-            // (not in c2n) does not.
-            assertNull(Singles.validateDesc(Singles.Params(62, 2, 0), "Z" + "1".repeat(123)))
+            // (not in c2n) does not. D-017 rejects generation only, so
+            // a hand-written save with 'Z' still loads in both engines.
+            val wideDesc = "Z" + "1".repeat(123)
+            val wideSave = handSave(wideDesc, params = "62x2de")
+            val wideExpected = oracle.status(wideSave)
+            val wideMidend = Midend.fromSave(Singles, SgtpSave.parse(wideSave))
+            assertEquals("62x2 accepted id", wideExpected.id, wideMidend.id())
+            assertEquals(
+                "62x2 accepted text",
+                oracle.text(wideSave),
+                wideMidend.textFormat(),
+            )
+            assertNull(Singles.validateDesc(Singles.Params(62, 2, 0), wideDesc))
             assertEquals(
                 "Invalid character in game description",
                 Singles.validateDesc(Singles.Params(62, 2, 0), "[" + "1".repeat(123)),
@@ -417,6 +428,56 @@ class SinglesDescTest {
             val decoded = Singles.decodeParams(params)
             assertNull("$params validates", Singles.validateParams(decoded, true))
         }
+    }
+
+    @Test(timeout = 180_000)
+    fun `the largest valid side generates the C description`() =
+        OracleClient().use { oracle ->
+            // D-017 keeps every side in 2..61. A side of 61 is the
+            // largest accepted size, so this is the boundary fixture:
+            // seed 3 is the measured fast seed (about six seconds in
+            // C); the other seeds did not finish in the budget.
+            val params = "61x2de"
+            val seed = "3"
+            val expected = oracle.newGame("singles", params, seed)
+            val actual = Midend.newGame(Singles, params, seed)
+            assertEquals("$params id", expected.id, actual.id())
+            assertEquals(
+                "$params save",
+                expected.state,
+                actual.serialise().serialise(),
+            )
+            assertNull(
+                "$params description validates",
+                Singles.validateDesc(
+                    Singles.decodeParams(params),
+                    actual.desc,
+                ),
+            )
+        }
+
+    @Test(timeout = 120_000)
+    fun `a pasted id starts from the defaults, so CPARAMS is Easy`() {
+        // Shared descriptive-id difference. C decodes `5x5:DESC` over
+        // the previous long-term parameters; Kotlin starts from the
+        // defaults (`midend.c:1874-1898`; `Midend.kt:791`). Only the
+        // base difficulty differs: a later save writes `CPARAMS 5x5de`
+        // instead of the previous `5x5dk`. The description, the state,
+        // and the short id are identical.
+        val desc = "5".repeat(25)
+        val pasted = Midend.fromGameId(Singles, "5x5:$desc")
+        assertEquals(desc, pasted.desc)
+        assertEquals("5x5de", pasted.serialise().value("CPARAMS"))
+
+        // The same description loaded from a save keeps the hard
+        // difficulty, so the difference is only the pasted-id base.
+        val loaded = Midend.fromSave(
+            Singles,
+            SgtpSave.parse(handSave(desc, params = "5x5dk")),
+        )
+        assertEquals(desc, loaded.desc)
+        assertEquals("5x5dk", loaded.serialise().value("CPARAMS"))
+        assertEquals("the short id is the same", pasted.id(), loaded.id())
     }
 
     private companion object {

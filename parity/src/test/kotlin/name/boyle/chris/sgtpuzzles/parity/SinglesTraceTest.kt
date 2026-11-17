@@ -192,20 +192,44 @@ class SinglesTraceTest {
     }
 
     @Test(timeout = 600_000)
-    fun `a cursor walk draws the eight corner lines`() = OracleClient().use { oracle ->
-        val save = oracle.newGame("singles", "5x5de", SEED).state
-        val sequence = listOf(Buttons.CURSOR_UP)
-        val expected = oracle.trace(save, sequence)
-        val midend = Midend.newGame(Singles, "5x5de", SEED)
-        for (key in sequence) midend.processKey(0, 0, key, 32)
-        val actual = normalize(KotlinTraceSink.stateTrace(midend))
-        assertLines("cursor", normalize(expected), actual)
-        assertEquals(
-            "eight cursor lines",
-            8,
-            actual.lines().count { it.startsWith("line ") && it.endsWith(" 7") },
-        )
-    }
+    fun `a cursor walk draws the eight corner lines at every wrap`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("singles", "5x5de", SEED).state
+            // The prefixes walk one edge each, so the four sequences
+            // trace the top, left, bottom, and right wrap.
+            val walks = listOf(
+                "up" to listOf(Buttons.CURSOR_UP),
+                "left" to listOf(
+                    Buttons.CURSOR_UP,
+                    Buttons.CURSOR_LEFT,
+                ),
+                "down" to listOf(
+                    Buttons.CURSOR_UP,
+                    Buttons.CURSOR_LEFT,
+                    Buttons.CURSOR_DOWN,
+                ),
+                "right" to listOf(
+                    Buttons.CURSOR_UP,
+                    Buttons.CURSOR_LEFT,
+                    Buttons.CURSOR_DOWN,
+                    Buttons.CURSOR_RIGHT,
+                ),
+            )
+            for ((name, sequence) in walks) {
+                val expected = oracle.trace(save, sequence)
+                val midend = Midend.newGame(Singles, "5x5de", SEED)
+                for (key in sequence) midend.processKey(0, 0, key, 32)
+                val actual = normalize(KotlinTraceSink.stateTrace(midend))
+                assertLines("cursor $name", normalize(expected), actual)
+                assertEquals(
+                    "cursor $name has eight lines",
+                    8,
+                    actual.lines().count {
+                        it.startsWith("line ") && it.endsWith(" 7")
+                    },
+                )
+            }
+        }
 
     @Test(timeout = 600_000)
     fun `the error marks use COL_ERROR and the black number uses COL_BLACKNUM`() =
