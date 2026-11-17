@@ -818,3 +818,64 @@ changes a game rule, a save record, or a frozen trace.
    least `1.0`, keeps its trace byte for byte. `ThickLineTraceTest`
    pins `0.0625` to `1000` and the rounding of `3.125` to `3125`;
    `KotlinGameEngineThickLineTest` pins the forwarded `1.0`.
+
+## Amendment: the configuration and preference seam (S8)
+
+- **Date:** 2026-11-17
+
+The earlier amendments said the seam had no preference store and that
+`one_key_shortcuts` was always on. S8 adds the settings and preference
+operations that the app adapter needs. The change is the seam for the
+39 games that are not enabled yet; it does not enable a second game.
+
+1. **`ConfigItem` is the C `config_item`.** The three types are
+   `Text`, `Bool`, and `Choices`. `kw` defaults to `name`, because
+   `android.c` passes the display name as the keyword for a settings
+   item; only a preference item carries a real keyword. The `choices`
+   and `keywords` strings are kept verbatim, including the leading
+   separator, so the Android builders split the same bytes as C.
+
+2. **`Game.configure(params)` returns the settings schema or null.**
+   Null is the "not declared yet" marker and the app must not enable
+   the game. `Game.customParams` converts an edited list back to
+   parameters; a game that declares a schema implements it, and the
+   default throws so a missing implementation cannot hide behind a
+   dialog crash.
+
+3. **`Game.prefs` is a static schema.** `midend_get_prefs` with no live
+   UI calls `new_ui(NULL)` and reads only the compile-time fields
+   (`midend.c:2986-3003`), so a static list equals
+   `get_prefs(new_ui(NULL))` and the preferences page needs no midend
+   and no generation. `Game.setPrefs(ui, prefs)` applies typed values to
+   a live UI; a game reads `Prefs.bool` and `Prefs.choice` and never
+   parses text.
+
+4. **`Prefs` copies the C text rules.** The encoding is one
+   `kw=value` line in schema order, `true`/`false` for a boolean, a
+   `choicekws` keyword for a choice, and the newline space stuffing.
+   The loader skips comments and blank lines, accepts a missing final
+   newline, ignores an unknown keyword, and returns the C error string
+   for a bad value. No upstream game has a string preference; the
+   parser and the encoder still handle one so they match C.
+
+5. **`Midend` owns the preference store.** It keeps
+   `one-key-shortcuts` first, then the game values, applies them after
+   `new_ui`, and writes them back with `serialisePrefs`. The
+   `one-key-shortcuts` value gates only the bare letters `n`, `u`, `r`,
+   and `q`; the `*`, `#`, control-character, and `UI_*` aliases stay
+   active, as `midend.c:1006-1034` does.
+
+6. **`Game.solveGame` is the solve error channel.** `Midend.solveAttempt`
+   returns the three `midend_solve` messages and `solve()` is
+   `solveAttempt() == null`, so every existing caller keeps its result.
+   A game that has a solver message overrides `solveGame`; the default
+   wraps `solve` and has no message.
+
+One order differs from C by design. C applies the stored preferences
+to the fresh UI before `decode_ui` (`midend.c:2669-2673`); the seam
+applies the factory `prefs` after `decode_ui`, so the preferences land
+on the final UI. No upstream game writes a preference field in
+`decode_ui`: `guess` restores pegs and holds, and `net` restores the
+cursor. The two orders therefore produce the same UI for every game
+that can be enabled today. A future game whose `decode_ui` writes a
+preference field must revisit this rule.

@@ -35,6 +35,10 @@ gestureSized(state, w, h, x0, y0, x1, y1, steps) -> state after a swipe
 pointsSized(state[, w, h], points[, trace]) -> state after several clicks
 traceWarm(state[, w, h], points) -> state + warm trace
 layout(state, w, h)     -> game size after midend_size
+config(game[, params])  -> title + settings item list
+configOK(game[, params], values) -> full params, or the validation error
+prefs(game[, state, text]) -> preference item list, or the saved text
+defaultParams(game)     -> full default params
 keys(state, seq[, prefs]) -> state + flags
 undo/redo(state)        -> state + flags
 serialise(state)        -> savefile
@@ -66,6 +70,15 @@ The optional `prefs` field applies game preferences first, in the
 upstream preferences file format, so a game mode that only `game_ui`
 holds (for example palisade's `cursor-mode=full`) can be compared at the
 state level.
+
+`config`, `configOK`, `prefs`, and `defaultParams` expose the settings
+and preference seam. `config` returns `game_configure` in C order and
+`configOK` applies `index=value` edits before `custom_params`,
+`validate_params`, and the full encoding. `prefs` returns the
+`CFG_PREFS` schema, or with a `state` and a `text` loads the text into a
+live midend and saves it again. The state is required because C applies
+the values to `me->ui` and reads them back from it. `defaultParams`
+returns the full default parameter text.
 
 `requestkeys` asks the game for its extra keys and the arrow mode. The
 optional `fullCursor` field passes the Android full-cursor hint to the
