@@ -1,46 +1,10 @@
 package name.boyle.chris.sgtpuzzles.parity
 
-import name.boyle.chris.sgtpuzzles.engine.BlackBox
-import name.boyle.chris.sgtpuzzles.engine.Bridges
-import name.boyle.chris.sgtpuzzles.engine.Cube
-import name.boyle.chris.sgtpuzzles.engine.Dominosa
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
-import name.boyle.chris.sgtpuzzles.engine.Flip
-import name.boyle.chris.sgtpuzzles.engine.Filling
-import name.boyle.chris.sgtpuzzles.engine.Flood
-import name.boyle.chris.sgtpuzzles.engine.Galaxies
 import name.boyle.chris.sgtpuzzles.engine.Game
-import name.boyle.chris.sgtpuzzles.engine.Guess
-import name.boyle.chris.sgtpuzzles.engine.Inertia
-import name.boyle.chris.sgtpuzzles.engine.Keen
-import name.boyle.chris.sgtpuzzles.engine.Lightup
-import name.boyle.chris.sgtpuzzles.engine.Loopy
-import name.boyle.chris.sgtpuzzles.engine.Map as MapGame
-import name.boyle.chris.sgtpuzzles.engine.Magnets
-import name.boyle.chris.sgtpuzzles.engine.Mines
-import name.boyle.chris.sgtpuzzles.engine.Mosaic
-import name.boyle.chris.sgtpuzzles.engine.Net
-import name.boyle.chris.sgtpuzzles.engine.Netslide
-import name.boyle.chris.sgtpuzzles.engine.Palisade
-import name.boyle.chris.sgtpuzzles.engine.Pattern
-import name.boyle.chris.sgtpuzzles.engine.Pearl
-import name.boyle.chris.sgtpuzzles.engine.Pegs
-import name.boyle.chris.sgtpuzzles.engine.Range
-import name.boyle.chris.sgtpuzzles.engine.Rect
-import name.boyle.chris.sgtpuzzles.engine.Signpost
-import name.boyle.chris.sgtpuzzles.engine.Singles
-import name.boyle.chris.sgtpuzzles.engine.Solo
-import name.boyle.chris.sgtpuzzles.engine.Tents
-import name.boyle.chris.sgtpuzzles.engine.Towers
-import name.boyle.chris.sgtpuzzles.engine.Tracks
-import name.boyle.chris.sgtpuzzles.engine.Undead
-import name.boyle.chris.sgtpuzzles.engine.Unequal
-import name.boyle.chris.sgtpuzzles.engine.Untangle
-import name.boyle.chris.sgtpuzzles.engine.SameGame
-import name.boyle.chris.sgtpuzzles.engine.Sixteen
-import name.boyle.chris.sgtpuzzles.engine.Twiddle
-import name.boyle.chris.sgtpuzzles.engine.Unruly
+import name.boyle.chris.sgtpuzzles.engine.PortedGames
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -54,51 +18,29 @@ import org.junit.Test
  * strings, parsing, or validation messages fails here. The oracle also
  * supplies the default and the presets, so no expected value comes from
  * the Kotlin game.
+ *
+ * The matrix is [PortedGames.all], the same engine-side registry that
+ * the preference matrix uses. Both modules see one list, so a ported
+ * game cannot be missing from this comparison. The count is pinned so
+ * that a new port changes it on purpose, not by accident.
  */
 class ConfigSchemaParityTest {
 
     private data class Scheme(val game: Game, val backend: String)
 
-    private val games = listOf(
-        Scheme(SameGame, "samegame"),
-        Scheme(Flood, "flood"),
-        Scheme(Sixteen, "sixteen"),
-        Scheme(Flip, "flip"),
-        Scheme(Twiddle, "twiddle"),
-        Scheme(Pegs, "pegs"),
-        Scheme(Guess, "guess"),
-        Scheme(BlackBox, "blackbox"),
-        Scheme(Bridges, "bridges"),
-        Scheme(Cube, "cube"),
-        Scheme(Filling, "filling"),
-        Scheme(Net, "net"),
-        Scheme(Netslide, "netslide"),
-        Scheme(Unruly, "unruly"),
-        Scheme(Range, "range"),
-        Scheme(Rect, "rect"),
-        Scheme(Galaxies, "galaxies"),
-        Scheme(Lightup, "lightup"),
-        Scheme(Mosaic, "mosaic"),
-        Scheme(Palisade, "palisade"),
-        Scheme(Pattern, "pattern"),
-        Scheme(Pearl, "pearl"),
-        Scheme(Loopy, "loopy"),
-        Scheme(Signpost, "signpost"),
-        Scheme(Inertia, "inertia"),
-        Scheme(Tents, "tents"),
-        Scheme(Magnets, "magnets"),
-        Scheme(Mines, "mines"),
-        Scheme(Undead, "undead"),
-        Scheme(Untangle, "untangle"),
-        Scheme(Tracks, "tracks"),
-        Scheme(Dominosa, "dominosa"),
-        Scheme(MapGame, "map"),
-        Scheme(Keen, "keen"),
-        Scheme(Towers, "towers"),
-        Scheme(Unequal, "unequal"),
-        Scheme(Singles, "singles"),
-        Scheme(Solo, "solo"),
-    )
+    private val games = PortedGames.all.map { Scheme(it, it.backendName) }
+
+    @Test
+    fun `the matrix covers every ported game`() {
+        assertEquals(40, PortedGames.all.size)
+        assertEquals(40, games.size)
+        for (game in PortedGames.all) {
+            assertNotNull(
+                "${game.backendName} has no configuration case",
+                games.firstOrNull { it.game === game },
+            )
+        }
+    }
 
     @Test
     fun `the default configuration matches the oracle`() = OracleClient().use { oracle ->
