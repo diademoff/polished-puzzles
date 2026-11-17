@@ -120,18 +120,27 @@ object KotlinGames {
     const val ENABLED = true
 
     /**
-     * Games whose Kotlin implementation is complete enough for the app.
-     * `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`,
-     * `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`,
-     * `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`,
-     * `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`,
-     * `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`,
-     * `towers`, `unequal`, `singles`, `pearl`, `loopy`, `rect`,
-     * `galaxies`, and `solo` are in dual-run: their engines pass the
-     * parity matrix, but the app still uses C until the configuration
-     * dialog and the two-release wait are done.
+     * Games whose Kotlin implementation is enabled in the app.
+     *
+     * The owner waived the two-release wait on 2026-11-18 and chose
+     * enablement in waves (decision 1a). The first wave is `samegame`,
+     * `flood`, and `pegs`; each game was checked for a `Review:`
+     * deviation, a flagged size or retry debt, and an undeclared
+     * preference schema before it was added. A game joins this set only
+     * after its device test passes, so the set is evidence, not a plan.
+     * See `docs/ROADMAP.md` Phase 4 and
+     * `docs/adr/0011-enable-games-in-waves.md`.
+     *
+     * `slant`, `sixteen`, `flip`, `twiddle`, `guess`, `blackbox`,
+     * `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`,
+     * `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`,
+     * `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`,
+     * `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`,
+     * `singles`, `pearl`, `loopy`, `rect`, `galaxies`, and `solo` are
+     * in dual-run: their engines pass the parity matrix, but the app
+     * still uses C until a later wave enables them.
      */
-    private val APP_GAMES = setOf(FIFTEEN)
+    private val APP_GAMES = setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS)
 
     /**
      * The Kotlin backend for [backend], or null when the game is not
