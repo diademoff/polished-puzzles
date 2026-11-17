@@ -1161,12 +1161,14 @@ Notes:
   are milliseconds, but `validate_params` accepts an area up to
   `INT_MAX`, so a size bound is an owner decision and no bound is
   added. `Midend.solveAttempt` carries the two C messages, and the shell shows
-  them. S8 builds the Width, Height, and `Start and end in corners`
-  configuration fields, shows the `Victory rotation effect`
-  (`flash-type`, `:Unidirectional:Meshing gears`) preference, and gates
-  the status text on `wantsStatusBar`. The `flash-type` value stays on the UI
-  and never enters the state, id, status, text, or save. S9 is a tested
-  `currentKeyLabel` helper with no Android call site. `SIGNPOST` is in
+  them. The engine declares the Width, Height, and `Start and end in
+  corners` configuration schema, and the app builds the dialog from it.
+  The `Victory rotation effect` (`flash-type`,
+  `:Unidirectional:Meshing gears`) preference reaches the live `Ui`, and
+  the status text is gated on `wantsStatusBar`. The `flash-type` value
+  stays on the UI and never enters the state, id, status, text, or
+  save. S9 is a tested `currentKeyLabel` helper with no Android call
+  site. `SIGNPOST` is in
   `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(SIGNPOST)`
   is false and the two-release wait still applies.
 
@@ -1245,9 +1247,10 @@ Notes:
   `pencil-keep-highlight` (boolean, default true) and `monsters`
   (`:Pictures:Letters`, default Pictures) after `newUi` and after
   `Midend.fromSave`; the shell then forces a redraw for `monsters`;
-  neither value is serialised. S8 builds the Width, Height, and
-  `:Easy:Normal:Tricky` configuration fields and gates the status text
-  on `wantsStatusBar` (it is false). S9 is a tested `currentKeyLabel` helper
+  neither value is serialised. The engine declares the Width, Height,
+  and `:Easy:Normal:Tricky` configuration schema, and the app builds the
+  dialog from it. The status text is gated on `wantsStatusBar` (it is
+  false). S9 is a tested `currentKeyLabel` helper
   with no
   Android call site. `UNDEAD` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(UNDEAD)` is false and the two-release wait
@@ -1311,11 +1314,12 @@ Notes:
   configuration dialog and the game-id path need a bound (an owner
   decision). `Midend.solveAttempt` carries `Solution not known for this
   puzzle` or `Internal error: aux_info badly formatted`, and the shell
-  shows them. S8 builds the one-field `Number of points` dialog,
+  shows them. The engine declares the one-field `Number of points`
+  schema, and the app builds the dialog from it. `Game.setPrefs`
   applies `snap-to-grid`, `show-crossed-edges`, and `vertex-style`
-  through `Game.setPrefs` after `newUi` and after `Midend.fromSave`,
-  forces a redraw for the two drawing preferences, and gates the status
-  text on `wantsStatusBar` (it is false). S9 is not needed because
+  after `newUi` and after `Midend.fromSave`, with a forced redraw for
+  the two drawing preferences. The status text is gated on
+  `wantsStatusBar` (it is false). S9 is not needed because
   `current_key_label` is
   `NULL`. `UNTANGLE` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(UNTANGLE)` is false and the two-release
@@ -1388,12 +1392,13 @@ Notes:
   `AUXINFO` assertion. Both entries carry a scope note: the NaN test
   runs before the 2-wide wrapping test, and a non-hex `AUXINFO`
   character reads as zero. Valid parameters, descriptions, and
-  auxiliary answers are unchanged. Enablement debt. S8 builds the
-  five-field configuration dialog (Width, Height, `Walls wrap around`,
-  `Barrier probability`, `Ensure unique solution`), applies the
-  `unlocked-loops` boolean through `Game.setPrefs` after `newUi` and
-  after `Midend.fromSave` with a forced redraw, and shows the solve
-  message. The accepted `46340x46340` area and the unbounded retry
+  auxiliary answers are unchanged. Enablement debt. The engine declares
+  the five-field configuration schema (Width, Height, `Walls wrap
+  around`, `Barrier probability`, `Ensure unique solution`), and the
+  app builds the dialog from it. `Game.setPrefs` applies the
+  `unlocked-loops` boolean after `newUi` and after `Midend.fromSave`
+  with a forced redraw, and the shell shows the solve message. The
+  accepted `46340x46340` area and the unbounded retry
   loops need an owner guard. The app generates off the UI thread. S9 is a
   tested `currentKeyLabel` helper with no Android call site.
   `NET` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
@@ -1463,10 +1468,10 @@ Notes:
   chord, a letterbox click, and a click after death or a win change
   neither, each followed by a positive control.
 
-  Enablement debt. Mines has no preferences, so S8 needs only the
-  four-field `Width`, `Height`, `Mines` (with the `%` rule), and
-  `Ensure solubility` configuration schema, the solve message
-  `Game has not been started yet` instead of the `solveEvent` throw,
+  Enablement debt. Mines has no preferences, so the engine declares
+  only the four-field `Width`, `Height`, `Mines` (with the `%` rule),
+  and `Ensure solubility` schema, and `Midend.solveAttempt` carries the
+  `Game has not been started yet` message. The open items are
   generation off the UI thread, an owner size bound for the accepted
   `2^28 - 1` area, a guard for the unbounded retry loop, and the
   two-release wait. `MINES` is in `KotlinGames.gameFor` and not in
@@ -1546,13 +1551,14 @@ Notes:
   `assert(n == 2)` in `solver_common` (`keen.c:377`). D-016 defines the
   Kotlin result as `DIFF_IMPOSSIBLE`; no generated game reaches it.
 
-  Enablement debt. S8 builds the four-field configuration schema
-  (`Grid size`, `Difficulty` with
+  Enablement debt. The engine declares the four-field configuration
+  schema (`Grid size`, `Difficulty` with
   `":Easy:Normal:Hard:Extreme:Unreasonable"`, `Multiplication only`),
-  applies `pencil-keep-highlight` after `newUi` and after
-  `Midend.fromSave`, gates the status text on `wantsStatusBar` (it is
-  false), and shows `No solution exists for this puzzle` and `Multiple
-  solutions exist for this puzzle` through `Midend.solveAttempt`. The
+  and the app builds the dialog from it. `pencil-keep-highlight` is
+  applied after `newUi` and after `Midend.fromSave`, the status text is
+  gated on `wantsStatusBar` (it is false), and `Midend.solveAttempt`
+  carries `No solution exists for this puzzle` and `Multiple solutions
+  exist for this puzzle`. The
   app generates off the UI thread (`9dn` takes about 100 ms in C but
   the retry count is unbounded). `currentKeyLabel` is a tested
   helper because the Android shell has no call site (S9). `KEEN` is in
@@ -1626,14 +1632,15 @@ Notes:
   description, or a generated move. No Towers abort is reachable beyond
   these definitions.
 
-  Enablement debt. S8 builds the two-field configuration schema
-  (`Grid size`, `Difficulty` with `":Easy:Hard:Extreme:Unreasonable"`),
-  applies `appearance` and `pencil-keep-highlight` to the live `Ui`
-  after `newUi` and after `Midend.fromSave` with a forced redraw for
-  `appearance` (Towers has no `UI` record), gates the status text on
-  `wantsStatusBar` (it is false), and shows `No solution exists for
-  this puzzle` and `Multiple solutions exist for this puzzle` through
-  `Midend.solveAttempt`. The app generates off the UI thread (`9du`
+  Enablement debt. The engine declares the two-field configuration
+  schema (`Grid size`, `Difficulty` with
+  `":Easy:Hard:Extreme:Unreasonable"`), and the app builds the dialog
+  from it. `appearance` and `pencil-keep-highlight` reach the live `Ui`
+  after `newUi` and after `Midend.fromSave`, with a forced redraw for
+  `appearance` (Towers has no `UI` record). The status text is gated on
+  `wantsStatusBar` (it is false), and `Midend.solveAttempt` carries `No
+  solution exists for this puzzle` and `Multiple solutions exist for
+  this puzzle`. The app generates off the UI thread (`9du`
   takes seconds). `currentKeyLabel` is a tested helper because the Android
   shell has no call site (S9). `TOWERS` is in `KotlinGames.gameFor` and
   not in `APP_GAMES`, so `handles(TOWERS)` is false.
@@ -1706,14 +1713,14 @@ Notes:
   C preconditions and the unreachable asserts are listed in
   `TESTING.md`. No Unequal abort is reachable beyond these definitions.
 
-  Enablement debt. S8 builds the three-field configuration schema
-  (`Mode` with `":Unequal:Adjacent"`, `Size (s*s)`, `Difficulty` with
-  `":Trivial:Easy:Tricky:Extreme:Recursive"`), applies
-  `pencil-keep-highlight` to the live `Ui` after `newUi` and after
-  `Midend.fromSave`, gates the status text on `wantsStatusBar` (it is
-  false), and shows `Solve operation failed` and `Solve unavailable
-  (already solved?)` through `Midend.solveAttempt`. The app generates
-  off the UI thread. `currentKeyLabel` is a
+  Enablement debt. The engine declares the three-field configuration
+  schema (`Mode` with `":Unequal:Adjacent"`, `Size (s*s)`, `Difficulty`
+  with `":Trivial:Easy:Tricky:Extreme:Recursive"`), and the app builds
+  the dialog from it. `pencil-keep-highlight` reaches the live `Ui`
+  after `newUi` and after `Midend.fromSave`. The status text is gated on
+  `wantsStatusBar` (it is false), and `Midend.solveAttempt` carries
+  `Solve operation failed` and `Solve unavailable (already solved?)`. The
+  app generates off the UI thread. `currentKeyLabel` is a
   tested helper because the Android shell has no call site (S9).
   `UNEQUAL` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(UNEQUAL)` is false.
@@ -1794,12 +1801,13 @@ Notes:
   accepted side (`61x2de` seed `3`) is compared with the oracle, and a
   hand-written `62x2de` save with `Z` still loads in both engines.
   Enablement
-  debt. S8 builds the three-field configuration schema (`Width`,
-  `Height`, `Difficulty` with `":Easy:Tricky"`), applies
-  `show-black-nums` after `newUi` and after `Midend.fromSave` with a
-  forced redraw, gates the status text on `wantsStatusBar` (it is
-  false), and shows `Unable to solve puzzle.` through
-  `Midend.solveAttempt`. The app generates off the UI thread;
+  debt. The engine declares the three-field configuration schema
+  (`Width`, `Height`, `Difficulty` with `":Easy:Tricky"`), and the app
+  builds the dialog from it. `show-black-nums` reaches the live `Ui`
+  after `newUi` and after `Midend.fromSave` with a forced redraw, the
+  status text is gated on `wantsStatusBar` (it is false), and
+  `Midend.solveAttempt` carries `Unable to solve puzzle.`. The app
+  generates off the UI thread;
   generation cost is unbounded at the accepted sides and is an owner
   size or time decision. `currentKeyLabel` is a
   tested helper because the Android shell has no call site (S9).
@@ -1830,13 +1838,14 @@ Notes:
   (D-019). The oracle is not asked about any of them.
 
   `pearl` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  the app stays on C and `handles(PEARL)` is false. S8 builds the
-  four-field configuration schema (Width, Height, `:Easy:Tricky`,
-  `Allow unsoluble`), applies `appearance` to the live `Ui` after
-  `newUi` and after `Midend.fromSave` with a re-run of the size and a
-  forced redraw, keeps the status line off (`wantsStatusBar` is false),
-  and shows the two C solve messages (`Unable to find solution`,
-  `invalid char in aux`) through `Midend.solveAttempt`. The `appearance`
+  the app stays on C and `handles(PEARL)` is false. The engine declares
+  the four-field configuration schema (Width, Height, `:Easy:Tricky`,
+  `Allow unsoluble`), and the app builds the dialog from it.
+  `appearance` reaches the live `Ui` after `newUi` and after
+  `Midend.fromSave` with a re-run of the size and a forced redraw, the
+  status line stays off (`wantsStatusBar` is false), and
+  `Midend.solveAttempt` carries the two C solve messages (`Unable to
+  find solution`, `invalid char in aux`). The `appearance`
   preference is a
   `Ui` field read by the UI-aware `computeSize` and by drawing; it is
   not serialized and not in the drawstate, so a redraw without the
@@ -1872,13 +1881,14 @@ Notes:
   bound `(w + 1) * (h + 1) <= INT_MAX` is pinned at 46339 and 46340.
 
   `loopy` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the
-  app stays on C and `handles(LOOPY)` is false. S8 builds the
+  app stays on C and `handles(LOOPY)` is false. The engine declares the
   four-field configuration schema (Width, Height, an eighteen-entry
-  Grid type, and `:Easy:Normal:Tricky:Hard`), applies
-  `draw-faint-lines` and `auto-follow` to the live `Ui` after `newUi`
-  and after `Midend.fromSave` (there is no `UI` record) with a forced
-  redraw, keeps the status line off (`wantsStatusBar` is false), and
-  shows the solve payload through `Midend.solveAttempt`. Generation
+  Grid type, and `:Easy:Normal:Tricky:Hard`), and the app builds the
+  dialog from it. `draw-faint-lines` and `auto-follow` reach the live
+  `Ui` after `newUi` and after `Midend.fromSave` (there is no `UI`
+  record) with a forced redraw, the status line stays off
+  (`wantsStatusBar` is false), and `Midend.solveAttempt` carries the
+  solve payload. Generation
   keeps the C cost and the C parameter bound; a large accepted board
   is effectively unbounded work, so the app generates off the UI thread
   and a size limit is an owner decision.
@@ -1904,13 +1914,13 @@ Notes:
   `w * h <= INT_MAX` is checked before anything is allocated.
 
   `rect` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the app
-  stays on C and `handles(RECT)` is false. S8 builds the four-field
-  configuration schema (Width, Height, Expansion factor, `Ensure unique
-  solution`), keeps the status bar on, shows `Auto-solved.` and
-  `COMPLETED!`, shows the solve payload through `Midend.solveAttempt`,
-  and generates off the UI thread. There is
-  no `UI` record and no preference. S9 is a tested `currentKeyLabel`
-  helper with no Android call site.
+  stays on C and `handles(RECT)` is false. The engine declares the
+  four-field configuration schema (Width, Height, Expansion factor,
+  `Ensure unique solution`), and the app builds the dialog from it. The
+  status bar stays on, showing `Auto-solved.` and `COMPLETED!`, and
+  `Midend.solveAttempt` carries the solve payload. Generation runs off
+  the UI thread. There is no `UI` record and no preference. S9 is a
+  tested `currentKeyLabel` helper with no Android call site.
 
 - `galaxies` is `dual-run`. Its parameters and six presets, the
   `%dx%dd[char]` grammar, the validation order, the description grammar,
