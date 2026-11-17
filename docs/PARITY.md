@@ -166,7 +166,7 @@ C wins.
 
 | Component | Status | Authority |
 |---|---|---|
-| `midend` | dual-run: semantic subset in `engine/Midend.kt`; shell in C | C |
+| `midend` | dual-run: semantic subset in `engine/Midend.kt`; the C shell serves C backends, and `KotlinGameEngine` builds the dialogs, the preferences page, and the generation path for a Kotlin backend | C |
 | `random` | parity: `engine/RandomState.kt`, strict differential | oracle streams |
 | `SAVEFILE` container | parity: `engine/SgtpSave.kt`, both directions | C save corpus |
 | `sort`, `combi` | parity: `engine/Sort.kt`, `engine/Combinations.kt` | C order |
@@ -255,8 +255,10 @@ Notes:
   file, and drawing pass the matrix in `FifteenDescTest`,
   `FifteenGameTest`, `FifteenSaveTest`, and `FifteenTraceTest`. The app
   selects `KotlinGameEngine` for every `fifteen` game, so the status is
-  `kotlin`. The C game remains in the vendored tree for the oracle and
-  chooser metadata; it is not a runtime backend. The seams are
+  `kotlin`. Its settings, seed, game-ID, and preference pages come from
+  the engine schema, generation runs on the worker, and a solve error
+  shows the C message. The C game remains in the vendored tree for the
+  oracle and chooser metadata; it is not a runtime backend. The seams are
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0008-run-fifteen-on-kotlin.md`.
 - `slant` is the second port target. Its generator, solver, state,
@@ -264,8 +266,8 @@ Notes:
   input pass the matrix in `SlantDescTest`, `SlantGameTest`,
   `SlantSaveTest`, `SlantTraceTest`, and `SlantInputParityTest`. It is
   `dual-run`: `KotlinGames.gameFor` knows the Kotlin game, but
-  `KotlinGames.handles` keeps the app on C until the configuration
-  dialog, cursor drawing, and the two-release wait are done. The seams
+  `KotlinGames.handles` keeps the app on C until cursor drawing and the
+  two-release wait are done. The seams
   are `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 - `samegame` is `dual-run`. Its generator, state, moves, score,
@@ -276,8 +278,7 @@ Notes:
   `pointsSized` operation, so a select and a remove run in one C midend
   and are compared with the Kotlin `processKey` path.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the configuration dialog, the `Fifteen` casts in
-  `KotlinGameEngine`, and the two-release wait are open. The seam is
+  C: the two-release wait is open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 - `sixteen` is `dual-run`. Its generator, state, moves, loose move
   bounds, cursor modes, keypad null move, status text, solver, save
@@ -286,8 +287,8 @@ Notes:
   `SixteenTraceTest`, and `SixteenInputParityTest`. The save test pins
   the `full`-argument quirk: `m` stays in the short id and in both
   `PARAMS` and `CPARAMS`, unlike flood and fifteen. `KotlinGames.gameFor`
-  knows the Kotlin game, but the app still uses C: the configuration
-  dialog and the two-release wait are open. A `SOLVE` record is undone
+  knows the Kotlin game, but the app still uses C: the two-release wait is
+  open. A `SOLVE` record is undone
   and redone against the oracle, because the midend clears the animation
   for every record type that is not `MOVE`. A `MOVE` record whose move
   text is `S` is Kotlin-only: the C debug oracle asserts in `game_redraw`
@@ -305,8 +306,7 @@ Notes:
   completion flash are not ported, which `PARITY.md` section 1 allows,
   so strict traces come from loaded states or `traceNew`, never from a
   move in a live midend. `KotlinGames.gameFor` knows the Kotlin game,
-  but the app still uses C: the configuration dialog and the
-  two-release wait are open. The seam is
+  but the app still uses C: the two-release wait is open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 - `pegs` is `dual-run`. Its parameters, generator, state, moves, drag
   and keyboard input, status, text, save file, drawing, layout, and the
@@ -324,9 +324,7 @@ Notes:
   id over the previous parameters and Kotlin starts from the defaults,
   so `currentParams.type` can differ; the description, the state, and
   the id do not. `KotlinGames.gameFor` knows the Kotlin game, but the
-  app still uses C: the configuration dialog, the `Fifteen` casts in
-  `KotlinGameEngine`, the unconditional status text, the missing
-  no-preferences path, and the two-release wait are open. The seam is
+  app still uses C: the two-release wait is open. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 - `guess` is `dual-run`. Its parameters, generator, loose move and UI
   grammars, state, hints, drag, hold, clear and keyboard input, the
@@ -346,11 +344,11 @@ Notes:
   rejected unmarkable move to `NoEffect`, which is C's release-build
   behavior. `GuessTest` pins both results, so they are port
   definitions, not game-rule deviations. The `show-labels`
-  preference lives on the engine UI with a false default until the app
-  adapter applies the stored value. `KotlinGames.gameFor` knows the
-  Kotlin game, but the app still uses C: the preference schema, the
-  configuration dialog, the app adapter, and the two-release wait are
-  open. The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  preference lives on the engine UI with a false default; the midend
+  applies the stored value through `Game.setPrefs`. `KotlinGames.gameFor`
+  knows the
+  Kotlin game, but the app still uses C: the two-release wait is open. The
+  seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 - `blackbox` is `dual-run`. Its parameters, generator, loose move and
   `UI` grammars, state, laser rules, grid-seeded reveal check, status
@@ -373,9 +371,8 @@ Notes:
   board nor the move count. D-003 rejects a drawn ball count above the
   cell count after the count draw instead of hanging; a count that fits
   keeps the C seed, `DESC`, and save text, whatever `maxBalls` is.
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C:
-  the configuration schema, the preference-dialog skip, the `Fifteen`
-  casts in `KotlinGameEngine`, and the two-release wait are open. The
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C: the
+  two-release wait is open. The
   seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 - `cube` is `dual-run`. Its parameters, generator, state, roll, face
@@ -397,9 +394,8 @@ Notes:
   `validate_params` accepts a huge area and then enumerates every grid
   square, as C does; that guard is enablement debt, not a deviation (see
   `TESTING.md`). `KotlinGames.gameFor` knows the Kotlin game, but the
-  app still uses C: the configuration schema, the preference-dialog
-  skip, the `Fifteen` casts in `KotlinGameEngine`, the huge-area guard,
-  and the two-release wait are open. The seam is
+  app still uses C: the huge-area guard and the two-release wait are open. The
+  seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 - `filling` is `dual-run`. Its parameters, description generator,
   deduction solver, state, move grammar, completion, status text, save
@@ -456,10 +452,9 @@ Notes:
   `validate_params` accepts `46340x46340`, and generation then
   allocates about 8.6 GB of boards and hangs, as C does. That guard is
   enablement debt, not a deviation (see `TESTING.md`). `KotlinGames.gameFor`
-  knows the Kotlin game, but the app still uses C: the configuration
-  schema, the preference-dialog skip, the `Fifteen` casts in
-  `KotlinGameEngine`, the huge-area guard, the S9 call site for
-  `currentKeyLabel`, and the two-release wait are open. The seam is
+  knows the Kotlin game, but the app still uses C: the huge-area guard, the S9
+  call site for `currentKeyLabel`,
+  and the two-release wait are open. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
@@ -500,9 +495,8 @@ Notes:
   about 17 GB of two `IntArray`s and does not finish, as C does with
   about 4.3 GB. That guard is enablement debt, not a deviation (see
   `TESTING.md`). `KotlinGames.gameFor` knows the Kotlin game, but the
-  app still uses C: the five-field configuration dialog, the
-  preference-dialog skip, the `Fifteen` casts in `KotlinGameEngine`,
-  the huge-area guard, and the two-release wait are open. `currentKeyLabel`
+  app still uses C: the huge-area guard and the two-release wait are open.
+  `currentKeyLabel`
   is a tested helper because C has no Android call site for it. The seam
   is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -570,10 +564,9 @@ Notes:
   boundary and the rejected `65536x65536` side, and the generation
   tests run with a timeout. That guard is enablement debt, not a
   deviation (see `TESTING.md`). `KotlinGames.gameFor` knows the
-  Kotlin game, but the app still uses C: the four-field configuration
-  dialog, the preference-dialog skip, the `Fifteen` casts in
-  `KotlinGameEngine`, the huge-area guard, and the two-release wait are
-  open. `currentKeyLabel` is a tested helper because C has no Android
+  Kotlin game, but the app still uses C: the huge-area guard and the
+  two-release wait are open. `currentKeyLabel` is a tested helper because C
+  has no Android
   call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -640,16 +633,13 @@ Notes:
   cells and no huge-area guard is needed.
 
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-field configuration dialog, the preference-dialog skip,
-  the `Fifteen` casts in `KotlinGameEngine`, and the two-release wait
-  are open. The `Mouse button order` preference (`fill` or `dot`) has
-  no engine hook yet; the adapter must parse
-  `left-mouse-button=fill|dot` and set `Range.Ui.swapButtons` after
-  `newUi` and after `Midend.fromSave`, because there is no `decodeUi`
-  and a load recreates the UI. The oracle's `pointsSized` and
-  `traceWarm` have no `prefs` field, so the swapped click is pinned on
-  the engine side against `range.c:1368-1375`; a `prefs` field is
-  needed before that click can be compared with C. `currentKeyLabel`
+  C: the `Mouse button order` preference (`fill` or `dot`) has no
+  engine hook yet, and the two-release wait is open. The adapter must
+  parse `left-mouse-button=fill|dot` and set `Range.Ui.swapButtons`
+  after `newUi` and after `Midend.fromSave`, because there is no
+  `decodeUi` and a load recreates the UI. The oracle's `pointsSized`
+  and `traceWarm` take a `prefs` field, so the swapped click can then
+  be compared with C. `currentKeyLabel`
   is a tested helper because C has no Android call site for it. The
   seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -704,15 +694,13 @@ Notes:
   all-black attempt. The port rejects both before generation; this is
   D-006, and the valid parameters are unchanged. The `show-lit-blobs`
   preference lives on `Lightup.Ui.drawBlobsWhenLit` with a true
-  default. The app adapter must parse it and set the live UI after
-  `newUi` and after `Midend.fromSave`, then force a redraw; the value
-  must not enter `DrawState.flags`, because C reads it in `tile_redraw`
+  default. `Game.setPrefs` applies it to the live UI after `newUi` and after
+  `Midend.fromSave`, and the shell forces a redraw; the value must not
+  enter `DrawState.flags`, because C reads it in `tile_redraw`
   and a warm frame after a preference change alone is empty.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the configuration schema (Width, Height, `%age of black squares`,
-  Symmetry, Difficulty), the preference schema and application, the
-  `Fifteen` casts in `KotlinGameEngine`, and the two-release wait are
-  open. `currentKeyLabel` is a tested helper because C has no Android
+  C: the two-release wait is open. `currentKeyLabel` is a tested helper
+  because C has no Android
   call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -759,12 +747,11 @@ Notes:
   'z'` (`mosaic.c:809-816`); the port reproduces it literally and
   `MosaicTest` pins it, but no generated board reaches it (4400 samples
   stayed in `0`-`9a`-`z`, longest run 26), so no deviation entry is
-  needed. An aggressive `100x100` board takes 30-45 s in C; the app
-  must generate off the UI thread, or accept a guard that C does not
-  have. `KotlinGames.gameFor` knows the Kotlin game, but the app still
-  uses C: the configuration schema (Height, Width, Aggressive), the
-  preference-dialog skip, the `Fifteen` casts in `KotlinGameEngine`,
-  and the two-release wait are open. `currentKeyLabel` is a tested
+  needed. An aggressive `100x100` board takes 30-45 s in C. The app
+  generates off the UI thread; a guard would reject parameters that C
+  accepts and needs an owner decision. `KotlinGames.gameFor` knows the
+  Kotlin game, but the app still uses C: the two-release wait is open.
+  `currentKeyLabel` is a tested
   helper because C has no Android call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -818,9 +805,9 @@ Notes:
   the input mode, the cursor shape, and the requested keys; it does not
   change the id, status, text, or save. `clear-complete-regions` changes
   only the drawn color of a `MAYBE` edge in a complete region. Neither
-  preference is serialized, so the app must apply both to the live UI
-  after `newUi` and after `Midend.fromSave`, call `forceRedraw`, and
-  re-request the keys for `cursor-mode`. `KotlinGameEngine.requestKeys`
+  preference is serialized, so the midend applies both to the live UI
+  after `newUi` and after `Midend.fromSave`; the shell then redraws and
+  re-requests the keys for `cursor-mode`. `KotlinGameEngine.requestKeys`
   already passes `palisadeFullCursor` to `Palisade.requestKeys(params,
   fullCursor)`. The completion flash is not ported; animations and
   transitions may differ (section 1) and the oracle's `allow_flash` is
@@ -843,9 +830,7 @@ Notes:
   reaches this path.
 
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the three-field configuration dialog (Width, Height, Region size),
-  the two-preference schema and its application, the `Fifteen` casts in
-  `KotlinGameEngine`, and the two-release wait are open. S9 is not
+  C: the two-release wait is open. S9 is not
   needed, because `current_key_label` is `NULL`. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -882,11 +867,9 @@ Notes:
   `46340x46340` boundary; only generation is guarded.
 
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-field configuration dialog (Width, Height), the
-  preference-dialog skip, the `Fifteen` casts in `KotlinGameEngine`,
-  the D-008 guard message, and the two-release wait are open. The app
-  `solveEvent` must show a message instead of throwing when the board
-  is already solved or dead. `currentKeyLabel` is a tested helper
+  C: the D-008 guard message and the two-release wait are open. The
+  shell shows the game's message when the board is already solved or
+  dead. `currentKeyLabel` is a tested helper
   because the Android shell has no call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -976,12 +959,9 @@ Notes:
   the generated save byte for byte for every preset and nine seeds.
   Every corpus save that already carries `AUXINFO` keeps it byte for
   byte. `KotlinGames.gameFor` knows the
-  Kotlin game, but the app still uses C: the three-field configuration
-  dialog (Width, Height, Difficulty with `":Easy:Tricky"`), the
-  preference-dialog skip (`get_prefs` is `NULL`), the `Fifteen` casts
-  in `KotlinGameEngine`, and the two-release wait are open. The app
-  `solveEvent` must show a message instead of throwing when a
-  hand-written board fails to solve. `currentKeyLabel` is a tested
+  Kotlin game, but the app still uses C: the two-release wait is open. The
+  shell shows the game's message
+  when a hand-written board fails to solve. `currentKeyLabel` is a tested
   helper because the Android shell has no call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -1043,10 +1023,10 @@ Notes:
   changed tile and clue. The completion flash is not ported; section 1
   allows animations to differ and the oracle never emits one.
 
-  Enablement debt. Generation runs on the calling thread today:
+  Enablement debt. Generation is synchronous; the app calls it on its worker:
   `16x14de` takes about 5.9 s and `20x20` does not finish in 90 s,
-  while the eight presets are under 20 ms. The app must generate off
-  the UI thread. `validate_params` accepts an area up to `INT_MAX`, so
+  while the eight presets are under 20 ms. The app generates off the
+  UI thread. `validate_params` accepts an area up to `INT_MAX`, so
   a size bound would reject parameters that C accepts; that is an owner
   decision that needs a deviation entry and a test, and no params bound
   is added in this slice. `LayDomino.checkedArea` is the only area
@@ -1055,11 +1035,7 @@ Notes:
   `2*w*h` must fit an `int`. That guard rejects only areas the presets
   and tests never generate, and it runs before the first RNG draw.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the S8 configuration schema (Width, Height,
-  Difficulty with `":Easy:Tricky"`, Strip clues), the
-  preference-dialog skip (`get_prefs` is `NULL`), the `Fifteen` casts
-  in `KotlinGameEngine`, the generation off the UI thread, and the
-  two-release wait are open. S9 is a tested `currentKeyLabel` helper
+  C: the two-release wait is open. S9 is a tested `currentKeyLabel` helper
   with no Android call site. `MAGNETS` is not in `APP_GAMES`, so
   `handles(MAGNETS)` is false.
 
@@ -1106,19 +1082,17 @@ Notes:
   and 100, and the 411x702 letterbox. No trace has a blitter, a status
   line, or a flash frame.
 
-  Enablement debt. Generation runs on the calling thread today: the
+  Enablement debt. Generation is synchronous; the app calls it on its worker:
+  the
   five presets are under 30 ms, `50x50` takes about 16 s, and `100x100`
-  does not finish in a minute. The app must generate off the UI thread.
+  does not finish in a minute. The app generates off the UI thread.
   `validate_params` accepts an area up to `INT_MAX`, so a size bound
   would reject parameters that C accepts; that is an owner decision
   that needs a deviation entry and a test, and no bound is added in
   this slice. The solve of `4x4:2/1/2/1/1.1/2/1/1` returns null
-  because the seam has no error channel; the app must show the C
-  message instead of throwing. `KotlinGames.gameFor` knows the Kotlin
-  game, but the app still uses C: the S8 configuration schema (Width,
-  Height), the preference-dialog skip (`get_prefs`/`set_prefs` are
-  `NULL`), the unconditional status text in the adapter, the `Fifteen`
-  casts, and the two-release wait are open. S9 is a tested
+  and `Midend.solveAttempt` carries the C message, which the shell
+  shows. `KotlinGames.gameFor` knows the Kotlin
+  game, but the app still uses C: the two-release wait is open. S9 is a tested
   `currentKeyLabel` helper with no Android call site. `PATTERN` is not
   in `APP_GAMES`, so `handles(PATTERN)` is false.
 
@@ -1180,15 +1154,15 @@ Notes:
   `canFormatAsText` is a constant seam and the params-aware hook is
   missing.
 
-  Enablement debt. Generation runs on the calling thread; the presets
+  Enablement debt. Generation is synchronous; the app calls it on its worker;
+  the presets
   are milliseconds, but `validate_params` accepts an area up to
   `INT_MAX`, so a size bound is an owner decision and no bound is
-  added. `Game.solve` has no error channel, so the app must show the
-  two C messages instead of throwing. S8 must build the Width, Height,
-  and `Start and end in corners` configuration fields, show the
-  `Victory rotation effect` (`flash-type`, `:Unidirectional:Meshing
-  gears`) preference, gate the status text on `wantsStatusBar`, and
-  remove the `Fifteen` casts. The `flash-type` value stays on the UI
+  added. `Midend.solveAttempt` carries the two C messages, and the shell shows
+  them. S8 builds the Width, Height, and `Start and end in corners`
+  configuration fields, shows the `Victory rotation effect`
+  (`flash-type`, `:Unidirectional:Meshing gears`) preference, and gates
+  the status text on `wantsStatusBar`. The `flash-type` value stays on the UI
   and never enters the state, id, status, text, or save. S9 is a tested
   `currentKeyLabel` helper with no Android call site. `SIGNPOST` is in
   `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(SIGNPOST)`
@@ -1258,20 +1232,21 @@ Notes:
   tile 64 is `thick_line 4000 ...`. `undead` is the first game-level consumer
   of the primitive.
 
-  Enablement debt. Generation runs on the calling thread; the presets
+  Enablement debt. Generation is synchronous; the app calls it on its worker;
+  the presets
   are milliseconds, but a hand-written maximum `13x4` board can take
-  about 1.3 s, so the app must generate off the UI thread. The solver
+  about 1.3 s, so the app generates off the UI thread. The solver
   is a brute force bounded by `3 ** num_total`, so a hand-written
   description can be expensive and the app must run `SOLVE` off the UI
-  thread. `Game.solve` has no error channel, so the app must show
-  `Puzzle is inconsistent` and `Puzzle is unsolvable` instead of
-  throwing. The app must parse and apply `pencil-keep-highlight`
-  (boolean, default true) and `monsters` (`:Pictures:Letters`, default
-  Pictures) after `newUi` and after `Midend.fromSave`, then force a
-  redraw for `monsters`; neither value is serialised. S8 must build the
-  Width, Height, and `:Easy:Normal:Tricky` configuration fields, gate
-  the status text on `wantsStatusBar` (it is false), and remove the
-  `Fifteen` casts. S9 is a tested `currentKeyLabel` helper with no
+  thread. `Midend.solveAttempt` carries `Puzzle is inconsistent` and
+  `Puzzle is unsolvable`, and the shell shows them. The midend applies
+  `pencil-keep-highlight` (boolean, default true) and `monsters`
+  (`:Pictures:Letters`, default Pictures) after `newUi` and after
+  `Midend.fromSave`; the shell then forces a redraw for `monsters`;
+  neither value is serialised. S8 builds the Width, Height, and
+  `:Easy:Normal:Tricky` configuration fields and gates the status text
+  on `wantsStatusBar` (it is false). S9 is a tested `currentKeyLabel` helper
+  with no
   Android call site. `UNDEAD` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(UNDEAD)` is false and the two-release wait
   still applies.
@@ -1327,18 +1302,19 @@ Notes:
   undo or a `SOLVE` in a live midend. Colour 0 is darker than the
   board, so the midend clear and the game rect differ.
 
-  Enablement debt. Generation runs on the calling thread; the presets
+  Enablement debt. Generation is synchronous; the app calls it on its worker;
+  the presets
   are milliseconds, but `validate_params` accepts `n` up to
   `INT_MAX / 3`, where `newDesc` allocates about 17 GB, so the
   configuration dialog and the game-id path need a bound (an owner
-  decision). `Game.solve` has no error channel, so the app must show
-  `Solution not known for this puzzle` or `Internal error: aux_info
-  badly formatted` instead of throwing. S8 must build the one-field
-  `Number of points` dialog, parse and apply `snap-to-grid`,
-  `show-crossed-edges`, and `vertex-style` after `newUi` and after
-  `Midend.fromSave`, force a redraw for the two drawing preferences,
-  gate the status text on `wantsStatusBar` (it is false), and remove
-  the `Fifteen` casts. S9 is not needed because `current_key_label` is
+  decision). `Midend.solveAttempt` carries `Solution not known for this
+  puzzle` or `Internal error: aux_info badly formatted`, and the shell
+  shows them. S8 builds the one-field `Number of points` dialog,
+  applies `snap-to-grid`, `show-crossed-edges`, and `vertex-style`
+  through `Game.setPrefs` after `newUi` and after `Midend.fromSave`,
+  forces a redraw for the two drawing preferences, and gates the status
+  text on `wantsStatusBar` (it is false). S9 is not needed because
+  `current_key_label` is
   `NULL`. `UNTANGLE` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(UNTANGLE)` is false and the two-release
   wait still applies.
@@ -1410,14 +1386,13 @@ Notes:
   `AUXINFO` assertion. Both entries carry a scope note: the NaN test
   runs before the 2-wide wrapping test, and a non-hex `AUXINFO`
   character reads as zero. Valid parameters, descriptions, and
-  auxiliary answers are unchanged. Enablement debt. S8 needs the
+  auxiliary answers are unchanged. Enablement debt. S8 builds the
   five-field configuration dialog (Width, Height, `Walls wrap around`,
-  `Barrier probability`, `Ensure unique solution`), the
-  `unlocked-loops` boolean applied after `newUi` and after
-  `Midend.fromSave` with a forced redraw, a solve message instead of
-  the `solveEvent` throw, and the removal of the `Fifteen` casts. The
-  accepted `46340x46340` area and the unbounded retry loops need an
-  owner guard, and generation must move off the UI thread. S9 is a
+  `Barrier probability`, `Ensure unique solution`), applies the
+  `unlocked-loops` boolean through `Game.setPrefs` after `newUi` and
+  after `Midend.fromSave` with a forced redraw, and shows the solve
+  message. The accepted `46340x46340` area and the unbounded retry
+  loops need an owner guard. The app generates off the UI thread. S9 is a
   tested `currentKeyLabel` helper with no Android call site.
   `NET` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(NET)` is false and the two-release wait still applies.
@@ -1569,15 +1544,15 @@ Notes:
   `assert(n == 2)` in `solver_common` (`keen.c:377`). D-016 defines the
   Kotlin result as `DIFF_IMPOSSIBLE`; no generated game reaches it.
 
-  Enablement debt. S8 must build the four-field configuration schema
+  Enablement debt. S8 builds the four-field configuration schema
   (`Grid size`, `Difficulty` with
   `":Easy:Normal:Hard:Extreme:Unreasonable"`, `Multiplication only`),
-  apply `pencil-keep-highlight` after `newUi` and after
-  `Midend.fromSave`, gate the status text on `wantsStatusBar` (it is
-  false), show `No solution exists for this puzzle` and `Multiple
-  solutions exist for this puzzle` instead of throwing, generate off
-  the UI thread (`9dn` takes about 100 ms in C but the retry count is
-  unbounded), and wait two releases. `currentKeyLabel` is a tested
+  applies `pencil-keep-highlight` after `newUi` and after
+  `Midend.fromSave`, gates the status text on `wantsStatusBar` (it is
+  false), and shows `No solution exists for this puzzle` and `Multiple
+  solutions exist for this puzzle` through `Midend.solveAttempt`. The
+  app generates off the UI thread (`9dn` takes about 100 ms in C but
+  the retry count is unbounded). `currentKeyLabel` is a tested
   helper because the Android shell has no call site (S9). `KEEN` is in
   `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(KEEN)` is
   false and the two-release wait still applies.
@@ -1649,16 +1624,15 @@ Notes:
   description, or a generated move. No Towers abort is reachable beyond
   these definitions.
 
-  Enablement debt. S8 must build the two-field configuration schema
-  (`Grid size`, `Difficulty` with
-  `":Easy:Hard:Extreme:Unreasonable"`), apply `appearance` and
-  `pencil-keep-highlight` to the live `Ui` after `newUi` and after
-  `Midend.fromSave` with a forced redraw for `appearance` (Towers has
-  no `UI` record), gate the status text on `wantsStatusBar` (it is
-  false), show `No solution exists for this puzzle` and
-  `Multiple solutions exist for this puzzle` instead of throwing,
-  generate off the UI thread (`9du` takes seconds), and wait two
-  releases. `currentKeyLabel` is a tested helper because the Android
+  Enablement debt. S8 builds the two-field configuration schema
+  (`Grid size`, `Difficulty` with `":Easy:Hard:Extreme:Unreasonable"`),
+  applies `appearance` and `pencil-keep-highlight` to the live `Ui`
+  after `newUi` and after `Midend.fromSave` with a forced redraw for
+  `appearance` (Towers has no `UI` record), gates the status text on
+  `wantsStatusBar` (it is false), and shows `No solution exists for
+  this puzzle` and `Multiple solutions exist for this puzzle` through
+  `Midend.solveAttempt`. The app generates off the UI thread (`9du`
+  takes seconds). `currentKeyLabel` is a tested helper because the Android
   shell has no call site (S9). `TOWERS` is in `KotlinGames.gameFor` and
   not in `APP_GAMES`, so `handles(TOWERS)` is false.
 
@@ -1730,14 +1704,14 @@ Notes:
   C preconditions and the unreachable asserts are listed in
   `TESTING.md`. No Unequal abort is reachable beyond these definitions.
 
-  Enablement debt. S8 must build the three-field configuration schema
+  Enablement debt. S8 builds the three-field configuration schema
   (`Mode` with `":Unequal:Adjacent"`, `Size (s*s)`, `Difficulty` with
-  `":Trivial:Easy:Tricky:Extreme:Recursive"`), apply
+  `":Trivial:Easy:Tricky:Extreme:Recursive"`), applies
   `pencil-keep-highlight` to the live `Ui` after `newUi` and after
-  `Midend.fromSave`, gate the status text on `wantsStatusBar` (it is
-  false), show `Solve operation failed` and
-  `Solve unavailable (already solved?)` instead of throwing, generate
-  off the UI thread, and wait two releases. `currentKeyLabel` is a
+  `Midend.fromSave`, gates the status text on `wantsStatusBar` (it is
+  false), and shows `Solve operation failed` and `Solve unavailable
+  (already solved?)` through `Midend.solveAttempt`. The app generates
+  off the UI thread. `currentKeyLabel` is a
   tested helper because the Android shell has no call site (S9).
   `UNEQUAL` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(UNEQUAL)` is false.
@@ -1808,8 +1782,8 @@ Notes:
   it changes the number drawn on a black cell and nothing else; it is
   not in `State`, the id, the save, or `DrawState.flags`. The port
   exposes `Singles.Ui.showBlackNums` and reads it in `redraw`. Because
-  `encode_ui` is `NULL`, a load creates a fresh UI, so the app adapter
-  must apply the preference after `newUi` and after `Midend.fromSave`.
+  `encode_ui` is `NULL`, a load creates a fresh UI; the midend applies
+  the preference after `newUi` and after `Midend.fromSave`.
 
   D-017 defines the 62 boundary. C accepts a side of 62, generates a
   description whose digit 62 is `[`, and aborts in `new_game`; the port
@@ -1818,14 +1792,14 @@ Notes:
   accepted side (`61x2de` seed `3`) is compared with the oracle, and a
   hand-written `62x2de` save with `Z` still loads in both engines.
   Enablement
-  debt. S8 must build the three-field configuration schema (`Width`,
-  `Height`, `Difficulty` with `":Easy:Tricky"`), apply
+  debt. S8 builds the three-field configuration schema (`Width`,
+  `Height`, `Difficulty` with `":Easy:Tricky"`), applies
   `show-black-nums` after `newUi` and after `Midend.fromSave` with a
-  forced redraw, gate the status text on `wantsStatusBar` (it is
-  false), show `Unable to solve puzzle.` instead of the `solveEvent`
-  throw, remove the `Fifteen` casts, generate off the UI thread, and
-  wait two releases; generation cost is unbounded at the accepted
-  sides and is an owner size or time decision. `currentKeyLabel` is a
+  forced redraw, gates the status text on `wantsStatusBar` (it is
+  false), and shows `Unable to solve puzzle.` through
+  `Midend.solveAttempt`. The app generates off the UI thread;
+  generation cost is unbounded at the accepted sides and is an owner
+  size or time decision. `currentKeyLabel` is a
   tested helper because the Android shell has no call site (S9).
   `SINGLES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(SINGLES)` is false.
@@ -1854,20 +1828,20 @@ Notes:
   (D-019). The oracle is not asked about any of them.
 
   `pearl` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  the app stays on C and `handles(PEARL)` is false. S8 must build the
-  four-field configuration schema (Width, Height,
-  `:Easy:Tricky`, `Allow unsoluble`), apply `appearance` to the live
-  `Ui` after `newUi` and after `Midend.fromSave` with a re-run of the
-  size and a forced redraw, keep the status line off
-  (`wantsStatusBar` is false), show the two C solve messages
-  (`Unable to find solution`, `invalid char in aux`) instead of
-  throwing, and wait two releases. The `appearance` preference is a
+  the app stays on C and `handles(PEARL)` is false. S8 builds the
+  four-field configuration schema (Width, Height, `:Easy:Tricky`,
+  `Allow unsoluble`), applies `appearance` to the live `Ui` after
+  `newUi` and after `Midend.fromSave` with a re-run of the size and a
+  forced redraw, keeps the status line off (`wantsStatusBar` is false),
+  and shows the two C solve messages (`Unable to find solution`,
+  `invalid char in aux`) through `Midend.solveAttempt`. The `appearance`
+  preference is a
   `Ui` field read by the UI-aware `computeSize` and by drawing; it is
   not serialized and not in the drawstate, so a redraw without the
   resize keeps the old geometry. Generation keeps the C cost and the C
   parameter bound: a `13x13` board takes seconds and `14x14` or larger
-  does not finish in the measured budget, so the app must generate off
-  the UI thread. A size limit is an owner decision (D-019). S9 is a
+  does not finish in the measured budget. The app generates off the UI
+  thread. A size limit is an owner decision (D-019). S9 is a
   tested `currentKeyLabel` helper with no Android call site.
 
 - `loopy` is `dual-run`. Its parameters and twenty presets, the loopy
@@ -1896,16 +1870,16 @@ Notes:
   bound `(w + 1) * (h + 1) <= INT_MAX` is pinned at 46339 and 46340.
 
   `loopy` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the
-  app stays on C and `handles(LOOPY)` is false. S8 must build the
+  app stays on C and `handles(LOOPY)` is false. S8 builds the
   four-field configuration schema (Width, Height, an eighteen-entry
-  Grid type, and `:Easy:Normal:Tricky:Hard`), apply
+  Grid type, and `:Easy:Normal:Tricky:Hard`), applies
   `draw-faint-lines` and `auto-follow` to the live `Ui` after `newUi`
   and after `Midend.fromSave` (there is no `UI` record) with a forced
-  redraw, keep the status line off (`wantsStatusBar` is false), show
-  the solve payload instead of throwing, and wait two releases.
-  Generation keeps the C cost and the C parameter bound; a large
-  accepted board is effectively unbounded work, so the app must
-  generate off the UI thread and a size limit is an owner decision.
+  redraw, keeps the status line off (`wantsStatusBar` is false), and
+  shows the solve payload through `Midend.solveAttempt`. Generation
+  keeps the C cost and the C parameter bound; a large accepted board
+  is effectively unbounded work, so the app generates off the UI thread
+  and a size limit is an owner decision.
   S9 is not needed because `current_key_label` is NULL.
 
 - `rect` is `dual-run`. Its five presets, the `%dx%d` parameter
@@ -1928,11 +1902,11 @@ Notes:
   `w * h <= INT_MAX` is checked before anything is allocated.
 
   `rect` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the app
-  stays on C and `handles(RECT)` is false. S8 must build the four-field
-  configuration schema (Width, Height, Expansion factor,
-  `Ensure unique solution`), keep the status bar on, show
-  `Auto-solved.` and `COMPLETED!`, show the solve payload instead of
-  throwing, generate off the UI thread, and wait two releases. There is
+  stays on C and `handles(RECT)` is false. S8 builds the four-field
+  configuration schema (Width, Height, Expansion factor, `Ensure unique
+  solution`), keeps the status bar on, shows `Auto-solved.` and
+  `COMPLETED!`, shows the solve payload through `Midend.solveAttempt`,
+  and generates off the UI thread. There is
   no `UI` record and no preference. S9 is a tested `currentKeyLabel`
   helper with no Android call site.
 
@@ -2012,12 +1986,11 @@ Notes:
   cells: `23169x23169` is accepted and `23170x23170` is rejected by the
   `4*w*h` bound. Generation then allocates the `(2w+1)(2h+1)` space
   array, so a large accepted board is effectively unbounded work. No
-  guard is added and no test generates such a board; the app must
-  generate off the UI thread, and a size limit is an owner decision.
+  guard is added and no test generates such a board; the app generates
+  off the UI thread, and a size limit is an owner decision.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C:
-  the three-field configuration dialog (Width, Height, Difficulty), the
-  `Fifteen` casts in `KotlinGameEngine`, and the two-release wait are
-  open. `currentKeyLabel` is a tested helper because C has no Android
+  the two-release wait is open. `currentKeyLabel` is a tested helper because C
+  has no Android
   call site. The seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
@@ -2096,9 +2069,7 @@ Notes:
   acceptance and messages; only `newDesc` and `newState` refuse the
   empty grid, and only drawing and solving define the unclued cage.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the seven-field configuration dialog, the `pencil-keep-highlight`
-  preference, the `Fifteen` casts in `KotlinGameEngine`, generation off
-  the UI thread, and the two-release wait are open. `currentKeyLabel`
+  C: the two-release wait is open. `currentKeyLabel`
   is a tested helper with no Android call site. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
