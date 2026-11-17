@@ -918,6 +918,38 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-023: `galaxies` defines the hand-made difficulty assert and encoder
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** `galaxies` has two paths that only a
+  hand-made `Params` value reaches. First, `validate_params` ends with
+  `assert(params->diff <= DIFF_UNREASONABLE)` (`galaxies.c:281`), which
+  aborts the shipped C build for a difficulty outside `0..1`. The port
+  returns `Unknown difficulty level`. Second, `encode_params` reads
+  `galaxies_diffchars[params->diff]` (`galaxies.c:220`) with no range
+  test. The array is `"nu"` followed by the terminator, so a difficulty
+  of 2 writes a bare `d` (the NUL ends the string), and a difficulty
+  above 2 reads past the array in C. The port writes a bare `d` for
+  every value outside `0..1`, which reproduces the difficulty-2 text and
+  defines the larger values.
+- **Why:** an abort is not acceptable in the app, and the app only
+  builds parameters through `decode_params` or `custom_params`, which
+  never produce a difficulty outside `0..1`. The check and the encoder
+  are therefore total library functions, not user paths. Every decoded
+  or generated parameter set keeps the C seed, `DESC`, `AUXINFO`, and
+  save text.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GalaxiesTest.kt::validation follows the C order and the area bound`
+  pins the message for `-1` and `2`;
+  `...::the encoder defines an out-of-range difficulty` pins `7x7d`
+  for `2`, `3`, and `-1`;
+  `parity/src/test/kotlin/.../GalaxiesDescTest.kt::the validation messages match the oracle in C order`
+  pins the decoded messages and the same encoder result.
+- **Scope:** `galaxies`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

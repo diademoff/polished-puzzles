@@ -6,6 +6,7 @@ import name.boyle.chris.sgtpuzzles.engine.Cube
 import name.boyle.chris.sgtpuzzles.engine.Dominosa
 import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
+import name.boyle.chris.sgtpuzzles.engine.Galaxies
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
@@ -278,6 +279,16 @@ class KotlinGamesTest {
         val expected = File(testdata, "saves/initial/rect/7x7.sgtp").readText()
         val actual = KotlinGames.generate(RECT, "7x7", "12345")
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `galaxies is registered but the app still uses C`() {
+        assertEquals(Galaxies, KotlinGames.gameFor(GALAXIES))
+        assertFalse(KotlinGames.handles(GALAXIES))
+        val actual = KotlinGames.generate(GALAXIES, "7x7dn", "12345")
+        assertTrue(actual.contains("GAME    :8:Galaxies"))
+        assertTrue(actual.contains("DESC    :13:cjrbhizuisfvf"))
+        assertTrue(actual.contains("AUXINFO :"))
     }
 
     @Test

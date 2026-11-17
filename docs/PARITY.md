@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, and `rect` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `rect`, and `galaxies` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -202,7 +202,7 @@ submenu entries when a game groups its presets.
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `dual-run` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `dual-run` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `dual-run` |
-| `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `C` |
+| `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `dual-run` |
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `dual-run` |
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `dual-run` |
@@ -1935,6 +1935,91 @@ Notes:
   throwing, generate off the UI thread, and wait two releases. There is
   no `UI` record and no preference. S9 is a tested `currentKeyLabel`
   helper with no Android call site.
+
+- `galaxies` is `dual-run`. Its parameters and six presets, the
+  `%dx%dd[char]` grammar, the validation order, the description grammar,
+  the generator, the deduction solver with its recursion, state, the
+  `E`/`U`/`M`/`A`/`S` moves, the text form, the cursor and key labels,
+  the save file, palette, drawing with three blitters, layout, and input
+  pass the matrix in `GalaxiesDescTest`, `GalaxiesGameTest`,
+  `GalaxiesSaveTest`, `GalaxiesTraceTest`, `GalaxiesInputParityTest`,
+  and the engine `GalaxiesTest`.
+
+  The generator is the whole chain: a shuffled pass over the
+  `(2w+1) x (2h+1)` space array, the block expansion and dot move, dot
+  placement with the obvious associations, ten wiggliness attempts with
+  a strict best, the outline pass, `check_complete`, and the solver gate
+  at the requested difficulty. The RNG draws only in the two shuffles,
+  so the seven golden entries, the six presets at eight seed strings,
+  and the full save including `AUXINFO` pin the stream. `AUXINFO` is
+  `diff_game(blank, state, true)`: an `S` prefix, one `a` association per
+  tile, and one `E` per interior edge, in x-major space order.
+  `solve_game` applies the stored answer when it is present, otherwise
+  tries the current then the initial state at Unreasonable, clears every
+  association, and returns the edge-only diff.
+
+  The solver runs the obvious associations, the opposite-edge rule, the
+  empty-tile rule, the line-of-sight expansion, the exclave extension,
+  and a recursion capped at five levels. `execute_move` keeps the C
+  `sscanf` grammar: whitespace around numbers, a sign, leading zeros,
+  one optional trailing semicolon, saturating overflow, and no trailing
+  junk. The parameters use the C `atoi`/`%d` saturation, and the short
+  encoder drops `d<char>`, so an Unreasonable game writes `PARAMS 7x7dn`
+  and `CPARAMS 7x7du`, and the id has no difficulty.
+
+  A left click rounds to the nearest edge; a click exactly on a vertex
+  or a tile centre rounds to the horizontal edge because the distance
+  test is not strict. A right press starts an arrow drag from a nearby
+  dot or from an associated tile, and the release emits `U` and/or `A`.
+  The keyboard cursor walks every space coordinate, so it has a polygon
+  ring on a tile, a narrow bar on an edge, a small square on a vertex,
+  and a red dot on a dot. `currentKeyLabel` is a tested helper (S9 has
+  no Android call site). The drawstate allocates three `TILE_SIZE`
+  blitters (drag, mirror, and cursor) before the first `start_draw`, and
+  an arrow is three `line` primitives. The six frozen traces, the sized
+  traces at 32, 48, 63, 82, and 100, the 411x702 and 1080x1920
+  letterboxes, the 200x200 viewport, tile/edge/vertex/dot cursor frames,
+  a keyboard drag, the warm drag path, and the port-only mid-drag frame
+  are compared.
+
+  `GalaxiesSaveTest` reads the seven corpus saves, rewrites them byte
+  for byte, compares id, status, undo, redo, text, and the reload in C,
+  makes C load a Kotlin save for every preset and eight seeds, pins the
+  `PARAMS`/`CPARAMS` split, and round-trips an edge click, a right drag,
+  undo with a live redo branch, a `SOLVE`, and a `RESTART`. No save has
+  a `UI`, `TIME`, `PRIVDESC`, or `HEXSEED` record, and every save has an
+  `AUXINFO`. `GalaxiesInputParityTest` compares the layout at five
+  viewports, the edge rounding, real edge clicks and right drags at
+  tiles 48, 63, 82, and 100, a letterboxed click at three presets, the
+  inert pointer shapes, a drag off an associated tile, the modifier
+  strip, the keyboard model with the hint and the shortcuts, undo and
+  redo, a real completion at tile 63 with one event, and a non-vacuous
+  post-click frame.
+
+  One C assertion in `generate_pass` (`galaxies.c:1428`) is kept as a
+  defensive skip: `dot_is_possible` rejects every dot whose adjacent
+  tiles would have an off-grid or associated opposite, so no generated
+  dot reaches the failing `solver_obvious_dot`. The port leaves such a
+  dot unassociated instead of aborting; the measured matrix does not
+  reach the branch.
+
+  D-023 defines the hand-made difficulty outside `0..1` as
+  `Unknown difficulty level` and the out-of-range encoder as a bare `d`,
+  which reproduces the C difficulty-2 string. `galaxies` has no
+  preference and no `UI` record, and no error colour or error frame.
+
+  Enablement debt. `validate_params` accepts an area up to about 5.36e8
+  cells: `23169x23169` is accepted and `23170x23170` is rejected by the
+  `4*w*h` bound. Generation then allocates the `(2w+1)(2h+1)` space
+  array, so a large accepted board is effectively unbounded work. No
+  guard is added and no test generates such a board; the app must
+  generate off the UI thread, and a size limit is an owner decision.
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C:
+  the three-field configuration dialog (Width, Height, Difficulty), the
+  `Fifteen` casts in `KotlinGameEngine`, and the two-release wait are
+  open. `currentKeyLabel` is a tested helper because C has no Android
+  call site. The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 ## 8. Goldens
 
