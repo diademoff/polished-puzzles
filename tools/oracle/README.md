@@ -52,6 +52,11 @@ Requests:
 ```
 {"op":"games"}
 {"op":"presets","game":"mines"}
+{"op":"config","game":"slant","params":"8x8dh"}
+{"op":"configOK","game":"slant","params":"8x8dh","values":"0=12;1=9;2=1"}
+{"op":"prefs","game":"range"}
+{"op":"prefs","game":"range","state":"...","text":"left-mouse-button=dot\n"}
+{"op":"defaultParams","game":"pearl"}
 {"op":"new","game":"fifteen","params":"4x4","seed":"12345"}
 {"op":"key","state":"...","x":90,"y":210,"k":512}
 {"op":"undo","state":"..."}
@@ -82,6 +87,29 @@ finishes on such a grid.
 cursor game lives in the frontend state, not in the save file, so a
 sequence must not be split into separate `key` requests. The sequence is
 a space- or comma-separated list of button codes; the pointer is `0,0`.
+
+`config` returns `game_configure` for `params`, or for the game's
+default parameters when `params` is absent. The response is the real
+`midend_get_config` title and the item list in C order. A settings
+choice has `choiceKws: null`, because `game_configure` never sets
+`choicekws`.
+
+`configOK` applies `index=value` edits to that list and returns
+`custom_params` plus full validation and full encoding, which is the
+call behind the app's `configOK`. A missing index keeps the schema
+value. A bad value returns the `validate_params` message. String
+values end at `;` or the end of the field.
+
+`prefs` without `text` returns `midend_get_config(CFG_PREFS)`, with the
+keyword of each item. `prefs` with `text` loads the text into a live
+midend created from `state`, then saves it again. The state is
+required because C applies preferences to `me->ui` and reads them back
+from it; a midend with no UI would answer with the compile-time
+defaults for every game item.
+
+`defaultParams` returns
+`g->encode_params(g->default_params(), true)`, the fallback that
+replaces the C external in `GamePlay.decideParams`.
 
 `trace` records one redraw through the recording drawing API. It is the
 strict trace described in `docs/adr/0003-strict-draw-traces.md`.

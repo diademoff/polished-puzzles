@@ -13,6 +13,9 @@ sealed class JsonValue {
     data class Str(val value: String) : JsonValue()
     data class Num(val value: Long) : JsonValue()
     data class Bool(val value: Boolean) : JsonValue()
+
+    /** JSON `null`, used by the `choiceKws` field of a settings item. */
+    data object Null : JsonValue()
 }
 
 object Json {
@@ -63,7 +66,7 @@ object Json {
                 '"' -> JsonValue.Str(readString())
                 't' -> readLiteral("true", JsonValue.Bool(true))
                 'f' -> readLiteral("false", JsonValue.Bool(false))
-                'n' -> throw IllegalArgumentException("null is not part of the protocol")
+                'n' -> readLiteral("null", JsonValue.Null)
                 else -> if (c == '-' || c.isDigit()) readNumber()
                 else throw IllegalArgumentException("unexpected '$c' at offset $position")
             }
@@ -182,6 +185,14 @@ fun JsonValue.Obj.field(key: String): JsonValue =
 fun JsonValue.Obj.string(key: String): String =
     (field(key) as? JsonValue.Str)?.value
         ?: throw IllegalStateException("field '$key' is not a string: $fields")
+
+/** A string field that may be absent or JSON null. */
+fun JsonValue.Obj.nullableString(key: String): String? =
+    when (val value = fields[key]) {
+        null, JsonValue.Null -> null
+        is JsonValue.Str -> value.value
+        else -> throw IllegalStateException("field '$key' is not a string or null: $fields")
+    }
 
 fun JsonValue.Obj.bool(key: String): Boolean =
     (field(key) as? JsonValue.Bool)?.value

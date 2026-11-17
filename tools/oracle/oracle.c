@@ -14,6 +14,11 @@
  *
  *   {"op":"games"}
  *   {"op":"presets","game":"mines"}
+ *   {"op":"config","game":"slant","params":"8x8dh"}
+ *   {"op":"configOK","game":"slant","params":"8x8dh","values":"0=12;1=9;2=1"}
+ *   {"op":"prefs","game":"range"}
+ *   {"op":"prefs","game":"range","state":"...","text":"left-mouse-button=dot\n"}
+ *   {"op":"defaultParams","game":"pearl"}
  *   {"op":"new","game":"fifteen","params":"4x4","seed":"12345"}
  *   {"op":"id","state":"..."}
  *   {"op":"key","state":"...","x":0,"y":0,"k":76}
@@ -1516,6 +1521,400 @@ static void do_key_seq(const char *save, const char *seq, const char *prefs)
 
     put_state(&fe);
     free_frontend(&fe);
+}
+
+/* ------------------------------------------------------------------ */
+/* Configuration and preferences.                                     */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The number of items in a C separated list such as `:Easy:Hard`. The
+ * first character is the separator.
+ */
+static int separated_count(const char *text)
+{
+    char separator;
+    const char *p = text;
+    int count = 0;
+
+    if (!p || !*p)
+        return 0;
+    separator = *p++;
+    while (true) {
+        count++;
+        while (*p && *p != separator)
+            p++;
+        if (!*p)
+            break;
+        p++;
+    }
+    return count;
+}
+
+/*
+ * Creates a midend and sets its parameters without generating a game,
+ * as midend_game_id does. An empty or absent params string uses the
+ * game's own default params, encoded in full.
+ */
+static const char *open_config_midend(frontend *fe, const char *gamename,
+                                      const char *params)
+{
+    const game *g = find_game(gamename);
+    const char *error;
+    char *par;
+
+    if (!g)
+        return "unknown game";
+    fe->me = midend_new(fe, g, &oracle_drawing, NULL);
+
+    if (params && *params) {
+        par = dupstr(params);
+    } else {
+        game_params *def = g->default_params();
+        par = g->encode_params(def, true);
+        g->free_params(def);
+    }
+    error = midend_game_id(fe->me, par);
+    sfree(par);
+    if (error) {
+        free_frontend(fe);
+        return error;
+    }
+    return NULL;
+}
+
+/*
+ * Emits one config_item. `prefs` selects the CFG_PREFS shape, which
+ * carries the keyword. A settings choice has no keyword list, because
+ * game_configure never sets choicekws; the field is still emitted so
+ * both ops return the same shape, and it is null.
+ */
+static void put_config_item(const config_item *it, bool prefs)
+{
+    fputs("{", stdout);
+    fputs("\"name\":", stdout);
+    put_json_string(it->name);
+    if (prefs) {
+        fputs(",\"kw\":", stdout);
+        put_json_string(it->kw);
+    }
+
+    switch (it->type) {
+      case C_STRING:
+        fputs(",\"type\":\"string\",\"value\":", stdout);
+        put_json_string(it->u.string.sval);
+        break;
+      case C_BOOLEAN:
+        printf(",\"type\":\"boolean\",\"value\":%s",
+               it->u.boolean.bval ? "true" : "false");
+        break;
+      case C_CHOICES:
+        fputs(",\"type\":\"choices\",\"choices\":", stdout);
+        put_json_string(it->u.choices.choicenames);
+        fputs(",\"choiceKws\":", stdout);
+        if (prefs && it->u.choices.choicekws)
+            put_json_string(it->u.choices.choicekws);
+        else
+            fputs("null", stdout);
+        printf(",\"selected\":%d", it->u.choices.selected);
+        break;
+      default:
+        break;
+    }
+    fputs("}", stdout);
+}
+
+/*
+ * Applies `index=value` edits to a config_item list. The index is the
+ * position in the `config` response. A missing index keeps the schema
+ * value. C never validates an index, so the bounds checks here are a
+ * protocol guard against undefined behavior in the oracle; the app
+ * always sends a valid index.
+ */
+static const char *apply_config_values(config_item *cfg, const char *values)
+{
+    int n_items = 0;
+    const char *p = values;
+
+    while (cfg[n_items].type != C_END)
+        n_items++;
+
+    while (*p) {
+        char *end;
+        long index;
+        const char *start;
+        size_t len;
+        char *text;
+        config_item *it;
+
+        while (*p == ' ' || *p == '\t' || *p == ';')
+            p++;
+        if (!*p)
+            break;
+
+        index = strtol(p, &end, 10);
+        if (end == p || *end != '=')
+            return "configOK values needs index=value";
+        p = end + 1;
+        start = p;
+        while (*p && *p != ';')
+            p++;
+        len = (size_t)(p - start);
+
+        if (index < 0 || index >= n_items)
+            return "configOK value index is out of range";
+
+        text = snewn(len + 1, char);
+        memcpy(text, start, len);
+        text[len] = '\0';
+
+        it = &cfg[index];
+        switch (it->type) {
+          case C_STRING:
+            sfree(it->u.string.sval);
+            it->u.string.sval = text;
+            text = NULL;
+            break;
+          case C_BOOLEAN:
+            if (len == 4 && !memcmp(text, "true", 4))
+                it->u.boolean.bval = true;
+            else if (len == 5 && !memcmp(text, "false", 5))
+                it->u.boolean.bval = false;
+            else {
+                sfree(text);
+                return "configOK boolean value must be true or false";
+            }
+            break;
+          case C_CHOICES: {
+            char *choice_end;
+            long selected = strtol(text, &choice_end, 10);
+            int n_choices = separated_count(it->u.choices.choicenames);
+
+            if (choice_end == text || *choice_end ||
+                selected < 0 || selected >= n_choices) {
+                sfree(text);
+                return "configOK choice value must be a valid index";
+            }
+            it->u.choices.selected = (int)selected;
+            break;
+          }
+          default:
+            break;
+        }
+        sfree(text);
+    }
+    return NULL;
+}
+
+static void do_config(const jobject *req)
+{
+    const char *gamename = field_string(req, "game");
+    const char *params = field_string(req, "params");
+    frontend fe = {0};
+    config_item *cfg;
+    char *title = NULL;
+    const char *error;
+    int i;
+
+    if (!gamename) {
+        put_error("config needs a game");
+        return;
+    }
+    error = open_config_midend(&fe, gamename, params);
+    if (error) {
+        put_error(error);
+        return;
+    }
+    cfg = midend_get_config(fe.me, CFG_SETTINGS, &title);
+    if (!cfg) {
+        free_frontend(&fe);
+        put_error("game has no configuration");
+        return;
+    }
+
+    fputs("{\"ok\":true,\"title\":", stdout);
+    put_json_string(title);
+    fputs(",\"items\":[", stdout);
+    for (i = 0; cfg[i].type != C_END; i++) {
+        if (i)
+            putchar(',');
+        put_config_item(&cfg[i], false);
+    }
+    fputs("]}\n", stdout);
+
+    free_cfg(cfg);
+    sfree(title);
+    free_frontend(&fe);
+}
+
+static void do_config_ok(const jobject *req)
+{
+    const char *gamename = field_string(req, "game");
+    const char *params = field_string(req, "params");
+    const char *values = field_string(req, "values");
+    frontend fe = {0};
+    config_item *cfg;
+    char *title = NULL;
+    char *encoded = NULL;
+    const char *error;
+
+    if (!gamename) {
+        put_error("configOK needs a game");
+        return;
+    }
+    if (!values) {
+        put_error("configOK needs values");
+        return;
+    }
+    error = open_config_midend(&fe, gamename, params);
+    if (error) {
+        put_error(error);
+        return;
+    }
+    cfg = midend_get_config(fe.me, CFG_SETTINGS, &title);
+    if (!cfg) {
+        free_frontend(&fe);
+        put_error("game has no configuration");
+        return;
+    }
+
+    error = apply_config_values(cfg, values);
+    if (error) {
+        free_cfg(cfg);
+        sfree(title);
+        free_frontend(&fe);
+        put_error(error);
+        return;
+    }
+
+    error = midend_config_to_encoded_params(fe.me, cfg, &encoded);
+    if (error) {
+        free_cfg(cfg);
+        sfree(title);
+        free_frontend(&fe);
+        put_error(error);
+        return;
+    }
+
+    fputs("{\"ok\":true,\"params\":", stdout);
+    put_json_string(encoded);
+    fputs("}\n", stdout);
+
+    sfree(encoded);
+    free_cfg(cfg);
+    sfree(title);
+    free_frontend(&fe);
+}
+
+static void do_prefs(const jobject *req)
+{
+    const char *gamename = field_string(req, "game");
+    const char *text = field_string(req, "text");
+    const char *save = field_string(req, "state");
+    frontend fe = {0};
+    const char *error;
+
+    if (!gamename) {
+        put_error("prefs needs a game");
+        return;
+    }
+    if (!find_game(gamename)) {
+        put_error("unknown game");
+        return;
+    }
+
+    if (text) {
+        /*
+         * A preferences round trip needs a live UI: midend_load_prefs
+         * applies the values to me->ui, and midend_save_prefs reads
+         * them back from it. A midend with no UI would answer with the
+         * compile-time defaults for every game item. The state supplies
+         * the UI without generating anything.
+         */
+        sbuf out = {0};
+
+        if (!save) {
+            put_error("prefs text needs a state");
+            return;
+        }
+        error = open_state_with_unsized(&fe, save, &oracle_drawing, NULL, false);
+        if (error) {
+            put_error(error);
+            return;
+        }
+        if (strcmp(midend_which_game(fe.me)->name, find_game(gamename)->name)) {
+            free_frontend(&fe);
+            put_error("prefs state is from a different game");
+            return;
+        }
+        error = apply_prefs(&fe, text);
+        if (error) {
+            free_frontend(&fe);
+            put_error(error);
+            return;
+        }
+
+        midend_save_prefs(fe.me, sbuf_write_cb, &out);
+        fputs("{\"ok\":true,\"text\":", stdout);
+        put_json_string(out.buf ? out.buf : "");
+        fputs("}\n", stdout);
+
+        sfree(out.buf);
+        free_frontend(&fe);
+        return;
+    }
+
+    {
+        const game *g = find_game(gamename);
+        config_item *cfg;
+        char *title = NULL;
+        int i;
+
+        if (!g) {
+            put_error("unknown game");
+            return;
+        }
+        fe.me = midend_new(&fe, g, &oracle_drawing, NULL);
+        cfg = midend_get_config(fe.me, CFG_PREFS, &title);
+        if (!cfg) {
+            free_frontend(&fe);
+            put_error("game has no preferences");
+            return;
+        }
+
+        fputs("{\"ok\":true,\"title\":", stdout);
+        put_json_string(title);
+        fputs(",\"items\":[", stdout);
+        for (i = 0; cfg[i].type != C_END; i++) {
+            if (i)
+                putchar(',');
+            put_config_item(&cfg[i], true);
+        }
+        fputs("]}\n", stdout);
+
+        free_cfg(cfg);
+        sfree(title);
+        free_frontend(&fe);
+    }
+}
+
+static void do_default_params(const char *gamename)
+{
+    const game *g = find_game(gamename);
+    game_params *params;
+    char *encoded;
+
+    if (!g) {
+        put_error("unknown game");
+        return;
+    }
+    params = g->default_params();
+    encoded = g->encode_params(params, true);
+    fputs("{\"ok\":true,\"params\":", stdout);
+    put_json_string(encoded);
+    fputs("}\n", stdout);
+    sfree(encoded);
+    g->free_params(params);
 }
 
 /* ------------------------------------------------------------------ */
@@ -3412,6 +3811,18 @@ int main(int argc, char **argv)
                 put_error("presets needs a game");
             else
                 do_presets(game);
+        } else if (!strcmp(op, "config")) {
+            do_config(&req);
+        } else if (!strcmp(op, "configOK")) {
+            do_config_ok(&req);
+        } else if (!strcmp(op, "prefs")) {
+            do_prefs(&req);
+        } else if (!strcmp(op, "defaultParams")) {
+            const char *game = field_string(&req, "game");
+            if (!game)
+                put_error("defaultParams needs a game");
+            else
+                do_default_params(game);
         } else if (!strcmp(op, "new")) {
             const char *game = field_string(&req, "game");
             if (!game)

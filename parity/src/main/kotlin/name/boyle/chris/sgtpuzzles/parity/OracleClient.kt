@@ -83,6 +83,86 @@ class OracleClient(
                 Preset(preset.string("title"), preset.string("params"))
             }
 
+    /** One settings or preference item from the oracle. */
+    data class ConfigItem(
+        val name: String,
+        val kw: String?,
+        val type: String,
+        val value: String? = null,
+        val boolean: Boolean? = null,
+        val choices: String? = null,
+        val choiceKws: String? = null,
+        val selected: Int? = null,
+    )
+
+    data class Config(val title: String, val items: List<ConfigItem>)
+
+    /** `game_configure` for [params], or the default when it is null. */
+    fun config(game: String, params: String? = null): Config {
+        val fields = linkedMapOf<String, Any>("op" to "config", "game" to game)
+        if (params != null) fields["params"] = params
+        return configResponse(request(fields))
+    }
+
+    /**
+     * `midend_config_to_encoded_params`: the full parameter text for the
+     * edits in [values]. Throws [OracleException] with the C
+     * `validate_params` message when the edit is invalid.
+     */
+    fun configOK(game: String, params: String? = null, values: String = ""): String {
+        val fields = linkedMapOf<String, Any>(
+            "op" to "configOK",
+            "game" to game,
+            "values" to values,
+        )
+        if (params != null) fields["params"] = params
+        return request(fields).string("params")
+    }
+
+    /** The `CFG_PREFS` schema of [game], with the keywords. */
+    fun prefs(game: String): Config =
+        configResponse(request(mapOf("op" to "prefs", "game" to game)))
+
+    /**
+     * Loads [text] into a live midend created from [state], then saves
+     * the preferences again. A live UI is required because C applies
+     * the values to `me->ui` and reads them back from it.
+     *
+     * Throws [OracleException] with the C loader message when the text is
+     * invalid.
+     */
+    fun prefsRoundTrip(game: String, state: String, text: String): String =
+        request(
+            mapOf(
+                "op" to "prefs",
+                "game" to game,
+                "state" to state,
+                "text" to text,
+            ),
+        ).string("text")
+
+    /** `g->encode_params(g->default_params(), true)`. */
+    fun defaultParams(game: String): String =
+        request(mapOf("op" to "defaultParams", "game" to game)).string("params")
+
+    private fun configResponse(response: JsonValue.Obj): Config {
+        val items = (response.field("items") as JsonValue.Arr).items.map {
+            val item = it as JsonValue.Obj
+            val valueField = item.fields["value"]
+            ConfigItem(
+                name = item.string("name"),
+                kw = item.nullableString("kw"),
+                type = item.string("type"),
+                value = (valueField as? JsonValue.Str)?.value,
+                boolean = (valueField as? JsonValue.Bool)?.value,
+                choices = item.nullableString("choices"),
+                choiceKws = item.nullableString("choiceKws"),
+                selected = (item.fields["selected"] as? JsonValue.Num)?.value?.toInt(),
+            )
+        }
+        return Config(response.string("title"), items)
+    }
+
     fun newGame(game: String, params: String, seed: String): GameState =
         GameState.of(
             request(
