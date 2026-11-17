@@ -19,6 +19,7 @@ import java.io.IOException
 import java.util.Objects
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.FutureTask
 
 class GameGenerator {
     interface Callback {
@@ -81,6 +82,46 @@ class GameGenerator {
             callback.gameGeneratorSuccess(input.finishedGenerating(generated), previousGame)
         }
         return future
+    }
+
+    /**
+     * Runs [create] on the generator executor and reports its result
+     * through [callback]. This is the Kotlin game path: [create] returns
+     * the save text and must not touch the activity, the view, or the
+     * engine.
+     *
+     * A [FutureTask] is used instead of the `lateinit` pattern of
+     * [generate], because a Kotlin generation can finish before
+     * `submit` returns and the task must always see its own future.
+     * The cancellation check runs before the callback, as the C path
+     * does, so a cancelled task leaves no callback. A failure is
+     * reported as [Callback.gameGeneratorFailure] instead of escaping
+     * on the worker thread.
+     */
+    fun submit(
+        input: GameLaunch,
+        previousGame: String?,
+        callback: Callback,
+        create: () -> String,
+    ): Future<*> {
+        lateinit var task: FutureTask<String?>
+        task = FutureTask {
+            var generated: String? = null
+            try {
+                generated = create()
+                if (!task.isCancelled) {
+                    callback.gameGeneratorSuccess(
+                        input.finishedGenerating(generated),
+                        previousGame,
+                    )
+                }
+            } catch (e: Exception) {
+                if (!task.isCancelled) callback.gameGeneratorFailure(e, input)
+            }
+            generated
+        }
+        executor.execute(task)
+        return task
     }
 
     companion object {

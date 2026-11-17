@@ -906,11 +906,16 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         if (KotlinGames.handles(launch.whichBackend)) {
             val params = launch.params ?: decideParams(launch)
             val seed = launch.seed?.substringAfter('#') ?: KotlinGames.newSeed()
-            try {
-                val generated = KotlinGames.generate(launch.whichBackend, params, seed)
-                gameGeneratorSuccess(launch.finishedGenerating(generated), previousGame)
-            } catch (e: IllegalArgumentException) {
-                gameGeneratorFailure(e, launch)
+            val backend = launch.whichBackend
+            /*
+             * The task runs on the GameGenerator worker, not on the UI
+             * thread. It creates its own midend and returns the save
+             * text; it must not touch the activity, the view, or the
+             * engine. The callback checks the future's cancellation
+             * flag and posts to the UI thread, as the C path does.
+             */
+            generationInProgress = gameGenerator.submit(launch, previousGame, this) {
+                KotlinGames.generate(backend, params, seed)
             }
             return
         }
@@ -929,7 +934,12 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             Log.d(TAG, "Using last params: $it")
             return it
         }
-        orientGameType(launch.whichBackend, getDefaultParams(launch.whichBackend)).let {
+        val defaults = if (KotlinGames.handles(launch.whichBackend)) {
+            KotlinGames.defaultParams(launch.whichBackend)
+        } else {
+            getDefaultParams(launch.whichBackend)
+        }
+        orientGameType(launch.whichBackend, defaults).let {
             Log.d(TAG, "Using default params with orientation: $it")
             return it
         }
