@@ -352,15 +352,27 @@ object Loopy : Game {
      * `decode_params`, `loopy.c:633-656`, with the literal control flow.
      * Only a digit run right after the first number hides the `x`; a
      * sign or a space stops the scan at its start, so `x` is not seen.
-     * The type keeps the base value when there is no `t`, and here the
-     * base is the default parameters, as the one-argument seam has no
-     * caller-supplied base.
+     * The type keeps the base value when there is no `t`. The
+     * one-argument form has no caller-supplied base, so it starts from
+     * the compile-time type 0.
      */
-    override fun decodeParams(text: String): Game.Params {
+    override fun decodeParams(text: String): Game.Params = decodeFrom(text, 0)
+
+    /**
+     * `decode_params` over [base]: C keeps `params->type` when [text] has
+     * no `t`, and the short encoding always writes `t`, so a
+     * `params:desc` id validates against the base grid type
+     * (`midend.c:1890-1921`). Width, height, and difficulty are always
+     * written by the decoder, so only the type comes from [base].
+     */
+    override fun decodeParams(text: String, base: Game.Params): Game.Params =
+        decodeFrom(text, (base as Params).type)
+
+    private fun decodeFrom(text: String, defaultType: Int): Game.Params {
         var position = 0
         var w = atoi(text, 0)
         var h = w
-        var type = 0
+        var type = defaultType
         var difficulty = DIFF_EASY
         while (position < text.length && text[position] in '0'..'9') position++
         if (position < text.length && text[position] == 'x') {

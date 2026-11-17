@@ -59,6 +59,35 @@ class GameIdTest {
         assertEquals("difficulty must be given", error.message)
     }
 
+    /**
+     * `midend_game_id_int` decodes a descriptive parameter string over a
+     * copy of `me->params` (`midend.c:1890-1906`) and the short encoding
+     * over another copy (`midend.c:1938-1950`). A `loopy` id that omits
+     * the grid type therefore keeps the current type, and
+     * `validate_desc` reads it. Starting from the compile-time default
+     * would validate the wrong grid and reject a triangular
+     * description.
+     */
+    @Test
+    fun `a descriptive id decodes its parameters over the base`() {
+        val base = Loopy.decodeParams("5x5t1")
+        val desc = Loopy.newDesc(base, RandomState.fromSeed(SEED)).text
+
+        assertNull(
+            Midend.validateGameId(Loopy, "5x5:$desc", isSeed = false, baseParams = base),
+            "the base grid type must reach validate_desc",
+        )
+        assertNotNull(
+            Midend.validateGameId(Loopy, "5x5:$desc", isSeed = false),
+            "the default grid type must not accept the same description",
+        )
+
+        // The short encoding carries the type, so a full id agrees too.
+        assertNull(
+            Midend.validateGameId(Loopy, "5x5t1:$desc", isSeed = false, baseParams = base),
+        )
+    }
+
     private companion object {
         const val SEED = "12345"
     }

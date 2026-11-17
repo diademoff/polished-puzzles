@@ -903,14 +903,24 @@ class Midend private constructor(
 
             var newParams = baseParams
             if (paramsText != null) {
-                val current = game.decodeParams(paramsText)
+                /*
+                 * C starts from `me->params` for a descriptive id, and
+                 * from `default_params()` for a parameter-only id
+                 * (`midend.c:1890-1907`). The decode must therefore see
+                 * the base fields that the text omits.
+                 */
+                val current = if (desc != null) {
+                    game.decodeParams(paramsText, baseParams)
+                } else {
+                    game.decodeParams(paramsText)
+                }
                 // C validates a seed or a parameter-only id with the full
                 // rule, and a descriptive id with the short rule, because
                 // the description can determine a parameter that the
                 // short form leaves out (`midend.c:1886`).
                 game.validateParams(current, desc == null)?.let { return it }
                 newParams = if (seed != null || desc != null) {
-                    game.decodeParams(game.encodeParams(current, false))
+                    game.decodeParams(game.encodeParams(current, false), baseParams)
                 } else {
                     current
                 }

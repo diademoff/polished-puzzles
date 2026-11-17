@@ -84,6 +84,24 @@ interface Game {
 
     fun decodeParams(text: String): Params
 
+    /**
+     * `decode_params` over [base].
+     *
+     * C decodes a parameter string into a copy of the caller's
+     * parameters (`midend.c:1890-1906` and `:1938-1950`), so a field
+     * that [text] does not mention keeps the base value. The seam's
+     * one-argument [decodeParams] starts from the compile-time default,
+     * which is what C does for a parameter-only game id
+     * (`midend.c:1905-1907`) but not for `params:desc`.
+     *
+     * The default ignores [base] because a game's decoder cannot express
+     * "over a base" without knowing its fields. It is correct for a game
+     * whose `decode_params` writes every field it later reads. A game
+     * that keeps a base field and whose short encoding carries it
+     * overrides this, as `loopy` does for its grid type.
+     */
+    fun decodeParams(text: String, base: Params): Params = decodeParams(text)
+
     fun encodeParams(params: Params, full: Boolean): String
 
     /** Returns an error message, or null when the parameters are valid. */
