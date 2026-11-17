@@ -266,8 +266,9 @@ Notes:
   input pass the matrix in `SlantDescTest`, `SlantGameTest`,
   `SlantSaveTest`, `SlantTraceTest`, and `SlantInputParityTest`. It is
   `dual-run`: `KotlinGames.gameFor` knows the Kotlin game, but
-  `KotlinGames.handles` keeps the app on C until cursor drawing and the
-  two-release wait are done. The seams
+  `KotlinGames.handles` keeps the app on C until the two-release wait is
+  done. The cursor is drawn (`Slant.kt` uses `COL_CURSOR`), and
+  `SlantTraceTest` pins the cursor frame against the oracle. The seams
   are `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 - `samegame` is `dual-run`. Its generator, state, moves, score,
@@ -943,7 +944,7 @@ Notes:
 
   Enablement debt. `validate_params` accepts any area up to `INT_MAX`,
   and Easy on a large board is slow: 20x20 takes about 0.6 s and 25x25
-  Easy takes 39 s in C. Generation must move off the UI thread, and a
+  Easy takes 39 s in C. Generation runs on the app's worker, and a
   size bound is an owner decision that needs a deviation entry and a
   test. The params-dependent `can_format_as_text_now`
   (`tents.c:1390-1393`, `w <= 1998 && h <= 1998`) has no seam hook:
@@ -1471,8 +1472,8 @@ Notes:
   Enablement debt. Mines has no preferences, so the engine declares
   only the four-field `Width`, `Height`, `Mines` (with the `%` rule),
   and `Ensure solubility` schema, and `Midend.solveAttempt` carries the
-  `Game has not been started yet` message. The open items are
-  generation off the UI thread, an owner size bound for the accepted
+  `Game has not been started yet` message. Generation runs on the app's
+  worker. The open items are an owner size bound for the accepted
   `2^28 - 1` area, a guard for the unbounded retry loop, and the
   two-release wait. `MINES` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(MINES)` is false and the app uses C. The

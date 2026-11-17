@@ -168,9 +168,12 @@ For each game, use the matrix from `PARITY.md`:
 
 Status: `fifteen` is `kotlin` (2026-11-14). `slant` is `dual-run`
 (2026-11-14): `SlantGeneration` and `Slant` are in `engine/` and pass
-the matrix, but the app still uses C. The remaining slant work is its
-configuration dialog, cursor drawing, and the two-release wait. The
-Kotlin `Game` seam, the semantic midend, `Fifteen`, and the drawing sink
+the matrix, but the app still uses C. The remaining slant work is
+enablement: the two-release wait. The configuration dialog comes from
+the schema declared in `Game.configure`, and the cursor is drawn
+(`Slant.kt` uses `COL_CURSOR`; `SlantTraceTest` pins the cursor frame
+against the oracle). The Kotlin `Game` seam, the semantic midend,
+`Fifteen`, and the drawing sink
 are in `engine/`; the seams are `docs/adr/0007-kotlin-game-seam.md`,
 `docs/adr/0008-run-fifteen-on-kotlin.md`, and
 `docs/adr/0009-game-ui-and-auxinfo.md`.

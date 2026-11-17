@@ -2430,8 +2430,8 @@ aggressive 100x100 latency is an enablement debt:
   `Generated aux string is not a valid move (!).` and `Game does not
   have a (non-recursive) solution.`, and the shell shows the message. The
   accepted `46340x46340` area and the unbounded retry
-    loop need an owner guard before generation can run on the app's UI
-    thread. `BRIDGES` is in `KotlinGames.gameFor` and not in
+    loop need an owner guard; generation already runs on the app's
+    worker. `BRIDGES` is in `KotlinGames.gameFor` and not in
     `APP_GAMES`, so `KotlinGames.handles(BRIDGES)` is false and the
     app keeps the C backend. The two-release wait also applies.
 
@@ -2649,8 +2649,8 @@ aggressive 100x100 latency is an enablement debt:
   engine declares only the four-field configuration schema (Width,
   Height, Mines with the `%` rule, `Ensure solubility`), and
   `Midend.solveAttempt` carries the solve message. The open items are
-  generation off the UI thread, an owner size bound and a retry guard,
-  and the two-release wait. `MINES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  an owner size bound and a retry guard, and the two-release wait.
+  `MINES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(MINES)` is false.
 
 - `TracksDescTest` is semantic. It compares the twelve presets, the
@@ -2710,9 +2710,9 @@ aggressive 100x100 latency is an enablement debt:
   Enablement debt: the engine declares the four-field configuration
   schema (Width, Height, `:Easy:Tricky:Hard`, `Disallow consecutive 1
   clues`), the status text is gated, and `Midend.solveAttempt` carries
-  the solve message. The open items are generation off the UI thread,
-  an owner size bound and a retry guard for the accepted `INT_MAX`
-  area, and the two-release wait. Tracks has no preferences and no `UI`
+  the solve message. The open items are an owner size bound and a retry
+  guard for the accepted `INT_MAX` area, and the two-release wait.
+  Tracks has no preferences and no `UI`
   record. S9 is a tested `currentKeyLabel` helper with no Android call
   site. `TRACKS` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(TRACKS)` is false.
@@ -2804,7 +2804,7 @@ aggressive 100x100 latency is an enablement debt:
   schema (`Maximum number on dominoes`,
   `:Trivial:Basic:Hard:Extreme:Ambiguous`) with its twelve presets, and
   `Midend.solveAttempt` carries the solve message. The open items are
-  generation off the UI thread, an owner size bound for the accepted
+  an owner size bound for the accepted
   `46339` order, and the two-release wait. Dominosa has no preferences and no `UI` record.
   S9 is a tested `currentKeyLabel` helper with no Android call site.
   `DOMINOSA` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
@@ -2961,8 +2961,8 @@ aggressive 100x100 latency is an enablement debt:
   `currentKeyLabel`, and the UI default. The engine declares the
   configuration schema, `pencil-keep-highlight` is applied after `newUi`
   and `fromSave`, the status is gated on `wantsStatusBar`, and the two
-  solve messages are carried. The Keen enablement debt is generation
-  off the UI thread and the two-release wait. S9 is a tested
+  solve messages are carried. The Keen enablement debt is the
+  two-release wait. S9 is a tested
   `currentKeyLabel` helper with no Android call site. `KEEN` is in
   `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(KEEN)` is false and the app uses C.
