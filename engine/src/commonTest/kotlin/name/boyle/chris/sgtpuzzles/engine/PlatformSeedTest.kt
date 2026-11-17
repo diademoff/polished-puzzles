@@ -149,6 +149,6 @@ class PlatformSeedTest {
 
         val reloaded = Midend.fromSave(Fifteen, SgtpSave.parse(text))
         assertEquals(text, reloaded.serialise().serialise())
-        assertEquals(Game.NoUi, reloaded.ui)
+        assertEquals(Fifteen.Ui(), reloaded.ui)
     }
 }
