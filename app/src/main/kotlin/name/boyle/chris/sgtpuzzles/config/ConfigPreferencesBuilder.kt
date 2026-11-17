@@ -12,7 +12,6 @@ import name.boyle.chris.sgtpuzzles.Utils.listFromSeparated
 import name.boyle.chris.sgtpuzzles.backend.BRIDGES
 import name.boyle.chris.sgtpuzzles.backend.BackendName
 import name.boyle.chris.sgtpuzzles.backend.GUESS
-import name.boyle.chris.sgtpuzzles.backend.GameEngine
 import name.boyle.chris.sgtpuzzles.backend.MAP
 import name.boyle.chris.sgtpuzzles.backend.SIGNPOST
 import name.boyle.chris.sgtpuzzles.backend.SINGLES
@@ -22,8 +21,9 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.CATEGORY_THIS_GAME_DISP
 class ConfigPreferencesBuilder(
     private val category: PreferenceCategory,
     private val context: Context,
-    private val gameEngine: GameEngine,
-    private val backend: BackendName
+    private val engine: ConfigBuilder.EngineCallbacks,
+    private val backend: BackendName,
+    private val save: (Context) -> Unit,
 ) : ConfigBuilder {
 
     /** Ignores the title for the preferences screen as there's nowhere to put it. */
@@ -40,8 +40,8 @@ class ConfigPreferencesBuilder(
             text = value
             summaryProvider = EditTextPreference.SimpleSummaryProvider.getInstance()
             setOnPreferenceChangeListener { _, newVal ->
-                gameEngine.configSetString(name, newVal.toString(), true)
-                gameEngine.savePrefs(context)
+                engine.configSetString(name, newVal.toString(), true)
+                save(context)
                 true
             }
         }
@@ -53,8 +53,8 @@ class ConfigPreferencesBuilder(
         category += SwitchPreferenceCompat(context).withCommonProps(kw, name).apply {
             isChecked = checked
             setOnPreferenceChangeListener { _, newVal ->
-                gameEngine.configSetBool(name, newVal as Boolean, true)
-                gameEngine.savePrefs(context)
+                engine.configSetBool(name, newVal as Boolean, true)
+                save(context)
                 true
             }
         }
@@ -79,8 +79,8 @@ class ConfigPreferencesBuilder(
             dialogTitle = name
             summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             setOnPreferenceChangeListener { _, newVal ->
-                gameEngine.configSetChoice(name, entryValues.indexOf(newVal), true)
-                gameEngine.savePrefs(context)
+                engine.configSetChoice(name, entryValues.indexOf(newVal), true)
+                save(context)
                 true
             }
         }

@@ -23,7 +23,10 @@ import name.boyle.chris.sgtpuzzles.backend.BRIDGES
 import name.boyle.chris.sgtpuzzles.backend.BackendName
 import name.boyle.chris.sgtpuzzles.backend.BackendName.Companion.byLowerCase
 import name.boyle.chris.sgtpuzzles.backend.GameEngineImpl
+import name.boyle.chris.sgtpuzzles.backend.KotlinGames
+import name.boyle.chris.sgtpuzzles.backend.KotlinPrefsEngine
 import name.boyle.chris.sgtpuzzles.backend.UNEQUAL
+import name.boyle.chris.sgtpuzzles.config.ConfigBuilder
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder.Event.CFG_PREFS
 import name.boyle.chris.sgtpuzzles.config.ConfigPreferencesBuilder
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.BRIDGES_SHOW_H_KEY
@@ -106,11 +109,33 @@ class PrefsActivity : ActivityWithNightMode(),
                 preferenceScreen -= thisGameCategory
             } else {
                 thisGameCategory.title = backend.displayName
-                with(GameEngineImpl.forPreferencesOnly(backend, requireContext())) {
-                    configEvent(
+                if (KotlinGames.handles(backend)) {
+                    // The Kotlin page comes from the engine schema, so it
+                    // creates no midend and generates no game.
+                    val engine = KotlinPrefsEngine.forBackend(backend, requireContext())
+                    engine.configEvent(
                         CFG_PREFS.jni,
-                        ConfigPreferencesBuilder(thisGameCategory, requireContext(), this, backend)
+                        ConfigPreferencesBuilder(
+                            thisGameCategory,
+                            requireContext(),
+                            engine,
+                            backend,
+                            engine::savePrefs,
+                        ),
                     )
+                } else {
+                    with(GameEngineImpl.forPreferencesOnly(backend, requireContext())) {
+                        configEvent(
+                            CFG_PREFS.jni,
+                            ConfigPreferencesBuilder(
+                                thisGameCategory,
+                                requireContext(),
+                                this as ConfigBuilder.EngineCallbacks,
+                                backend,
+                                this::savePrefs,
+                            ),
+                        )
+                    }
                 }
             }
         }
