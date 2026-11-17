@@ -136,11 +136,16 @@ class Midend private constructor(
     /**
      * The C preferences file text, one `kw=value` line per item.
      *
-     * C's `midend_save_prefs` returns the values that `set_prefs` copied
-     * into the live UI, while this writes the stored [Prefs]. Nothing in
-     * the port edits a UI preference without applying it to [Prefs]
-     * first, so the two agree; reading the live UI would need a
-     * `get_prefs` seam and has no caller today.
+     * C's `midend_save_prefs` reads the values back from the live UI
+     * through `get_prefs`, so a game that toggles a UI preference in
+     * `interpret_move` keeps the toggle in the saved text. The port has
+     * no `get_prefs` seam, so this writes the stored [Prefs] instead.
+     * `bridges`, `guess`, `map`, `singles`, and `undead` toggle a live
+     * UI field directly (`bridges.c:2626`, `guess.c:850`,
+     * `map.c:2532`/`:2537`, `singles.c:1571`, `undead.c:1829`), which
+     * this text does not see. That is unreachable today: the preferences
+     * dialog applies every edit to [Prefs] first, and nothing saves after
+     * a live toggle.
      */
     fun serialisePrefs(): String = prefs.encode()
 
