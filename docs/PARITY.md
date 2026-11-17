@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, and `singles` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, and `loopy` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -207,7 +207,7 @@ submenu entries when a game groups its presets.
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `dual-run` |
 | `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `dual-run` |
-| `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
+| `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `dual-run` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `dual-run` |
 | `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `dual-run` |
@@ -1869,6 +1869,42 @@ Notes:
   does not finish in the measured budget, so the app must generate off
   the UI thread. A size limit is an owner decision (D-019). S9 is a
   tested `currentKeyLabel` helper with no Android call site.
+
+- `loopy` is `dual-run`. Its parameters and twenty presets, the loopy
+  grid-type index (a separate list, not the `GridType` order), the
+  decode quirks and validation order, the `DESC` grammar with the
+  optional grid description, generation (a null-bias `generate_loop`,
+  the full-clue array, the four solver stages, the uniqueness and
+  "too easy" retries, and the run-length clue encoder), the state, the
+  `%d[ynu]` move grammar, the three-state cycle of both pointer and
+  keyboard buttons, the auto-follow walk in its two modes, the solver,
+  completion, the square-only text form, the palette, the thick-line
+  drawing with its cursor blitter, layout, input, and `requestKeys`
+  pass the matrix in `LoopyDescTest`, `LoopyGameTest`,
+  `LoopySaveTest`, `LoopyTraceTest`, `LoopyInputParityTest`, and the
+  engine `LoopyTest`.
+
+  The port keeps the C quirks that decide output: the auto-follow walk
+  tests the state of the originally clicked edge while it walks the
+  candidates, the cursor walks in grid units until the nearest edge
+  changes, and a modified cursor move is unused. The C
+  `assert(params->diff < DIFF_MAX)` is a message in the port; it is
+  unreachable from a save or the chooser, and a hand-made value writes
+  a bare `d` that decodes as Easy. The C square bound
+  `(w + 1) * (h + 1) <= INT_MAX` is pinned at 46339 and 46340.
+
+  `loopy` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the
+  app stays on C and `handles(LOOPY)` is false. S8 must build the
+  four-field configuration schema (Width, Height, an eighteen-entry
+  Grid type, and `:Easy:Normal:Tricky:Hard`), apply
+  `draw-faint-lines` and `auto-follow` to the live `Ui` after `newUi`
+  and after `Midend.fromSave` (there is no `UI` record) with a forced
+  redraw, keep the status line off (`wantsStatusBar` is false), show
+  the solve payload instead of throwing, and wait two releases.
+  Generation keeps the C cost and the C parameter bound; a large
+  accepted board is effectively unbounded work, so the app must
+  generate off the UI thread and a size limit is an owner decision.
+  S9 is not needed because `current_key_label` is NULL.
 
 ## 8. Goldens
 

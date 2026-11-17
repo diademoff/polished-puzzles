@@ -94,6 +94,7 @@ class HelpTopicTest {
         UNEQUAL to "unequal",
         SINGLES to "singles",
         PEARL to "pearl",
+        LOOPY to "loopy",
     )
 
     @Test

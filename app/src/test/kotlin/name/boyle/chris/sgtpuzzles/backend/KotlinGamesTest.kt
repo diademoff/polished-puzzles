@@ -11,6 +11,7 @@ import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Keen
 import name.boyle.chris.sgtpuzzles.engine.Lightup
+import name.boyle.chris.sgtpuzzles.engine.Loopy
 import name.boyle.chris.sgtpuzzles.engine.Magnets
 import name.boyle.chris.sgtpuzzles.engine.Map
 import name.boyle.chris.sgtpuzzles.engine.Mines
@@ -263,6 +264,19 @@ class KotlinGamesTest {
     fun `pearl is registered but the app still uses C`() {
         assertEquals(Pearl, KotlinGames.gameFor(PEARL))
         assertFalse(KotlinGames.handles(PEARL))
+    }
+
+    @Test
+    fun `loopy is registered but the app still uses C`() {
+        assertEquals(Loopy, KotlinGames.gameFor(LOOPY))
+        assertFalse(KotlinGames.handles(LOOPY))
+    }
+
+    @Test
+    fun `the loopy generator matches the frozen save`() {
+        val expected = File(testdata, "saves/initial/loopy/7x7t0dh.sgtp").readText()
+        val actual = KotlinGames.generate(LOOPY, "7x7t0dh", "12345")
+        assertEquals(expected, actual)
     }
 
     @Test
