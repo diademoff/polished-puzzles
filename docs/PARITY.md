@@ -633,13 +633,15 @@ Notes:
   cells and no huge-area guard is needed.
 
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the `Mouse button order` preference (`fill` or `dot`) has no
-  engine hook yet, and the two-release wait is open. The adapter must
-  parse `left-mouse-button=fill|dot` and set `Range.Ui.swapButtons`
-  after `newUi` and after `Midend.fromSave`, because there is no
-  `decodeUi` and a load recreates the UI. The oracle's `pointsSized`
-  and `traceWarm` take a `prefs` field, so the swapped click can then
-  be compared with C. `currentKeyLabel`
+  C: the two-release wait is open. `Game.prefs` declares the
+  `Mouse button order` choice (`fill` or `dot`) and `Game.setPrefs`
+  copies it to `Range.Ui.swapButtons` after `newUi` and after
+  `Midend.fromSave`, because there is no `decodeUi` and a load recreates
+  the UI. `PrefsSchemaParityTest` compares the schema and the text with
+  C, `PrefsApplicationTest` checks the live field and `RangeTest` the
+  swapped click; the oracle's `prefs` op is the schema check. The
+  `pointsSized` and `traceWarm` preference fields still carry no range
+  trace comparison. `currentKeyLabel`
   is a tested helper because C has no Android call site for it. The
   seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.

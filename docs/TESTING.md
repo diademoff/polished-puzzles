@@ -226,9 +226,15 @@ The app adapter is covered on the JVM, without an Android runtime:
   a `RuntimeException` mapped to the failure callback, and a cancelled
   task that leaves no callback.
 - `KotlinGamesTest` checks that `handles` is true only for `fifteen`,
-  that `defaultParams` is the engine's full default for every known
+  that the engine registry `PortedGames` covers every `BackendName` and
+  resolves through `gameFor`, that the prefs gate rejects a game with C
+  preferences but no schema (and a stray schema), that
+  `defaultParams` is the engine's full default for every known
   game, and that the `fifteen` generator is a pure function of its
   arguments.
+- `ConfigNameIndexTest` checks that a duplicate display name in an open
+  dialog resolves to the first item, as `configItemWithName`
+  (`android.c:402-414`) does.
 
 The instrumented `GamePlayParameterizedTest` still covers the real tap,
 swipe, and key paths for the enabled game on a device or emulator.
@@ -1619,8 +1625,9 @@ items:
   is sticky, a post-win move keeps status 1, and a redo into the
   completed state raises the event again. The hand-written
   `4x4:2/1/2/1/1.1/2/1/1` cannot be finished one line at a time; C
-  returns `Solving algorithm cannot complete this puzzle`, and the
-  game has not overridden `solveGame`, so the engine returns null.
+  returns `Solving algorithm cannot complete this puzzle`,
+  `Pattern.solveGame` carries it in `SolveOutcome.error`, and
+  `SolveErrorParityTest` compares it with the oracle.
 - Generation cost is enablement debt: the five presets are under
   30 ms, `40x40` takes about 0.3 s, `50x50` takes about 16 s, and
   `100x100` does not finish in a minute. The app generates off the UI thread.
@@ -1882,28 +1889,27 @@ one seam decision, and one enablement debt:
   `w + h <= 128` validation bound caps the board at `64x64`, so unlike
   `unruly`, `filling`, and `netslide`, no huge-area guard is needed.
 - The `Mouse button order` preference (`left-mouse-button=fill|dot`)
-  lives on `Range.Ui.swapButtons` with a false default. Range still
-  needs its `Game.prefs` schema and `setPrefs`; the midend then applies
-  the value after `newUi` and after `Midend.fromSave`, because `range.c`
-  has no `decodeUi` and a load recreates the UI. The shell reloads prefs
-  when `preferencesName` changes. The oracle's `pointsSized` and
-  `traceWarm` take a `prefs` field, so once the schema exists a swapped
-  click can be compared with C. `RangeInputParityTest` pins the rule on
-  the engine side against `range.c:1368-1375` (a left press cycles
-  forwards and a right press backwards, and a select key is not
-  swapped). Until then this is enablement debt, not a deviation.
+  lives on `Range.Ui.swapButtons` with a false default. `Game.prefs`
+  declares the choice and `Game.setPrefs` copies it, and the midend
+  applies the value after `newUi` and after `Midend.fromSave`, because
+  `range.c` has no `decodeUi` and a load recreates the UI. The shell
+  reloads prefs when `preferencesName` changes.
+  `RangeInputParityTest` pins the rule on the engine side against
+  `range.c:1368-1375` (a left press cycles forwards and a right press
+  backwards, and a select key is not swapped); `RangeTest` checks that
+  `left-mouse-button=dot` reaches the live UI and swaps the click, and
+  `PrefsApplicationTest` covers the field. The oracle `prefs` op
+  compares the schema and the text round trip in
+  `PrefsSchemaParityTest`.
 - `currentKeyLabel` is a tested helper because C has no Android call
   site yet (seam item S9).
 
-The flip solver has one known seam gap. `Game.solve` has no error
-out-parameter, so an insoluble hand-written position returns `null` in
-Kotlin, while C reports `No solution exists for this position`. The
-current `null` behavior is pinned by
-`FlipGameTest.an insoluble hand-written position cannot be solved`, with
-no `DEVIATIONS.md` entry: generated games are always soluble, and the
-gap is enablement seam debt, recorded in `work/port-queue.md`. A fix
-belongs in the seam as a solver result type, not as a field on the game
-state.
+`Game.solveGame` carries the C error channel, so an insoluble position
+returns `null` with `No solution exists for this position` in
+`SolveOutcome.error`, as C reports it. `FlipTest` pins both halves, and
+`SolveErrorParityTest` compares the text with the oracle. Generated
+games are always soluble; the message is reachable only through a
+hand-written description.
 
 `guess` has two enablement debts, both recorded in `work/port-queue.md`:
 
