@@ -183,15 +183,30 @@ loop, the recursion and context copy protocol, and the first-solution
 write-back. `LatinParityTest` compares generation, the encoded RNG
 state, and the solver difficulty at every `maxdiff` with the oracle;
 `keen` is the first game consumer of its callback layer.
+`Grid.kt`, `Penrose.kt`, `Hat.kt`, and `Spectre.kt` port `grid.c`.
+`GridParityTest` compares the description generator, the validated
+description, `grid_new`, `grid_compute_size`, the nearest edge, and the
+incentre of every type with the `grid` oracle op. The aperiodic patches
+(Penrose P2 and P3, hats, spectres) are compared cell by cell, so a
+wrong substitution or trimming rule changes a `loopy` or `pearl` id.
 `Loopgen.kt` ports `loopgen.c`, including the candidate order, the bias
 calls, and the two flip passes. `LoopgenParityTest` compares the board
-and the encoded RNG state with the `loopgen` oracle op; `loopy` and
-`pearl` will be the game consumers.
+and the encoded RNG state with the `loopgen` oracle op, which offers
+only the `none` and `count` biases. `pearl` is the first game consumer
+of both libraries; its own bias is not available in the oracle, so
+`PearlBiasTest` rebuilds the score from scratch on every call of a real
+generation and compares it with the incremental context, while the
+nine golden entries and the save corpus pin the result.
+D-019 records the two upstream buffer overruns that pearl defines (the
+drag path and the clue-removal list); the port sizes both buffers and
+the oracle is not asked about either path. The generator keeps the C
+cost and the C parameter bound: `13x13de` takes seconds and `14x14` or
+larger does not finish in the measured budget, so the app must generate
+off the UI thread; a size limit is an owner decision (D-019).
 `Game`, `Midend`, and `Fifteen` are the first Phase 4 slice; see
-`docs/adr/0007-kotlin-game-seam.md`. `grid` and `loopgen` are ported to
-Kotlin and compared with the oracle before `loopy` and `pearl` consume
-them. The semantic midend is in Kotlin; the shell parts of the C midend
-stay in C until the app uses a Kotlin game.
+`docs/adr/0007-kotlin-game-seam.md`. The semantic midend is in Kotlin;
+the shell parts of the C midend stay in C until the app uses a Kotlin
+game.
 
 `engine/SgtpSave.kt` is a lossless container for the same text. It
 keeps repeated moves and unknown records in order and writes canonical

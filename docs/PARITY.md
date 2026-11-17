@@ -173,8 +173,8 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
-| `grid` | parity: `engine/Grid.kt`, `engine/Penrose.kt`, `engine/Hat.kt`, `engine/Spectre.kt`, strict differential tests | C behavior |
-| `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest`; `pearl` is the first consumer | C behavior |
+| `grid` | parity: `engine/Grid.kt`, `engine/Penrose.kt`, `engine/Hat.kt`, `engine/Spectre.kt`; `GridParityTest` compares the description generator, validation, `grid_new`, size, nearest edge, and incentre for all 18 types, including the aperiodic Penrose, hat, and spectre patches | C behavior |
+| `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
 | games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, and `singles` are `dual-run`, the other games are `C` | the game inventory below |
@@ -1852,14 +1852,22 @@ Notes:
   extra entry, and the clue-removal buffer is `2*w*h` (D-019). The
   oracle is not asked about either path.
 
-  `pearl` is not in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  the app stays on C and `handles(PEARL)` is false. The `appearance`
-  preference is a `Ui` field read by the UI-aware `computeSize` and by
-  drawing; it is not serialized and not in the drawstate. Generation
-  keeps the C cost and the C parameter bound: a `13x13` board takes
-  seconds and `14x14` or larger does not finish in the measured
-  budget, so the app must generate off the UI thread. A size limit is
-  an owner decision (D-019).
+  `pearl` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  the app stays on C and `handles(PEARL)` is false. S8 must build the
+  four-field configuration schema (Width, Height,
+  `:Easy:Tricky`, `Allow unsoluble`), apply `appearance` to the live
+  `Ui` after `newUi` and after `Midend.fromSave` with a re-run of the
+  size and a forced redraw, keep the status line off
+  (`wantsStatusBar` is false), show the two C solve messages
+  (`Unable to find solution`, `invalid char in aux`) instead of
+  throwing, and wait two releases. The `appearance` preference is a
+  `Ui` field read by the UI-aware `computeSize` and by drawing; it is
+  not serialized and not in the drawstate, so a redraw without the
+  resize keeps the old geometry. Generation keeps the C cost and the C
+  parameter bound: a `13x13` board takes seconds and `14x14` or larger
+  does not finish in the measured budget, so the app must generate off
+  the UI thread. A size limit is an owner decision (D-019). S9 is a
+  tested `currentKeyLabel` helper with no Android call site.
 
 ## 8. Goldens
 

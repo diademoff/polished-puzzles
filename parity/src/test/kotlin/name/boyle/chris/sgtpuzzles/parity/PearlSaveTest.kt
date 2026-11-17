@@ -133,6 +133,17 @@ class PearlSaveTest {
         checkInC(oracle, drag, "drag")
         assertEquals(1, drag.serialise().values("MOVE").size)
 
+        // A real mark click.
+        val mark = Midend.newGame(Pearl, "6x6de", SEED)
+        mark.processKey(px(0), clickY, Buttons.RIGHT_BUTTON, tile)
+        mark.processKey(px(0), clickY, Buttons.RIGHT_RELEASE, tile)
+        checkInC(oracle, mark, "mark")
+        assertTrue(
+            "the mark record",
+            mark.serialise().value("MOVE")!!.startsWith("M"),
+        )
+        assertEquals(1, mark.serialise().values("MOVE").size)
+
         // Undo with a live redo branch.
         val undone = Midend.fromSave(Pearl, SgtpSave.parse(drag.serialise().serialise()))
         assertTrue(undone.undo())
@@ -146,6 +157,25 @@ class PearlSaveTest {
         assertTrue(solved.solve())
         checkInC(oracle, solved, "solve")
         assertNotNull(solved.serialise().value("SOLVE"))
+
+        // An S move sets used_solve; alone it changes nothing else.
+        val solveFlag = Midend.fromSave(
+            Pearl,
+            SgtpSave.parse(appendMove(File(saves, "6x6de.sgtp").readText(), "S")),
+        )
+        checkInC(oracle, solveFlag, "S move")
+        assertTrue((solveFlag.state as Pearl.State).usedSolve)
+        assertEquals(0, solveFlag.status())
+
+        // An S-prefixed line move is the same C path with a visible change.
+        val solveLine = Midend.fromSave(
+            Pearl,
+            SgtpSave.parse(
+                appendMove(File(saves, "6x6de.sgtp").readText(), "S;F1,0,0;F4,1,0"),
+            ),
+        )
+        checkInC(oracle, solveLine, "S line")
+        assertTrue((solveLine.state as Pearl.State).usedSolve)
 
         // A RESTART record.
         val restarted = Midend.newGame(Pearl, "6x6de", SEED)
@@ -217,6 +247,8 @@ class PearlSaveTest {
         val state = oracle.id(text)
         assertEquals("$what id", midend.id(), state.id)
         assertEquals("$what status", midend.status(), state.status)
+        assertEquals("$what canUndo", midend.canUndo, state.canUndo)
+        assertEquals("$what canRedo", midend.canRedo, state.canRedo)
         assertEquals("$what text", midend.textFormat(), oracle.text(text))
         assertEquals("$what canonical", text, state.state)
     }

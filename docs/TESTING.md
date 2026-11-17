@@ -162,6 +162,34 @@ fun `undo restores previous state`() {
 A test must not know about Android. If it needs an emulator, it is an
 instrumented test, not a parity test.
 
+### Shared components
+
+Shared libraries have their own differential suite before a game uses
+them:
+
+- `GridParityTest` covers `Grid`, `Penrose`, `Hat`, and `Spectre`
+  through the `grid` op: the description generator, the validation
+  messages, `grid_new`, the size, the nearest edge, and the incentre
+  for every type, including the aperiodic Penrose P2 and P3, hat, and
+  spectre patches.
+- `LoopgenParityTest` covers `Loopgen` through the `loopgen` op, which
+  offers the `none` and `count` biases. `pearl` is the first game
+  consumer of both libraries.
+- Pearl's own bias has no oracle op. `PearlBiasTest` compares the
+  incremental context with a from-scratch rebuild on every call of a
+  real generation, including the vertex bits, the neighbour arrays, the
+  to-do queues, and the score. `PearlDescTest`, the nine goldens, the
+  eight traces, and the nine corpus saves pin the result end to end.
+- D-019 defines the two upstream buffer overruns (the drag path and the
+  clue-removal list). `PearlTest` pins the `sz + 1` drag entry, the
+  24-edge committed path, the `2*w*h` clue-removal capacity, and the
+  repeated straight list. The oracle is not asked about either path,
+  because the unmodified build overruns its heap.
+- Pearl generation keeps the C cost and the C parameter bound:
+  `13x13de` takes 1.4 to 14.6 seconds and `14x14` or larger does not
+  finish in 25 seconds, so the app must generate off the UI thread. A
+  size limit is an owner decision (D-019).
+
 ## 4. Corpus
 
 ```

@@ -63,12 +63,20 @@ class PearlGameTest {
         assertEquals(3, normal.arrowMode)
         assertEquals(ArrowMode.ARROWS_LEFT_RIGHT, kotlinNormal.arrowMode)
         assertTrue(kotlinNormal.labels.isEmpty())
+        assertEquals(
+            normal.labels.map { Triple(it.label, it.button, it.needsArrows) },
+            kotlinNormal.labels.map { Triple(it.name, it.button, it.needsArrows) },
+        )
 
         val full = oracle.requestKeys(save, fullCursor = true)
         val kotlinFull = Pearl.requestKeys(Pearl.decodeParams("8x8dt"), fullCursor = true)
         assertEquals(1, full.arrowMode)
         assertEquals(ArrowMode.ARROWS_ONLY, kotlinFull.arrowMode)
         assertTrue(kotlinFull.labels.isEmpty())
+        assertEquals(
+            full.labels.map { Triple(it.label, it.button, it.needsArrows) },
+            kotlinFull.labels.map { Triple(it.name, it.button, it.needsArrows) },
+        )
     }
 
     @Test

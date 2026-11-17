@@ -19,6 +19,7 @@ import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Palisade
 import name.boyle.chris.sgtpuzzles.engine.Pattern
+import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
@@ -256,6 +257,12 @@ class KotlinGamesTest {
     fun `singles is registered but the app still uses C`() {
         assertEquals(Singles, KotlinGames.gameFor(SINGLES))
         assertFalse(KotlinGames.handles(SINGLES))
+    }
+
+    @Test
+    fun `pearl is registered but the app still uses C`() {
+        assertEquals(Pearl, KotlinGames.gameFor(PEARL))
+        assertFalse(KotlinGames.handles(PEARL))
     }
 
     @Test

@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
@@ -24,6 +25,7 @@ class PearlInputParityTest {
     private val testdata = File(
         System.getProperty("testdata") ?: error("testdata system property is not set"),
     )
+    private val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
 
     @Test
     fun `layout matches the oracle at every viewport and preset`() = OracleClient().use { oracle ->
@@ -64,6 +66,12 @@ class PearlInputParityTest {
             val inertState = compare(oracle, base.state, inert, "6x6de", tile)
             assertEquals("tile $tile inert moves", 0, inertState.state.countMoves())
             assertFalse("tile $tile inert canUndo", inertState.canUndo)
+            assertEquals(
+                "tile $tile inert board",
+                oracle.text(base.state),
+                oracle.text(inertState.state),
+            )
+            assertEquals("tile $tile inert status", 0, inertState.status)
 
             val real = listOf(
                 Point(cx, cy + effectiveTile(tile) / 4 + 1, Buttons.LEFT_BUTTON),
@@ -73,6 +81,10 @@ class PearlInputParityTest {
             assertEquals("tile $tile real moves", 1, realState.state.countMoves())
             assertTrue("tile $tile real canUndo", realState.canUndo)
             assertEquals("tile $tile real status", 0, realState.status)
+            assertTrue(
+                "tile $tile real board",
+                oracle.text(base.state) != oracle.text(realState.state),
+            )
         }
     }
 
@@ -227,6 +239,22 @@ class PearlInputParityTest {
                 assertTrue("$name has a move", expected.state.countMoves() >= 1)
             }
         }
+
+        // The same drag at the even and odd tile sizes the app can pick.
+        for (dragTile in listOf(48, 63, 82, 100)) {
+            val points = listOf(
+                Point(gx(0, dragTile), gy(0, dragTile), Buttons.LEFT_BUTTON),
+                Point(gx(1, dragTile), gy(0, dragTile), Buttons.LEFT_DRAG),
+                Point(gx(1, dragTile), gy(0, dragTile), Buttons.LEFT_RELEASE),
+            )
+            val expected = compare(oracle, base.state, points, "6x6de", dragTile)
+            assertEquals("tile $dragTile drag moves", 1, expected.state.countMoves())
+            assertTrue(
+                "tile $dragTile drag board",
+                oracle.text(base.state) != oracle.text(expected.state),
+            )
+            assertEquals("tile $dragTile drag status", 0, expected.status)
+        }
     }
 
     @Test
@@ -363,6 +391,38 @@ class PearlInputParityTest {
     }
 
     @Test
+    fun `request keys match the oracle for every preset`() = OracleClient().use { oracle ->
+        val allParams = listOf("") + Pearl.presets().map { it.params }
+        for (params in allParams) {
+            val save = oracle.newGame("pearl", params, SEED).state
+            for (fullCursor in listOf(false, true)) {
+                val expected = oracle.requestKeys(save, fullCursor)
+                val actual = Pearl.requestKeys(Pearl.decodeParams(params), fullCursor)
+                val mode = if (fullCursor) 1 else 3
+                assertEquals(
+                    "'$params' fullCursor $fullCursor C arrow mode",
+                    mode,
+                    expected.arrowMode,
+                )
+                assertEquals(
+                    "'$params' fullCursor $fullCursor arrow mode",
+                    if (fullCursor) ArrowMode.ARROWS_ONLY else ArrowMode.ARROWS_LEFT_RIGHT,
+                    actual.arrowMode,
+                )
+                assertEquals(
+                    "'$params' fullCursor $fullCursor labels",
+                    expected.labels.map { Triple(it.label, it.button, it.needsArrows) },
+                    actual.labels.map { Triple(it.name, it.button, it.needsArrows) },
+                )
+                assertTrue(
+                    "'$params' fullCursor $fullCursor has no extra keys",
+                    actual.labels.isEmpty(),
+                )
+            }
+        }
+    }
+
+    @Test
     fun `a real mark changes the board and text while an inert click does not`() =
         OracleClient().use { oracle ->
             val midend = Midend.newGame(Pearl, "6x6de", SEED)
@@ -397,6 +457,96 @@ class PearlInputParityTest {
         }
 
     @Test
+    fun `the line and mark cycle toggles on and off`() = OracleClient().use { oracle ->
+        val base = oracle.newGame("pearl", "6x6de", SEED)
+        val tile = 31
+        val (cx, cy) = centre(2, 2, tile)
+        val y = cy + effectiveTile(tile) / 4 + 1
+        for ((name, button) in listOf(
+            "line" to Buttons.LEFT_BUTTON,
+            "mark" to Buttons.RIGHT_BUTTON,
+        )) {
+            val release = button + (Buttons.LEFT_RELEASE - Buttons.LEFT_BUTTON)
+            val press = Point(cx, y, button)
+            val up = Point(cx, y, release)
+
+            val once = compare(oracle, base.state, listOf(press, up), "6x6de", tile)
+            assertEquals("$name on moves", 1, once.state.countMoves())
+            assertTrue(
+                "$name on board",
+                oracle.text(base.state) != oracle.text(once.state),
+            )
+            assertEquals("$name on status", 0, once.status)
+
+            val twice = compare(
+                oracle,
+                base.state,
+                listOf(press, up, press, up),
+                "6x6de",
+                tile,
+            )
+            assertEquals("$name off moves", 2, twice.state.countMoves())
+            assertEquals(
+                "$name off board",
+                oracle.text(base.state),
+                oracle.text(twice.state),
+            )
+            assertEquals("$name off id", base.id, twice.id)
+            assertEquals("$name off status", 0, twice.status)
+        }
+    }
+
+    @Test
+    fun `a mark over a line and a line over a mark are inert`() =
+        OracleClient().use { oracle ->
+            val base = oracle.newGame("pearl", "6x6de", SEED)
+            val tile = 31
+            val (cx, cy) = centre(2, 2, tile)
+            val y = cy + effectiveTile(tile) / 4 + 1
+            val line = listOf(
+                Point(cx, y, Buttons.LEFT_BUTTON),
+                Point(cx, y, Buttons.LEFT_RELEASE),
+            )
+            val mark = listOf(
+                Point(cx, y, Buttons.RIGHT_BUTTON),
+                Point(cx, y, Buttons.RIGHT_RELEASE),
+            )
+
+            val laid = compare(oracle, base.state, line, "6x6de", tile)
+            assertEquals(1, laid.state.countMoves())
+            val markOverLine = compare(oracle, laid.state, mark, "6x6de", tile)
+            assertEquals(
+                "the mark over a line adds no move",
+                1,
+                markOverLine.state.countMoves(),
+            )
+            assertEquals(
+                "the mark over a line keeps the board",
+                oracle.text(laid.state),
+                oracle.text(markOverLine.state),
+            )
+            assertEquals("the mark over a line keeps the status", laid.status, markOverLine.status)
+
+            val marked = compare(oracle, base.state, mark, "6x6de", tile)
+            assertEquals(1, marked.state.countMoves())
+            val lineOverMark = compare(oracle, marked.state, line, "6x6de", tile)
+            assertEquals(
+                "the line over a mark adds no move",
+                1,
+                lineOverMark.state.countMoves(),
+            )
+            assertEquals(
+                "the line over a mark keeps the board",
+                oracle.text(marked.state),
+                oracle.text(lineOverMark.state),
+            )
+
+            // The positive controls above are real moves on the same point.
+            assertTrue(oracle.text(base.state) != oracle.text(laid.state))
+            assertTrue(oracle.text(base.state) != oracle.text(marked.state))
+        }
+
+    @Test
     fun `a letterboxed click matches the oracle`() = OracleClient().use { oracle ->
         val base = oracle.newGame("pearl", "6x6de", SEED)
         val midend = Midend.fromSave(Pearl, SgtpSave.parse(base.state))
@@ -418,10 +568,19 @@ class PearlInputParityTest {
             ),
             411,
             702,
+            recordTrace = true,
         )
         midend.processKey(gameX, gameY, Buttons.LEFT_BUTTON, tile)
         midend.processKey(gameX, gameY, Buttons.LEFT_RELEASE, tile)
         assertEquals(expected.state.state, midend.serialise().serialise())
+        assertEquals(expected.state.id, midend.id())
+        assertEquals(expected.state.status, midend.status())
+        assertEquals(expected.state.canUndo, midend.canUndo)
+        assertEquals(expected.state.canRedo, midend.canRedo)
+        assertEquals(
+            TraceNormalizer.normalize(expected.trace!!, upstream),
+            TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend, tile), upstream),
+        )
         assertEquals(1, midend.serialise().values("MOVE").size)
 
         // The centre of the same cell is inert.
@@ -436,11 +595,24 @@ class PearlInputParityTest {
             ),
             411,
             702,
+            recordTrace = true,
         )
         inertMidend.processKey(inertX, inertY, Buttons.LEFT_BUTTON, tile)
         inertMidend.processKey(inertX, inertY, Buttons.LEFT_RELEASE, tile)
         assertEquals(inertExpected.state.state, inertMidend.serialise().serialise())
+        assertEquals(inertExpected.state.id, inertMidend.id())
+        assertEquals(inertExpected.state.status, inertMidend.status())
+        assertEquals(inertExpected.state.canUndo, inertMidend.canUndo)
+        assertEquals(inertExpected.state.canRedo, inertMidend.canRedo)
+        assertEquals(
+            TraceNormalizer.normalize(inertExpected.trace!!, upstream),
+            TraceNormalizer.normalize(KotlinTraceSink.stateTrace(inertMidend, tile), upstream),
+        )
         assertEquals(0, inertMidend.serialise().values("MOVE").size)
+        assertEquals(
+            oracle.text(base.state),
+            oracle.text(inertMidend.serialise().serialise()),
+        )
     }
 
     // ------------------------------------------------------------------
@@ -467,7 +639,8 @@ class PearlInputParityTest {
     /**
      * Sends [points] to one oracle midend sized to the board at [tile],
      * and to one Kotlin midend at the same tile. The board fills the
-     * view, so the letterbox origin is zero.
+     * view, so the letterbox origin is zero. The state, id, status,
+     * undo/redo, and the final redraw are all compared.
      */
     private fun compare(
         oracle: OracleClient,
@@ -482,13 +655,22 @@ class PearlInputParityTest {
             points.map { OracleClient.Point(it.x, it.y, it.button) },
             board.width,
             board.height,
+            recordTrace = true,
         )
         val midend = Midend.fromSave(Pearl, SgtpSave.parse(save))
         for (point in points) {
             midend.processKey(point.x, point.y, point.button, tile)
         }
         assertEquals("save", expected.state.state, midend.serialise().serialise())
+        assertEquals("id", expected.state.id, midend.id())
         assertEquals("status", expected.state.status, midend.status())
+        assertEquals("canUndo", expected.state.canUndo, midend.canUndo)
+        assertEquals("canRedo", expected.state.canRedo, midend.canRedo)
+        assertEquals(
+            "final trace",
+            TraceNormalizer.normalize(expected.trace!!, upstream),
+            TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend, tile), upstream),
+        )
         return expected.state
     }
 
