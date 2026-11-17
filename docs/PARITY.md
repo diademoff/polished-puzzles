@@ -176,7 +176,7 @@ C wins.
 | `grid`, `loopgen` | C until the first game consumer (ADR 0006) | C |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, and `keen` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, and `towers` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -226,7 +226,7 @@ submenu entries when a game groups its presets.
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
-| `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `C` |
+| `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `dual-run` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `dual-run` |
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `dual-run` |
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `dual-run` |
@@ -1580,6 +1580,86 @@ Notes:
   helper because the Android shell has no call site (S9). `KEEN` is in
   `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(KEEN)` is
   false and the two-release wait still applies.
+
+- `towers` is `dual-run`. Its parameters and seven presets, the decode
+  quirks and validation order, the Latin-square generator with the
+  Easy-only empty-grid pre-check before both shuffles, the clue-removal
+  shuffle above Easy, the state and the shared clues, the move grammar,
+  the sticky completion, the `AUXINFO` solve and the aux-free solve,
+  the text format, the palette, the 3D tower drawing, layout, input,
+  `currentKeyLabel`, and `requestKeys` pass the matrix in
+  `TowersDescTest`, `TowersGameTest`, `TowersSaveTest`,
+  `TowersTraceTest`, `TowersInputParityTest`, and the engine
+  `TowersTest`, plus the shared `LatinParityTest` and `LatinTest`.
+
+  The generator draws one Latin square, an Easy-only pre-check that
+  may restart the attempt before either shuffle, one order shuffle, and
+  the clue-removal shuffle above Easy. The gate is the same solver
+  call, so the strategy slots, the shared `started` flag, the
+  `solver_hard` early return, and the validator are all part of the
+  RNG contract. A three-by-three board at Extreme or Unreasonable
+  generates at Hard while `CPARAMS` keeps the request, as C does.
+
+  The solver keeps the literal flat cube indices. `cube[cell*w + n-1]`
+  decodes, through `cubepos`, as the transposed cell of a row-major
+  position, while placement uses `(pos%w, pos/w)`; both forms are
+  copied as written. A "tidy" transposed index would still produce
+  valid puzzles, so only the eight descriptions, the seed sweeps, the
+  retry fixtures, and the solve strings catch it.
+
+  The save matrix reads all eight corpus saves (`default` plus the
+  seven presets), rewrites them byte for byte, and compares id, status,
+  `canUndo`, `canRedo`, text, `textFormat`, and the raw `AUXINFO` with
+  C. A Kotlin save for every preset and nine seeds loads in C with the
+  same id, text, status, and `AUXINFO`. The `PARAMS`/`CPARAMS` split is
+  pinned: the long-term copy is the bare width decoded over the
+  defaults, so `5dh` writes `PARAMS :3:5de` and `CPARAMS :3:5dh`, and
+  the short id has no `d`. In-memory history round-trips number entry,
+  a pencil mark, `M`, a `D` move, an undone position with a live redo
+  branch, a `SOLVE`, and a `RESTART` in both directions. No save has a
+  `UI`, `TIME`, `PRIVDESC`, or `HEXSEED` record, and every save has an
+  `AUXINFO`.
+
+  `TowersInputParityTest` sends real presses, pencil toggles, and real
+  number entries at tiles 48, 63, 82, and 100 and at the 411x702
+  letterbox (tile 56, origin (2,148)), the 3D hit test on a board with
+  tall towers, the clue bands and an absent clue, the cursor, a
+  duplicate-digit error frame, and the border, drag, release, middle
+  press, hidden-digit, and pencil-on-filled cases. State, id, status,
+  undo, redo, and the final frame with `pointsSized` are compared.
+  Every real number change fills or clears the cell and adds one move;
+  an inert event changes neither the board nor the count. `requestKeys`
+  is arrow mode 2 with the labels `1`..`w`, `Clear`, and `Mark`, every
+  key reports `needsArrows` false, and the full-cursor hint does not
+  change the result.
+
+  Neither preference is serialised, because Towers has no `UI` record.
+  `appearance` changes the drawing and the hit test, and
+  `pencil-keep-highlight` changes the input only. The 2D frame and the
+  keep-highlight frame are compared with the oracle's `trace` `prefs`
+  field; the `pointsSized` operation has no `prefs` field, so the 2D
+  hit test and the highlight cancel are pinned engine-side.
+
+  C undefined behavior is defined by the port and pinned, not entered
+  in `DEVIATIONS.md`: `encode_params` writes a plain `d` for a
+  difficulty outside `0..3`, the `atoi` and move `%d` parses saturate,
+  and `new_game` rejects an invalid description instead of asserting.
+  None is reachable from a validated parameter set, a validated
+  description, or a generated move. No Towers abort is reachable beyond
+  these definitions.
+
+  Enablement debt. S8 must build the two-field configuration schema
+  (`Grid size`, `Difficulty` with
+  `":Easy:Hard:Extreme:Unreasonable"`), apply `appearance` and
+  `pencil-keep-highlight` to the live `Ui` after `newUi` and after
+  `Midend.fromSave` with a forced redraw for `appearance` (Towers has
+  no `UI` record), gate the status text on `wantsStatusBar` (it is
+  false), show `No solution exists for this puzzle` and
+  `Multiple solutions exist for this puzzle` instead of throwing,
+  generate off the UI thread (`9du` takes seconds), and wait two
+  releases. `currentKeyLabel` is a tested helper because the Android
+  shell has no call site (S9). `TOWERS` is in `KotlinGames.gameFor` and
+  not in `APP_GAMES`, so `handles(TOWERS)` is false.
 
 ## 8. Goldens
 

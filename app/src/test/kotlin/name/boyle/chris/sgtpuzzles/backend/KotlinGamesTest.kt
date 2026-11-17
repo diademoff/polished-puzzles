@@ -27,6 +27,7 @@ import name.boyle.chris.sgtpuzzles.engine.Signpost
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Tents
+import name.boyle.chris.sgtpuzzles.engine.Towers
 import name.boyle.chris.sgtpuzzles.engine.Tracks
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
 import name.boyle.chris.sgtpuzzles.engine.Undead
@@ -235,6 +236,12 @@ class KotlinGamesTest {
     fun `keen is registered but the app still uses C`() {
         assertEquals(Keen, KotlinGames.gameFor(KEEN))
         assertFalse(KotlinGames.handles(KEEN))
+    }
+
+    @Test
+    fun `towers is registered but the app still uses C`() {
+        assertEquals(Towers, KotlinGames.gameFor(TOWERS))
+        assertFalse(KotlinGames.handles(TOWERS))
     }
 
     @Test

@@ -2889,6 +2889,84 @@ aggressive 100x100 latency is an enablement debt:
   `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(KEEN)` is false and the app uses C.
 
+- `TowersDescTest` is semantic. It compares the seven presets and the
+  default with the oracle, the eight golden descriptions at the shared
+  seed (the empty params string plus the presets), nine seed strings
+  and a numeric sweep per preset, the decode quirks (`+5`, `05`,
+  ` 5`, `5de `, `5dhx`, `5d`, `5dq`), the validation order and
+  messages, the description grammar and every rejection, the retry
+  fixtures, the `AUXINFO` answer, and that two calls leave the same
+  random stream. The three-by-three clamp is pinned by id *and* by
+  `CPARAMS` for `3dh`, `3dx`, and `3du`.
+- `TowersGameTest` is semantic and strict where a frame is compared.
+  It compares every preset's `SOLVE`, the generated difficulty, key
+  sequences including the Android pencil branches and modified keys,
+  real clicks at tiles 48, 63, 82, and 100, the 411x702 letterbox, all
+  four clue bands, `M` and `D` as undoable history, undo and redo
+  after a digit, a `D` move, and a solve, completion by real keys with
+  one event, the text form in every shape, and `requestKeys`.
+- `TowersSaveTest` is strict for the save text and semantic for the
+  state. It reads all eight corpus saves, rewrites them byte for byte,
+  and compares id, status, undo, redo, text, `textFormat`, and the raw
+  `AUXINFO` with C. A Kotlin save for every preset and nine seeds loads
+  in C with the same id, text, status, and `AUXINFO`. In-memory
+  history covers number entry, a pencil mark, `M`, a `D` move, an
+  undone position with a live redo branch, a `SOLVE`, and a
+  `RESTART`. `PARAMS` is the bare width decoded over the defaults
+  (`5de`) and `CPARAMS` keeps the request (`5dh`). No save has a `UI`,
+  `TIME`, `PRIVDESC`, or `HEXSEED` record, and a save without
+  `AUXINFO` solves from the clues.
+- `TowersTraceTest` is strict. It compares the seven frozen traces,
+  loaded-save and fresh-game frames at tiles 48, 63, 82, and 100, the
+  411x702 letterbox, the warm empty frames after a click, a pencil
+  toggle, a digit, and `M`, a cold frame with the two tower faces and
+  the digit, `M` and `D` marks in one frame, the `COL_ERROR` digits, a
+  completed board with no flash, the 2D `appearance` frame, and the
+  `pencil-keep-highlight=false` frame. Every frame is blitter-free.
+- `TowersInputParityTest` is semantic and ui. It compares the layout at
+  five viewports and tiles 48, 63, 82, and 100, real presses, pencil
+  toggles, and real number entries at those four tiles and at the
+  411x702 letterbox (tile 56, origin (2,148)), the 3D hit test on a
+  board with tall towers, all four clue bands and an absent clue, the
+  cursor, a duplicate-digit error frame, and the border, drag,
+  release, middle press, hidden-digit, and pencil-on-filled cases.
+  State, id, status, undo, redo, and the final frame with
+  `pointsSized` are compared. Every real number change fills or clears
+  the cell and adds one move; an inert event changes neither. It also
+  compares `requestKeys` with the oracle: arrow mode 2, the labels
+  `1`..`w`, `Clear`, and `Mark`, and `needsArrows` false, with and
+  without the full-cursor hint.
+- `TowersTest` is the engine test. It pins the parameter and decode
+  quirks, the plain `d` for an out-of-range difficulty, the saturating
+  `atoi` and `%d` parses, the validation order, the description
+  messages, the eight goldens, the retry attempt counts, the
+  three-by-three clamp, the generator determinism, the `AUXINFO`
+  solution, the five solver slots, the shared `Shared` instance of a
+  copied state, the Android highlight branches, the 3D hit test with
+  its last-candidate rule, the cursor, the move grammar and sticky
+  completion, `checkErrors`, `changedState`, undo and redo across a
+  solve and a restart, the two solve errors, the text form, the key
+  labels, the UI defaults, the palette, the size search, and the
+  drawstate arrays. The solver keeps the literal flat cube indices:
+  `cube[cell*w + n-1]` is the transposed cell of a row-major position,
+  while placement uses `(pos%w, pos/w)`. A tidied index still solves
+  and still generates valid puzzles, so only the description and solve
+  goldens catch it. C undefined behavior is defined and pinned without
+  a deviation entry: an out-of-range encode writes a plain `d`, the
+  `atoi` and `%d` parses saturate, and an invalid description is
+  rejected instead of aborting `new_game`.
+- Towers enablement debt. S8 must build the two-field configuration
+  schema (`Grid size` and `Difficulty` with
+  `":Easy:Hard:Extreme:Unreasonable"`), apply `appearance` and
+  `pencil-keep-highlight` to the live `Ui` after `newUi` and after
+  `Midend.fromSave` (Towers has no `UI` record) and force a redraw for
+  `appearance`, gate the status text on `wantsStatusBar`, show the two
+  solve messages instead of throwing, generate off the UI thread, and
+  wait two releases. S9 is a tested `currentKeyLabel` helper with no
+  Android call site. `TOWERS` is in `KotlinGames.gameFor` and not in
+  `APP_GAMES`, so `KotlinGames.handles(TOWERS)` is false and the app
+  uses C.
+
 - The `Midend` state-params rule is cross-cutting. `newGame` and
   `fromGameId` build state 0 from the short (long-term) params, as
   `midend_new_game` does, and `fromSave` builds it from `CPARAMS`.

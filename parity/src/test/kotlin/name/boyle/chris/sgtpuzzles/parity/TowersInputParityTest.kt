@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
@@ -117,6 +118,43 @@ class TowersInputParityTest {
         }
     }
 
+    @Test(timeout = 300_000)
+    fun `requestKeys matches the oracle for every preset`() = OracleClient().use { oracle ->
+        for (params in Towers.presets().map { it.params } + "") {
+            val start = oracle.newGame("towers", params, "12345").state
+            for (fullCursor in listOf(false, true)) {
+                val expected = oracle.requestKeys(start, fullCursor)
+                val decoded = if (params.isEmpty()) {
+                    Towers.defaultParams()
+                } else {
+                    Towers.decodeParams(params)
+                }
+                val actual = Towers.requestKeys(decoded, fullCursor)
+                assertEquals("$params/$fullCursor arrow mode", 2, expected.arrowMode)
+                assertEquals("$params/$fullCursor arrows", ArrowMode.ARROWS_LEFT, actual.arrowMode)
+                assertEquals("$params/$fullCursor key count", expected.labels.size, actual.labels.size)
+                for (i in expected.labels.indices) {
+                    assertEquals(
+                        "$params/$fullCursor label $i text",
+                        expected.labels[i].label,
+                        actual.labels[i].name,
+                    )
+                    assertEquals(
+                        "$params/$fullCursor label $i button",
+                        expected.labels[i].button,
+                        actual.labels[i].button,
+                    )
+                    assertEquals(
+                        "$params/$fullCursor label $i needsArrows",
+                        expected.labels[i].needsArrows,
+                        actual.labels[i].needsArrows,
+                    )
+                    assertFalse("$params/$fullCursor label $i is not arrow-only", actual.labels[i].needsArrows)
+                }
+            }
+        }
+    }
+
     @Test(timeout = 600_000)
     fun `real presses at four tile sizes match the oracle`() =
         OracleClient().use { oracle ->
@@ -133,6 +171,9 @@ class TowersInputParityTest {
                     press(4, 4, tile = tile),
                     listOf(OracleClient.Point(0, 0, '0'.code)),
                     listOf(OracleClient.Point(0, 0, 'M'.code)),
+                    press(3, 0, tile = tile),
+                    press(3, 0, tile = tile),
+                    listOf(OracleClient.Point(0, 0, '5'.code)),
                 )
                 val midend = midend()
                 val points = ArrayList<OracleClient.Point>()
@@ -185,6 +226,11 @@ class TowersInputParityTest {
                                 0,
                                 (midend.state as Towers.State).grid[0],
                             )
+                            assertEquals(
+                                "tile $tile pencil bitmap",
+                                1 shl 3,
+                                (midend.state as Towers.State).pencil[0],
+                            )
                         }
 
                         3 -> {
@@ -198,6 +244,11 @@ class TowersInputParityTest {
                                 midend.serialise().values("MOVE").last(),
                             )
                             assertEquals("tile $tile second pencil count", 3, midend.stateCount)
+                            assertEquals(
+                                "tile $tile second pencil bitmap",
+                                1 shl 2,
+                                (midend.state as Towers.State).pencil[1],
+                            )
                         }
 
                         5 -> {
@@ -211,6 +262,11 @@ class TowersInputParityTest {
                                 midend.serialise().values("MOVE").last(),
                             )
                             assertEquals("tile $tile third pencil count", 4, midend.stateCount)
+                            assertEquals(
+                                "tile $tile third pencil bitmap",
+                                1 shl 4,
+                                (midend.state as Towers.State).pencil[2],
+                            )
                         }
 
                         7 -> {
@@ -255,6 +311,42 @@ class TowersInputParityTest {
                                 "tile $tile M marks the empty cells",
                                 (midend.state as Towers.State).pencil[0] != 0,
                             )
+                            assertTrue(
+                                "tile $tile M leaves the grid empty",
+                                (midend.state as Towers.State).grid.all { it == 0 },
+                            )
+                        }
+
+                        10 -> {
+                            assertEquals("tile $tile real digit target", 5, midend.stateCount)
+                        }
+
+                        11 -> {
+                            assertEquals(
+                                "tile $tile second click keeps the move count",
+                                5,
+                                midend.stateCount,
+                            )
+                        }
+
+                        12 -> {
+                            assertEquals(
+                                "tile $tile real digit move",
+                                "R3,0,5",
+                                midend.serialise().values("MOVE").last(),
+                            )
+                            assertEquals("tile $tile real digit count", 6, midend.stateCount)
+                            assertEquals("tile $tile real digit status", 0, midend.status())
+                            assertEquals(
+                                "tile $tile real digit fills the cell",
+                                5,
+                                (midend.state as Towers.State).grid[3],
+                            )
+                            assertEquals(
+                                "tile $tile real digit clears the pencil",
+                                0,
+                                (midend.state as Towers.State).pencil[3],
+                            )
                         }
                     }
                 }
@@ -268,7 +360,7 @@ class TowersInputParityTest {
             }
         }
 
-    @Test(timeout = 300_000)
+    @Test(timeout = 600_000)
     fun `the letterbox view uses the found tile and origin`() =
         OracleClient().use { oracle ->
             val midend = midend()
@@ -276,24 +368,112 @@ class TowersInputParityTest {
             assertEquals(56, geometry.tileSize)
             assertEquals(2, geometry.originX)
             assertEquals(148, geometry.originY)
+            val tile = geometry.tileSize
 
-            val (gx, gy) = center(0, 0, geometry.tileSize)
-            val viewPoints = listOf(
-                OracleClient.Point(gx + geometry.originX, gy + geometry.originY, Buttons.LEFT_BUTTON),
-                OracleClient.Point(gx + geometry.originX, gy + geometry.originY, Buttons.LEFT_RELEASE),
-                OracleClient.Point(0, 0, '4'.code),
+            val steps = listOf(
+                press(0, 0, tile = tile),
+                press(0, 0, tile = tile),
+                listOf(OracleClient.Point(0, 0, '3'.code)),
+                press(4, 4, tile = tile),
+                press(4, 4, tile = tile),
+                listOf(OracleClient.Point(0, 0, '1'.code)),
+                listOf(OracleClient.Point(0, 0, 'M'.code)),
+                listOf(OracleClient.Point(0, 0, Buttons.CURSOR_UP)),
+                listOf(OracleClient.Point(0, 0, Buttons.CURSOR_SELECT)),
+                listOf(OracleClient.Point(0, 0, '2'.code)),
             )
-            val expected = oracle.pointsSized(save, viewPoints, 411, 702)
-            for (point in viewPoints) {
-                midend.processKey(
-                    point.x - geometry.originX,
-                    point.y - geometry.originY,
-                    point.button,
-                    geometry.tileSize,
-                )
+            val viewPoints = ArrayList<OracleClient.Point>()
+            for ((index, step) in steps.withIndex()) {
+                viewPoints += step.map {
+                    OracleClient.Point(
+                        it.x + geometry.originX,
+                        it.y + geometry.originY,
+                        it.button,
+                    )
+                }
+                val expected = oracle.pointsSized(save, viewPoints, 411, 702)
+                val outcomes = step.map {
+                    midend.processKey(it.x, it.y, it.button, tile)
+                }
+                assertSame("letterbox step $index", expected.state, midend)
+                if (step.size == 2) {
+                    assertEquals(
+                        "letterbox step $index press",
+                        KeyOutcome.SomeEffect,
+                        outcomes.first(),
+                    )
+                    assertEquals(
+                        "letterbox step $index release",
+                        KeyOutcome.Unused,
+                        outcomes.last(),
+                    )
+                }
+                when (index) {
+                    1 -> assertEquals("letterbox pencil toggle", 1, midend.stateCount)
+                    2 -> {
+                        assertEquals(
+                            "letterbox pencil move",
+                            "P0,0,3",
+                            midend.serialise().values("MOVE").last(),
+                        )
+                        assertEquals("letterbox pencil count", 2, midend.stateCount)
+                        assertEquals(
+                            "letterbox pencil leaves the grid empty",
+                            0,
+                            (midend.state as Towers.State).grid[0],
+                        )
+                    }
+
+                    4 -> assertEquals("letterbox second click", 2, midend.stateCount)
+
+                    5 -> {
+                        assertEquals(
+                            "letterbox real digit move",
+                            "R4,4,1",
+                            midend.serialise().values("MOVE").last(),
+                        )
+                        assertEquals("letterbox real digit count", 3, midend.stateCount)
+                        assertEquals(
+                            "letterbox real digit fills the cell",
+                            1,
+                            (midend.state as Towers.State).grid[24],
+                        )
+                    }
+
+                    6 -> {
+                        assertEquals(
+                            "letterbox M",
+                            "M",
+                            midend.serialise().values("MOVE").last(),
+                        )
+                        assertEquals("letterbox M count", 4, midend.stateCount)
+                    }
+
+                    9 -> {
+                        assertEquals(
+                            "letterbox key pencil move",
+                            "P4,3,2",
+                            midend.serialise().values("MOVE").last(),
+                        )
+                        assertEquals("letterbox key pencil count", 5, midend.stateCount)
+                    }
+                }
             }
-            assertSame("letterbox", expected.state, midend)
-            assertEquals("letterbox move", "R0,0,4", midend.serialise().values("MOVE").last())
+
+            val final = oracle.pointsSized(
+                save,
+                viewPoints,
+                411,
+                702,
+                recordTrace = true,
+            )
+            assertLines(
+                "letterbox final trace",
+                normalize(final.trace!!),
+                normalize(KotlinTraceSink.stateTrace(midend, tile)),
+            )
+            assertEquals(5, midend.stateCount)
+            assertEquals(0, midend.status())
         }
 
     @Test(timeout = 600_000)
@@ -421,6 +601,37 @@ class TowersInputParityTest {
                 (givenMidend.state as Towers.State).grid[8],
             )
             assertNull("the given hides the highlight", givenMidend.cursorLocation(48))
+        }
+
+    @Test(timeout = 300_000)
+    fun `real clicks that repeat a digit raise the error colour`() =
+        OracleClient().use { oracle ->
+            val points = press(0, 0) + listOf(OracleClient.Point(0, 0, '1'.code)) +
+                press(1, 0) + listOf(OracleClient.Point(0, 0, '1'.code))
+            val expected = oracle.pointsSized(save, points, 348, 348, recordTrace = true)
+            val midend = midend()
+            apply(midend, points)
+            assertSame("duplicate", expected.state, midend)
+            assertEquals("duplicate status", 0, midend.status())
+            assertEquals("duplicate move count", 3, midend.stateCount)
+            assertEquals(
+                "duplicate move",
+                "R1,0,1",
+                midend.serialise().values("MOVE").last(),
+            )
+            assertEquals(
+                "the board changed",
+                listOf(1, 1),
+                (midend.state as Towers.State).grid.take(2),
+            )
+            val actual = normalize(KotlinTraceSink.stateTrace(midend, 48))
+            assertLines("error frame", normalize(expected.trace!!), actual)
+            assertTrue(
+                "the repeated digits are red",
+                actual.lines().count {
+                    it.startsWith("text ") && it.endsWith(" 4 \"1\"")
+                } >= 2,
+            )
         }
 
     @Test(timeout = 300_000)
