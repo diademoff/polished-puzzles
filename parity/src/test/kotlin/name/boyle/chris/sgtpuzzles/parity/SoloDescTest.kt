@@ -5,6 +5,7 @@ import name.boyle.chris.sgtpuzzles.engine.RandomState
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Solo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -352,6 +353,34 @@ class SoloDescTest {
                 "Expected killer clue grid in game description",
                 Solo.validateDesc(Solo.decodeParams("3x3k"), "$kgrid3,$kblocks"),
             )
+        }
+
+    @Test(timeout = 120_000)
+    fun `a killer singleton merge that overflows the C row is retried`() =
+        OracleClient().use { oracle ->
+            // With these inputs the C singleton remover merges into a
+            // full cr-square cage and writes past the end of the block
+            // row (`solo.c:3594-3607`). The C build happens to return a
+            // reloadable description from the corrupted rows; the port
+            // abandons the attempt and retries, so it returns a
+            // different, valid description (D-025).
+            for ((params, seed) in listOf("3jka" to "1", "2x2xka" to "1")) {
+                val c = oracle.newGame("solo", params, seed)
+                assertEquals("$params C save reloads", c.id, oracle.id(c.state).id)
+                val midend = Midend.newGame(Solo, params, seed)
+                assertNotEquals("$params port desc", c.id, midend.id())
+                assertNull(
+                    "$params port desc validates",
+                    Solo.validateDesc(Solo.decodeParams(params), midend.desc),
+                )
+                val reloaded = oracle.id(midend.serialise().serialise())
+                assertEquals("$params port save reloads", midend.id(), reloaded.id)
+                assertEquals(
+                    "$params port save state",
+                    midend.serialise().serialise(),
+                    reloaded.state,
+                )
+            }
         }
 
     @Test(timeout = 300_000)

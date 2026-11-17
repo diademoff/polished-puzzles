@@ -2047,7 +2047,11 @@ Notes:
   cage-merge loop is dead code. The port reproduces the vendored
   behavior exactly, and the killer `DESC` and `AUXINFO` goldens pin it.
   A literal fix (`npairs++`) changes the killer description, so the
-  frozen `3x3ka` entry and the oracle comparison fail.
+  frozen `3x3ka` entry and the oracle comparison fail. One separate C
+  out-of-bounds write is D-025: the singleton remover can merge into a
+  full cage row and corrupt the generated cages. The port detects that
+  case, abandons the attempt, and retries from the advanced RNG state,
+  so it returns a valid description with a different cage layout.
 
   `solve_game` reads `state->grid`, which C fills from `states[0]`, not
   from the current board. The port keeps the initial clue grid on a

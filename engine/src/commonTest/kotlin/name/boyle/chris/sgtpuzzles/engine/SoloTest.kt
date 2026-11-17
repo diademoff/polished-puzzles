@@ -377,6 +377,32 @@ class SoloTest {
     }
 
     @Test
+    fun `a killer singleton overflow is retried`() {
+        // `gen_killer_cages` can merge a singleton into a full cage and
+        // write past the cage row. C returns a corrupted description;
+        // the port retries the attempt and returns a valid one (D-025).
+        for (params in listOf("3jka", "2x2xka")) {
+            val random = RandomState.fromSeed("1")
+            val first = Solo.newDesc(Solo.decodeParams(params), random)
+            assertNull(
+                Solo.validateDesc(Solo.decodeParams(params), first.text),
+                "$params description validates",
+            )
+            val second = Solo.newDesc(
+                Solo.decodeParams(params),
+                RandomState.fromSeed("1"),
+            )
+            assertEquals(first.text, second.text, "$params determinism")
+            // The generated save reloads through the engine.
+            val reloaded = Midend.fromGameId(
+                Solo,
+                Solo.encodeParams(Solo.decodeParams(params), false) + ":" + first.text,
+            )
+            assertEquals(first.text, reloaded.desc, "$params reload")
+        }
+    }
+
+    @Test
     fun `hand made parameters are defined before any random draw`() {
         val r = RandomState.fromSeed("1")
         val before = r.encodeState()

@@ -989,7 +989,7 @@ Anything not listed here is a bug.
   Third, `validate_desc` does not require a clue in every killer cage.
   A hand-written `kgrid` with an unclued cage loads and reports the same
   id, but the C solver asserts `usage->kclues[i] > 0`
-  (`solo.c:1749`) and the drawing path asserts `clue != 0`
+  (`solo.c:1757`) and the drawing path asserts `clue != 0`
   (`solo.c:3025`). The Kotlin solver reads the missing clue as 0: a
   single-square cage of value 0 is impossible, the minmax and sums
   analyses have no information for that cage, and a complete grid with
@@ -1020,6 +1020,49 @@ Anything not listed here is a bug.
   one-off oracle runs above are the abort evidence.
 - **Review:** the owner should decide the final empty-grid and
   hand-made-range behavior before `solo` is enabled in the app.
+- **Scope:** `solo`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
+### D-025: `solo` retries a killer singleton merge that overflows the C row
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** `gen_killer_cages` removes single-square cages
+  with `merge_blocks` (`solo.c:3611-3621`) and never checks the combined
+  size against the cage row capacity `b->max_nr_squares`, which is
+  `cr`. When the randomly selected neighbour is already a full
+  `cr`-square cage, `merge_blocks` writes
+  `b->blocks[n][b->max_nr_squares]` and increments `nr_squares[n]` to
+  `cr + 1`. In C that slot is the first entry of the next block row in
+  `blocks_data`, so the write is out of bounds and corrupts the cage
+  rows; the generated description is produced from whatever the
+  corrupted rows contain. For `3jka` seed `1` and `2x2xka` seed `1` the
+  C build still returns a description that reloads, but the write is
+  undefined behavior and depends on the allocator layout. The Kotlin
+  `genKillerCages` detects the overflow before the write, abandons that
+  generation attempt, and retries the outer loop from the advanced RNG
+  state. The result is a valid description with a different killer cage
+  layout. The `3x3ka` preset at the tested seeds and every other preset
+  are unchanged.
+- **Why:** an out-of-bounds write is undefined behavior and can corrupt
+  the heap. The overflow depends only on the current cage sizes and the
+  selected neighbour, so the retry is deterministic. Every valid
+  generated description, save, and `.sgtp` file is accepted; only the
+  corrupt path is replaced by a valid puzzle.
+- **Test:**
+  `parity/src/test/kotlin/.../SoloDescTest.kt::a killer singleton merge that overflows the C row is retried`
+  pins the C save reload, the different port description, the port
+  validation, and the C reload of the port save;
+  `engine/src/commonTest/kotlin/.../SoloTest.kt::a killer singleton overflow is retried`
+  pins the valid description, determinism for the same seed, and the
+  engine reload. The tests do not reproduce the C write; they ask the
+  oracle only for the output it happens to return.
+- **Review:** the owner should review this entry before `solo` is
+  enabled in the app. The guard runs for every killer generation; the
+  tested `3x3ka` seeds and every other preset do not change. A killer
+  board with a small `cr` can reach it, so the retry is the intended
+  app behavior.
 - **Scope:** `solo`
 - **Upstream:** none known
 - **Date:** 2026-11-17

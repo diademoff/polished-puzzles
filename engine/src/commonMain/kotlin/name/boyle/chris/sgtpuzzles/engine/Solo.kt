@@ -2631,6 +2631,20 @@ object Solo : Game {
                 val other = blocks.whichBlock[xy2]
                 if (blocks.nrSquares[other] == 1) nSingletons--
                 nSingletons--
+                /*
+                 * C has no capacity test here. When the selected
+                 * neighbour is already a full cr-square cage, C writes
+                 * `blocks[n][max_nr_squares]`, which is the first slot
+                 * of the next block row, and the generated description
+                 * can no longer be reloaded. The port abandons this
+                 * attempt and retries from the advanced RNG state
+                 * (D-025).
+                 */
+                if (blocks.nrSquares[n] + blocks.nrSquares[other] >
+                    blocks.maxNrSquares
+                ) {
+                    throw KillerCageOverflow()
+                }
                 mergeBlocks(blocks, n, other)
                 if (n < other) n++
             }
@@ -2638,6 +2652,9 @@ object Solo : Game {
         }
         return blocks
     }
+
+    /** The C singleton merge would write past a killer cage row. */
+    private class KillerCageOverflow : RuntimeException()
 
     /**
      * `new_game_desc`, `solo.c:3656-3896`.
@@ -2691,7 +2708,11 @@ object Solo : Game {
             makeBlocksFromWhichBlock(blocks)
 
             if (p.killer) {
-                kblocks = genKillerCages(cr, random, p.kdiff > DIFF_KSINGLE)
+                kblocks = try {
+                    genKillerCages(cr, random, p.kdiff > DIFF_KSINGLE)
+                } catch (e: KillerCageOverflow) {
+                    continue
+                }
             }
 
             if (!gridgen(cr, blocks, kblocks, p.xtype, grid, random, area * area)) {
