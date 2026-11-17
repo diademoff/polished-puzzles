@@ -85,8 +85,24 @@ internal fun keysResultFor(
     return GameEngine.KeysResult(keys, keysIfArrows, arrowsFor(request.arrowMode))
 }
 
+/**
+ * The display name to position map of an open dialog.
+ *
+ * `configItemWithName` (`android.c:402-414`) scans the list from the
+ * first item and returns the first match, so a duplicate display name
+ * resolves to the earlier item. C never assumes unique names.
+ */
+internal fun configNameIndex(items: List<ConfigItem>): Map<String, Int> {
+    val index = LinkedHashMap<String, Int>()
+    for ((position, item) in items.withIndex()) {
+        if (item.name !in index) index[item.name] = position
+    }
+    return index
+}
+
 /** The Android arrow mode for an engine arrow mode, as `android.c` maps it. */
-private fun arrowsFor(mode: EngineArrowMode): ArrowMode = when (mode) {    EngineArrowMode.NONE -> ArrowMode.NO_ARROWS
+private fun arrowsFor(mode: EngineArrowMode): ArrowMode = when (mode) {
+    EngineArrowMode.NONE -> ArrowMode.NO_ARROWS
     EngineArrowMode.ARROWS_ONLY -> ArrowMode.ARROWS_ONLY
     EngineArrowMode.ARROWS_LEFT -> ArrowMode.ARROWS_LEFT_CLICK
     EngineArrowMode.ARROWS_LEFT_RIGHT -> ArrowMode.ARROWS_LEFT_RIGHT_CLICK
@@ -471,7 +487,7 @@ class KotlinGameEngine private constructor(
             ConfigMode.PREFS -> midend.prefItems
         }
         configItems = items
-        configIndex = items.withIndex().associate { it.value.name to it.index }
+        configIndex = configNameIndex(items)
 
         val title = when (mode) {
             ConfigMode.SETTINGS -> "${game.name} configuration"
