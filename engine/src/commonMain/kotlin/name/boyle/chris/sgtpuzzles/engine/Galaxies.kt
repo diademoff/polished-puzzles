@@ -1675,14 +1675,15 @@ object Galaxies : Game {
         val ret = dupGame(state)
         val b = ret.board
         for (i in 0 until b.sx * b.sy) {
-            b.flags[i] = b.flags[i] and (F_EDGE_SET or F_TILE_ASSOC).inv()
+            b.flags[i] = b.flags[i] and
+                (F_EDGE_SET or F_TILE_ASSOC or F_DOT_HOLD).inv()
             b.dotX[i] = 0
             b.dotY[i] = 0
             b.nassoc[i] = 0
         }
         for (x in 0 until b.sx) {
             for (y in 0 until b.sy) {
-                if ((x % 2 == 0 || y % 2 == 0) &&
+                if ((x % 2 == 0) != (y % 2 == 0) &&
                     (x == 0 || y == 0 || x == b.sx - 1 || y == b.sy - 1)
                 ) {
                     b.flags[b.index(x, y)] = b.flags[b.index(x, y)] or F_EDGE_SET

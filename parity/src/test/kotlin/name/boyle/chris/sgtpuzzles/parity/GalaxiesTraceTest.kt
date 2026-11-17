@@ -74,6 +74,27 @@ class GalaxiesTraceTest {
     }
 
     @Test
+    fun `a black-dot frame matches the oracle`() = OracleClient().use { oracle ->
+        // The black dot uses its own palette entry and marker, so a
+        // parser that drops F_DOT_BLACK changes the frame.
+        val desc = "Azx"
+        val save = buildString {
+            append("SAVEFILE:41:Simon Tatham's Portable Puzzle Collection\n")
+            append("VERSION :1:1\n")
+            append("GAME    :8:Galaxies\n")
+            append("PARAMS  :5:7x7dn\n")
+            append("CPARAMS :5:7x7dn\n")
+            append("DESC    :3:$desc\n")
+            append("NSTATES :1:1\n")
+            append("STATEPOS:1:1\n")
+        }
+        val midend = Midend.fromSave(Galaxies, SgtpSave.parse(save))
+        val actual = TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend), upstream)
+        val expected = TraceNormalizer.normalize(oracle.trace(save), upstream)
+        assertLines("black dot", expected, actual)
+    }
+
+    @Test
     fun `sized traces match the oracle`() = OracleClient().use { oracle ->
         for (params in listOf("7x7dn", "10x10dn", "10x10du")) {
             val save = oracle.newGame("galaxies", params, SEED).state

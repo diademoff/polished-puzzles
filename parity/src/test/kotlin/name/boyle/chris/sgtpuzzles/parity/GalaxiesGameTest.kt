@@ -281,6 +281,33 @@ class GalaxiesGameTest {
     }
 
     @Test
+    fun `a held dot does not block the stored answer`() = OracleClient().use { oracle ->
+        // `M` sets F_DOT_HOLD in a hand-written save. The initial state
+        // has no held dots, so the stored answer still applies.
+        val base = oracle.newGame("galaxies", "7x7dn", SEED)
+        val hold = appendMove(base.state, "M3,1")
+        val expected = oracle.solve(hold)
+        val midend = Midend.fromSave(Galaxies, SgtpSave.parse(hold))
+        assertEquals(
+            "held solve payload",
+            SgtpSave.parse(expected.state).value("SOLVE"),
+            Galaxies.solve(midend.state, midend.auxInfo),
+        )
+        assertTrue("held solve", midend.solve())
+        assertEquals("held solved save", expected.state, midend.serialise().serialise())
+        assertEquals("held solved status", expected.status, midend.status())
+
+        val noAux = withoutRecord(hold, "AUXINFO")
+        val expectedNoAux = oracle.solve(noAux)
+        val noAuxMidend = Midend.fromSave(Galaxies, SgtpSave.parse(noAux))
+        assertEquals(
+            "held no-aux payload",
+            SgtpSave.parse(expectedNoAux.state).value("SOLVE"),
+            Galaxies.solve(noAuxMidend.state, null),
+        )
+    }
+
+    @Test
     fun `the text form matches the oracle`() = OracleClient().use { oracle ->
         for (params in presets) {
             val expected = oracle.newGame("galaxies", params, SEED)
