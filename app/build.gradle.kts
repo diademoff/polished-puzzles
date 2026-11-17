@@ -16,23 +16,34 @@ fun timestamp(time: Boolean): String {
 }
 
 fun gitCommand(vararg args: String): String {
-    return providers.exec {
-        commandLine("git", *args)
-    }.standardOutput.asText.get().trim()
-}
-
-fun idForSimon(): String {
     return try {
-        val mergeBase = gitCommand("merge-base", "simon/main", "main")
-        gitCommand("rev-parse", "--short", mergeBase)
+        providers.exec {
+            commandLine("git", *args)
+            // A missing ref or remote must not fail the build or the configuration cache.
+            isIgnoreExitValue = true
+        }.standardOutput.asText.get().trim()
     } catch (_: Exception) {
-        "UNOFFICIAL"
+        ""
     }
 }
 
+fun idForSimon(): String {
+    val mergeBase = gitCommand("merge-base", "simon/main", "main")
+    if (mergeBase.isEmpty()) {
+        return "UNOFFICIAL"
+    }
+    return gitCommand("rev-parse", "--short", mergeBase).ifEmpty { "UNOFFICIAL" }
+}
+
 fun issuesURL(): String {
-    val originURL = gitCommand("ls-remote", "--get-url", "origin")
-    return originURL.replaceFirst(Regex("\\.git/*$"), "") + "/issues"
+    val repository = providers.environmentVariable("GITHUB_REPOSITORY").orNull
+    val baseURL = when {
+        !repository.isNullOrBlank() -> "https://github.com/$repository"
+        else -> gitCommand("ls-remote", "--get-url", "origin")
+            .ifEmpty { "https://github.com/diademoff/polished-puzzles" }
+            .replaceFirst(Regex("\\.git/*$"), "")
+    }
+    return "$baseURL/issues"
 }
 
 java {
