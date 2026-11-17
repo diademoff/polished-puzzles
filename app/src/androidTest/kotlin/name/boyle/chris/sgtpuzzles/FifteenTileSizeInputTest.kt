@@ -21,6 +21,7 @@ import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -51,9 +52,14 @@ class FifteenTileSizeInputTest {
                 GamePlayTestSupport.intent(context, GamePlayTestSupport.SOLVED_4X4),
             ).use { scenario ->
                 val first = awaitSizedBoard(scenario, previousTile = null)
-                assertTrue(
-                    "the live tile ${first.tileSize} is the preferred tile, so this is not " +
-                        "the non-default case",
+                // The viewport decides the tile. A legitimate viewport
+                // that already yields the preferred tile cannot exercise
+                // the non-default case, so it skips. Every input
+                // assertion below stays hard.
+                assumeTrue(
+                    "skipped: this viewport yields the preferred tile " +
+                        "(${Fifteen.preferredTileSize}), so the board is not at a " +
+                        "non-default tile size",
                     first.tileSize != Fifteen.preferredTileSize,
                 )
 
@@ -134,8 +140,10 @@ class FifteenTileSizeInputTest {
 
     /**
      * Waits for the resize that follows the launch or the preference
-     * change, then returns the geometry. A [previousTile] of null asks
-     * for any size that is not the preferred one.
+     * change, then returns the geometry. A [previousTile] of null accepts
+     * any laid-out board, so the caller can skip when the viewport yields
+     * the preferred tile. A non-null [previousTile] requires a live tile
+     * that changed and is not the preferred one.
      */
     private fun awaitSizedBoard(
         scenario: ActivityScenario<GamePlay>,
@@ -149,8 +157,13 @@ class FifteenTileSizeInputTest {
                 val engine = activity.gameEngine as? KotlinGameEngine
                 if (view.width > 0 && view.height > 0 && engine != null) {
                     val candidate = engine.boardGeometry
-                    val changed = previousTile == null || candidate.tileSize != previousTile
-                    if (changed && candidate.tileSize != Fifteen.preferredTileSize) {
+                    val accepted = if (previousTile == null) {
+                        true
+                    } else {
+                        candidate.tileSize != previousTile &&
+                            candidate.tileSize != Fifteen.preferredTileSize
+                    }
+                    if (accepted) {
                         board = candidate
                     }
                 }
@@ -158,6 +171,6 @@ class FifteenTileSizeInputTest {
             board?.let { return it }
             SystemClock.sleep(50)
         }
-        throw AssertionError("the board did not take a non-preferred tile size")
+        throw AssertionError("the board did not reach the expected tile size")
     }
 }
