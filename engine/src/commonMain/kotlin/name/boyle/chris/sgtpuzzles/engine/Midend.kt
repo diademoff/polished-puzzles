@@ -755,7 +755,11 @@ class Midend private constructor(
             game.validateDesc(currentParams, generated.text)?.let {
                 throw IllegalArgumentException(it)
             }
-            val state = game.newState(currentParams, generated.text)
+            // `midend_new_game` builds the state from the long-term
+            // parameters, not the full ones, on purpose: a game that
+            // fails to encode a play-time parameter in its short form
+            // then shows the behavior at play time. `midend.c:611-628`.
+            val state = game.newState(params, generated.text)
             return Midend(
                 game = game,
                 params = params,
@@ -795,7 +799,7 @@ class Midend private constructor(
                 initialDesc = desc,
                 auxInfo = null,
                 entries = mutableListOf(
-                    Entry(game.newState(currentParams, desc), null, MoveType.NEWGAME),
+                    Entry(game.newState(params, desc), null, MoveType.NEWGAME),
                 ),
                 statePos = 1,
                 platformSeed = platformSeed,

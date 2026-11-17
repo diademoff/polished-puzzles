@@ -118,7 +118,13 @@ class MinesSaveTest {
             // The C save loads in Kotlin and rewrites byte for byte.
             val reloaded = Midend.fromSave(Mines, SgtpSave.parse(loaded.state))
             assertEquals(text, reloaded.serialise().serialise())
-            assertEquals(midend.state, reloaded.state)
+            // `new_game` takes `me->params`, and the short Mines encoding
+            // drops the mine count (`mines.c:203-225`, `mines.c:2269`),
+            // so a new state has the decoded default `9x9` -> 8 while a
+            // load rebuilds state 0 from CPARAMS -> 10. The save text and
+            // the layout are the same; the count is not serialized.
+            assertEquals("new state n", 8, (midend.state as Mines.State).n)
+            assertEquals("loaded state n", 10, (reloaded.state as Mines.State).n)
             assertSameLayout(midend.state as Mines.State, reloaded.state as Mines.State)
             assertEquals(midend.id(), reloaded.id())
             assertTrue(reloaded.canUndo)
