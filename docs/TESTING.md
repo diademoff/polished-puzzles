@@ -239,6 +239,30 @@ The app adapter is covered on the JVM, without an Android runtime:
 The instrumented `GamePlayParameterizedTest` still covers the real tap,
 swipe, and key paths for the enabled game on a device or emulator.
 
+The instrumented adapter tests cover the shell seams that a JVM test
+cannot reach:
+
+- `FifteenTileSizeInputTest` reads the live board geometry, checks that
+  the tile size is not the preferred one, changes the `limitDpi`
+  preference and checks that the size follows, then sends a real tap and
+  a real swipe at cell centres computed from `originX`, `originY`, and
+  the tile size. Each gesture must add exactly one move.
+- `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
+  `Width` and `Height` fields against the engine schema, starts a 3x3
+  game, and checks that an invalid width shows the C validation message
+  and keeps the old game.
+- `FifteenGameIdDialogTest` checks that the game-ID dialog is prefilled
+  with the current ID and that a valid ID becomes the new game with
+  `Moves: 0`.
+- `FifteenSeedDialogTest` checks the `4x4#<uuid>` seed text and that the
+  same fixed seed produces the same game ID on two launches.
+- `PrefsActivityTest` runs the real `PrefsActivity`: the global rows, a
+  switch that writes its key, and the `fifteen` page, which must be
+  exactly `Fifteen.prefs` plus the shell's arrow-key switch.
+- `FifteenChooserLaunchTest` clicks the `fifteen` row in the real
+  chooser and checks that `GamePlay` opens with the Kotlin engine and
+  `Moves: 0`.
+
 ## 4. Corpus
 
 ```
@@ -349,7 +373,13 @@ Shell tests:
   `app/src/androidTest/assets/screens/`, which is git-ignored, so a
   fresh checkout skips these tests. Record them on the reference AVD
   with the procedure in the test class; another density, renderer, or
-  font changes every pixel.
+  font changes every pixel. The recorded goldens are 1080x2400, from
+  the AVD in `tools/perf/baseline.md` (1080x2400, 420 dpi), so the
+  class skips itself with a message when the display size or density
+  does not match. It reports a skip, not a failure, on a physical
+  device. The skip message is in the UTP log
+  (`androidTest-results/.../utp.0.log`); the JUnit XML records only
+  that the test was skipped.
 - `ChooserScreenshotsTest` runs the chooser under fastlane only: it
   skips itself when the `device_type` argument is absent. It is a
   screenshot producer for the store, not a behavior gate.

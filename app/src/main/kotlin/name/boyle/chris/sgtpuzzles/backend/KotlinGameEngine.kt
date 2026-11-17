@@ -737,6 +737,11 @@ class KotlinGameEngine private constructor(
     val boardGeometry: BoardGeometry
         get() = geometry
 
+    /** The current game ID, the counterpart of `midend_get_game_id`; for tests. */
+    @get:VisibleForTesting
+    val gameId: String
+        get() = midend.id()
+
     @VisibleForTesting
     override fun freezePartialRedo() {
         midend.redo()
