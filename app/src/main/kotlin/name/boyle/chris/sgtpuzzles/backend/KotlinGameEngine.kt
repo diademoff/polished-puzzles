@@ -11,53 +11,14 @@ import name.boyle.chris.sgtpuzzles.engine.ArrowMode as EngineArrowMode
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder
 import name.boyle.chris.sgtpuzzles.config.CustomDialogBuilder
 import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
-import name.boyle.chris.sgtpuzzles.engine.BlackBox
-import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
-import name.boyle.chris.sgtpuzzles.engine.Cube
-import name.boyle.chris.sgtpuzzles.engine.Dominosa
 import name.boyle.chris.sgtpuzzles.engine.DrawSink
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
-import name.boyle.chris.sgtpuzzles.engine.Filling
-import name.boyle.chris.sgtpuzzles.engine.Flip
-import name.boyle.chris.sgtpuzzles.engine.Flood
-import name.boyle.chris.sgtpuzzles.engine.Galaxies
 import name.boyle.chris.sgtpuzzles.engine.Game
-import name.boyle.chris.sgtpuzzles.engine.Guess
-import name.boyle.chris.sgtpuzzles.engine.Inertia
-import name.boyle.chris.sgtpuzzles.engine.Keen
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
-import name.boyle.chris.sgtpuzzles.engine.Lightup
-import name.boyle.chris.sgtpuzzles.engine.Loopy
-import name.boyle.chris.sgtpuzzles.engine.Magnets
-import name.boyle.chris.sgtpuzzles.engine.Map
 import name.boyle.chris.sgtpuzzles.engine.Midend
-import name.boyle.chris.sgtpuzzles.engine.Mines
-import name.boyle.chris.sgtpuzzles.engine.Mosaic
-import name.boyle.chris.sgtpuzzles.engine.Net
-import name.boyle.chris.sgtpuzzles.engine.Netslide
-import name.boyle.chris.sgtpuzzles.engine.Palisade
-import name.boyle.chris.sgtpuzzles.engine.Pattern
-import name.boyle.chris.sgtpuzzles.engine.Pearl
-import name.boyle.chris.sgtpuzzles.engine.Pegs
-import name.boyle.chris.sgtpuzzles.engine.Range
-import name.boyle.chris.sgtpuzzles.engine.Rect
-import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
-import name.boyle.chris.sgtpuzzles.engine.Signpost
-import name.boyle.chris.sgtpuzzles.engine.Singles
-import name.boyle.chris.sgtpuzzles.engine.Sixteen
-import name.boyle.chris.sgtpuzzles.engine.Slant
-import name.boyle.chris.sgtpuzzles.engine.Solo
-import name.boyle.chris.sgtpuzzles.engine.Tents
 import name.boyle.chris.sgtpuzzles.engine.Text
-import name.boyle.chris.sgtpuzzles.engine.Towers
-import name.boyle.chris.sgtpuzzles.engine.Tracks
-import name.boyle.chris.sgtpuzzles.engine.Twiddle
-import name.boyle.chris.sgtpuzzles.engine.Undead
-import name.boyle.chris.sgtpuzzles.engine.Unequal
-import name.boyle.chris.sgtpuzzles.engine.Unruly
-import name.boyle.chris.sgtpuzzles.engine.Untangle
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.MenuEntry
 import java.io.ByteArrayOutputStream
@@ -125,8 +86,7 @@ internal fun keysResultFor(
 }
 
 /** The Android arrow mode for an engine arrow mode, as `android.c` maps it. */
-private fun arrowsFor(mode: EngineArrowMode): ArrowMode = when (mode) {
-    EngineArrowMode.NONE -> ArrowMode.NO_ARROWS
+private fun arrowsFor(mode: EngineArrowMode): ArrowMode = when (mode) {    EngineArrowMode.NONE -> ArrowMode.NO_ARROWS
     EngineArrowMode.ARROWS_ONLY -> ArrowMode.ARROWS_ONLY
     EngineArrowMode.ARROWS_LEFT -> ArrowMode.ARROWS_LEFT_CLICK
     EngineArrowMode.ARROWS_LEFT_RIGHT -> ArrowMode.ARROWS_LEFT_RIGHT_CLICK
@@ -157,55 +117,40 @@ object KotlinGames {
      */
     private val APP_GAMES = setOf(FIFTEEN)
 
-    fun gameFor(backend: BackendName): Game? = when (backend) {
-        FIFTEEN -> Fifteen
-        SLANT -> Slant
-        SAMEGAME -> SameGame
-        FLOOD -> Flood
-        SIXTEEN -> Sixteen
-        FLIP -> Flip
-        TWIDDLE -> Twiddle
-        PEGS -> Pegs
-        GUESS -> Guess
-        BLACKBOX -> BlackBox
-        BRIDGES -> Bridges
-        CUBE -> Cube
-        FILLING -> Filling
-        NET -> Net
-        NETSLIDE -> Netslide
-        UNRULY -> Unruly
-        RANGE -> Range
-        RECT -> Rect
-        GALAXIES -> Galaxies
-        LIGHTUP -> Lightup
-        MOSAIC -> Mosaic
-        PALISADE -> Palisade
-        PATTERN -> Pattern
-        PEARL -> Pearl
-        LOOPY -> Loopy
-        SIGNPOST -> Signpost
-        INERTIA -> Inertia
-        TENTS -> Tents
-        MAGNETS -> Magnets
-        MINES -> Mines
-        UNDEAD -> Undead
-        UNTANGLE -> Untangle
-        TRACKS -> Tracks
-        DOMINOSA -> Dominosa
-        MAP -> Map
-        KEEN -> Keen
-        TOWERS -> Towers
-        UNEQUAL -> Unequal
-        SINGLES -> Singles
-        SOLO -> Solo
-        else -> null
-    }
+    /**
+     * The Kotlin backend for [backend], or null when the game is not
+     * ported. The list is [name.boyle.chris.sgtpuzzles.engine.PortedGames],
+     * which the parity suite also iterates, so adding a game there is
+     * the only way to add it here.
+     */
+    fun gameFor(backend: BackendName): Game? =
+        name.boyle.chris.sgtpuzzles.engine.PortedGames.byBackend(backend.sourceName)
 
+    /**
+     * True when the app may use the Kotlin backend for [backend].
+     *
+     * Two conditions, both honest. `configure` is the game's settings
+     * dialog, which the app needs for a new game. [Game.declaresPrefs]
+     * must agree with [Game.prefs]: a game whose C table has a
+     * non-NULL `get_prefs` but whose Kotlin port forgot the schema would
+     * otherwise ship without its preferences page. A NULL C `get_prefs`
+     * game must not invent a schema either.
+     */
     fun handles(backend: BackendName): Boolean {
         if (!ENABLED || backend !in APP_GAMES) return false
         val game = gameFor(backend) ?: return false
-        return game.configure(game.defaultParams()) != null
+        return isSelectable(game)
     }
+
+    /**
+     * The per-game half of [handles], exposed so a test can check the
+     * rule with a game that is not in [APP_GAMES]. The C half, that
+     * [Game.declaresPrefs] is true exactly for a non-NULL C
+     * `get_prefs`, is compared with the oracle in `PrefsSchemaParityTest`.
+     */
+    internal fun isSelectable(game: Game): Boolean =
+        game.configure(game.defaultParams()) != null &&
+            game.declaresPrefs == game.prefs.isNotEmpty()
 
     /**
      * `encode_params(default_params(), true)`, the call that
@@ -245,7 +190,8 @@ object KotlinGames {
  * The settings, seed, game-ID, and preference dialogs come from the
  * game's engine schema ([Game.configure] and [Game.prefs]), so this
  * class has no field of one game's parameters. A game that declares no
- * schema is never enabled: [KotlinGames.handles] requires `configure`.
+ * schema is never enabled: [KotlinGames.handles] requires `configure`
+ * and requires `declaresPrefs` to agree with the schema.
  *
  * Ordering and threading: this class, its [Midend], its [Game], the game
  * UI, and the draw state are not thread-safe and are used on the UI

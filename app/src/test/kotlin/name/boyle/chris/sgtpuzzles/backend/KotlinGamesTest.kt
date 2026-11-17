@@ -4,9 +4,12 @@ import name.boyle.chris.sgtpuzzles.engine.BlackBox
 import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.Cube
 import name.boyle.chris.sgtpuzzles.engine.Dominosa
+import name.boyle.chris.sgtpuzzles.engine.ConfigItem
+import name.boyle.chris.sgtpuzzles.engine.Fifteen
 import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Galaxies
+import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
@@ -23,6 +26,7 @@ import name.boyle.chris.sgtpuzzles.engine.Palisade
 import name.boyle.chris.sgtpuzzles.engine.Pattern
 import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Pegs
+import name.boyle.chris.sgtpuzzles.engine.PortedGames
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.Rect
 import name.boyle.chris.sgtpuzzles.engine.SameGame
@@ -358,6 +362,67 @@ class KotlinGamesTest {
                 "$backend must stay on the C backend",
                 backend === FIFTEEN,
                 KotlinGames.handles(backend),
+            )
+        }
+    }
+
+    @Test
+    fun `the engine registry is every backend and nothing else`() {
+        val ported = PortedGames.all.map { it.backendName }.toSet()
+        assertEquals(
+            "every BackendName must have exactly one Kotlin backend",
+            BackendName.all.map { it.sourceName }.toSet(),
+            ported,
+        )
+        assertEquals(40, PortedGames.all.size)
+        assertEquals(
+            "two registry entries share a game object",
+            ported.size,
+            PortedGames.all.size,
+        )
+        for (backend in BackendName.all) {
+            assertTrue(
+                "$backend must resolve through the registry",
+                KotlinGames.gameFor(backend) === PortedGames.byBackend(backend.sourceName),
+            )
+        }
+    }
+
+    /**
+     * The gate must not enable a game whose C `get_prefs` is non-NULL
+     * while its Kotlin schema is missing. C truth for
+     * [Game.declaresPrefs] is checked against the oracle in
+     * `PrefsSchemaParityTest`; this test checks that the app's gate
+     * rejects both mismatches and that every registered game agrees with
+     * itself.
+     */
+    @Test
+    fun `the prefs gate rejects a missing or stray schema`() {
+        assertTrue(KotlinGames.isSelectable(Slant))
+
+        val missingSchema = object : Game by Slant {
+            override val declaresPrefs: Boolean get() = true
+            override val prefs: List<ConfigItem> get() = emptyList()
+        }
+        assertFalse(
+            "a C prefs game without a Kotlin schema must not be selectable",
+            KotlinGames.isSelectable(missingSchema),
+        )
+
+        val straySchema = object : Game by Fifteen {
+            override val declaresPrefs: Boolean get() = false
+            override val prefs: List<ConfigItem> get() = Slant.prefs
+        }
+        assertFalse(
+            "a schema without the declaresPrefs flag must not be selectable",
+            KotlinGames.isSelectable(straySchema),
+        )
+
+        for (game in PortedGames.all) {
+            assertEquals(
+                "${game.backendName} declares its C prefs exactly when it has a schema",
+                game.declaresPrefs,
+                game.prefs.isNotEmpty(),
             )
         }
     }
