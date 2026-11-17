@@ -1432,6 +1432,67 @@ object Bridges : Game {
         return solveSub(state, difficulty, 0)
     }
 
+    /** `game_configure` (`bridges.c:748-794`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Medium:Hard",
+                null,
+                p.difficulty,
+            ),
+            ConfigItem.Bool("Allow loops", p.allowloops),
+            ConfigItem.Choices(
+                "Max. bridges per direction",
+                ":1:2:3:4",
+                null,
+                p.maxb - 1,
+            ),
+            ConfigItem.Choices(
+                "%age of island squares",
+                ":5%:10%:15%:20%:25%:30%",
+                null,
+                p.islands / 5 - 1,
+            ),
+            ConfigItem.Choices(
+                "Expansion factor (%age)",
+                ":0%:10%:20%:30%:40%:50%:60%:70%:80%:90%:100%",
+                null,
+                p.expansion / 10,
+            ),
+        )
+    }
+
+    /** `custom_params` (`bridges.c:796-809`), including the derived fields. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            cAtoi((items[0] as ConfigItem.Text).value, 0),
+            cAtoi((items[1] as ConfigItem.Text).value, 0),
+            ((items[5] as ConfigItem.Choices).selected + 1) * 5,
+            (items[6] as ConfigItem.Choices).selected * 10,
+            (items[4] as ConfigItem.Choices).selected + 1,
+            (items[3] as ConfigItem.Bool).value,
+            (items[2] as ConfigItem.Choices).selected,
+        )
+
+    /** `get_prefs` (`bridges.c:2170-2185`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Show possible bridge locations",
+                false,
+                "show-hints",
+            ),
+        )
+
+    /** `set_prefs` (`bridges.c:2187-2190`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).showHints = prefs.bool("show-hints")
+    }
+
     // ------------------------------------------------------------------
     // Generation.
     // ------------------------------------------------------------------
@@ -2030,6 +2091,12 @@ object Bridges : Game {
 
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveAttempt(state, auxInfo).move
+
+    /** `solve_game` with the C error strings (`bridges.c:2703-2729`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val attempt = solveAttempt(state, auxInfo)
+        return SolveOutcome(attempt.move, attempt.error)
+    }
 
     /**
      * The solver with the two C error strings. The seam has no error

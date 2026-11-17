@@ -254,6 +254,43 @@ object Net : Game {
         return null
     }
 
+    /** `game_configure` (`net.c:271-305`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Bool("Walls wrap around", p.wrapping),
+            ConfigItem.Text("Barrier probability", cFloatG(p.barrierProbability)),
+            ConfigItem.Bool("Ensure unique solution", p.unique),
+        )
+    }
+
+    /** `custom_params` (`net.c:307-318`), with `atof` for the barrier. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Bool).value,
+            (items[4] as ConfigItem.Bool).value,
+            cAtof((items[3] as ConfigItem.Text).value),
+        )
+
+    /** `get_prefs` (`net.c:2129-2145`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Highlight loops involving unlocked squares",
+                true,
+                "unlocked-loops",
+            ),
+        )
+
+    /** `set_prefs` (`net.c:2147-2150`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).unlockedLoops = prefs.bool("unlocked-loops")
+    }
+
     // ------------------------------------------------------------------
     // Description.
     // ------------------------------------------------------------------
@@ -1224,6 +1261,12 @@ object Net : Game {
 
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveAttempt(state, auxInfo).move
+
+    /** `solve_game` with the C error string (`net.c:1787-1876`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val attempt = solveAttempt(state, auxInfo)
+        return SolveOutcome(attempt.move, attempt.error)
+    }
 
     /**
      * `solve_game`. C reads the first state as `orig` and the current

@@ -453,6 +453,29 @@ object Cube : Game {
         return null
     }
 
+    /** `game_configure` (`cube.c:489-513`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Choices(
+                "Type of solid",
+                ":Tetrahedron:Cube:Octahedron:Icosahedron",
+                null,
+                p.solid,
+            ),
+            ConfigItem.Text("Width / top", p.d1.toString()),
+            ConfigItem.Text("Height / bottom", p.d2.toString()),
+        )
+    }
+
+    /** `custom_params` (`cube.c:515-524`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            (items[0] as ConfigItem.Choices).selected,
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            atoi((items[2] as ConfigItem.Text).value, 0),
+        )
+
     /**
      * `new_game_desc`: exactly `nfaces + 1` draws, in class order, from
      * shrinking class lists. There is no retry and no `AUXINFO`.

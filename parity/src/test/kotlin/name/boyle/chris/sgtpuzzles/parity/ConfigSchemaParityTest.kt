@@ -1,15 +1,23 @@
 package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.BlackBox
+import name.boyle.chris.sgtpuzzles.engine.Bridges
+import name.boyle.chris.sgtpuzzles.engine.Cube
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.Flip
+import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Net
+import name.boyle.chris.sgtpuzzles.engine.Netslide
 import name.boyle.chris.sgtpuzzles.engine.Pegs
+import name.boyle.chris.sgtpuzzles.engine.Range
+import name.boyle.chris.sgtpuzzles.engine.Rect
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
+import name.boyle.chris.sgtpuzzles.engine.Unruly
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -38,6 +46,14 @@ class ConfigSchemaParityTest {
         Scheme(Pegs, "pegs"),
         Scheme(Guess, "guess"),
         Scheme(BlackBox, "blackbox"),
+        Scheme(Bridges, "bridges"),
+        Scheme(Cube, "cube"),
+        Scheme(Filling, "filling"),
+        Scheme(Net, "net"),
+        Scheme(Netslide, "netslide"),
+        Scheme(Unruly, "unruly"),
+        Scheme(Range, "range"),
+        Scheme(Rect, "rect"),
     )
 
     @Test
@@ -242,6 +258,35 @@ class ConfigSchemaParityTest {
             listOf(Edit(2, " 4- 7", " 4- 7")),
             listOf(Edit(2, "4 -7", "4 -7")),
             listOf(Edit(2, "4-", "4-")),
+        ),
+        "bridges" to listOf(
+            /* Derived fields: maxb = selected + 1, islands = selected * 5 + 5,
+             * expansion = selected * 10. */
+            listOf(Edit(4, "2", 2), Edit(5, "1", 1), Edit(6, "2", 2)),
+            listOf(Edit(2, "2", 2), Edit(3, "false", false), Edit(4, "3", 3)),
+        ),
+        "cube" to listOf(
+            listOf(Edit(0, "0", 0)),
+            listOf(Edit(0, "3", 3)),
+        ),
+        "net" to listOf(
+            /* atof: a decimal, an exponent, a hex float, and a space. */
+            listOf(Edit(3, "0.5", "0.5")),
+            listOf(Edit(3, "1e-1", "1e-1")),
+            listOf(Edit(3, "0x1p-1", "0x1p-1")),
+            listOf(Edit(3, " 0.25", " 0.25")),
+        ),
+        "netslide" to listOf(
+            listOf(Edit(3, "0.25", "0.25")),
+            listOf(Edit(3, "1", "1")),
+        ),
+        "rect" to listOf(
+            listOf(Edit(2, "0.5", "0.5")),
+            listOf(Edit(2, "2", "2")),
+        ),
+        "unruly" to listOf(
+            listOf(Edit(2, "true", true)),
+            listOf(Edit(3, "2", 2)),
         ),
         "samegame" to listOf(
             /* scoresub = selected + 1, the default is 2. */

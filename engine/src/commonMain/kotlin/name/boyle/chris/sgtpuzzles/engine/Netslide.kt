@@ -344,6 +344,28 @@ object Netslide : Game {
         return null
     }
 
+    /** `game_configure` (`netslide.c:262-297`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Bool("Walls wrap around", p.wrapping),
+            ConfigItem.Text("Barrier probability", cFloatG(p.barrierProbability)),
+            ConfigItem.Text("Number of shuffling moves", p.moveTarget.toString()),
+        )
+    }
+
+    /** `custom_params` (`netslide.c:299-310`), with `atof` for the barrier. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Bool).value,
+            cAtof((items[3] as ConfigItem.Text).value),
+            atoi((items[4] as ConfigItem.Text).value, 0),
+        )
+
     /**
      * `new_game_desc`. Phase 1 builds the spanning tree from the centre
      * with one `random_upto(count)` draw per connected cell, so exactly

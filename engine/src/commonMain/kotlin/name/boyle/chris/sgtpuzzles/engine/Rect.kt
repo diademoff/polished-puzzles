@@ -241,6 +241,26 @@ object Rect : Game {
         return null
     }
 
+    /** `game_configure` (`rect.c:177-207`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Text("Expansion factor", cFloatG(p.expandFactor)),
+            ConfigItem.Bool("Ensure unique solution", p.unique),
+        )
+    }
+
+    /** `custom_params` (`rect.c:209-219`), with `atof` for the factor. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            cAtof((items[2] as ConfigItem.Text).value),
+            (items[3] as ConfigItem.Bool).value,
+        )
+
     // ------------------------------------------------------------------
     // Description validation and state creation, `rect.c:1785-1952`.
     // ------------------------------------------------------------------

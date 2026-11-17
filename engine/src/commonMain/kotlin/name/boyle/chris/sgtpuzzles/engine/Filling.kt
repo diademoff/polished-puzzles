@@ -198,6 +198,22 @@ object Filling : Game {
         return null
     }
 
+    /** `game_configure` (`filling.c:153-174`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+        )
+    }
+
+    /** `custom_params` (`filling.c:176-184`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+        )
+
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         return Description(FillingSolver.newDesc(p.width, p.height, random))
