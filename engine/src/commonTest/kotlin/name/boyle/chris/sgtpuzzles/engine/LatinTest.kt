@@ -435,6 +435,110 @@ class LatinTest {
         assertTrue(valid === solver.grid)
     }
 
+    /** The digits still possible at (x,y), in ascending order. */
+    private fun candidates(solver: LatinSolver, x: Int, y: Int): List<Int> =
+        (1..solver.order).filter { solver.cubeAt(x, y, it) }
+
+    @Test
+    fun allocateReportsAConsistentGridAsValid() {
+        val grid = intArrayOf(
+            1, 2, 0,
+            0, 3, 0,
+            0, 0, 2,
+        )
+        val solver = LatinSolver.allocate(grid, 3)
+
+        assertTrue(solver.valid, "every digit of a consistent grid is placed")
+        assertTrue(grid === solver.grid, "the solver writes through the caller grid")
+        assertEquals(
+            listOf(
+                1, 2, 0,
+                0, 3, 0,
+                0, 0, 2,
+            ),
+            grid.toList(),
+            "a placement stores the digit that is already in the cell",
+        )
+
+        for (y in 0 until 3) {
+            for (x in 0 until 3) {
+                val n = grid[y * 3 + x]
+                if (n == 0) continue
+                assertEquals(listOf(n), candidates(solver, x, y), "cell $x,$y")
+                assertTrue(solver.row[y * 3 + n - 1], "row $y does not know $n")
+                assertTrue(solver.col[x * 3 + n - 1], "column $x does not know $n")
+            }
+        }
+
+        // A valid allocation is also what `alloc` hands out.
+        val alsoValid = LatinSolver.alloc(grid.copyOf(), 3)
+        assertTrue(alsoValid != null && alsoValid.valid, "a consistent grid also allocates")
+    }
+
+    @Test
+    fun allocateKeepsThePartialCubeOfAnInconsistentGrid() {
+        /*
+         * `latin_solver_alloc` walks the cells with x outer and y inner
+         * and returns false at the first digit it cannot place. The cube
+         * that it built before that digit is still returned to the
+         * caller, and `unequal` copies it into `hints`.
+         *
+         * This grid was run through upstream `latin.c` directly. The
+         * placements are (0,0)=1, (0,1)=2 and (1,0)=2. The duplicate is
+         * (1,1)=2, in the same row as (0,1)=2. The clue 4 at (3,3)
+         * comes after the duplicate in the walk, so upstream never
+         * places it.
+         */
+        val grid = intArrayOf(
+            1, 2, 0, 0,
+            2, 2, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 4,
+        )
+        val before = grid.copyOf()
+
+        val solver = LatinSolver.allocate(grid, 4)
+        assertFalse(solver.valid, "a duplicate digit makes the allocation invalid")
+        assertNull(LatinSolver.alloc(grid, 4), "alloc hides the partial cube")
+
+        assertEquals(before.toList(), grid.toList(), "the grid keeps its clues")
+
+        // The exact cube, cell by cell in cube index order.
+        val expected = listOf(
+            listOf(1), listOf(2), listOf(3, 4), listOf(3, 4),
+            listOf(2), listOf(1, 3, 4), listOf(1, 3, 4), listOf(1, 3, 4),
+            listOf(3, 4), listOf(1, 3, 4), listOf(1, 2, 3, 4), listOf(1, 2, 3, 4),
+            listOf(3, 4), listOf(1, 3, 4), listOf(1, 2, 3, 4), listOf(1, 2, 3, 4),
+        )
+        val actual = mutableListOf<List<Int>>()
+        for (x in 0 until 4) {
+            for (y in 0 until 4) {
+                actual.add(candidates(solver, x, y))
+            }
+        }
+        assertEquals(expected, actual, "the partial cube")
+
+        // The same state in the row and column flags.
+        val expectedRow = BooleanArray(16)
+        val expectedCol = BooleanArray(16)
+        // (0,0)=1: row 0 and column 0 know the digit 1.
+        expectedRow[0 * 4 + 1 - 1] = true
+        expectedCol[0 * 4 + 1 - 1] = true
+        // (0,1)=2: row 1 knows 2, column 0 knows 2.
+        expectedRow[1 * 4 + 2 - 1] = true
+        expectedCol[0 * 4 + 2 - 1] = true
+        // (1,0)=2: row 0 knows 2, column 1 knows 2.
+        expectedRow[0 * 4 + 2 - 1] = true
+        expectedCol[1 * 4 + 2 - 1] = true
+        assertEquals(expectedRow.toList(), solver.row.toList(), "the row flags")
+        assertEquals(expectedCol.toList(), solver.col.toList(), "the column flags")
+
+        // The clue after the duplicate is still in the grid but was
+        // never placed, so the cube still allows it there.
+        assertEquals(4, grid[3 * 4 + 3])
+        assertTrue(solver.cubeAt(3, 3, 4), "the digit after the duplicate must not be placed")
+    }
+
     @Test
     fun contextIsCopiedAndFreedForEveryAttempt() {
         val copies = mutableListOf<Int>()

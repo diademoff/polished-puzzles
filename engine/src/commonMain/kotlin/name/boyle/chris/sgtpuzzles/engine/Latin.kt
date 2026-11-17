@@ -56,12 +56,24 @@ class LatinSolver private constructor(
          * `latin_solver_alloc`: makes a solver over [grid] and places
          * every non-zero digit that is already there.
          *
-         * Returns null when the given digits cannot be placed, which is
-         * what C reports with a false return value. On that path [grid]
-         * is unchanged, because a placement writes the same digit back
-         * to its own cell.
+         * The digits are visited in the C order, `x` outer and `y`
+         * inner. Each digit is placed while it is still possible. The
+         * first digit that is not possible stops the loop: later cells
+         * are not placed, and [valid] becomes false. That is exactly
+         * what C does with its early `return false`, so the cube, the
+         * row and column flags, and [grid] hold the state of the
+         * placements that came before the conflict.
+         *
+         * The solver is always returned, because C returns the partial
+         * cube to its caller even on the false path. A consumer that
+         * keeps the partial state after a conflict, such as the hint
+         * path of `unequal`, needs it. A consumer that only wants a
+         * consistent grid uses [alloc].
+         *
+         * [grid] is never rewritten, since a placement stores the digit
+         * that is already in the cell.
          */
-        fun alloc(grid: IntArray, order: Int): LatinSolver? {
+        fun allocate(grid: IntArray, order: Int): LatinSolver {
             require(order in 1..MAX_ORDER) { "latin order must be 1..255, not $order" }
             require(grid.size >= order * order) {
                 "latin grid needs ${order * order} entries, not ${grid.size}"
@@ -72,17 +84,41 @@ class LatinSolver private constructor(
                     val n = grid[y * order + x]
                     if (n != 0) {
                         require(n in 1..order) { "latin grid value $n is outside 1..$order" }
-                        if (!solver.cubeAt(x, y, n)) return null
+                        if (!solver.cubeAt(x, y, n)) {
+                            solver.valid = false
+                            return solver
+                        }
                         solver.place(x, y, n)
                     }
                 }
             }
             return solver
         }
+
+        /**
+         * The consistent part of [allocate]: returns the solver only
+         * when every given digit could be placed, and null otherwise.
+         *
+         * The cube on the null path is the partial cube that
+         * [allocate] returns; it is simply not handed to a caller that
+         * can do nothing with it.
+         */
+        fun alloc(grid: IntArray, order: Int): LatinSolver? =
+            allocate(grid, order).takeIf { it.valid }
     }
 
     /** `cube`: `order^3` possibilities, indexed by [cubePos]. */
     val cube = BooleanArray(order * order * order) { true }
+
+    /**
+     * The value that `latin_solver_alloc` returns: true when every digit
+     * in [grid] was placed, false when [allocate] met a digit that was
+     * not possible.
+     *
+     * It is only written by [LatinSolver.allocate]; a caller reads it.
+     */
+    var valid: Boolean = true
+        private set
 
     /** `row`: `row[y*order + n - 1]` is true when n is already in row y. */
     val row = BooleanArray(order * order)
