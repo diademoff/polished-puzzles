@@ -868,7 +868,7 @@ Anything not listed here is a bug.
 - **What differs:** two paths in `loopy` are reachable only from a
   hand-made `Loopy.Params`, never from a save or the chooser. First,
   `validate_params` ends with `assert(params->diff < DIFF_MAX)`
-  (`loopy.c:730`), which aborts the C process for a difficulty of 4 or
+  (`loopy.c:731`), which aborts the C process for a difficulty of 4 or
   more. The port returns `Unknown difficulty level`. Second,
   `encode_params` reads `diffchars[params->diff]` (`loopy.c:663`);
   an index above 4 reads out of bounds in C, while the port writes a
