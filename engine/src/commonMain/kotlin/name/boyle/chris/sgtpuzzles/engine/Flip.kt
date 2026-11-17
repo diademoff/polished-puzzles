@@ -209,6 +209,29 @@ object Flip : Game {
         return null
     }
 
+    /** `game_configure` (`flip.c:150-174`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Choices(
+                name = "Shape type",
+                choices = ":Crosses:Random",
+                keywords = null,
+                selected = p.matrixType.ordinal,
+            ),
+        )
+    }
+
+    /** `custom_params` (`flip.c:176-185`): `matrix_type = selected`. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            MatrixType.values()[(items[2] as ConfigItem.Choices).selected],
+        )
+
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         return Description(

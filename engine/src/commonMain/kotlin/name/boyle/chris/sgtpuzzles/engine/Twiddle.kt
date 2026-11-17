@@ -248,6 +248,30 @@ object Twiddle : Game {
         return null
     }
 
+    /** `game_configure` (`twiddle.c:158-197`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Text("Rotating block size", p.n.toString()),
+            ConfigItem.Bool("One number per row", p.rowsOnly),
+            ConfigItem.Bool("Orientation matters", p.orientable),
+            ConfigItem.Text("Number of shuffling moves", p.moveTarget.toString()),
+        )
+    }
+
+    /** `custom_params` (`twiddle.c:199-211`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            atoi((items[2] as ConfigItem.Text).value, 0),
+            (items[3] as ConfigItem.Bool).value,
+            (items[4] as ConfigItem.Bool).value,
+            atoi((items[5] as ConfigItem.Text).value, 0),
+        )
+
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         return Description(

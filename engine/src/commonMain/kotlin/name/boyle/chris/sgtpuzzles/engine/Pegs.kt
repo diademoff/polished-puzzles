@@ -256,6 +256,29 @@ object Pegs : Game {
         return null
     }
 
+    /** `game_configure` (`pegs.c:154-178`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Choices(
+                name = "Board type",
+                choices = ":Cross:Octagon:Random",
+                keywords = null,
+                selected = p.type.ordinal,
+            ),
+        )
+    }
+
+    /** `custom_params` (`pegs.c:180-189`): `type = selected`. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            Type.values()[(items[2] as ConfigItem.Choices).selected],
+        )
+
     /** `new_game_desc`. There is no `AUXINFO`; the result has no aux text. */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params

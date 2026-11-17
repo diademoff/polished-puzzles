@@ -218,6 +218,33 @@ object SameGame : Game {
         return null
     }
 
+    /** `game_configure` (`samegame.c:239-274`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Text("No. of colours", p.ncols.toString()),
+            ConfigItem.Choices(
+                name = "Scoring system",
+                choices = ":(n-1)^2:(n-2)^2",
+                keywords = null,
+                selected = p.scoresub - 1,
+            ),
+            ConfigItem.Bool("Ensure solubility", p.soluble),
+        )
+    }
+
+    /** `custom_params` (`samegame.c:276-287`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            atoi((items[2] as ConfigItem.Text).value, 0),
+            (items[3] as ConfigItem.Choices).selected + 1,
+            (items[4] as ConfigItem.Bool).value,
+        )
+
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         return Description(

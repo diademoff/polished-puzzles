@@ -362,6 +362,43 @@ object Guess : Game {
         return null
     }
 
+    /** `game_configure` (`guess.c:167-201`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Colours", p.ncolours.toString()),
+            ConfigItem.Text("Pegs per guess", p.npegs.toString()),
+            ConfigItem.Text("Guesses", p.nguesses.toString()),
+            ConfigItem.Bool("Allow blanks", p.allowBlank),
+            ConfigItem.Bool("Allow duplicates", p.allowMultiple),
+        )
+    }
+
+    /** `custom_params` (`guess.c:203-215`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            atoi((items[2] as ConfigItem.Text).value, 0),
+            (items[3] as ConfigItem.Bool).value,
+            (items[4] as ConfigItem.Bool).value,
+        )
+
+    /** `get_prefs` (`guess.c:452-467`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Label colours with numbers",
+                false,
+                "show-labels",
+            ),
+        )
+
+    /** `set_prefs` (`guess.c:469-472`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).showLabels = prefs.bool("show-labels")
+    }
+
     /**
      * `new_game_desc`: one `random_upto(ncolours)` per attempt, in peg
      * order. A duplicate is discarded and the same peg is drawn again,

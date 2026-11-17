@@ -176,6 +176,24 @@ object Sixteen : Game {
         return null
     }
 
+    /** `game_configure` (`sixteen.c:138-164`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Text("Number of shuffling moves", p.moveTarget.toString()),
+        )
+    }
+
+    /** `custom_params` (`sixteen.c:166-175`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            atoi((items[2] as ConfigItem.Text).value, 0),
+        )
+
     /**
      * `new_game_desc`. The two branches consume the random stream in the
      * C order: one draw per placed piece, or two draws per shuffle

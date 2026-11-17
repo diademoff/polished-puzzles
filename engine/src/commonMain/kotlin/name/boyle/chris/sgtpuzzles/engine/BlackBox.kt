@@ -359,6 +359,70 @@ object BlackBox : Game {
         return null
     }
 
+    /** `game_configure` (`blackbox.c:145-174`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        val balls = if (p.minBalls == p.maxBalls) {
+            p.minBalls.toString()
+        } else {
+            "${p.minBalls}-${p.maxBalls}"
+        }
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Text("No. of balls", balls),
+        )
+    }
+
+    /**
+     * `custom_params` (`blackbox.c:176-189`): `sscanf("%d-%d")`, and a
+     * single number when the scan reads fewer than two fields.
+     */
+    override fun customParams(items: List<ConfigItem>): Game.Params {
+        val balls = (items[2] as ConfigItem.Text).value
+        val range = scanRange(balls)
+        val min: Int
+        val max: Int
+        if (range != null) {
+            min = range.first
+            max = range.second
+        } else {
+            min = atoi(balls, 0)
+            max = min
+        }
+        return Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            min,
+            max,
+        )
+    }
+
+    /**
+     * C `sscanf(text, "%d-%d")`, as a pair or null when it reads fewer
+     * than two numbers. The literal `-` must follow the first number
+     * with no space, while each `%d` skips leading white space.
+     */
+    private fun scanRange(text: String): Pair<Int, Int>? {
+        var i = 0
+        while (i < text.length && text[i].isWhitespace()) i++
+        val firstStart = i
+        if (i < text.length && (text[i] == '+' || text[i] == '-')) i++
+        val firstDigits = i
+        while (i < text.length && text[i] in '0'..'9') i++
+        if (i == firstDigits) return null
+        val first = atoi(text, firstStart)
+        if (i >= text.length || text[i] != '-') return null
+        i++
+        while (i < text.length && text[i].isWhitespace()) i++
+        val secondStart = i
+        if (i < text.length && (text[i] == '+' || text[i] == '-')) i++
+        val secondDigits = i
+        while (i < text.length && text[i] in '0'..'9') i++
+        if (i == secondDigits) return null
+        return first to atoi(text, secondStart)
+    }
+
     /**
      * `new_game_desc`: the ball count draw, then `x` before `y` for every
      * ball, with a whole-pair retry on a collision. The bytes are
