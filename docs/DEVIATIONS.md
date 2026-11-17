@@ -898,9 +898,10 @@ Anything not listed here is a bug.
 - **What differs:** `rect` with a side of 1 and a positive expansion
   factor passes `validate_params` in C (`rect.c:221-236`), then
   `new_game_desc` computes the base grid side as
-  `(int)(1 / (1 + expandfactor)) == 0` (`rect.c:1160-1170`) and calls
-  `random_upto(rs, params2->h - 1)` with `-1` in the expansion loop,
-  which aborts the process with `allocation too large`. The port throws
+  `(int)(1 / (1 + expandfactor)) == 0` (`rect.c:1160-1170`); the
+  expansion then allocates `snewn(params2->h - 1, int)` with `-1`
+  (`rect.c:1464`), which aborts the process with
+  `allocation too large`. The port throws
   `IllegalArgumentException` with
   `Expansion factor leaves an empty base grid` before it allocates
   anything. The parameter validator still accepts the value, as C does,

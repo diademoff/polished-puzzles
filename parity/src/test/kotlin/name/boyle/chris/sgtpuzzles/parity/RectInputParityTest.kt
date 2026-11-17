@@ -73,6 +73,33 @@ class RectInputParityTest {
         }
 
     @Test
+    fun `a right click toggles the same edge`() = OracleClient().use { oracle ->
+        val base = oracle.newGame("rect", "7x7", SEED)
+        val points = listOf(
+            OracleClient.Point(38, 26, Buttons.RIGHT_BUTTON),
+            OracleClient.Point(38, 26, Buttons.RIGHT_RELEASE),
+        )
+        val expected = oracle.pointsSized(base.state, points, 173, 173)
+        val midend = Midend.fromSave(Rect, SgtpSave.parse(base.state))
+        for (p in points) midend.processKey(p.x, p.y, p.button, 24)
+        assertEquals("right click save", expected.state.state, midend.serialise().serialise())
+        assertEquals(
+            "right click move",
+            listOf("H1,1"),
+            SgtpSave.parse(expected.state.state).values("MOVE"),
+        )
+        // A second right click toggles it back.
+        val again = oracle.pointsSized(expected.state.state, points, 173, 173)
+        for (p in points) midend.processKey(p.x, p.y, p.button, 24)
+        assertEquals("right click twice", again.state.state, midend.serialise().serialise())
+        assertEquals(
+            "back to empty",
+            listOf("H1,1", "H1,1"),
+            SgtpSave.parse(again.state.state).values("MOVE"),
+        )
+    }
+
+    @Test
     fun `a real click matches the oracle at several tile sizes`() = OracleClient().use { oracle ->
         for (params in listOf("7x7", "9x9", "11x11")) {
             val base = oracle.newGame("rect", params, SEED)

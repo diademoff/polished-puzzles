@@ -7,7 +7,6 @@ import name.boyle.chris.sgtpuzzles.engine.Rect
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -76,6 +75,7 @@ class RectGameTest {
             "E0,0,3,3",
             "R 1,1,2,2",
             "R1,1,3,3,4",
+            "R1,1,2,2junk",
             "S1",
             aux,
         )
@@ -110,6 +110,8 @@ class RectGameTest {
             "R-1,0,1,1",
             "R0,0,8,1",
             "R0,0,1,8",
+            "R1,1,-2,1",
+            "E1,1,-1,-1",
             "E1,1",
         )
         for (move in moves) {
@@ -140,6 +142,7 @@ class RectGameTest {
             val applied = Rect.executeMove(midend.state, expected)!!
             val save = appendMove(generated.state, expected)
             val solved = oracle.id(save)
+            assertEquals("$params solved save", solved.state, midendFrom(save).serialise().serialise())
             assertEquals("$params solved status", solved.status, Rect.status(applied))
             assertEquals("$params cheated status", 0, solved.status)
             assertEquals("$params source id", generated.id, solved.id)
@@ -178,7 +181,6 @@ class RectGameTest {
         val setup = moves.dropLast(1).fold(base.state) { text, move -> appendMove(text, move) }
         assertEquals("C is open", 0, oracle.id(setup).status)
         val midend = Midend.fromSave(Rect, SgtpSave.parse(setup))
-        val state = midend.state as Rect.State
         assertEquals("open status", 0, midend.status())
         assertFalse("no event yet", midend.takeCompletedEvent())
 
@@ -190,10 +192,17 @@ class RectGameTest {
         assertTrue("completion event", midend.takeCompletedEvent())
         assertFalse("raised once", midend.takeCompletedEvent())
 
+        // A solve after a completed game leaves it completed and takes
+        // the cheated status text, because the status order tests
+        // `cheated` first.
+        assertTrue(midend.solve())
+        assertEquals("cheated status", 1, midend.status())
+        assertEquals("cheated text", "Auto-solved.", midend.statusText())
+
         // A further toggle keeps the game completed.
-        val after = Rect.executeMove(midend.state, last)!!
+        val after = Rect.executeMove(midend.state, last) as Rect.State
+        assertTrue("completion is sticky", after.completed)
         assertEquals(1, Rect.status(after))
-        assertNotEquals("a real change", state.completed, (after as Rect.State).completed)
     }
 
     @Test
@@ -228,6 +237,8 @@ class RectGameTest {
         assertEquals("restored status", 0, midend.status())
         assertEquals("restored text", "", midend.statusText())
     }
+
+    private fun midendFrom(save: String) = Midend.fromSave(Rect, SgtpSave.parse(save))
 
     private fun midpoint(move: String, tile: Int): Pair<Int, Int> {
         val parts = move.substring(1).split(',').map { it.toInt() }

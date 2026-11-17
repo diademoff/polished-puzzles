@@ -209,6 +209,58 @@ class RectTraceTest {
     }
 
     @Test
+    fun `the in-progress drag preview and status are pinned`() {
+        // The oracle cannot record a frame in the middle of an input,
+        // because its traced redraw happens after the release. The
+        // preview colour and the drag dimension prefix are pinned on
+        // the port side.
+        val midend = Midend.newGame(Rect, "7x7", SEED)
+        val points = listOf(
+            OracleClient.Point(14, 14, Buttons.LEFT_BUTTON),
+            OracleClient.Point(26, 26, Buttons.LEFT_DRAG),
+            OracleClient.Point(38, 38, Buttons.LEFT_DRAG),
+        )
+        for (p in points) midend.processKey(p.x, p.y, p.button, 24)
+        val ui = midend.ui as Rect.Ui
+        assertTrue("dragging", ui.dragged)
+        val preview = TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend, 24), upstream)
+        assertEquals("preview status", listOf("status \"2x2 \""), preview.lines().filter { it.startsWith("status ") })
+        assertTrue(
+            "preview colour",
+            preview.lines().any { it.startsWith("rect ") && it.endsWith(" 5") },
+        )
+
+        // Release clears the preview and the status prefix.
+        midend.processKey(38, 38, Buttons.LEFT_RELEASE, 24)
+        assertFalse("released", ui.dragged)
+        val after = TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend, 24), upstream)
+        assertEquals("after status", listOf("status \"\""), after.lines().filter { it.startsWith("status ") })
+        assertFalse("no preview", after.lines().any { it.startsWith("rect ") && it.endsWith(" 5") })
+
+        // A right drag uses the erase colour.
+        val erase = Midend.newGame(Rect, "7x7", SEED)
+        val erasePoints = listOf(
+            OracleClient.Point(14, 14, Buttons.RIGHT_BUTTON),
+            OracleClient.Point(26, 26, Buttons.RIGHT_DRAG),
+            OracleClient.Point(38, 38, Buttons.RIGHT_DRAG),
+        )
+        for (p in erasePoints) erase.processKey(p.x, p.y, p.button, 24)
+        val erasePreview = TraceNormalizer.normalize(
+            KotlinTraceSink.stateTrace(erase, 24),
+            upstream,
+        )
+        assertTrue(
+            "erase preview colour",
+            erasePreview.lines().any { it.startsWith("rect ") && it.endsWith(" 6") },
+        )
+        assertEquals(
+            "erase status",
+            listOf("status \"2x2 \""),
+            erasePreview.lines().filter { it.startsWith("status ") },
+        )
+    }
+
+    @Test
     fun `the completed frame matches the oracle`() = OracleClient().use { oracle ->
         val base = oracle.newGame("rect", "7x7", SEED)
         val aux = Midend.fromSave(Rect, SgtpSave.parse(base.state)).auxInfo!!

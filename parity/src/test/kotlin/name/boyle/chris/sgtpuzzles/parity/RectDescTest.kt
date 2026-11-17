@@ -92,6 +92,9 @@ class RectDescTest {
             "8x5" to "12345",
             "5x8" to "12345",
             "7x7e0.25" to "3",
+            "1x7" to "12345",
+            "7x1" to "12345",
+            "2x1" to "1",
         )
         for ((params, seed) in cases) {
             val expected = oracle.newGame("rect", params, seed)
