@@ -41,16 +41,12 @@ object ScreenshotGoldens {
     private const val ASSET_DIR = "screens"
 
     /*
-     * The reference AVD is the row "Screen" in
-     * `tools/perf/baseline.md`: 1080x2400 at 420 dpi. The three recorded
-     * goldens in `app/src/androidTest/assets/screens/` are 1080x2400.
-     * The layout, the text, and the anti-aliasing all depend on the pixel
-     * size and the density, so another device cannot be compared without
-     * a new golden. The gate skips instead of failing.
+     * The reference display is `ReferenceCaptureGate`, sourced from the
+     * "Screen" row in `tools/perf/baseline.md`. The layout, the text, and
+     * the anti-aliasing all depend on the pixel size and the density, so
+     * another device cannot be compared without a new golden. Another
+     * device skips; the reference display left in landscape fails.
      */
-    private const val REFERENCE_WIDTH = 1080
-    private const val REFERENCE_HEIGHT = 2400
-    private const val REFERENCE_DENSITY_DPI = 420
 
     /** A frame can still be settling right after launch; retry a few times. */
     private const val ATTEMPTS = 3
@@ -65,9 +61,10 @@ object ScreenshotGoldens {
      * Skips the whole class unless this is the reference device.
      *
      * The gate uses the captured screen, not a configuration value: the
-     * capture is the artifact that is compared. A display left in
-     * landscape by another test is 2340x1080 here, so the gate skips it
-     * instead of letting the golden comparison fail on the size.
+     * capture is the artifact that is compared. A capture at the
+     * reference density with the sides swapped is the reference display
+     * left in landscape, so the gate fails instead of hiding a real
+     * regression. Any other size or density skips.
      */
     fun requireReferenceDevice() {
         val densityDpi = instrumentation.targetContext.resources.displayMetrics.densityDpi
@@ -76,14 +73,22 @@ object ScreenshotGoldens {
             fail("the device did not return a screenshot")
             return
         }
-        assumeTrue(
-            "skipped: not the reference device. The chooser goldens were recorded on the " +
-                "1080x2400 420 dpi AVD (tools/perf/baseline.md); this device captures " +
-                "${capture.width}x${capture.height} at $densityDpi dpi",
-            capture.width == REFERENCE_WIDTH &&
-                capture.height == REFERENCE_HEIGHT &&
-                densityDpi == REFERENCE_DENSITY_DPI,
-        )
+        when (ReferenceCaptureGate.classify(capture.width, capture.height, densityDpi)) {
+            ReferenceCaptureGate.Verdict.REFERENCE -> Unit
+            ReferenceCaptureGate.Verdict.ROTATED -> fail(
+                "the display is rotated: captured ${capture.width}x${capture.height} at " +
+                    "$densityDpi dpi, but the reference orientation is " +
+                    "${ReferenceCaptureGate.WIDTH}x${ReferenceCaptureGate.HEIGHT}. " +
+                    "Rotate the display back to portrait and rerun.",
+            )
+            ReferenceCaptureGate.Verdict.OTHER -> assumeTrue(
+                "skipped: not the reference device. The chooser goldens were recorded on the " +
+                    "${ReferenceCaptureGate.WIDTH}x${ReferenceCaptureGate.HEIGHT} " +
+                    "${ReferenceCaptureGate.DENSITY_DPI} dpi AVD (tools/perf/baseline.md); " +
+                    "this device captures ${capture.width}x${capture.height} at $densityDpi dpi",
+                false,
+            )
+        }
     }
 
     fun compare(name: String) {
