@@ -43,6 +43,7 @@ import org.junit.Test
  * - `tracks.c:3027`: `"Train Tracks", "games.tracks", "tracks"`
  * - `dominosa.c:3463`: `"Dominosa", "games.dominosa", "dominosa"`
  * - `map.c:3390`: `"Map", "games.map", "map"`
+ * - `keen.c:2575`: `"Keen", "games.keen", "keen"`
  *
  * The oracle is not available to app unit tests, so the expected value
  * is the third field of these initializers. `HelpActivity` accepts only
@@ -84,6 +85,7 @@ class HelpTopicTest {
         TRACKS to "tracks",
         DOMINOSA to "dominosa",
         MAP to "map",
+        KEEN to "keen",
     )
 
     @Test

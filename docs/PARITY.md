@@ -174,9 +174,9 @@ C wins.
 | `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
 | `grid`, `loopgen` | C until the first game consumer (ADR 0006) | C |
-| `latin` | parity: `engine/Latin.kt`, differential test on the generic path; the per-game callbacks arrive with keen | C behavior |
+| `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, and `net` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, and `keen` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -204,7 +204,7 @@ submenu entries when a game groups its presets.
 | `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `C` |
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `dual-run` |
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
-| `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `C` |
+| `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `dual-run` |
 | `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `dual-run` |
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `dual-run` |
@@ -1494,6 +1494,86 @@ Notes:
   two-release wait. `MINES` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `handles(MINES)` is false and the app uses C. The
   seam is `docs/adr/0007-kotlin-game-seam.md`.
+
+- `keen` is `dual-run`. Its parameters and ten presets, the decode
+  quirks and validation order, the Latin-square generator with its two
+  order shuffles and two solver gates, the clue choice, the state and
+  the shared blocks, the move grammar, the sticky completion, the
+  `AUXINFO` solve and the clue solve, the empty text form, the palette,
+  the thick block outlines, drawing, layout, input, `currentKeyLabel`,
+  and `requestKeys` pass the matrix in `KeenDescTest`,
+  `KeenGameTest`, `KeenSaveTest`, `KeenTraceTest`,
+  `KeenInputParityTest`, the engine `KeenTest`, and the shared
+  `LatinParityTest` and `LatinTest`.
+
+  `Latin.kt` is differentially pinned before Keen uses it. The oracle's
+  `latin` operation compares `latin_generate` and `latin_generate_rect`
+  grids and the encoded generator state for orders 1..9, rectangles,
+  and resumed states, and it compares `latin_solver` at every
+  `maxdiff` from 0 to 4 over complete, unique, set, extreme-set,
+  forcing, recursive, ambiguous, invalid, and impossible grids.
+  `KeenDescTest` then pins Keen's own callback layer: the box order by
+  class minimum, the transposed cube indexing, the ADD/MUL odometer,
+  the Hard early return, the validator, and the five difficulty slots
+  `0, 2, 3, 3, 4`.
+
+  The save matrix reads all eleven corpus saves (`default` plus the ten
+  presets), rewrites them byte for byte, and compares id, status,
+  `canUndo`, `canRedo`, text, `textFormat`, and `AUXINFO` with C. A
+  Kotlin save for every preset and nine seeds loads in C with the same
+  id, text, status, and `AUXINFO`. The `PARAMS`/`CPARAMS` split is
+  pinned: the long-term params are the short width decoded over the
+  defaults, so `5dem` writes `PARAMS 5dn` and `CPARAMS 5dem`, and the
+  short id has no `d` or `m`. In-memory history round-trips number
+  entry, a pencil mark, `M`, an undone position with a live redo
+  branch, a `SOLVE`, and a `RESTART` in both directions. No save has a
+  `UI`, `TIME`, `PRIVDESC`, or `HEXSEED` record.
+
+  The state of a new game comes from the long-term params and the state
+  of a load from `CPARAMS`, as C does (`midend.c:628`,
+  `midend.c:2634-2642`). `multiplication_only` is in the full encoding
+  and not in the short one, so a new `5dem` state draws `5×` and a
+  loaded `5dem` save draws `5`. `KeenGameTest` and `KeenTraceTest` pin
+  both frames. The `Midend` change touches every game; the whole suite,
+  including every frozen trace, stays green. `MinesSaveTest` pins the
+  same rule for the mine count: a new `9x9n10` game has state `n = 8`
+  from the short params and a load has `n = 10` from `CPARAMS`.
+
+  `KeenInputParityTest` sends real presses and digits at tiles 48, 63,
+  82, and 100, a right-button pencil mark and its toggle, `M` at every
+  tile and at the 411x702 letterbox, the cursor and the two select
+  keys, and the border, letterbox, drag, release, middle press, and
+  hidden-digit cases. It compares state, id, status, undo, redo, and
+  the final frame with `pointsSized`. Every real number change fills
+  the cell and adds one move; `M` fills every empty pencil bitmap and
+  adds one move with status 0; an inert event changes neither the
+  board nor the count. `KeenTraceTest` pins the error colours for two
+  equal digits and for a complete block with a wrong clue. `requestKeys`
+  is arrow mode 2 with the labels `1`..`w`, `Clear`, and `Mark`, every
+  key reports `needsArrows` false, and the full-cursor hint does not
+  change the result.
+
+  C undefined behavior is defined by the port and pinned, not entered
+  in `DEVIATIONS.md`: `encode_params` writes a plain `d` for a
+  difficulty outside `0..4`, the move `%d` scan and `atoi` saturate,
+  the block-structure repeat count is bounded, and the block outline
+  reserves the polyomino perimeter bound. None is reachable from a
+  validated parameter set, a validated description, or a generated
+  move. The `SOLVE` values come from `AUXINFO` when present, so every
+  generated save solves with the stored answer.
+
+  Enablement debt. S8 must build the four-field configuration schema
+  (`Grid size`, `Difficulty` with
+  `":Easy:Normal:Hard:Extreme:Unreasonable"`, `Multiplication only`),
+  apply `pencil-keep-highlight` after `newUi` and after
+  `Midend.fromSave`, gate the status text on `wantsStatusBar` (it is
+  false), show `No solution exists for this puzzle` and `Multiple
+  solutions exist for this puzzle` instead of throwing, generate off
+  the UI thread (`9dn` takes about 100 ms in C but the retry count is
+  unbounded), and wait two releases. `currentKeyLabel` is a tested
+  helper because the Android shell has no call site (S9). `KEEN` is in
+  `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(KEEN)` is
+  false and the two-release wait still applies.
 
 ## 8. Goldens
 

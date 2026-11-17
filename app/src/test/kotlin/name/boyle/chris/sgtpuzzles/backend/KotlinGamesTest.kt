@@ -9,6 +9,7 @@ import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
+import name.boyle.chris.sgtpuzzles.engine.Keen
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Magnets
 import name.boyle.chris.sgtpuzzles.engine.Map
@@ -228,6 +229,12 @@ class KotlinGamesTest {
     fun `map is registered but the app still uses C`() {
         assertEquals(Map, KotlinGames.gameFor(MAP))
         assertFalse(KotlinGames.handles(MAP))
+    }
+
+    @Test
+    fun `keen is registered but the app still uses C`() {
+        assertEquals(Keen, KotlinGames.gameFor(KEEN))
+        assertFalse(KotlinGames.handles(KEEN))
     }
 
     @Test

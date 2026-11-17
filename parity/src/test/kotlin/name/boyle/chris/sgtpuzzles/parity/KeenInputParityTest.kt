@@ -68,6 +68,24 @@ class KeenInputParityTest {
         assertEquals("$what redo", expected.canRedo, midend.canRedo)
     }
 
+    private fun upstream(): String =
+        UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+
+    private fun normalize(trace: JsonValue.Obj): String =
+        TraceNormalizer.normalize(trace, upstream())
+
+    private fun assertLines(what: String, expected: String, actual: String) {
+        val expectedLines = expected.trimEnd('\n').lines()
+        val actualLines = actual.trimEnd('\n').lines()
+        for (i in 0 until maxOf(expectedLines.size, actualLines.size)) {
+            assertEquals(
+                "$what line ${i + 1}",
+                expectedLines.getOrNull(i),
+                actualLines.getOrNull(i),
+            )
+        }
+    }
+
     @Test(timeout = 300_000)
     fun `the layout matches every viewport`() = OracleClient().use { oracle ->
         val viewports = listOf(
@@ -186,6 +204,11 @@ class KeenInputParityTest {
                                 1,
                                 midend.stateCount,
                             )
+                            assertEquals(
+                                "tile $tile step $index leaves the cell empty",
+                                0,
+                                (midend.state as Keen.State).grid[1],
+                            )
                         }
 
                         2 -> {
@@ -195,6 +218,12 @@ class KeenInputParityTest {
                                 outcomes.single(),
                             )
                             assertEquals("tile $tile digit moves", 2, midend.stateCount)
+                            assertEquals(
+                                "tile $tile digit fills the cell",
+                                6,
+                                (midend.state as Keen.State).grid[1],
+                            )
+                            assertEquals("tile $tile digit status", 0, midend.status())
                         }
 
                         6 -> {
@@ -210,8 +239,13 @@ class KeenInputParityTest {
 
                 // The last step enters 6 on a cell that already holds 6,
                 // so it is unused with the default preference.
-                val final = oracle.pointsSized(save, points, board, board)
+                val final = oracle.pointsSized(save, points, board, board, recordTrace = true)
                 assertEquals(board, final.state.width)
+                assertLines(
+                    "tile $tile final trace",
+                    normalize(final.trace!!),
+                    normalize(KotlinTraceSink.stateTrace(midend, tile)),
+                )
             }
         }
 
@@ -318,6 +352,12 @@ class KeenInputParityTest {
                     outcomes.all { it == KeyOutcome.Unused },
                 )
                 assertEquals("case $points adds no move", 1, midend.stateCount)
+                assertEquals(
+                    "case $points changes no board",
+                    save,
+                    midend.serialise().serialise(),
+                )
+                assertEquals("case $points keeps status 0", 0, midend.status())
             }
 
             // The positive control: a press and a digit do change the
@@ -360,6 +400,126 @@ class KeenInputParityTest {
             )
             assertSame("pencil on filled", expected, midend)
             assertEquals(2, midend.stateCount)
+        }
+
+    @Test(timeout = 300_000)
+    fun `a pencil mark at four tiles and the letterbox matches the oracle`() =
+        OracleClient().use { oracle ->
+            for (tile in listOf(48, 63, 82, 100)) {
+                val board = Keen.computeSize(Keen.decodeParams("6dn"), tile).width
+                val points = press(tile, 0, Buttons.RIGHT_BUTTON) +
+                    listOf(OracleClient.Point(0, 0, '3'.code))
+                val expected = oracle.pointsSized(
+                    save,
+                    points,
+                    board,
+                    board,
+                    recordTrace = true,
+                )
+                val midend = midend()
+                apply(midend, points, tile)
+                assertSame("tile $tile pencil", expected.state, midend)
+                assertEquals("tile $tile move", "P0,0,3", midend.serialise().value("MOVE"))
+                assertEquals("tile $tile adds one move", 2, midend.stateCount)
+                assertEquals("tile $tile status", 0, midend.status())
+                assertEquals(
+                    "tile $tile keeps the grid empty",
+                    0,
+                    (midend.state as Keen.State).grid[0],
+                )
+                assertLines(
+                    "tile $tile trace",
+                    normalize(expected.trace!!),
+                    normalize(KotlinTraceSink.stateTrace(midend, tile)),
+                )
+            }
+
+            // The same mark in the 411x702 letterbox.
+            val geometry = midend().geometryFor(411, 702)
+            val (gx, gy) = cellPoint(geometry.tileSize, 0)
+            val viewPoints = listOf(
+                OracleClient.Point(gx + geometry.originX, gy + geometry.originY, Buttons.RIGHT_BUTTON),
+                OracleClient.Point(gx + geometry.originX, gy + geometry.originY, Buttons.RIGHT_RELEASE),
+                OracleClient.Point(0, 0, '3'.code),
+            )
+            val expected = oracle.pointsSized(save, viewPoints, 411, 702, recordTrace = true)
+            val midend = midend()
+            for (point in viewPoints) {
+                midend.processKey(
+                    point.x - geometry.originX,
+                    point.y - geometry.originY,
+                    point.button,
+                    geometry.tileSize,
+                )
+            }
+            assertSame("letterbox pencil", expected.state, midend)
+            assertEquals("letterbox move", "P0,0,3", midend.serialise().value("MOVE"))
+            assertLines(
+                "letterbox trace",
+                normalize(expected.trace!!),
+                normalize(KotlinTraceSink.stateTrace(midend, geometry.tileSize)),
+            )
+        }
+
+    @Test(timeout = 300_000)
+    fun `M marks every empty cell at four tiles and the letterbox`() =
+        OracleClient().use { oracle ->
+            val expected = oracle.keys(save, listOf('M'.code))
+            for (tile in listOf(48, 63, 82, 100)) {
+                val board = Keen.computeSize(Keen.decodeParams("6dn"), tile).width
+                val midend = midend()
+                assertEquals(
+                    "tile $tile M",
+                    KeyOutcome.SomeEffect,
+                    midend.processKey(0, 0, 'M'.code, tile),
+                )
+                assertEquals("tile $tile adds one move", 2, midend.stateCount)
+                assertEquals("tile $tile move", "M", midend.serialise().value("MOVE"))
+                assertSame("tile $tile", expected, midend)
+                assertTrue(
+                    "tile $tile marks every cell",
+                    (midend.state as Keen.State).pencil.all { it != 0 },
+                )
+                val final = oracle.pointsSized(
+                    save,
+                    listOf(OracleClient.Point(0, 0, 'M'.code)),
+                    board,
+                    board,
+                    recordTrace = true,
+                )
+                assertLines(
+                    "tile $tile trace",
+                    normalize(final.trace!!),
+                    normalize(KotlinTraceSink.stateTrace(midend, tile)),
+                )
+            }
+
+            // The letterbox path sends the shell's game-local coordinates,
+            // which a keyboard event ignores.
+            val geometry = midend().geometryFor(411, 702)
+            val letterbox = midend()
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                letterbox.processKey(
+                    -geometry.originX,
+                    -geometry.originY,
+                    'M'.code,
+                    geometry.tileSize,
+                ),
+            )
+            assertSame("letterbox", expected, letterbox)
+            val final = oracle.pointsSized(
+                save,
+                listOf(OracleClient.Point(0, 0, 'M'.code)),
+                411,
+                702,
+                recordTrace = true,
+            )
+            assertLines(
+                "letterbox trace",
+                normalize(final.trace!!),
+                normalize(KotlinTraceSink.stateTrace(letterbox, geometry.tileSize)),
+            )
         }
 
     @Test(timeout = 300_000)

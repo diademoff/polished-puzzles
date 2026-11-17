@@ -363,7 +363,10 @@ Engine tests:
   recursive, ambiguous, invalid, and impossible grids, and it pins
   `latin_check`. `LatinTest` pins fixed vectors, the Latin square and
   placement invariants, and the context copy and free protocol that a
-  game solver uses.
+  game solver uses. The game callback layer is pinned by
+  `KeenDescTest`: box order, transposed cube indexing, the ADD/MUL
+  odometer, the Hard early return, the validator, and Keen's difficulty
+  slots `0, 2, 3, 3, 4`.
 - `PegsTest` checks the pegs parameter quirks, the state ownership, the
   text format, the key label, the loose move grammar, the lax
   completion rule, the cursor scan order, and the generator's retry
@@ -2823,6 +2826,72 @@ aggressive 100x100 latency is an enablement debt:
   before enablement. `MAP` is in `KotlinGames.gameFor` and not in
   `APP_GAMES`, so `KotlinGames.handles(MAP)` is false and the app uses
   C. S9 is a tested `currentKeyLabel` helper with no Android call site.
+
+- `KeenDescTest` is semantic. It compares the ten presets and the
+  default with the oracle, the eleven golden descriptions at the shared
+  seed, nine seed strings per preset, the decode quirks (`6m`, `6dnxyz`,
+  `6dm`, `6d`, `6dq`, `2`, `10`, and `+5`), the validation order and
+  messages, and the `3x3` difficulty downgrade. It also pins
+  the `PARAMS ...dn` / `CPARAMS ...dem` split, the new-game short state
+  and the load full state, the generator attempt diagnostics, and the
+  `AUXINFO` answer. The generator draws one Latin square, one order
+  shuffle, one `random_upto(4)` per domino-capable singleton, a second
+  order shuffle, and then the two solver gates; the clue choice draws
+  nothing. A missing or reordered draw changes every id, so the goldens
+  and sweeps are the guard.
+- `KeenGameTest` is semantic and strict where a frame is compared. It
+  compares every preset's `SOLVE`, key sequences including the Android
+  pencil branches and modified keys, undo and redo after a digit and a
+  solve, completion by real clicks and digits, `requestKeys` in both
+  full-cursor modes, and the absent text form. A dedicated regression
+  pins the `Midend` state-params rule: a new `5dem` game gets the
+  short-form value (no flag, operator drawn), and a load of the same
+  save gets the full-form value (flag on, no operator).
+- `KeenSaveTest` is strict for the save text and semantic for the
+  state. It reads all eleven corpus saves, rewrites them byte for byte,
+  and compares id, status, undo, redo, text, `textFormat`, and
+  `AUXINFO` with C. A Kotlin save for every preset and nine seeds loads
+  in C with the same id and text. In-memory history covers number entry,
+  a pencil mark, `M`, an undone position with a live redo branch, a
+  `SOLVE`, and a `RESTART`. No save has a `UI`, `TIME`, `PRIVDESC`, or
+  `HEXSEED` record, and a save without `AUXINFO` solves from the clues.
+- `KeenTraceTest` is strict. It compares the ten frozen traces, the
+  loaded multiplication-only saves, sized frames at tiles 48, 63, 82,
+  and 100, the 411x702 letterbox, the cursor and pencil triangle, a
+  digit and a pencil mark, both error colours, a completed board, and
+  the warm path with its block polygons. Every Keen frame is
+  blitter-free and carries one `thick_poly` per block.
+- `KeenInputParityTest` is semantic and ui. It compares the layout at
+  six viewports, real presses and digits at tiles 48, 63, 82, and 100,
+  a pencil mark and its toggle, `M` at every tile and at the letterbox,
+  the border bands and cell edges, the cursor and select keys, and the
+  inert drag, release, middle press, hidden digit, and pencil-on-filled
+  cases. State, id, status, undo, redo, and the final frame with
+  `pointsSized` are compared. Every real number change fills the cell
+  and adds one move; `M` changes every empty pencil bitmap and adds one
+  move with status 0; an inert event changes neither the board nor the
+  count.
+- `KeenTest` is the engine test. It pins the decode and validation
+  tables, the plain `d` for an out-of-range difficulty, the saturating
+  move parse, the block-structure bounds, the move grammar and the
+  sticky completion, `changedState`, the two solve errors, the solver
+  difficulty slots, the palette and size search, `currentKeyLabel`, and
+  the UI default. Keen enablement debt is the S8 configuration schema,
+  `pencil-keep-highlight` applied after `newUi` and `fromSave`, the
+  status gate on `wantsStatusBar`, the two solve messages, generation
+  off the UI thread, and the two-release wait. S9 is a tested
+  `currentKeyLabel` helper with no Android call site. `KEEN` is in
+  `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `KotlinGames.handles(KEEN)` is false and the app uses C.
+
+- The `Midend` state-params rule is cross-cutting. `newGame` and
+  `fromGameId` build state 0 from the short (long-term) params, as
+  `midend_new_game` does, and `fromSave` builds it from `CPARAMS`.
+  `KeenGameTest` pins the Keen operator quirk, `KeenTraceTest` pins both
+  frames, and `MinesSaveTest` pins the mine count: a new `9x9n10` game
+  has `n = 8` from the short params and a load has `n = 10` from
+  `CPARAMS`. Every other game's state and frozen trace is part of the
+  same suite, so a regression in the shared rule fails there.
 
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a

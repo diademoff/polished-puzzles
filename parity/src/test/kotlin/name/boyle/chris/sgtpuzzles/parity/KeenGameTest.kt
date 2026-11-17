@@ -164,6 +164,49 @@ class KeenGameTest {
         }
 
     @Test(timeout = 300_000)
+    fun `a play-time parameter is short on a new game and full on load`() =
+        OracleClient().use { oracle ->
+            // `multiplication_only` is in the full encoding and not in
+            // the short one, and it changes the drawn operator. C builds
+            // a new state from `me->params` (`midend.c:628`), which is
+            // the short form decoded over the defaults on the game-id
+            // path, and a load from `CPARAMS` (`midend.c:2634-2642`).
+            val params = "5dem"
+            val fresh = Midend.newGame(Keen, params, SEED)
+            val freshState = fresh.state as Keen.State
+            assertFalse("new state flag", freshState.params.multiplicationOnly)
+            assertEquals("new state params", Keen.decodeParams("5"), freshState.params)
+            assertEquals("PARAMS", "5dn", fresh.serialise().value("PARAMS"))
+            assertEquals("CPARAMS", params, fresh.serialise().value("CPARAMS"))
+
+            val cNew = oracle.newGame("keen", params, SEED)
+            assertEquals("new game save", cNew.state, fresh.serialise().serialise())
+            assertEquals("new game id", cNew.id, fresh.id())
+
+            val loaded = Midend.fromSave(Keen, SgtpSave.parse(cNew.state))
+            val loadedState = loaded.state as Keen.State
+            assertTrue("loaded state flag", loadedState.params.multiplicationOnly)
+            assertEquals("loaded state params", Keen.decodeParams(params), loadedState.params)
+            assertEquals("load keeps the id", fresh.id(), loaded.id())
+
+            // The flag is a drawing input only: the two states have the
+            // same grid and blocks, and C draws the operator on the new
+            // game and not on the load.
+            assertTrue(
+                "new game draws the operator",
+                normalize(oracle.traceNew("keen", params, SEED)).lines().any {
+                    it.startsWith("text ") && it.endsWith("\"5\u00d7\"")
+                },
+            )
+            assertTrue(
+                "loaded save draws no operator",
+                normalize(oracle.trace(cNew.state)).lines().none {
+                    it.startsWith("text ") && it.contains("\u00d7")
+                },
+            )
+        }
+
+    @Test(timeout = 300_000)
     fun `the request keys match the oracle for every preset`() =
         OracleClient().use { oracle ->
             for (params in Keen.presets().map { it.params } + "") {

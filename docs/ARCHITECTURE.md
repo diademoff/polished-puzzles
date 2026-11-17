@@ -145,6 +145,13 @@ solver, text, status, keys, and drawing. `engine/Midend.kt` owns the
 history and the `.sgtp` records. `engine/Fifteen.kt` is the first
 implementation.
 
+`Midend.newGame` and `Midend.fromGameId` build state 0 from the decoded
+short (long-term) parameters, as `midend_new_game` does
+(`midend.c:628`); `Midend.fromSave` builds it from `CPARAMS`. A game
+may keep a play-time parameter out of the short encoding, which is why
+Keen's new game draws its operator and a loaded save does not. The
+rule is shared, so every game's tests and frozen traces cover it.
+
 `DrawSink` is the Kotlin drawing seam. `Fifteen` records the same
 primitives as the C game, and `FifteenTraceTest` compares the result
 with the frozen traces through `TraceNormalizer`. The app still draws
@@ -169,10 +176,15 @@ format with other platforms and the main parity oracle.
 `engine/Sort.kt` ports upstream `arraysort()`, a heapsort whose tie
 order is observable, and `engine/Combinations.kt` ports `combi.c`.
 `DeterministicHelpersParityTest` compares both with the oracle.
-`Dsf`, `Tdq`, `FindLoop`, `Matching`, and `Tree234` are the solver
-utilities listed in `docs/adr/0006-port-libraries-with-consumer.md`.
+`Dsf`, `Tdq`, `FindLoop`, `Matching`, `Tree234`, and `Latin` are the
+solver utilities listed in `docs/adr/0006-port-libraries-with-consumer.md`.
+`Latin.kt` ports `latin.c` with the cube layout, the strategy restart
+loop, the recursion and context copy protocol, and the first-solution
+write-back. `LatinParityTest` compares generation, the encoded RNG
+state, and the solver difficulty at every `maxdiff` with the oracle;
+`keen` is the first game consumer of its callback layer.
 `Game`, `Midend`, and `Fifteen` are the first Phase 4 slice; see
-`docs/adr/0007-kotlin-game-seam.md`. `grid`, `latin`, and `loopgen`
+`docs/adr/0007-kotlin-game-seam.md`. `grid` and `loopgen`
 stay in C until their first game consumer, because their behavior is
 only observable through a game. The semantic midend is in Kotlin; the
 shell parts of the C midend stay in C until the app uses a Kotlin
