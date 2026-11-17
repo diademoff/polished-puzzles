@@ -40,6 +40,18 @@ object ScreenshotGoldens {
 
     private const val ASSET_DIR = "screens"
 
+    /*
+     * The reference AVD is the row "Screen" in
+     * `tools/perf/baseline.md`: 1080x2400 at 420 dpi. The three recorded
+     * goldens in `app/src/androidTest/assets/screens/` are 1080x2400.
+     * The layout, the text, and the anti-aliasing all depend on the pixel
+     * size and the density, so another device cannot be compared without
+     * a new golden. The gate skips instead of failing.
+     */
+    private const val REFERENCE_WIDTH = 1080
+    private const val REFERENCE_HEIGHT = 2400
+    private const val REFERENCE_DENSITY_DPI = 420
+
     /** A frame can still be settling right after launch; retry a few times. */
     private const val ATTEMPTS = 3
     private const val RETRY_DELAY_MS = 400L
@@ -48,6 +60,31 @@ object ScreenshotGoldens {
 
     private val recording: Boolean
         get() = InstrumentationRegistry.getArguments().getString("recordScreens") == "true"
+
+    /**
+     * Skips the whole class unless this is the reference device.
+     *
+     * The gate uses the captured screen, not a configuration value: the
+     * capture is the artifact that is compared. A display left in
+     * landscape by another test is 2340x1080 here, so the gate skips it
+     * instead of letting the golden comparison fail on the size.
+     */
+    fun requireReferenceDevice() {
+        val densityDpi = instrumentation.targetContext.resources.displayMetrics.densityDpi
+        val capture = screenshot()
+        if (capture == null) {
+            fail("the device did not return a screenshot")
+            return
+        }
+        assumeTrue(
+            "skipped: not the reference device. The chooser goldens were recorded on the " +
+                "1080x2400 420 dpi AVD (tools/perf/baseline.md); this device captures " +
+                "${capture.width}x${capture.height} at $densityDpi dpi",
+            capture.width == REFERENCE_WIDTH &&
+                capture.height == REFERENCE_HEIGHT &&
+                densityDpi == REFERENCE_DENSITY_DPI,
+        )
+    }
 
     fun compare(name: String) {
         if (recording) {

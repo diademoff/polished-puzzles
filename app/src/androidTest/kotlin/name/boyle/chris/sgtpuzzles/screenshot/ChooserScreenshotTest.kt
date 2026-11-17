@@ -14,6 +14,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.NIGHT_MODE_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.STATE_PREFS_NAME
 import org.junit.After
 import org.junit.AfterClass
+import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,6 +46,11 @@ import java.io.FileInputStream
  */
 @RunWith(AndroidJUnit4::class)
 class ChooserScreenshotTest {
+
+    @Before
+    fun requireReferenceDevice() {
+        ScreenshotGoldens.requireReferenceDevice()
+    }
 
     @Test
     fun chooserListLight() {
