@@ -264,8 +264,10 @@ game rule or a save file.
      `'\x12'`, `'\x19'`, `UI_REDO`; `'\x13'`, `UI_SOLVE`; `'q'`, `'Q'`,
      `'\x11'`, `UI_QUIT`.
    `CTRL+Z` canonicalises to `'\x1A'`, so it undoes. `CTRL+SHFT+Z`
-   becomes `UI_REDO` in the midend, so it redoes. `one_key_shortcuts` is
-   always on, the C default; the seam has no preference store.
+   becomes `UI_REDO` in the midend, so it redoes. At the time of this
+   amendment `one_key_shortcuts` was always on, the C default, and the
+   seam had no preference store; the S8 amendment below adds the store
+   and keeps `one-key-shortcuts` as its first value.
 
 3. **New game and quit stay in the shell.** This seam owns no new-game
    or quit action, and `midend_new_game` needs the menu path that lives
