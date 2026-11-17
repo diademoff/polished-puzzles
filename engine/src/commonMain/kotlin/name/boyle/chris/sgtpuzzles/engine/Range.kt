@@ -128,8 +128,8 @@ object Range : Game {
 
         /**
          * `swap_buttons`: true selects `left-mouse-button=dot`, so a
-         * left press cycles forwards and a right press backwards. The
-         * preference is applied by the shell through this field.
+         * left press cycles forwards and a right press backwards.
+         * [Range.setPrefs] copies the preference here.
          */
         var swapButtons = false
     }
@@ -229,6 +229,27 @@ object Range : Game {
             atoi((items[0] as ConfigItem.Text).value, 0),
             atoi((items[1] as ConfigItem.Text).value, 0),
         )
+
+    /** True: the C backend has a non-NULL `get_prefs`. */
+    override val declaresPrefs: Boolean get() = true
+
+    /** `get_prefs` (`range.c:1276-1288`): the mouse button order. */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Choices(
+                name = "Mouse button order",
+                choices = ":Left to fill, right to dot:Left to dot, right to fill",
+                keywords = ":fill:dot",
+                selected = 0,
+                kw = "left-mouse-button",
+            ),
+        )
+
+    /** `set_prefs` (`range.c:1296-1299`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        val u = ui as Ui
+        u.swapButtons = prefs.choice("left-mouse-button") == 1
+    }
 
     /** `new_game_desc`: fill, winnow, and retry while the winnow refuses. */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
@@ -331,13 +352,25 @@ object Range : Game {
      * `solve_game` from `range.c:318-341`. C reads the first state, so
      * the port solves [Shared.initialGrid]. `auxInfo` is ignored, and a
      * valid board always yields a move string: the C error path needs a
-     * reasoning that returns NULL, and none can. The null result is the
-     * seam's "cannot solve" contract; only a shared grid that does not
-     * match its parameters reaches it, and no midend path builds one.
+     * reasoning that returns NULL, and none of the four can. The null
+     * result is the seam's "cannot solve" contract; only a shared grid
+     * that does not match its parameters reaches it, and no midend path
+     * builds one.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` with the C error text. `Puzzle is inconsistent`
+     * (`range.c:337`) belongs to the `moves == NULL` branch, which the
+     * four reasonings cannot produce; the only way here is the port's
+     * guard against a grid that does not match its parameters.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
         val s = state as State
-        if (s.shared.initialGrid.size != s.width * s.height) return null
+        if (s.shared.initialGrid.size != s.width * s.height) {
+            return SolveOutcome(null, "Puzzle is inconsistent")
+        }
         val moves = RangeSolver.solve(
             s.shared.initialGrid,
             s.width,
@@ -350,7 +383,7 @@ object Range : Game {
             out.append(if (move.colour == RangeSolver.M_BLACK) 'B' else 'W')
             out.append(',').append(move.r).append(',').append(move.c)
         }
-        return out.toString()
+        return SolveOutcome(out.toString(), null)
     }
 
     /**

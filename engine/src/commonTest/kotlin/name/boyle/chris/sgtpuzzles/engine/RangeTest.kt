@@ -176,6 +176,43 @@ class RangeTest {
         val shared = Range.Shared(3, 3, IntArray(4), BooleanArray(4))
         val state = Range.State(shared, IntArray(4), wasSolved = false, hasCheated = false)
         assertNull(Range.solve(state))
+        // The four C reasonings never return NULL, so C cannot reach
+        // `Puzzle is inconsistent` (`range.c:337`); this guard is the
+        // port's own and is the only caller of the message.
+        assertEquals(
+            "Puzzle is inconsistent",
+            Range.solveGame(state, null).error,
+        )
+    }
+
+    /**
+     * `left-mouse-button=dot` is selected 1 (`range.c:1276-1288`) and
+     * `set_prefs` copies it to `ui->swap_buttons` (`range.c:1296-1299`).
+     * The swap turns a left press from backwards (`B` on an empty cell)
+     * into forwards (`W`), as `range.c:1365-1371` does.
+     */
+    @Test
+    fun `the mouse button preference reaches the live ui and swaps the click`() {
+        val midend = Midend.fromGameId(Range, "3x3:i")
+        val ui = midend.ui as Range.Ui
+        assertEquals(0, Range.prefs.first().let { (it as ConfigItem.Choices).selected })
+        assertFalse(ui.swapButtons)
+
+        assertEquals(
+            MoveResult.Move("B,0,0"),
+            Range.interpretMove(midend.state, ui, 16, 16, Buttons.LEFT_BUTTON, 32),
+        )
+
+        assertNull(midend.applyPrefs("left-mouse-button=dot\n"))
+        assertTrue(ui.swapButtons)
+        assertEquals(
+            MoveResult.Move("W,0,0"),
+            Range.interpretMove(midend.state, ui, 16, 16, Buttons.LEFT_BUTTON, 32),
+        )
+        assertEquals(
+            MoveResult.Move("B,0,0"),
+            Range.interpretMove(midend.state, ui, 16, 16, Buttons.RIGHT_BUTTON, 32),
+        )
     }
 
     @Test
