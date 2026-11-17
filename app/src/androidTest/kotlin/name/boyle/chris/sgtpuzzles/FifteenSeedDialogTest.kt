@@ -27,8 +27,10 @@ import org.junit.runner.RunWith
  * A game launched from parameters alone is generated with a fresh UUID
  * seed, so the first dialog must show `4x4#<uuid>`. Typing the same
  * fixed seed in a second launch must produce the same game ID, which is
- * the description of the board: the seed is the only input that can
- * change it.
+ * the description of the board. The test proves the dialog text and
+ * that the same seed is repeatable; it does not prove that the RNG
+ * honours the seed. The meaning of the seed and the RNG are compared
+ * with C by the parity suite (`FifteenDescTest`, `FifteenGameTest`).
  */
 @RunWith(AndroidJUnit4::class)
 class FifteenSeedDialogTest {
