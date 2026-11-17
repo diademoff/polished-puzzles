@@ -581,6 +581,31 @@ object Tracks : Game {
         return null
     }
 
+    /** `game_configure` (`tracks.c:152-182`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Tricky:Hard",
+                null,
+                p.difficulty,
+            ),
+            ConfigItem.Bool("Disallow consecutive 1 clues", p.singleOnes),
+        )
+    }
+
+    /** `custom_params` (`tracks.c:184-194`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            cAtoi((items[0] as ConfigItem.Text).value, 0),
+            cAtoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Choices).selected,
+            (items[3] as ConfigItem.Bool).value,
+        )
+
     // ------------------------------------------------------------------
     // Generation.
     // ------------------------------------------------------------------
@@ -2226,6 +2251,12 @@ object Tracks : Game {
 
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveAttempt(state).move
+
+    /** `solve_game` with the C error string (`tracks.c:1664-1688`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val attempt = solveAttempt(state)
+        return SolveOutcome(attempt.move, attempt.error)
+    }
 
     /**
      * The solver with the C error string. The seam has no error

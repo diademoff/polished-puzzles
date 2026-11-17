@@ -334,6 +334,31 @@ object Mines : Game {
         return null
     }
 
+    /** `game_configure` (`mines.c:227-257`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Text("Mines", p.n.toString()),
+            ConfigItem.Bool("Ensure solubility", p.unique),
+        )
+    }
+
+    /**
+     * `custom_params` (`mines.c:259-272`). A `%` in the mines string
+     * makes the number a percentage of the area, with C integer
+     * division. The call resets the first-click fields.
+     */
+    override fun customParams(items: List<ConfigItem>): Game.Params {
+        val mines = (items[2] as ConfigItem.Text).value
+        val w = atoi((items[0] as ConfigItem.Text).value, 0)
+        val h = atoi((items[1] as ConfigItem.Text).value, 0)
+        var n = atoi(mines, 0)
+        if (mines.contains('%')) n = n * (w * h) / 100
+        return Params(w, h, n, (items[3] as ConfigItem.Bool).value, -1, -1)
+    }
+
     /**
      * `new_game_desc` as the app sees it: the interactive form only. The
      * two `random_upto` draws happen first, so interactive and batch
@@ -537,6 +562,10 @@ object Mines : Game {
     /** The C error string of [solve], or null when a move is available. */
     fun solveError(state: Game.State): String? =
         if ((state as State).layout.mines == null) "Game has not been started yet" else null
+
+    /** `solve_game` with the C error string (`mines.c:2415-2424`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
+        SolveOutcome(solve(state, auxInfo), solveError(state))
 
     /**
      * `execute_move`. `S` reveals the board, with the post-death

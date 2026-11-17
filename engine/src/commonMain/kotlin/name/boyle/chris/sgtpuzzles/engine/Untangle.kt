@@ -347,6 +347,44 @@ object Untangle : Game {
         }
     }
 
+    /** `game_configure` (`untangle.c:196-212`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Number of points", p.n.toString()),
+        )
+    }
+
+    /** `custom_params` (`untangle.c:214-221`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(atoi((items[0] as ConfigItem.Text).value, 0))
+
+    /** `get_prefs` (`untangle.c:1201-1228`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool("Snap points to a grid", false, "snap-to-grid"),
+            ConfigItem.Bool(
+                "Show edges that cross another edge",
+                false,
+                "show-crossed-edges",
+            ),
+            ConfigItem.Choices(
+                "Display style for vertices",
+                ":Circles:Numbers",
+                ":circle:number",
+                0,
+                "vertex-style",
+            ),
+        )
+
+    /** `set_prefs` (`untangle.c:1230-1235`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        val u = ui as Ui
+        u.snapToGrid = prefs.bool("snap-to-grid")
+        u.showCrossedEdges = prefs.bool("show-crossed-edges")
+        u.vertexNumbers = prefs.choice("vertex-style") == 1
+    }
+
     /**
      * `new_game_desc`: one grid shuffle, the deterministic degree and
      * distance edge loop, then one or more label shuffles until the
@@ -665,6 +703,12 @@ object Untangle : Game {
     /** `Game.solve`: the move, or null when the aux is missing or bad. */
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveWithError(state, auxInfo).first
+
+    /** `solve_game` with the two C error strings (`untangle.c:992-1095`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val (move, error) = solveWithError(state, auxInfo)
+        return SolveOutcome(move, error)
+    }
 
     /**
      * The `sscanf(aux, ";P%d:%ld,%ld/%ld%n")` chain. C eats the first

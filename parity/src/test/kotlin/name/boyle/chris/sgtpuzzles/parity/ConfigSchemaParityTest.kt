@@ -10,8 +10,11 @@ import name.boyle.chris.sgtpuzzles.engine.Flood
 import name.boyle.chris.sgtpuzzles.engine.Galaxies
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Loopy
+import name.boyle.chris.sgtpuzzles.engine.Magnets
+import name.boyle.chris.sgtpuzzles.engine.Mines
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.engine.Netslide
@@ -22,6 +25,10 @@ import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.Rect
 import name.boyle.chris.sgtpuzzles.engine.Signpost
+import name.boyle.chris.sgtpuzzles.engine.Tents
+import name.boyle.chris.sgtpuzzles.engine.Tracks
+import name.boyle.chris.sgtpuzzles.engine.Undead
+import name.boyle.chris.sgtpuzzles.engine.Untangle
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
@@ -70,6 +77,13 @@ class ConfigSchemaParityTest {
         Scheme(Pearl, "pearl"),
         Scheme(Loopy, "loopy"),
         Scheme(Signpost, "signpost"),
+        Scheme(Inertia, "inertia"),
+        Scheme(Tents, "tents"),
+        Scheme(Magnets, "magnets"),
+        Scheme(Mines, "mines"),
+        Scheme(Undead, "undead"),
+        Scheme(Untangle, "untangle"),
+        Scheme(Tracks, "tracks"),
     )
 
     @Test
@@ -315,6 +329,32 @@ class ConfigSchemaParityTest {
             /* atol, narrowed to int: 4294967306 is 10. */
             listOf(Edit(0, "4294967306", "4294967306")),
             listOf(Edit(2, "false", false)),
+        ),
+        "mines" to listOf(
+            /* A percent of the area, with C integer division. */
+            listOf(Edit(2, "10%", "10%")),
+            listOf(Edit(2, "50%", "50%")),
+            listOf(Edit(3, "false", false)),
+        ),
+        "tents" to listOf(
+            listOf(Edit(2, "1", 1)),
+        ),
+        "magnets" to listOf(
+            listOf(Edit(2, "0", 0)),
+            listOf(Edit(3, "false", false)),
+        ),
+        "undead" to listOf(
+            listOf(Edit(2, "0", 0)),
+            listOf(Edit(2, "2", 2)),
+        ),
+        "untangle" to listOf(
+            listOf(Edit(0, "11", "11")),
+            listOf(Edit(0, "1000000", "1000000")),
+        ),
+        "tracks" to listOf(
+            listOf(Edit(2, "0", 0)),
+            listOf(Edit(2, "2", 2)),
+            listOf(Edit(3, "false", false)),
         ),
         "palisade" to listOf(
             listOf(Edit(2, "1", "1")),

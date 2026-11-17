@@ -336,6 +336,31 @@ object Magnets : Game {
         return null
     }
 
+    /** `game_configure` (`magnets.c:193-223`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Tricky",
+                null,
+                p.diff,
+            ),
+            ConfigItem.Bool("Strip clues", p.stripClues),
+        )
+    }
+
+    /** `custom_params` (`magnets.c:225-235`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Choices).selected,
+            (items[3] as ConfigItem.Bool).value,
+        )
+
     /**
      * `new_game_desc`. The order of the draws is the contract: a retry
      * redraws the domino layout, the lay passes, and the strip shuffle,

@@ -12,6 +12,8 @@ import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Prefs
 import name.boyle.chris.sgtpuzzles.engine.PrefsException
 import name.boyle.chris.sgtpuzzles.engine.Signpost
+import name.boyle.chris.sgtpuzzles.engine.Undead
+import name.boyle.chris.sgtpuzzles.engine.Untangle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -41,6 +43,8 @@ class PrefsSchemaParityTest {
         Scheme(Pearl, "pearl"),
         Scheme(Loopy, "loopy"),
         Scheme(Signpost, "signpost"),
+        Scheme(Undead, "undead"),
+        Scheme(Untangle, "untangle"),
     )
 
     private val testdata = File(

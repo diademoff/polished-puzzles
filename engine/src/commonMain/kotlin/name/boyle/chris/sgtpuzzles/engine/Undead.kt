@@ -360,6 +360,53 @@ object Undead : Game {
         return null
     }
 
+    /** `game_configure` (`undead.c:168-194`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Normal:Tricky",
+                null,
+                p.diff,
+            ),
+        )
+    }
+
+    /** `custom_params` (`undead.c:196-204`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Choices).selected,
+        )
+
+    /** `get_prefs` (`undead.c:1692-1715`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Keep cursor after changing monsters",
+                true,
+                "pencil-keep-highlight",
+            ),
+            ConfigItem.Choices(
+                "Monster representation",
+                ":Pictures:Letters",
+                ":pictures:letters",
+                0,
+                "monsters",
+            ),
+        )
+
+    /** `set_prefs` (`undead.c:1717-1721`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        val u = ui as Ui
+        u.pencilKeepHighlight = prefs.bool("pencil-keep-highlight")
+        u.ascii = prefs.choice("monsters") == 1
+    }
+
     /** `new_game_desc`. `AUXINFO` is never set. */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val generation = generate(params as Params, random)
@@ -1378,6 +1425,12 @@ object Undead : Game {
     /** `solve_game`: null on either C failure. */
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveAttempt(state, auxInfo).move
+
+    /** `solve_game` with the two C error strings (`undead.c:1529-1613`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val attempt = solveAttempt(state, auxInfo)
+        return SolveOutcome(attempt.move, attempt.error)
+    }
 
     /**
      * The solver result with the two C error strings. The seam has no

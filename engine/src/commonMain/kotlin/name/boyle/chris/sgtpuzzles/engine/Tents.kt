@@ -258,6 +258,29 @@ object Tents : Game {
         return null
     }
 
+    /** `game_configure` (`tents.c:370-396`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Tricky",
+                null,
+                p.diff,
+            ),
+        )
+    }
+
+    /** `custom_params` (`tents.c:398-407`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Choices).selected,
+        )
+
     /**
      * `new_game_desc`. The caller owns [random]; a retry draws from the
      * same stream, as C does. The aux answer is the C solution string.
@@ -394,6 +417,12 @@ object Tents : Game {
      */
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveAttempt(state, auxInfo).move
+
+    /** `solve_game` with the two C error strings (`tents.c:1340-1388`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val attempt = solveAttempt(state, auxInfo)
+        return SolveOutcome(attempt.move, attempt.error)
+    }
 
     /**
      * The solver result with the C error strings. The seam has no error
