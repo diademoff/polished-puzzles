@@ -28,8 +28,10 @@ import kotlin.math.min
  * [solveAttempt]; the seam has no error channel.
  *
  * The clue-removal buffer is sized `2*w*h` and the drag path one entry
- * longer than the cell count. Both are upstream out-of-bounds writes;
- * see D-019 in `docs/DEVIATIONS.md` and the engine tests.
+ * longer than the cell count. Both are upstream out-of-bounds writes.
+ * The drag extension also stops at a cell that is already on the path,
+ * because C appends every intermediate cell without a visit test. See
+ * D-019 in `docs/DEVIATIONS.md` and the engine tests.
  *
  * Generation has the C cost: a `13x13` board takes seconds and `14x14`
  * or larger does not finish in the measured budget. `validateParams`
@@ -1192,11 +1194,18 @@ object Pearl : Game {
             for (y in 0 until h) {
                 for (x in 0 until w) {
                     val square = (2 * y + 1) * W + (2 * x + 1)
+                    var found = false
                     for (b in 0 until 0xD) {
                         if (workspace[square] == (1 shl b)) {
                             result[y * w + x] = b
+                            found = true
                             break
                         }
+                    }
+                    // `pearl.c:890`: `assert(b < 0xD)` pins that a
+                    // solved board leaves exactly one state per cell.
+                    if (ret == 1) {
+                        check(found) { "the C solver left a cell without a single state" }
                     }
                 }
             }
@@ -1900,6 +1909,18 @@ object Pearl : Game {
     }
 
     /**
+     * Whether [pos] is already on the drag path. C appends every
+     * intermediate cell of a rook step without a visit test, so a drag
+     * that crosses its own path can grow past the path array. See D-019.
+     */
+    private fun onDragPath(ui: Ui, pos: Int): Boolean {
+        for (i in 0 until ui.ndragcoords) {
+            if (ui.dragcoords[i] == pos) return true
+        }
+        return false
+    }
+
+    /**
      * `update_ui_drag`, `pearl.c:2084-2178`.
      *
      * C writes `dragcoords[ndragcoords]` in the loop-drag branch, and a
@@ -1909,7 +1930,6 @@ object Pearl : Game {
      */
     private fun updateUiDrag(state: State, ui: Ui, gx: Int, gy: Int) {
         val w = state.shared.w
-        val sz = state.shared.size
 
         if (!inGrid(state, gx, gy)) return
         if (ui.ndragcoords < 0) return
@@ -1928,7 +1948,11 @@ object Pearl : Game {
         }
 
         if (pos == ui.dragcoords[0]) {
-            check(ui.ndragcoords <= sz) { "a drag path is longer than the board" }
+            // The path can hold `sz + 1` entries. `ndragcoords == sz` is
+            // the last in-bounds slot for the closing cell. The revisit
+            // rule below makes a longer path impossible, so this guard
+            // only protects a broken invariant.
+            if (ui.ndragcoords >= ui.dragcoords.size) return
             ui.dragcoords[ui.ndragcoords] = pos
             var clearing = true
             var lines = state.lines[pos] and (L or R or U or D)
@@ -1958,10 +1982,19 @@ object Pearl : Game {
                 if ((state.marks[oy * w + ox] and dir) != 0) break
                 ox += dx
                 oy += dy
-                check(ui.ndragcoords < ui.dragcoords.size) {
-                    "a drag path is longer than the board"
+                val next = oy * w + ox
+                // C appends every intermediate cell of a rook step
+                // without a visit test, so a drag that crosses its own
+                // path writes past `dragcoords` (`pearl.c:2165`). The
+                // port stops at the first cell that is already on the
+                // path. The start cell is allowed only as the last step,
+                // so a drag can still close the loop. See D-019.
+                if (onDragPath(ui, next) &&
+                    !(next == ui.dragcoords[0] && ox == gx && oy == gy)
+                ) {
+                    break
                 }
-                ui.dragcoords[ui.ndragcoords++] = oy * w + ox
+                ui.dragcoords[ui.ndragcoords++] = next
             }
         }
     }

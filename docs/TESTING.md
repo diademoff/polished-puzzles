@@ -174,17 +174,22 @@ them:
   spectre patches.
 - `LoopgenParityTest` covers `Loopgen` through the `loopgen` op, which
   offers the `none` and `count` biases. `pearl` is the first game
-  consumer of both libraries.
+  consumer of both libraries. D-020 rejects a one-face grid in
+  `generateLoop`, where upstream `can_colour_face` never returns;
+  `LoopgenTest` pins the exception, and the oracle op has the same
+  guard.
 - Pearl's own bias has no oracle op. `PearlBiasTest` compares the
   incremental context with a from-scratch rebuild on every call of a
   real generation, including the vertex bits, the neighbour arrays, the
   to-do queues, and the score. `PearlDescTest`, the nine goldens, the
   eight traces, and the nine corpus saves pin the result end to end.
-- D-019 defines the two upstream buffer overruns (the drag path and the
-  clue-removal list). `PearlTest` pins the `sz + 1` drag entry, the
-  24-edge committed path, the `2*w*h` clue-removal capacity, and the
-  repeated straight list. The oracle is not asked about either path,
-  because the unmodified build overruns its heap.
+- D-019 defines the three upstream buffer overruns (the drag path, the
+  self-crossing drag extension, and the clue-removal list). `PearlTest`
+  pins the `sz + 1` drag entry, the 24-edge committed path, the stop at
+  a visited cell, the `2*w*h` clue-removal capacity, and the repeated
+  straight list. `PearlInputParityTest` sends the self-crossing gesture
+  through the real input path at tile 48. The oracle is not asked about
+  any of these paths, because the unmodified build overruns its heap.
 - Pearl generation keeps the C cost and the C parameter bound:
   `13x13de` takes 1.4 to 14.6 seconds and `14x14` or larger does not
   finish in 25 seconds, so the app must generate off the UI thread. A

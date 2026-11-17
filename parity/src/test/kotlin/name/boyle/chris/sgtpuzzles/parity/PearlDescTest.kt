@@ -64,9 +64,24 @@ class PearlDescTest {
         for (item in entries) {
             val entry = item as JsonValue.Obj
             val params = entry.string("params")
-            val id = Midend.newGame(Pearl, params, "12345").id()
-            assertEquals("params='$params'", entry.string("id"), id)
+            val id = entry.string("id")
+            val midend = Midend.newGame(Pearl, params, "12345")
+            assertEquals("params='$params'", id, midend.id())
+            // The golden id carries the description, so compare the
+            // save record too. `the eight presets at every seed match
+            // the oracle` compares the whole save, including AUXINFO,
+            // for all eight presets. The empty entry is the short-encoder
+            // path with the same parameters and seed as `8x8de`, and the
+            // equality below ties its full save to that oracle-compared
+            // record.
+            val save = midend.serialise()
+            assertEquals("params='$params' DESC", id.substringAfter(':'), save.value("DESC"))
+            assertTrue("params='$params' AUXINFO", save.value("AUXINFO") != null)
         }
+        assertEquals(
+            Midend.newGame(Pearl, "8x8de", "12345").serialise().serialise(),
+            Midend.newGame(Pearl, "", "12345").serialise().serialise(),
+        )
     }
 
     @Test(timeout = 300_000)

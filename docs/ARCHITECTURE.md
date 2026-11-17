@@ -192,14 +192,18 @@ wrong substitution or trimming rule changes a `loopy` or `pearl` id.
 `Loopgen.kt` ports `loopgen.c`, including the candidate order, the bias
 calls, and the two flip passes. `LoopgenParityTest` compares the board
 and the encoded RNG state with the `loopgen` oracle op, which offers
-only the `none` and `count` biases. `pearl` is the first game consumer
+only the `none` and `count` biases. A one-face grid is rejected before
+the first draw, because upstream `can_colour_face` does not return
+(D-020). `pearl` is the first game consumer
 of both libraries; its own bias is not available in the oracle, so
 `PearlBiasTest` rebuilds the score from scratch on every call of a real
 generation and compares it with the incremental context, while the
 nine golden entries and the save corpus pin the result.
-D-019 records the two upstream buffer overruns that pearl defines (the
-drag path and the clue-removal list); the port sizes both buffers and
-the oracle is not asked about either path. The generator keeps the C
+D-019 records the three upstream buffer overruns that pearl defines
+(the drag path, the self-crossing drag extension, and the clue-removal
+list); the port sizes both buffers, stops the extension at a visited
+cell, and the oracle is not asked about any of the three paths. The
+generator keeps the C
 cost and the C parameter bound: `13x13de` takes seconds and `14x14` or
 larger does not finish in the measured budget, so the app must generate
 off the UI thread; a size limit is an owner decision (D-019).

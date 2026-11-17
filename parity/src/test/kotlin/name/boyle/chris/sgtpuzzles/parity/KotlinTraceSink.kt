@@ -305,14 +305,16 @@ class KotlinTraceSink : DrawSink {
          * A sized oracle trace draws at the tile size its viewport
          * chose, which is not always the preferred size. The draw
          * sequence follows [Midend.recordRedraw], and the trace header
-         * reports the size the draw uses.
+         * reports the size the draw uses. The size comes from the
+         * UI-aware `computeSize`, because a game can pick its border
+         * from a preference (pearl's `appearance`).
          */
         fun stateTrace(
             midend: Midend,
             tileSize: Int,
             statusAlreadyDrawn: Boolean = false,
         ): JsonValue.Obj {
-            val size = midend.game.computeSize(midend.params, tileSize)
+            val size = midend.game.computeSize(midend.params, midend.ui, tileSize)
             val sink = KotlinTraceSink()
             if (statusAlreadyDrawn) {
                 sink.recording = false
@@ -371,7 +373,7 @@ class KotlinTraceSink : DrawSink {
             return objectFor(
                 midend,
                 sink,
-                midend.game.computeSize(midend.params, tileSize),
+                midend.game.computeSize(midend.params, midend.ui, tileSize),
             )
         }
 
@@ -414,7 +416,7 @@ class KotlinTraceSink : DrawSink {
             return objectFor(
                 midend,
                 sink,
-                midend.game.computeSize(midend.params, tileSize),
+                midend.game.computeSize(midend.params, midend.ui, tileSize),
             )
         }
 
@@ -428,7 +430,7 @@ class KotlinTraceSink : DrawSink {
             sink: KotlinTraceSink,
             tileSize: Int,
         ) {
-            val size = midend.game.computeSize(midend.params, tileSize)
+            val size = midend.game.computeSize(midend.params, midend.ui, tileSize)
             val drawState = midend.ensureDrawState(tileSize, sink)
             val first = midend.takeFirstDraw()
             sink.startDraw()

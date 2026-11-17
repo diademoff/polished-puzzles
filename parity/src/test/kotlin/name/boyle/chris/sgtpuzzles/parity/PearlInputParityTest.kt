@@ -274,6 +274,51 @@ class PearlInputParityTest {
     }
 
     @Test
+    fun `a self-crossing drag is bounded at a real tile size`() {
+        // The oracle cannot be asked: C appends the retraced cells past
+        // its `sz`-entry drag array. The Kotlin rule is defined in D-019.
+        val tile = 48
+        val midend = Midend.fromGameId(Pearl, "5x5:y")
+        val ui = midend.ui as Pearl.Ui
+        val path = listOf(
+            0 to 0, 1 to 0, 1 to 1, 0 to 1, 0 to 2, 1 to 2, 2 to 2, 3 to 2,
+            3 to 3, 2 to 3, 1 to 3, 0 to 3, 0 to 4, 1 to 4, 2 to 4, 3 to 4,
+            4 to 4, 4 to 3, 4 to 2, 4 to 1, 4 to 0, 3 to 0, 3 to 1, 2 to 1,
+            2 to 0,
+        )
+
+        midend.processKey(gx(0, tile), gy(0, tile), Buttons.LEFT_BUTTON, tile)
+        for ((x, y) in path.drop(1)) {
+            midend.processKey(gx(x, tile), gy(y, tile), Buttons.LEFT_DRAG, tile)
+        }
+        assertEquals(25, ui.ndragcoords)
+
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(gx(0, tile), gy(0, tile), Buttons.LEFT_DRAG, tile),
+        )
+        // The extension stops at (1,0) and the loop branch wrote the start
+        // into the extra entry.
+        assertEquals(25, ui.ndragcoords)
+        assertEquals(0, ui.dragcoords[25])
+
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(gx(0, tile), gy(0, tile), Buttons.LEFT_RELEASE, tile),
+        )
+        assertEquals(2, midend.stateCount)
+        assertEquals(24, midend.serialise().value("MOVE")!!.split(';').size / 2)
+
+        // Positive control at the same tile: a normal two-cell drag.
+        val normal = Midend.fromGameId(Pearl, "5x5:y")
+        normal.processKey(gx(0, tile), gy(0, tile), Buttons.LEFT_BUTTON, tile)
+        normal.processKey(gx(1, tile), gy(0, tile), Buttons.LEFT_DRAG, tile)
+        normal.processKey(gx(1, tile), gy(0, tile), Buttons.LEFT_RELEASE, tile)
+        assertEquals(2, normal.stateCount)
+        assertEquals(1, normal.serialise().values("MOVE").size)
+    }
+
+    @Test
     fun `a right drag uses the click rule and a lone release or drag is ignored`() =
         OracleClient().use { oracle ->
             val base = oracle.newGame("pearl", "6x6de", SEED)

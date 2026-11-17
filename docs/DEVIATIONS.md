@@ -747,11 +747,11 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
-### D-019: Pearl defines two upstream buffer overruns
+### D-019: Pearl defines three upstream buffer overruns
 
 - **Area:** behavior
 - **Status:** active
-- **What differs:** two C writes go past an allocation:
+- **What differs:** three C writes can go past an allocation:
   - the drag path. `ui->dragcoords` holds `sz` ints
     (`pearl.c:1939`), and `update_ui_drag` writes
     `dragcoords[ndragcoords]` in the loop-drag branch
@@ -761,6 +761,15 @@ Anything not listed here is a bug.
     release emits the `ndragcoords - 1` ordinary path edges, so a
     serpentine drag over a `5x5` board commits a 24-edge path and adds
     one state; the extra entry is not part of the move text.
+  - the drag extension. C appends every intermediate cell of a
+    rook step without a visit test (`pearl.c:2162-2166`). A drag that
+    crosses its own path can append a cell that is already on the path
+    and grow past `sz + 1`; on a full `5x5` board the next append needs
+    index 26 in an array of 26 entries. The port stops the extension at
+    the first intermediate cell that is already on the path. The start
+    cell is allowed only as the last cell, so the loop-closure rule
+    (`pearl.c:2125-2146`) is unchanged. A drag that does not revisit a
+    cell appends exactly the C cells.
   - the clue-removal buffer. `cluespace` holds `w*h` ints
     (`pearl.c:1351-1357`), and the second scan fills the corner list
     with the straight positions too (`pearl.c:1359-1361`). A board with
@@ -769,11 +778,17 @@ Anything not listed here is a bug.
     `5x5` clue array needs 50 entries; the C capacity is 25.
 - **Why:** an out-of-bounds write is undefined behavior and can corrupt
   the heap. The guards depend only on the board and the drag path, so
-  the same input always gives the same result. No generated board
-  reaches the clue-list overflow: a maximal clue array has at most one
-  straight clue per cell, and the measured presets stay far below half.
-  The drag overflow needs a path that visits every cell and returns to
-  the start; the result is deterministic and pinned by the engine test.
+  the same input always gives the same result. The revisit stop keeps
+  the path bounded: the entries after the start are distinct, and the
+  only allowed repeat is the start as the closing cell. A self-crossing
+  drag therefore stops at the first visit, and a later release emits
+  the edges of the path prefix before the stop. C has no defined result
+  for that gesture, so the port pins a deterministic one. No generated
+  board reaches the clue-list overflow: a maximal clue array has at most
+  one straight clue per cell, and the measured presets stay far below
+  half. The drag overflow needs a path that visits every cell and
+  returns to the start; the result is deterministic and pinned by the
+  engine and input tests.
 - **Cost note:** `validate_params` accepts any area up to
   `INT_MAX / h` (`pearl.c:290`). Generation is the C algorithm and has
   the C cost: `13x13de` takes 1.4 to 14.6 seconds at the measured
@@ -784,13 +799,65 @@ Anything not listed here is a bug.
 - **Test:**
   `engine/src/commonTest/kotlin/.../PearlTest.kt::a drag that visits every cell keeps the extra entry and stays defined`
   pins the extra entry, the 24-edge committed path, and the state
-  count. `...::the clue removal list repeats the straights and the
-  buffer covers it` pins the doubled capacity, the `w*h/2` overflow
+  count.
+  `...::a drag that crosses itself stops at the visited cell` pins the
+  exact 5x5 reproducer: a Hamiltonian path from `(0,0)` to `(2,0)`,
+  then a drag into the start. The old guard threw when the extension
+  needed index 26; the port stops at `(1,0)`, keeps `ndragcoords` at
+  25, and commits the 24 path edges.
+  `parity/src/test/kotlin/.../PearlInputParityTest.kt::a self-crossing drag is bounded at a real tile size`
+  sends the same gesture through the real input path at requested tile
+  48, so the rule is checked at a non-default geometry.
+  `...::the clue removal list repeats the straights and the buffer
+  covers it` pins the doubled capacity, the `w*h/2` overflow
   boundary, and the repeated straight list. The oracle is not asked
-  about either path, because the unmodified C build overflows its heap.
+  about any of these paths, because the unmodified C build overruns its
+  heap.
 - **Review:** the owner should review this entry before `pearl` is
   enabled in the app.
 - **Scope:** `pearl`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
+### D-020: `loopgen` rejects a one-face grid where C hangs
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** upstream `generate_loop` never finishes for a grid
+  with one face. The exact input is
+  `Grid.new(GridType.SQUARE, 1, 1, null)` followed by
+  `generateLoop(grid, IntArray(1), RandomState.fromSeed("1"))`. At every
+  dot of the single finite face the only other face is the infinite
+  face, so `can_colour_face` alternates between the test face and the
+  infinite face and never reaches the canonical `(starting_dot,
+  starting_face)` pair (`loopgen.c:174-207`). The C call does not
+  return. The Kotlin guard throws
+  `IllegalArgumentException` with the message
+  `the grid has 1 faces; loop generation needs at least two`, before
+  the first `random_bits` draw. The committed oracle also refuses the
+  same request: its `loopgen` operation returns
+  `loopgen needs a grid with at least two faces`
+  (`tools/oracle/oracle.c:2160-2164`), so the oracle protocol cannot
+  observe the hang.
+- **Why:** a hang is not acceptable in the app. The guard depends only
+  on the face count, so the same input always gives the same result,
+  and it runs before the RNG state changes. Every grid with two or more
+  faces keeps the C algorithm, the C draw order, and the C output;
+  `LoopgenParityTest` and the pearl goldens compare those boards. The
+  two consumers validate their board sizes before they generate, so the
+  guard is reachable only through a direct library call or a
+  hand-written description that bypasses the validator.
+- **Scope note:** the guard is in `generateLoop`, not in
+  `Grid` or a game validator. A caller that needs a one-face grid for
+  drawing still gets it; only loop generation is refused.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../LoopgenTest.kt::a one-face grid is rejected instead of hanging`
+  builds the exact input, asserts the one face, and pins the exception
+  type. The parity tests do not send the request to the oracle, because
+  the vendored C loop does not return.
+- **Review:** the owner should review this entry before `loopy` or
+  `pearl` is enabled in the app.
+- **Scope:** `loopgen`
 - **Upstream:** none known
 - **Date:** 2026-11-17
 

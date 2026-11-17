@@ -1847,10 +1847,11 @@ Notes:
   and the clue-removal list. That list is filled with the straight
   positions twice and read from `straights` for both counters; the
   second shuffle still consumes its RNG draws. The port reproduces both
-  bugs because they decide every description. Two upstream
-  out-of-bounds writes are defined and pinned: the drag path gets one
-  extra entry, and the clue-removal buffer is `2*w*h` (D-019). The
-  oracle is not asked about either path.
+  bugs because they decide every description. Three upstream
+  out-of-bounds paths are defined and pinned: the drag path gets one
+  extra entry, a self-crossing drag stops before a visited cell instead
+  of growing past that entry, and the clue-removal buffer is `2*w*h`
+  (D-019). The oracle is not asked about any of them.
 
   `pearl` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   the app stays on C and `handles(PEARL)` is false. S8 must build the

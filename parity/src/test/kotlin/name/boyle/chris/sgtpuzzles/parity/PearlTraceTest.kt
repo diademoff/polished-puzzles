@@ -91,8 +91,11 @@ class PearlTraceTest {
     }
 
     @Test
-    fun `sized traces match the oracle at 48 63 82 and 100`() = OracleClient().use { oracle ->
+    fun `sized traces match the oracle at 48 64 82 and 100`() = OracleClient().use { oracle ->
         val save = oracle.newGame("pearl", "8x8de", SEED).state
+        // Requested tile sizes. An even request is reduced to the
+        // effective odd `TILE_SIZE` one lower: 48 -> 47, 64 -> 63,
+        // 82 -> 81, 100 -> 99.
         for ((view, tile) in listOf(422 to 48, 566 to 64, 728 to 82, 890 to 100)) {
             val expected = oracle.pointsSized(save, emptyList(), view, view, recordTrace = true)
             val midend = Midend.fromSave(Pearl, SgtpSave.parse(save))

@@ -356,6 +356,61 @@ class PearlTest {
         assertEquals(0, midend.status())
     }
 
+    @Test
+    fun `a drag that crosses itself stops at the visited cell`() {
+        val p = params("5x5de")
+        val midend = Midend.fromGameId(Pearl, "5x5:y")
+        val ui = midend.ui as Pearl.Ui
+        val tile = 31
+        val border = tile / 2
+        fun px(x: Int) = border + x * tile + tile / 2
+        fun py(y: Int) = border + y * tile + tile / 2
+
+        // A Hamiltonian path from (0,0) to (2,0). The last cell shares
+        // the row with the start, so a drag into the start makes the C
+        // extension retrace (1,0) and (0,0). The old port threw when the
+        // append needed index 26.
+        val path = listOf(
+            0 to 0, 1 to 0, 1 to 1, 0 to 1, 0 to 2, 1 to 2, 2 to 2, 3 to 2,
+            3 to 3, 2 to 3, 1 to 3, 0 to 3, 0 to 4, 1 to 4, 2 to 4, 3 to 4,
+            4 to 4, 4 to 3, 4 to 2, 4 to 1, 4 to 0, 3 to 0, 3 to 1, 2 to 1,
+            2 to 0,
+        )
+        assertEquals(p.w * p.h, path.size)
+
+        midend.processKey(px(0), py(0), Buttons.LEFT_BUTTON, tile)
+        for ((x, y) in path.drop(1)) {
+            midend.processKey(px(x), py(y), Buttons.LEFT_DRAG, tile)
+        }
+        assertEquals(25, ui.ndragcoords)
+
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(px(0), py(0), Buttons.LEFT_DRAG, tile),
+        )
+        assertEquals(25, ui.ndragcoords, "the extension stops at (1,0)")
+        assertEquals(0, ui.dragcoords[25], "the loop branch wrote the start")
+
+        // The release emits the 24 path edges and never reads the extra
+        // closing entry, so this is a defined open path.
+        assertEquals(
+            KeyOutcome.SomeEffect,
+            midend.processKey(px(0), py(0), Buttons.LEFT_RELEASE, tile),
+        )
+        assertEquals(2, midend.stateCount)
+        val move = midend.serialise().value("MOVE")!!
+        assertEquals(24, move.split(';').size / 2, move)
+        assertEquals(0, midend.status())
+
+        // Positive control: a normal two-cell drag still commits one edge.
+        val normal = Midend.fromGameId(Pearl, "5x5:y")
+        normal.processKey(px(0), py(0), Buttons.LEFT_BUTTON, tile)
+        normal.processKey(px(1), py(0), Buttons.LEFT_DRAG, tile)
+        normal.processKey(px(1), py(0), Buttons.LEFT_RELEASE, tile)
+        assertEquals(2, normal.stateCount)
+        assertEquals(2, normal.serialise().value("MOVE")!!.split(';').size)
+    }
+
     // ------------------------------------------------------------------
     // Solver and solve.
     // ------------------------------------------------------------------

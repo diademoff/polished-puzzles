@@ -68,7 +68,8 @@ fun generateLoop(
     // A one-face grid makes upstream's can_colour_face loop forever: at
     // every dot the only other face is the infinite face, so the walk
     // can never return to its starting pair. The consumers reject such
-    // grids before they call this function.
+    // grids before they call this function. The guard is D-020 in
+    // `docs/DEVIATIONS.md`.
     require(numFaces >= 2) {
         "the grid has $numFaces faces; loop generation needs at least two"
     }
