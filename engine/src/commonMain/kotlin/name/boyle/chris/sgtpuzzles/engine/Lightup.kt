@@ -419,6 +419,53 @@ object Lightup : Game {
         )
     }
 
+    /** `game_configure` (`lightup.c:302-340`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Text("%age of black squares", p.blackpc.toString()),
+            ConfigItem.Choices(
+                "Symmetry",
+                ":None:2-way mirror:2-way rotational:4-way mirror:4-way rotational",
+                null,
+                p.symm,
+            ),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Tricky:Hard",
+                null,
+                p.diff,
+            ),
+        )
+    }
+
+    /** `custom_params` (`lightup.c:342-353`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            eAtNum((items[0] as ConfigItem.Text).value, 0),
+            eAtNum((items[1] as ConfigItem.Text).value, 0),
+            eAtNum((items[2] as ConfigItem.Text).value, 0),
+            (items[3] as ConfigItem.Choices).selected,
+            (items[4] as ConfigItem.Choices).selected,
+        )
+
+    /** `get_prefs` (`lightup.c:1875-1890`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Draw non-light marks even when lit",
+                true,
+                "show-lit-blobs",
+            ),
+        )
+
+    /** `set_prefs` (`lightup.c:1892-1895`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).drawBlobsWhenLit = prefs.bool("show-lit-blobs")
+    }
+
     /**
      * `new_game_desc`. The RNG draws are: one shuffle of the cell list,
      * two draws per black square plus the odd-width `SYMM_ROT4` draw, and

@@ -7,13 +7,21 @@ import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.Flip
 import name.boyle.chris.sgtpuzzles.engine.Filling
 import name.boyle.chris.sgtpuzzles.engine.Flood
+import name.boyle.chris.sgtpuzzles.engine.Galaxies
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Lightup
+import name.boyle.chris.sgtpuzzles.engine.Loopy
+import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.engine.Netslide
+import name.boyle.chris.sgtpuzzles.engine.Palisade
+import name.boyle.chris.sgtpuzzles.engine.Pattern
+import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.Rect
+import name.boyle.chris.sgtpuzzles.engine.Signpost
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Twiddle
@@ -54,6 +62,14 @@ class ConfigSchemaParityTest {
         Scheme(Unruly, "unruly"),
         Scheme(Range, "range"),
         Scheme(Rect, "rect"),
+        Scheme(Galaxies, "galaxies"),
+        Scheme(Lightup, "lightup"),
+        Scheme(Mosaic, "mosaic"),
+        Scheme(Palisade, "palisade"),
+        Scheme(Pattern, "pattern"),
+        Scheme(Pearl, "pearl"),
+        Scheme(Loopy, "loopy"),
+        Scheme(Signpost, "signpost"),
     )
 
     @Test
@@ -279,6 +295,35 @@ class ConfigSchemaParityTest {
         "netslide" to listOf(
             listOf(Edit(3, "0.25", "0.25")),
             listOf(Edit(3, "1", "1")),
+        ),
+        "galaxies" to listOf(
+            listOf(Edit(2, "1", 1)),
+        ),
+        "lightup" to listOf(
+            /* plain atoi, no clamp, and the symmetry choices. */
+            listOf(Edit(2, "35", "35")),
+            listOf(Edit(3, "1", 1)),
+            listOf(Edit(3, "4", 4)),
+            listOf(Edit(4, "2", 2)),
+        ),
+        "loopy" to listOf(
+            listOf(Edit(2, "1", 1)),
+            listOf(Edit(2, "4", 4)),
+            listOf(Edit(3, "3", 3)),
+        ),
+        "mosaic" to listOf(
+            /* atol, narrowed to int: 4294967306 is 10. */
+            listOf(Edit(0, "4294967306", "4294967306")),
+            listOf(Edit(2, "false", false)),
+        ),
+        "palisade" to listOf(
+            listOf(Edit(2, "1", "1")),
+            listOf(Edit(2, "2", "2")),
+            listOf(Edit(2, "25", "25")),
+        ),
+        "pearl" to listOf(
+            listOf(Edit(2, "0", 0)),
+            listOf(Edit(3, "true", true)),
         ),
         "rect" to listOf(
             listOf(Edit(2, "0.5", "0.5")),

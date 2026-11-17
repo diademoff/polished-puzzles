@@ -256,6 +256,22 @@ object Pattern : Game {
     // Description generation.
     // ------------------------------------------------------------------
 
+    /** `game_configure` (`pattern.c:149-170`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+        )
+    }
+
+    /** `custom_params` (`pattern.c:172-180`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+        )
+
     /**
      * `new_game_desc`: generate a soluble board, keep the answer in aux,
      * and write the `w + h` clue lists. The writer ends every entry with

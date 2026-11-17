@@ -494,6 +494,64 @@ object Loopy : Game {
         return null
     }
 
+    /** `game_configure` (`loopy.c:667-698`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Grid type",
+                ":Squares:Triangular:Honeycomb:Snub-Square:Cairo:" +
+                    "Great-Hexagonal:Octagonal:Kites:Floret:Dodecagonal:" +
+                    "Great-Dodecagonal:Penrose (kite/dart):Penrose (rhombs):" +
+                    "Great-Great-Dodecagonal:Kagome:Compass-Dodecagonal:" +
+                    "Hats:Spectres",
+                null,
+                p.type,
+            ),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Normal:Tricky:Hard",
+                null,
+                p.difficulty,
+            ),
+        )
+    }
+
+    /** `custom_params` (`loopy.c:700-710`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[3] as ConfigItem.Choices).selected,
+            (items[2] as ConfigItem.Choices).selected,
+        )
+
+    /** `get_prefs` (`loopy.c:967-990`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Bool(
+                "Draw excluded grid lines faintly",
+                true,
+                "draw-faint-lines",
+            ),
+            ConfigItem.Choices(
+                "Auto-follow unique paths of edges",
+                ":No:Based on grid only:Based on grid and game state",
+                ":off:fixed:adaptive",
+                0,
+                "auto-follow",
+            ),
+        )
+
+    /** `set_prefs` (`loopy.c:992-996`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        val u = ui as Ui
+        u.drawFaintLines = prefs.bool("draw-faint-lines")
+        u.autoFollow = AutoFollow.values()[prefs.choice("auto-follow")]
+    }
+
     /**
      * `new_game_desc`, `loopy.c:1571-1633`. The grid description draw is
      * first, then the retry loop on the same grid: `add_full_clues`

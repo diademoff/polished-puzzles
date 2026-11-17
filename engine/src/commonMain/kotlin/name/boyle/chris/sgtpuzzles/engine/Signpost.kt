@@ -450,6 +450,41 @@ object Signpost : Game {
     // Generation.
     // ------------------------------------------------------------------
 
+    /** `game_configure` (`signpost.c:396-421`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Bool("Start and end in corners", p.forceCornerStart),
+        )
+    }
+
+    /** `custom_params` (`signpost.c:423-432`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Bool).value,
+        )
+
+    /** `get_prefs` (`signpost.c:1472-1490`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Choices(
+                "Victory rotation effect",
+                ":Unidirectional:Meshing gears",
+                ":unidirectional:gears",
+                0,
+                "flash-type",
+            ),
+        )
+
+    /** `set_prefs` (`signpost.c:1492-1495`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).gearMode = prefs.choice("flash-type") == 1
+    }
+
     /**
      * `new_game_desc`. The result depends only on the parameters and the
      * random stream: the free-ends pair, one draw per filled cell, the
@@ -1093,6 +1128,12 @@ object Signpost : Game {
 
     /** `solve_state` on a copy, for tests that need to see the fallback. */
     internal fun solveResult(state: Game.State): Int = solveState((state as State).duplicate())
+
+    /** `solve_game` with the C error strings (`signpost.c:1379-1405`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val attempt = solveAttempt(state, auxInfo)
+        return SolveOutcome(attempt.move, attempt.error)
+    }
 
     fun solveAttempt(state: Game.State, auxInfo: String?): SolveAttempt {
         val s = state as State

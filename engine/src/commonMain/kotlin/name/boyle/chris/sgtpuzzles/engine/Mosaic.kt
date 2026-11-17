@@ -234,6 +234,54 @@ object Mosaic : Game {
         return null
     }
 
+    /** `game_configure` (`mosaic.c:207-229`): Height before Width. */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Height", p.height.toString()),
+            ConfigItem.Text("Width", p.width.toString()),
+            ConfigItem.Bool("Aggressive generation (longer)", p.aggressive),
+        )
+    }
+
+    /** `custom_params` (`mosaic.c:231-238`): `atol`, not `atoi`. */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atol((items[1] as ConfigItem.Text).value, 0).toInt(),
+            atol((items[0] as ConfigItem.Text).value, 0).toInt(),
+            (items[2] as ConfigItem.Bool).value,
+        )
+
+    /**
+     * C `atol`: white space, an optional sign, then digits. A value
+     * outside `Long` saturates as glibc does; `custom_params` then
+     * narrows it to `int`, which is the C assignment.
+     */
+    private fun atol(text: String, start: Int): Long {
+        var i = start
+        while (i < text.length && text[i].isWhitespace()) i++
+        var negative = false
+        if (i < text.length && (text[i] == '+' || text[i] == '-')) {
+            negative = text[i] == '-'
+            i++
+        }
+        var value = 0L
+        var overflow = false
+        while (i < text.length && text[i] in '0'..'9') {
+            val digit = text[i] - '0'
+            if (!overflow) {
+                if (value > (Long.MAX_VALUE - digit) / 10) {
+                    overflow = true
+                } else {
+                    value = value * 10 + digit
+                }
+            }
+            i++
+        }
+        if (overflow) return if (negative) Long.MIN_VALUE else Long.MAX_VALUE
+        return if (negative) -value else value
+    }
+
     /** `new_game_desc`: generate and encode the clues. */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params

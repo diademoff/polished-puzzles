@@ -332,6 +332,48 @@ object Pearl : Game {
         return null
     }
 
+    /** `game_configure` (`pearl.c:242-272`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Choices(
+                "Difficulty",
+                ":Easy:Tricky",
+                null,
+                p.difficulty,
+            ),
+            ConfigItem.Bool("Allow unsoluble", p.nosolve),
+        )
+    }
+
+    /** `custom_params` (`pearl.c:274-284`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            (items[2] as ConfigItem.Choices).selected,
+            (items[3] as ConfigItem.Bool).value,
+        )
+
+    /** `get_prefs` (`pearl.c:1960-1977`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Choices(
+                "Puzzle appearance",
+                ":Traditional:Loopy-style",
+                ":traditional:loopy",
+                0,
+                "appearance",
+            ),
+        )
+
+    /** `set_prefs` (`pearl.c:1979-1982`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        (ui as Ui).appearance = Appearance.values()[prefs.choice("appearance")]
+    }
+
     // ------------------------------------------------------------------
     // Description and generation, `pearl.c:995-1481`.
     // ------------------------------------------------------------------
@@ -1516,6 +1558,13 @@ object Pearl : Game {
         when (val result = solveAttempt(state, auxInfo)) {
             is SolveResult.Move -> result.text
             is SolveResult.Error -> null
+        }
+
+    /** `solve_game` with the two C error strings (`pearl.c:1810-1853`). */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
+        when (val result = solveAttempt(state, auxInfo)) {
+            is SolveResult.Move -> SolveOutcome(result.text, null)
+            is SolveResult.Error -> SolveOutcome(null, result.message)
         }
 
     /** `solve_for_diff`, `pearl.c:1793-1808`. */

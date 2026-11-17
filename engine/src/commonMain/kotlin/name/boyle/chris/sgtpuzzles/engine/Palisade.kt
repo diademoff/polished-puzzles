@@ -271,6 +271,48 @@ object Palisade : Game {
         return null
     }
 
+    /** `game_configure` (`palisade.c:124-144`). */
+    override fun configure(params: Game.Params): List<ConfigItem> {
+        val p = params as Params
+        return listOf(
+            ConfigItem.Text("Width", p.w.toString()),
+            ConfigItem.Text("Height", p.h.toString()),
+            ConfigItem.Text("Region size", p.k.toString()),
+        )
+    }
+
+    /** `custom_params` (`palisade.c:146-155`). */
+    override fun customParams(items: List<ConfigItem>): Game.Params =
+        Params(
+            atoi((items[0] as ConfigItem.Text).value, 0),
+            atoi((items[1] as ConfigItem.Text).value, 0),
+            atoi((items[2] as ConfigItem.Text).value, 0),
+        )
+
+    /** `get_prefs` (`palisade.c:928-952`). */
+    override val prefs: List<ConfigItem>
+        get() = listOf(
+            ConfigItem.Choices(
+                "Cursor mode",
+                ":Half-grid:Full-grid",
+                ":half:full",
+                0,
+                "cursor-mode",
+            ),
+            ConfigItem.Bool(
+                "Automatically clear edges in completed regions",
+                false,
+                "clear-complete-regions",
+            ),
+        )
+
+    /** `set_prefs` (`palisade.c:954-959`). */
+    override fun setPrefs(ui: Game.Ui, prefs: Prefs) {
+        val u = ui as Ui
+        u.legacyCursor = prefs.choice("cursor-mode") == 1
+        u.clearCompleteRegions = prefs.bool("clear-complete-regions")
+    }
+
     /** `new_game_desc`: generate and encode the clues, and the aux solution. */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val generated = generate(params, random)

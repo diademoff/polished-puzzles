@@ -4,9 +4,14 @@ import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Guess
+import name.boyle.chris.sgtpuzzles.engine.Lightup
+import name.boyle.chris.sgtpuzzles.engine.Loopy
 import name.boyle.chris.sgtpuzzles.engine.Net
+import name.boyle.chris.sgtpuzzles.engine.Palisade
+import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Prefs
 import name.boyle.chris.sgtpuzzles.engine.PrefsException
+import name.boyle.chris.sgtpuzzles.engine.Signpost
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -31,6 +36,11 @@ class PrefsSchemaParityTest {
         Scheme(Bridges, "bridges"),
         Scheme(Guess, "guess"),
         Scheme(Net, "net"),
+        Scheme(Lightup, "lightup"),
+        Scheme(Palisade, "palisade"),
+        Scheme(Pearl, "pearl"),
+        Scheme(Loopy, "loopy"),
+        Scheme(Signpost, "signpost"),
     )
 
     private val testdata = File(
