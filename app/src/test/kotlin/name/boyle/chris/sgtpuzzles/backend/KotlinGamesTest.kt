@@ -11,6 +11,7 @@ import name.boyle.chris.sgtpuzzles.engine.Guess
 import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Magnets
+import name.boyle.chris.sgtpuzzles.engine.Map
 import name.boyle.chris.sgtpuzzles.engine.Mines
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Net
@@ -221,6 +222,12 @@ class KotlinGamesTest {
     fun `dominosa is registered but the app still uses C`() {
         assertEquals(Dominosa, KotlinGames.gameFor(DOMINOSA))
         assertFalse(KotlinGames.handles(DOMINOSA))
+    }
+
+    @Test
+    fun `map is registered but the app still uses C`() {
+        assertEquals(Map, KotlinGames.gameFor(MAP))
+        assertFalse(KotlinGames.handles(MAP))
     }
 
     @Test

@@ -1,6 +1,7 @@
 package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.Buttons
+import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Map
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
@@ -47,9 +48,15 @@ class MapSaveTest {
                 assertEquals("${file.name} can undo", expected.canUndo, midend.canUndo)
                 assertEquals("${file.name} can redo", expected.canRedo, midend.canRedo)
                 assertEquals("${file.name} text", oracle.text(text), "")
+                assertEquals("${file.name} text format", "", midend.textFormat())
 
                 val save = SgtpSave.parse(text)
-                assertTrue("${file.name} AUXINFO", save.value("AUXINFO")!!.isNotEmpty())
+                val aux = save.value("AUXINFO")!!
+                assertTrue("${file.name} AUXINFO", aux.isNotEmpty())
+                assertTrue(
+                    "${file.name} AUXINFO text",
+                    midend.auxInfo!!.startsWith("S;"),
+                )
                 assertNull("${file.name} PRIVDESC", save.value("PRIVDESC"))
                 assertNull("${file.name} UI", save.value("UI"))
                 assertNull("${file.name} TIME", save.value("TIME"))
@@ -70,6 +77,12 @@ class MapSaveTest {
             assertEquals("20x15n30dn", easy.value("PARAMS"))
             assertEquals("20x15n30de", easy.value("CPARAMS"))
             assertTrue(Midend.fromSave(Map, easy).id().startsWith("20x15n30:"))
+            // The 30x25 saves keep the same Normal long-term copy.
+            val large = SgtpSave.parse(
+                File(testdata, "saves/initial/map/30x25n75dh.sgtp").readText(),
+            )
+            assertEquals("30x25n75dn", large.value("PARAMS"))
+            assertEquals("30x25n75dh", large.value("CPARAMS"))
             // The default save is byte-identical to the Normal save.
             assertEquals(
                 File(testdata, "saves/initial/map/20x15n30dn.sgtp").readText(),
@@ -127,9 +140,59 @@ class MapSaveTest {
             )
             for (text in history) {
                 val midend = Midend.fromSave(Map, SgtpSave.parse(text))
+                val loaded = oracle.id(text)
                 assertEquals("round trip", text, midend.serialise().serialise())
-                assertEquals("oracle", oracle.id(text).state, midend.serialise().serialise())
+                assertEquals("oracle", loaded.state, midend.serialise().serialise())
+                assertEquals(
+                    "undo flag of ${SgtpSave.parse(text).value("MOVE")}",
+                    loaded.canUndo,
+                    midend.canUndo,
+                )
+                assertEquals(
+                    "redo flag of ${SgtpSave.parse(text).value("MOVE")}",
+                    loaded.canRedo,
+                    midend.canRedo,
+                )
+                assertEquals("status", loaded.status, midend.status())
+                assertEquals("text format", "", midend.textFormat())
             }
+
+            // The four in-memory history shapes: a recolour, a pencil
+            // mark, a live redo branch, and a solve.
+            val live = Midend.fromSave(Map, SgtpSave.parse(save))
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                live.processKey(30, 30, Buttons.LEFT_BUTTON, 20),
+            )
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                live.processKey(110, 30, Buttons.LEFT_RELEASE, 20),
+            )
+            assertEquals("0:4", live.serialise().value("MOVE"))
+            assertEquals(2, live.stateCount)
+            assertTrue(live.canUndo)
+            assertFalse(live.canRedo)
+            assertEquals(1, live.status())
+            assertTrue(live.undo())
+            assertTrue(live.canRedo)
+            assertEquals(0, live.status())
+            assertTrue(live.redo())
+            assertEquals(1, live.status())
+
+            val pencil = Midend.fromSave(Map, SgtpSave.parse(save))
+            pencil.processKey(30, 30, Buttons.RIGHT_BUTTON, 20)
+            pencil.processKey(110, 30, Buttons.RIGHT_RELEASE, 20)
+            assertEquals("p0:4", pencil.serialise().value("MOVE"))
+            assertEquals(2, pencil.stateCount)
+            assertEquals(0, pencil.status())
+
+            val solved = Midend.fromSave(Map, SgtpSave.parse(handSave("fh,01010")))
+            assertTrue(solved.solve())
+            assertEquals(1, solved.status())
+            assertEquals(
+                oracle.solve(handSave("fh,01010")).state,
+                solved.serialise().serialise(),
+            )
 
             // A restart is a Kotlin-only history shape: the oracle has no
             // restart key. The oracle must still load the save.

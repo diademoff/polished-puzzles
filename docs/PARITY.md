@@ -207,7 +207,7 @@ submenu entries when a game groups its presets.
 | `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `dual-run` |
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `C` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `dual-run` |
-| `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `C` |
+| `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `dual-run` |
 | `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `dual-run` |
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `dual-run` |
 | `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `dual-run` |

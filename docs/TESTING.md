@@ -2719,6 +2719,100 @@ aggressive 100x100 latency is an enablement debt:
   `DOMINOSA` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(DOMINOSA)` is false and the app uses C.
 
+- `MapDescTest` is semantic. It compares the six presets and the
+  default with the goldens and fresh oracle games, the short and full
+  encodings, the decode quirks (`20x15` gives `n = 37`, `20x15n3.5`
+  gives `n = 3`, `20x15n30d`, `20x15n30dz`, `-4x5`, and a saturating
+  `atoi`), the validation order, the `PARAMS ...dn` / `CPARAMS ...de`
+  split, and `params + seed -> DESC` over nine seed strings and a
+  numeric sweep. The generator order is pinned by the encoded
+  `RandomState` after `newDesc`, so the region-seed placement, the
+  weighted extension, the four-colour recursion with its reverse trial
+  order, the clue-removal loop, and the one region shuffle are all
+  fixed. The retry fixtures pin the difficulty gate and the `tries`
+  counter. The auxiliary answer is the full four-colouring, one `c:i`
+  per region in order. Map has two seed streams: the game seed drives
+  the generator and every `DESC` and `AUXINFO`, while the description
+  text seeds a second, independent stream for the diagonal smoothing
+  and the canonical edge and region points. The test pins that the
+  second stream follows the text: two descriptions with the same edge
+  list split the cells differently, and `newState` is deterministic.
+- `MapGameTest` is semantic. It pins the two hand-written new-game
+  shapes, the real left and right drag strings, completion, the sticky
+  `completed` flag, undo and redo, the completion event, the two solve
+  modes, the two C error strings, and `requestKeys` (arrow mode 3,
+  `Regions`/`Colours`, no `needsArrows`, unchanged by the full-cursor
+  hint). A solve with `AUXINFO` returns the stored answer; a solve
+  without it starts from the captured initial clues, not the current
+  board, and diffs against the current colouring. A hand-written move
+  can overwrite a clue; the oracle loads that save without a solve,
+  and the Kotlin solve includes the clue in the diff and restores it.
+- `MapSaveTest` is strict for the save text and semantic for the
+  state. It reads all seven corpus saves, rewrites them byte for byte,
+  and compares id, status, undo, redo, text, text format, and the raw
+  `AUXINFO` text with C. It pins the record order, the absence of
+  `UI`, `TIME`, and `PRIVDESC`, the `PARAMS ...dn` / `CPARAMS ...de`
+  split for the 20x15 Easy save, the same split for the 30x25 Hard
+  save, and that `default.sgtp` equals `20x15n30dn.sgtp`. A Kotlin
+  save for every preset and nine seeds loads in C. In-memory history
+  covers a recolour, a pencil mark, an undone position with a live redo
+  branch, a `SOLVE`, and a `RESTART`, and every shape reloads in both
+  engines. A save without `AUXINFO` loads and solves from the clues,
+  a hand-written `AUXINFO` round-trips, and an empty seed stays a
+  zero-length `SEED` record.
+- `MapTraceTest` is strict. It compares the six frozen traces and
+  `traceNew` for every preset, the first frame (the window clear, the
+  grid background, 300 `clip`/`unclip` pairs, a diagonal triangle, and
+  one `23x23` blitter created before `start_draw` and never freed), the
+  sized fresh frames, the damaged-cell warm frames with the
+  `blitter_load`/`blitter_save` pair, and the letterbox. The label
+  preferences `show-labels=regions` and `show-labels=colours` are
+  compared with the oracle text operations, including the pencil
+  letters. The stipple preference is compared at the `T/7` and `T/4`
+  radii. The flash preference is stored on the live UI but draws
+  nothing: the oracle's `allow_flash` is 0, so all three values are
+  compared as the same frame. The test also pins the error diamond and
+  the cursor epsilon.
+- `MapInputParityTest` is semantic and ui. It compares the layout at
+  six viewports, real recolours and right-button pencil drags at tiles
+  48, 63, 82, and 100 and at the 411x702 letterbox, and the four
+  quadrants of a diagonally split cell. State, id, status, the history
+  size, and the final frame with `pointsSized` are compared for every
+  real gesture. Every real recolour changes the board and the status
+  and adds one move and one state; a pencil drag changes the board and
+  the count but not the status. Border, same-region, lone-release,
+  drag-into-border, and letterbox clicks change neither, at every tile
+  and in the letterbox, each followed by a positive control. The test
+  also pins `requestKeys`, the two requested keys as UI-only updates,
+  the cursor move, and that unknown keys and modified arrows are
+  unused.
+- `MapTest` is the engine test. It pins the decode and validation
+  tables, the `atoi` saturation, the plain `d` for an out-of-range
+  difficulty, the description messages, the retry counters, the
+  deterministic geometry, the move grammar, the completion and
+  `changedState` rules, the two solve errors, the initial-clue solve,
+  the key labels, the UI defaults, the palette, the size search, the
+  drawstate and blitter lifecycle, the colour labels, the stipple
+  radius, and the error marker. D-014 is pinned here: the C validation
+  boundary `32767x32767` accepted and `32768x32768` rejected, the
+  `2^20` area and `4096` region limits on `newDesc`, `newState`, and
+  `validateDesc`, and the two fixed messages. D-015 is pinned here
+  too: the saturating move index, the plain `d`, the clue overwrite
+  restored by the solve diff, and the skipped missing canonical point.
+  The owner review notes are in `docs/DEVIATIONS.md`.
+- Map enablement debt. S8 must build the four-field configuration
+  schema (Width, Height, Regions, `:Easy:Normal:Hard:Unreasonable`),
+  apply `flash-type`, `show-labels`, and `stipple-style` to the live
+  `Ui` after `newUi` and after `Midend.fromSave` with a forced redraw
+  (map has no `UI` record), show `Puzzle is inconsistent` and
+  `Unable to find a unique solution for this puzzle` instead of the
+  generic solve error, move generation off the UI thread, and wait two
+  releases. The owner must decide the final area and region limits
+  (D-014) and review the defined C undefined-behavior paths (D-015)
+  before enablement. `MAP` is in `KotlinGames.gameFor` and not in
+  `APP_GAMES`, so `KotlinGames.handles(MAP)` is false and the app uses
+  C. S9 is a tested `currentKeyLabel` helper with no Android call site.
+
 - `EmptySeedSaveTest` is strict for the save text. It opens fifteen and
   flood with an empty seed and asserts that Kotlin writes a
   zero-length `SEED` record instead of `HEXSEED`, that the text equals

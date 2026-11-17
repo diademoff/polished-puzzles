@@ -358,6 +358,28 @@ class MapTraceTest {
         }
 
     @Test(timeout = 300_000)
+    fun `the flash preference is stored but draws nothing`() =
+        OracleClient().use { oracle ->
+            // The oracle's `allow_flash` is 0 and the port never draws a
+            // flash, so all three values produce the same frame. The
+            // preference is still accepted and stored on the live UI.
+            val save = oracle.newGame("map", "20x15n30dn", SEED).state
+            val plain = normalize(oracle.trace(save))
+            for ((pref, value) in listOf(
+                "flash-type=cyclic" to 0,
+                "flash-type=each-white" to 1,
+                "flash-type=all-white" to 2,
+            )) {
+                val expected = normalize(oracle.trace(save, prefs = "$pref\n"))
+                assertLines("'$pref' oracle frame", plain, expected)
+                val midend = Midend.fromSave(Map, SgtpSave.parse(save))
+                (midend.ui as Map.Ui).flashType = value
+                val actual = normalize(KotlinTraceSink.stateTrace(midend))
+                assertLines("'$pref'", expected, actual)
+            }
+        }
+
+    @Test(timeout = 300_000)
     fun `the error marker and the cursor match the oracle`() =
         OracleClient().use { oracle ->
             // Two adjacent regions with the same colour: a red diamond

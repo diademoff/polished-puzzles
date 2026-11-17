@@ -7,6 +7,7 @@ import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -361,7 +362,259 @@ class MapInputParityTest {
         assertFalse(midend.canUndo)
     }
 
+    @Test(timeout = 300_000)
+    fun `real recolours and pencil drags match at every tile and the letterbox`() =
+        OracleClient().use { oracle ->
+            val save = handSave("fh,0123a")
+            for (view in viewports(save)) {
+                val tile = view.tile
+                val name = "${view.width}x${view.height} tile $tile"
+                for (drag in listOf(
+                    Drag(
+                        "recolour",
+                        Buttons.LEFT_BUTTON,
+                        Buttons.LEFT_RELEASE,
+                        "0:4",
+                        1,
+                    ),
+                    Drag(
+                        "pencil",
+                        Buttons.RIGHT_BUTTON,
+                        Buttons.RIGHT_RELEASE,
+                        "p0:4",
+                        0,
+                    ),
+                )) {
+                    val gamePoints = listOf(
+                        ButtonPoint(tile + tile / 2, tile + tile / 2, drag.press),
+                        ButtonPoint(5 * tile + tile / 2, tile + tile / 2, drag.release),
+                    )
+                    val viewPoints = gamePoints.map {
+                        OracleClient.Point(
+                            it.x + view.originX,
+                            it.y + view.originY,
+                            it.button,
+                        )
+                    }
+                    val expected = oracle.pointsSized(
+                        save,
+                        viewPoints,
+                        width = view.width,
+                        height = view.height,
+                        recordTrace = true,
+                    )
+                    assertEquals(
+                        "$name ${drag.what} move",
+                        drag.move,
+                        SgtpSave.parse(expected.state.state).value("MOVE"),
+                    )
+                    assertEquals("$name ${drag.what} status", drag.status, expected.state.status)
+
+                    val midend = Midend.fromSave(Map, SgtpSave.parse(save))
+                    for (point in gamePoints) {
+                        midend.processKey(point.x, point.y, point.button, tile)
+                    }
+                    assertEquals("$name ${drag.what} id", expected.state.id, midend.id())
+                    assertEquals(
+                        "$name ${drag.what} canonical",
+                        expected.state.state,
+                        midend.serialise().serialise(),
+                    )
+                    assertEquals("$name ${drag.what} history", 2, midend.stateCount)
+                    assertTrue("$name ${drag.what} can undo", midend.canUndo)
+                    assertFalse("$name ${drag.what} can redo", midend.canRedo)
+                    assertEquals("$name ${drag.what} status", drag.status, midend.status())
+                    assertNotEquals(
+                        "$name ${drag.what} changes the board",
+                        save,
+                        midend.serialise().serialise(),
+                    )
+                    assertLines(
+                        "$name ${drag.what} trace",
+                        TraceNormalizer.normalize(expected.trace!!, upstream),
+                        TraceNormalizer.normalize(
+                            KotlinTraceSink.stateTrace(midend, tile),
+                            upstream,
+                        ),
+                    )
+                }
+            }
+        }
+
+    @Test(timeout = 300_000)
+    fun `inert clicks change nothing at every tile and the letterbox`() =
+        OracleClient().use { oracle ->
+            val save = handSave("fh,0123a")
+            for (view in viewports(save)) {
+                val tile = view.tile
+                val border = tile / 2
+                val center = tile + tile / 2
+                val last = 5 * tile + tile / 2
+                val name = "${view.width}x${view.height} tile $tile"
+                val cases = listOf(
+                    "border" to listOf(
+                        ButtonPoint(border, border, Buttons.LEFT_BUTTON),
+                        ButtonPoint(border, border, Buttons.LEFT_RELEASE),
+                    ),
+                    "same region" to listOf(
+                        ButtonPoint(center, center, Buttons.LEFT_BUTTON),
+                        ButtonPoint(center, center, Buttons.LEFT_RELEASE),
+                    ),
+                    "lone release" to listOf(
+                        ButtonPoint(last, center, Buttons.LEFT_RELEASE),
+                    ),
+                    "drag into the border" to listOf(
+                        ButtonPoint(center, center, Buttons.LEFT_BUTTON),
+                        ButtonPoint(border, border, Buttons.LEFT_RELEASE),
+                    ),
+                )
+                for ((what, gamePoints) in cases) {
+                    val viewPoints = gamePoints.map {
+                        OracleClient.Point(
+                            it.x + view.originX,
+                            it.y + view.originY,
+                            it.button,
+                        )
+                    }
+                    val expected = oracle.pointsSized(
+                        save,
+                        viewPoints,
+                        width = view.width,
+                        height = view.height,
+                    )
+                    val midend = Midend.fromSave(Map, SgtpSave.parse(save))
+                    for (point in gamePoints) {
+                        midend.processKey(point.x, point.y, point.button, tile)
+                    }
+                    assertEquals("$name $what oracle", expected.state.state, save)
+                    assertEquals("$name $what state", save, midend.serialise().serialise())
+                    assertEquals("$name $what count", 1, midend.stateCount)
+                    assertEquals("$name $what status", 0, midend.status())
+                    assertEquals("$name $what id", expected.state.id, midend.id())
+                }
+
+                // A click in the letterbox band is outside the grid.
+                if (view.originX > 0 || view.originY > 0) {
+                    val viewPoint = OracleClient.Point(1, 1, Buttons.LEFT_BUTTON)
+                    val bandPoints = listOf(
+                        viewPoint,
+                        viewPoint.copy(button = Buttons.LEFT_RELEASE),
+                    )
+                    val gamePoints = bandPoints.map {
+                        ButtonPoint(
+                            it.x - view.originX,
+                            it.y - view.originY,
+                            it.button,
+                        )
+                    }
+                    val expected = oracle.pointsSized(
+                        save,
+                        bandPoints,
+                        width = view.width,
+                        height = view.height,
+                    )
+                    val midend = Midend.fromSave(Map, SgtpSave.parse(save))
+                    for (point in gamePoints) {
+                        midend.processKey(point.x, point.y, point.button, tile)
+                    }
+                    assertEquals("$name letterbox oracle", expected.state.state, save)
+                    assertEquals("$name letterbox state", save, midend.serialise().serialise())
+                    assertEquals("$name letterbox count", 1, midend.stateCount)
+                }
+            }
+
+            // The positive control: the same gesture on a real region.
+            val midend = Midend.fromSave(Map, SgtpSave.parse(save))
+            midend.processKey(30, 30, Buttons.LEFT_BUTTON, 20)
+            midend.processKey(110, 30, Buttons.LEFT_RELEASE, 20)
+            assertEquals(2, midend.stateCount)
+            assertEquals(1, midend.status())
+            assertNotEquals(save, midend.serialise().serialise())
+        }
+
+    @Test(timeout = 120_000)
+    fun `the requested keys and the cursor are UI updates`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("map", "", SEED).state
+            val expected = oracle.requestKeys(save)
+            val actual = Map.requestKeys(Map.defaultParams())
+            assertEquals(3, expected.arrowMode)
+            assertEquals(expected.labels.size, actual.labels.size)
+            for (i in expected.labels.indices) {
+                assertEquals(expected.labels[i].label, actual.labels[i].name)
+                assertEquals(expected.labels[i].button, actual.labels[i].button)
+                assertEquals(expected.labels[i].needsArrows, actual.labels[i].needsArrows)
+            }
+            assertEquals("Regions", actual.labels[0].name)
+            assertEquals(76, actual.labels[0].button)
+            assertEquals("Colours", actual.labels[1].name)
+            assertEquals(67, actual.labels[1].button)
+            assertEquals(expected, oracle.requestKeys(save, fullCursor = true))
+
+            // The two requested keys toggle a drawing preference. The
+            // C save text and the state count do not change.
+            val sequence = listOf('l'.code, 'l'.code, 'c'.code, 'c'.code)
+            val expectedState = oracle.keys(save, sequence).state
+            assertEquals(save, expectedState)
+            val midend = Midend.fromSave(Map, SgtpSave.parse(save))
+            for (key in sequence) {
+                assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, key, 20))
+            }
+            assertEquals(save, midend.serialise().serialise())
+            assertEquals(1, midend.stateCount)
+            val ui = midend.ui as Map.Ui
+            assertEquals(0, ui.showLabels)
+
+            // A cursor move is also a UI update, and a real drag is the
+            // positive control.
+            assertEquals(
+                KeyOutcome.SomeEffect,
+                midend.processKey(0, 0, Buttons.CURSOR_RIGHT, 20),
+            )
+            assertEquals(save, midend.serialise().serialise())
+            assertEquals(1, midend.stateCount)
+            val control = Midend.fromSave(Map, SgtpSave.parse(handSave("fh,0123a")))
+            control.processKey(30, 30, Buttons.LEFT_BUTTON, 20)
+            control.processKey(110, 30, Buttons.LEFT_RELEASE, 20)
+            assertEquals(2, control.stateCount)
+            assertEquals(1, control.status())
+        }
+
+    private fun viewports(save: String): List<GameViewport> {
+        val params = Map.decodeParams("5x2n5")
+        val sizes = listOf(48, 63, 82, 100).map { tile ->
+            val size = Map.computeSize(params, tile)
+            tile to (size.width to size.height)
+        } + listOf(null to (411 to 702))
+        return sizes.map { (tile, viewport) ->
+            val geometry = Midend.fromSave(Map, SgtpSave.parse(save))
+                .geometryFor(viewport.first, viewport.second)
+            if (tile != null) assertEquals(tile, geometry.tileSize)
+            GameViewport(
+                tile = geometry.tileSize,
+                width = viewport.first,
+                height = viewport.second,
+                originX = geometry.originX,
+                originY = geometry.originY,
+            )
+        }
+    }
+
     private data class ButtonPoint(val x: Int, val y: Int, val button: Int)
+    private data class Drag(
+        val what: String,
+        val press: Int,
+        val release: Int,
+        val move: String,
+        val status: Int,
+    )
+    private data class GameViewport(
+        val tile: Int,
+        val width: Int,
+        val height: Int,
+        val originX: Int,
+        val originY: Int,
+    )
     private data class Quadrant(val name: String, val dx: Int, val dy: Int, val region: Int)
 
     private fun assertLines(what: String, expected: String, actual: String) {
