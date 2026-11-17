@@ -665,7 +665,18 @@ object Netslide : Game {
      * `solve_game`: the stored auxiliary answer is the whole solution.
      * There is no search, and a game without the answer cannot solve.
      */
+    /**
+     * `solve_game` (`netslide.c:886-898`): the answer is the stored
+     * `AUXINFO`, and a save without it has no known solution.
+     */
     override fun solve(state: Game.State, auxInfo: String?): String? = auxInfo
+
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
+        if (auxInfo != null) {
+            SolveOutcome(auxInfo, null)
+        } else {
+            SolveOutcome(null, "Solution not known for this puzzle")
+        }
 
     /**
      * `execute_move`. `R<row>,<d>` accepts `-w <= d <= w` and

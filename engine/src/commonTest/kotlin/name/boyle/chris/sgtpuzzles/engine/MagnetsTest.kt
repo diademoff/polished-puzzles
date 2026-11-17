@@ -169,6 +169,18 @@ class MagnetsTest {
     }
 
     @Test
+    fun `an impossible board has the C solve error`() {
+        // Every row is two horizontal dominoes. Four positive magnets in
+        // column 0 force every cell of column 1 to be negative, but the
+        // bottom count asks for three negatives there. The parse is
+        // valid; only the solver sees the contradiction
+        // (`magnets.c:1493-1498`).
+        val state = stateOf("4x4de", "4112,2222,0332,2222,LRLRLRLRLRLRLRLR")
+        assertNull(Magnets.solve(state, null))
+        assertEquals("Puzzle is impossible.", Magnets.solveGame(state, null).error)
+    }
+
+    @Test
     fun `the text format is the C rectangle`() {
         val text = Magnets.textFormat(stateOf("6x5de", GOLDEN_6X5DE))
         assertEquals(

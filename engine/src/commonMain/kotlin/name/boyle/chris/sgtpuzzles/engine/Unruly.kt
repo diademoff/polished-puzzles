@@ -428,7 +428,15 @@ object Unruly : Game {
      * seven presets always solve, so the two messages are reachable only
      * through a hand-written description.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` (`unruly.c:1274-1300`). A result of 1 is a stalled
+     * board and a result of -1 is an invalid board, with the two C
+     * messages.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
         val s = state as State
         val w = s.width
         val h = s.height
@@ -441,12 +449,17 @@ object Unruly : Game {
         if (UnrulySolver.validateAllRows(solved, w, h, unique, null) == -1) {
             result = -1
         }
-        if (result != 0) return null
+        if (result != 0) {
+            return SolveOutcome(
+                null,
+                if (result == 1) "No solution found." else "Puzzle is invalid.",
+            )
+        }
 
         val out = StringBuilder(solved.size + 1)
         out.append('S')
         for (value in solved) out.append(if (value == N_ONE) '1' else '0')
-        return out.toString()
+        return SolveOutcome(out.toString(), null)
     }
 
     /**

@@ -248,6 +248,7 @@ class FloodTest {
         }
         assertTrue((complete as Flood.State).complete)
         assertNull(Flood.solve(complete))
+        assertEquals("Puzzle is already solved", Flood.solveGame(complete, null).error)
 
         // A uniform description is complete as far as `completed()` is
         // concerned, so the solver loop runs zero times. C then returns

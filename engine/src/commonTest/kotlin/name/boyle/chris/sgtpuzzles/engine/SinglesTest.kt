@@ -374,6 +374,10 @@ class SinglesTest {
             Singles.solve(state("231222312", "3x3de")),
         )
         assertNull(Singles.solve(state("1111")))
+        assertEquals(
+            "Unable to solve puzzle.",
+            Singles.solveGame(state("1111"), null).error,
+        )
         // The aux argument is ignored, as C ignores it.
         assertEquals(
             Singles.solve(state("2111")),

@@ -346,7 +346,27 @@ object Inertia : Game {
 
     /** The C solver; null means "no solution from this position". */
     override fun solve(state: Game.State, auxInfo: String?): String? =
-        solveInertia(state as State)
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` with the two C messages (`inertia.c:749-755` and
+     * `:1093`, `:1239`): a board with no gem is already solved, and any
+     * other null from the heuristic means no tour was found from this
+     * starting point.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val s = state as State
+        val move = solveInertia(s)
+        if (move != null) return SolveOutcome(move, null)
+        return SolveOutcome(
+            null,
+            if (s.grid.none { it == GEM }) {
+                "Game is already solved"
+            } else {
+                "Unable to find a solution from this starting point"
+            },
+        )
+    }
 
     /**
      * `execute_move`. The `S` path installs a tour and does not touch

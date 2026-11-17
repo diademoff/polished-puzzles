@@ -410,10 +410,14 @@ class UnrulyTest {
         // `aux` is accepted and ignored.
         assertEquals(SOLVE_8X8, Unruly.solve(midend.state, "S" + "0".repeat(64)))
 
-        // A stalled board and an invalid board return null; C sets
-        // "No solution found." and "Puzzle is invalid." instead.
-        assertNull(Unruly.solve(Unruly.newState(Unruly.decodeParams("8x8dt"), "zzo")))
-        assertNull(Unruly.solve(Unruly.newState(Unruly.decodeParams("8x8dt"), "AAAzzl")))
+        // A stalled board and an invalid board return null; the error
+        // channel carries the two C messages (`unruly.c:1290-1297`).
+        val stalled = Unruly.newState(Unruly.decodeParams("8x8dt"), "zzo")
+        assertNull(Unruly.solve(stalled))
+        assertEquals("No solution found.", Unruly.solveGame(stalled, null).error)
+        val invalid = Unruly.newState(Unruly.decodeParams("8x8dt"), "AAAzzl")
+        assertNull(Unruly.solve(invalid))
+        assertEquals("Puzzle is invalid.", Unruly.solveGame(invalid, null).error)
     }
 
     @Test

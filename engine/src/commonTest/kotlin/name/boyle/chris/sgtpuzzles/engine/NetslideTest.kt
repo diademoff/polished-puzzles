@@ -452,6 +452,17 @@ class NetslideTest {
     private fun execute(state: Netslide.State, move: String): Netslide.State =
         Netslide.executeMove(state, move) as Netslide.State
 
+    @Test
+    fun `a state without an aux answer has the C solve error`() {
+        val s = state("3x3", "15c9d6234")
+        assertNull(Netslide.solve(s, null))
+        assertEquals(
+            "Solution not known for this puzzle",
+            Netslide.solveGame(s, null).error,
+        )
+        assertEquals(Netslide.solve(s, "S15c9d6234"), Netslide.solveGame(s, "S15c9d6234").move)
+    }
+
     private fun statusText(state: Netslide.State): String =
         Netslide.statusText(state, Netslide.newUi(state))
 

@@ -310,13 +310,18 @@ class FlipTest {
         assertEquals("Auto-solved. Moves: 4", Flip.statusText(next, Flip.newUi(next)))
         assertFalse(sawCompletion, "a cheated completion raises no event")
 
-        // A hand-written insoluble position has no solution. The seam has
-        // no error out-parameter, so C's message cannot be returned.
+        // A hand-written insoluble position has no solution; the C
+        // message is in the error channel (`flip.c:747`).
         val insoluble = Flip.newState(
             Flip.decodeParams("3x3c"),
             "000000000000000000000,008",
         )
         assertNull(Flip.solve(insoluble))
+        assertEquals(
+            "No solution exists for this position",
+            Flip.solveGame(insoluble, null).error,
+        )
+        assertNull(Flip.solveGame(insoluble, null).move)
 
         // An honest completion does raise the event.
         var honest: Game.State = state

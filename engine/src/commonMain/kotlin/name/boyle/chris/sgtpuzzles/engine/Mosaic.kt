@@ -379,11 +379,15 @@ object Mosaic : Game {
      * A board the solver cannot finish returns null; C reports
      * "Could not solve this board".
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /** `solve_game` (`mosaic.c:925-953`): the solver failed. */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
         val s = state as State
         val n = s.width * s.height
         val sol = MosaicSolver.solve(s.width, s.height, s.shared.clue, s.shared.shown)
-            ?: return null
+            ?: return SolveOutcome(null, "Could not solve this board")
         val out = StringBuilder(1 + 2 * ((n + 7) / 8))
         out.append('s')
         var i = 0
@@ -398,7 +402,7 @@ object Mosaic : Game {
             byte = byte shl (8 - bits)
             out.append(HEX[(byte shr 4) and 0x0F]).append(HEX[byte and 0x0F])
         }
-        return out.toString()
+        return SolveOutcome(out.toString(), null)
     }
 
     /**

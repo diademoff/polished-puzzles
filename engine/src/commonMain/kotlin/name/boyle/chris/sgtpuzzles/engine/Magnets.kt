@@ -1691,24 +1691,37 @@ object Magnets : Game {
      * current state, then on the decoded initial state. The move is
      * always the column-major diff from the current state.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` (`magnets.c:1468-1500`). The current board is tried
+     * first, then the decoded first state. A negative result from the
+     * second solve means the clues contradict each other; zero means
+     * this solver could not finish an otherwise consistent board.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
         val current = state as State
         val solved = current.copy() as State
 
         if (auxInfo != null && auxInfo.length == current.wh) {
             solveFromAux(solved, auxInfo)
-            return stateDiff(current, solved)
+            return SolveOutcome(stateDiff(current, solved), null)
         }
 
         if (solveState(solved, DIFFCOUNT) > 0) {
-            return stateDiff(current, solved)
+            return SolveOutcome(stateDiff(current, solved), null)
         }
 
         val initial = initialStateForSolve(current)
-        if (solveState(initial, DIFFCOUNT) > 0) {
-            return stateDiff(current, initial)
+        val ret = solveState(initial, DIFFCOUNT)
+        if (ret > 0) {
+            return SolveOutcome(stateDiff(current, initial), null)
         }
-        return null
+        return SolveOutcome(
+            null,
+            if (ret < 0) "Puzzle is impossible." else "Unable to solve puzzle.",
+        )
     }
 
     /** `solve_from_aux`: every cell is set, including the singletons. */

@@ -281,10 +281,23 @@ object Filling : Game {
      * The `AUXINFO` branch is kept for a save from another
      * implementation.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
-        if (auxInfo != null) return auxInfo
+    /**
+     * `solve_game` (`filling.c:1379-1389`). C returns the partial answer
+     * even when its solver fails, and sets the error that the midend
+     * then ignores because the move is non-NULL. [solveGame] keeps both
+     * halves so the seam reports the same state.
+     */
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        if (auxInfo != null) return SolveOutcome(auxInfo, null)
         val s = state as State
-        return FillingSolver.solve(s.shared.clues, s.width, s.height).solutionString()
+        val result = FillingSolver.solve(s.shared.clues, s.width, s.height)
+        return SolveOutcome(
+            result.solutionString(),
+            if (result.solved) null else "Sorry, I couldn't find a solution",
+        )
     }
 
     /**

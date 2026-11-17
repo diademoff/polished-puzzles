@@ -359,6 +359,10 @@ class LightupTest {
     fun `an insoluble board returns null`() {
         val midend = Midend.fromGameId(Lightup, "3x3:4h")
         assertNull(Lightup.solve(midend.state))
+        assertEquals(
+            "Unable to find a solution to this puzzle.",
+            Lightup.solveGame(midend.state, null).error,
+        )
     }
 
     // ------------------------------------------------------------------

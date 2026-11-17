@@ -587,6 +587,11 @@ class FillingTest {
         // The 5x5 all-empty board stalls and C returns the partial move.
         val stalled = Filling.newState(Filling.decodeParams("5x5"), "y")
         assertEquals("s" + "0".repeat(25), Filling.solve(stalled))
+        // C still returns the partial answer, so the midend never shows
+        // this error (`filling.c:1384-1387`); the seam keeps both halves.
+        val stalledOutcome = Filling.solveGame(stalled, null)
+        assertEquals("s" + "0".repeat(25), stalledOutcome.move)
+        assertEquals("Sorry, I couldn't find a solution", stalledOutcome.error)
 
         // Two adjacent 1 clues make an overfull region. C asserts at
         // `filling.c:796` and the shipped C code keeps assertions, so C

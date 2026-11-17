@@ -1076,20 +1076,24 @@ object Singles : Game {
      * A move never changes `nums`, so that is the state a save starts
      * with.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /** `solve_game` (`singles.c:1197-1217`): both boards failed. */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
         val s = state as State
 
         val solved = s.duplicate()
         if (solveSpecific(solved, DIFF_ANY, false) > 0) {
-            return gameStateDiff(s, solved, true)
+            return SolveOutcome(gameStateDiff(s, solved, true), null)
         }
 
         val initial = s.initial()
         if (solveSpecific(initial, DIFF_ANY, false) > 0) {
-            return gameStateDiff(s, initial, true)
+            return SolveOutcome(gameStateDiff(s, initial, true), null)
         }
 
-        return null
+        return SolveOutcome(null, "Unable to solve puzzle.")
     }
 
     // ------------------------------------------------------------------

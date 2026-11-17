@@ -286,9 +286,17 @@ class SoloTest {
         // An empty board is ambiguous.
         val empty = Solo.newState(Solo.decodeParams("3x3"), "i".repeat(9))
         assertNull(Solo.solve(empty, null))
+        assertEquals(
+            "Multiple solutions exist for this puzzle",
+            Solo.solveGame(empty, null).error,
+        )
         // A board with duplicate clues is impossible.
         val bad = Solo.newState(Solo.decodeParams("3x3"), "1_".repeat(80) + "1")
         assertNull(Solo.solve(bad, null))
+        assertEquals(
+            "No solution exists for this puzzle",
+            Solo.solveGame(bad, null).error,
+        )
         // A stored answer is returned unchanged, as C does.
         val state = Solo.newState(Solo.decodeParams("3x3"), "i".repeat(9))
         assertEquals("S1,2", Solo.solve(state, "S1,2"))

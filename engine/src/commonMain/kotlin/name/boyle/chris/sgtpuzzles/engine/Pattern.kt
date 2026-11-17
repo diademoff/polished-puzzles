@@ -28,9 +28,9 @@ package name.boyle.chris.sgtpuzzles.engine
  *   status 0, and the first accepted move can win it.
  *
  * `solve` returns null when the line solver cannot finish a hand-written
- * board; the seam has no error channel, so the C message
- * `Solving algorithm cannot complete this puzzle` is not returned. This
- * is enablement debt, not a rule change.
+ * board; `solveGame` carries the C message
+ * `Solving algorithm cannot complete this puzzle` in
+ * `SolveOutcome.error`.
  *
  * Enablement debt: `validate_params` accepts an area up to `INT_MAX`
  * cells. The five presets generate in milliseconds, `40x40` takes about
@@ -849,14 +849,23 @@ object Pattern : Game {
      * grid does not change the answer. A board the solver cannot finish
      * returns null.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
-        if (auxInfo != null) return auxInfo
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` (`pattern.c:1100-1126`). A stored answer is returned
+     * unchanged; otherwise the line solver either finishes every row and
+     * column or fails with the C message.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        if (auxInfo != null) return SolveOutcome(auxInfo, null)
         val s = state as State
-        val matrix = LineSolver(s.width, s.height).solveFromCommon(s.common) ?: return null
+        val matrix = LineSolver(s.width, s.height).solveFromCommon(s.common)
+            ?: return SolveOutcome(null, "Solving algorithm cannot complete this puzzle")
         val out = StringBuilder(s.grid.size + 1)
         out.append('S')
         for (value in matrix) out.append(if (value == BLOCK) '1' else '0')
-        return out.toString()
+        return SolveOutcome(out.toString(), null)
     }
 
     /**

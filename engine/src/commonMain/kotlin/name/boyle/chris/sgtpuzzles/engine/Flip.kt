@@ -290,13 +290,27 @@ object Flip : Game {
      * of the click matrix with the lit bit as the right-hand side; the
      * free columns are enumerated, and the shortest solution wins.
      *
-     * The seam has no error out-parameter, so an insoluble hand-written
-     * position returns null here, as a game without a solver would. C
-     * reports "No solution exists for this position" instead. Generated
-     * games are always soluble.
+     * The seam returns null for an insoluble hand-written position, as a
+     * game without a solver would. [solveGame] carries the C message
+     * "No solution exists for this position" (`flip.c:747`) in that
+     * case. Generated games are always soluble.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
-        val s = state as State
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` with the C error channel. The inconsistent-equation
+     * branch is the only null result of the solver.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val move = solveFlip(state as State)
+        return SolveOutcome(
+            move,
+            if (move == null) "No solution exists for this position" else null,
+        )
+    }
+
+    private fun solveFlip(s: State): String? {
         val wh = s.count
         val stride = wh + 1
         val equations = ByteArray(stride * wh)

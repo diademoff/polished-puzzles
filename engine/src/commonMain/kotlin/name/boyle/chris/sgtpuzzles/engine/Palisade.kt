@@ -500,15 +500,25 @@ object Palisade : Game {
      * The clues are immutable, so the current state and the first state
      * solve the same, and no initial-grid copy is needed.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
-        if (auxInfo != null) return auxInfo
+    /**
+     * `solve_game` (`palisade.c:824-850`). The aux answer is returned as
+     * is; otherwise the local solver either finds the whole border set
+     * or fails with the C message. C's text has no full stop.
+     */
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        if (auxInfo != null) return SolveOutcome(auxInfo, null)
         val s = state as State
         val wh = s.shared.size
         val move = IntArray(wh)
         initBorders(s.shared.w, s.shared.h, move)
-        if (!solver(s.shared, s.shared.clues, move)) return null
+        if (!solver(s.shared, s.shared.clues, move)) {
+            return SolveOutcome(null, "Sorry, I can't solve this puzzle")
+        }
         val chars = CharArray(wh) { (move[it] or '@'.code).toChar() }
-        return "S" + String(chars)
+        return SolveOutcome("S" + String(chars), null)
     }
 
     /**

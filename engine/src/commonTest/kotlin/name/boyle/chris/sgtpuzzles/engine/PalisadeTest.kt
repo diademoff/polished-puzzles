@@ -736,6 +736,10 @@ class PalisadeTest {
         // A board the local techniques cannot finish.
         val empty = Midend.fromGameId(Palisade, "5x5n5:")
         assertNull(Palisade.solve(empty.state, null))
+        assertEquals(
+            "Sorry, I can't solve this puzzle",
+            Palisade.solveGame(empty.state, null).error,
+        )
         assertFalse(empty.solve())
 
         // k == 1 and a domino path solve from the sizes alone.

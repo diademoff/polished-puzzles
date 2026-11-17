@@ -274,6 +274,10 @@ class MosaicTest {
     fun `an inconsistent board returns no answer`() {
         val midend = Midend.fromGameId(Mosaic, "3x3:444444444")
         assertNull(Mosaic.solve(midend.state))
+        assertEquals(
+            "Could not solve this board",
+            Mosaic.solveGame(midend.state, null).error,
+        )
     }
 
     @Test

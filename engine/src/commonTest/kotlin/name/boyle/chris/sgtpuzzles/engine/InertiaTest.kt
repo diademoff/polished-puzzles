@@ -864,10 +864,15 @@ class InertiaTest {
         val solved = Inertia.executeMove(stateOf("2x3", "wbgmSs"), "0") as Inertia.State
         assertEquals(0, solved.gems)
         assertNull(Inertia.solve(solved))
+        assertEquals("Game is already solved", Inertia.solveGame(solved, null).error)
 
         val dead = Inertia.executeMove(stateOf("3x2", "Sgmbgs"), "2") as Inertia.State
         assertTrue(dead.dead)
         assertNull(Inertia.solve(dead))
+        assertEquals(
+            "Unable to find a solution from this starting point",
+            Inertia.solveGame(dead, null).error,
+        )
     }
 
     @Test

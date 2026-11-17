@@ -194,19 +194,38 @@ object Slant : Game {
         )
     }
 
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` (`slant.c:1544-1592`). A stored answer is used
+     * directly. Otherwise `slant_solve` reports 0 for a contradiction
+     * and 2 for a board it cannot finish, with the two C messages. A
+     * short `aux` is a seam guard: C reads `w*h` bytes without a length,
+     * so no C message applies.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
         val s = state as State
         val w = s.params.width
         val h = s.params.height
         val soln = IntArray(w * h)
         if (auxInfo != null) {
-            if (auxInfo.length != w * h) return null
+            if (auxInfo.length != w * h) return SolveOutcome(null, null)
             for (i in 0 until w * h) soln[i] = if (auxInfo[i] == '\\') -1 else 1
         } else {
             val ret = SlantGeneration.solve(
                 w, h, s.clues, soln, SlantGeneration.Scratch(w, h), SlantGeneration.HARD,
             )
-            if (ret != 1) return null
+            if (ret != 1) {
+                return SolveOutcome(
+                    null,
+                    if (ret == 0) {
+                        "This puzzle is not self-consistent"
+                    } else {
+                        "Unable to find a unique solution for this puzzle"
+                    },
+                )
+            }
         }
 
         val move = StringBuilder("S")
@@ -220,7 +239,7 @@ object Slant : Game {
                 }
             }
         }
-        return move.toString()
+        return SolveOutcome(move.toString(), null)
     }
 
     override fun executeMove(state: Game.State, move: String): Game.State? {

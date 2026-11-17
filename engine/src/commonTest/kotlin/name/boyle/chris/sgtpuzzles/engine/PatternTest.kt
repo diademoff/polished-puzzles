@@ -305,6 +305,10 @@ class PatternTest {
         // error channel, so solve returns null.
         val state = stateOf("4x4", "2/1/2/1/1.1/2/1/1")
         assertNull(Pattern.solve(state, null))
+        assertEquals(
+            "Solving algorithm cannot complete this puzzle",
+            Pattern.solveGame(state, null).error,
+        )
         assertEquals(0, Pattern.status(state))
         assertEquals(0, Pattern.status(state.copy() as Pattern.State))
     }

@@ -2992,15 +2992,26 @@ object Solo : Game {
     }
 
     /** `solve_game`, `solo.c:4302-4341`. */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
-        if (auxInfo != null) return auxInfo
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /**
+     * `solve_game` (`solo.c:4301-4340`). A stored answer is returned as
+     * is. The solver reports `DIFF_IMPOSSIBLE` and `DIFF_AMBIGUOUS`,
+     * with the two C messages.
+     */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        if (auxInfo != null) return SolveOutcome(auxInfo, null)
         val s = state as State
         val cr = s.cr
         val grid = s.shared.initialGrid.copyOf()
         val dlev = Difficulty(DIFF_RECURSIVE, DIFF_KINTERSECT)
         solver(cr, s.blocks, s.kblocks, s.xtype, grid, s.kgrid, dlev)
-        if (dlev.diff == DIFF_IMPOSSIBLE || dlev.diff == DIFF_AMBIGUOUS) return null
-        return encodeSolveMove(cr, grid)
+        return when (dlev.diff) {
+            DIFF_IMPOSSIBLE -> SolveOutcome(null, "No solution exists for this puzzle")
+            DIFF_AMBIGUOUS -> SolveOutcome(null, "Multiple solutions exist for this puzzle")
+            else -> SolveOutcome(encodeSolveMove(cr, grid), null)
+        }
     }
 
     /** `grid_text_format`, `solo.c:4343-4528`. */

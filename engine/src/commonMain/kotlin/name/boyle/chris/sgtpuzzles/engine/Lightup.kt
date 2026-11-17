@@ -1359,8 +1359,19 @@ object Lightup : Game {
      * order and names `L` or `I` by which flag differs, so the solver's
      * `F_IMPOSSIBLE` marks are part of the move. `aux` is not read.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
-        val s = state as State
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /** `solve_game` (`lightup.c:1726-1747`): both boards failed to solve. */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+        val move = solveLightup(state as State)
+        return SolveOutcome(
+            move,
+            if (move == null) "Unable to find a solution to this puzzle." else null,
+        )
+    }
+
+    private fun solveLightup(s: State): String? {
         val w = s.width
         val h = s.height
         val sflags = F_SOLVE_ALLOWRECURSE or F_SOLVE_DISCOUNTSETS

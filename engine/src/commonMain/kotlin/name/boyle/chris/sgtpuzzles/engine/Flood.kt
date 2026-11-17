@@ -338,10 +338,14 @@ object Flood : Game {
      * parameter, and a completed state has no solution. The result is
      * the move string only; executing it as an `S` move sets `cheated`.
      */
-    override fun solve(state: Game.State, auxInfo: String?): String? {
+    override fun solve(state: Game.State, auxInfo: String?): String? =
+        solveGame(state, auxInfo).move
+
+    /** `solve_game` (`flood.c:704-725`): a complete board is an error. */
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
         val s = state as State
-        if (s.complete) return null
-        return FloodSolver.solve(s.width, s.height, s.grid, s.colours)
+        if (s.complete) return SolveOutcome(null, "Puzzle is already solved")
+        return SolveOutcome(FloodSolver.solve(s.width, s.height, s.grid, s.colours), null)
     }
 
     /**
