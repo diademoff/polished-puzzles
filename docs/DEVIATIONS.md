@@ -891,6 +891,32 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-022: `rect` refuses an expansion that empties a base side
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** `rect` with a side of 1 and a positive expansion
+  factor passes `validate_params` in C (`rect.c:221-236`), then
+  `new_game_desc` computes the base grid side as
+  `(int)(1 / (1 + expandfactor)) == 0` (`rect.c:1160-1170`) and calls
+  `random_upto(rs, params2->h - 1)` with `-1` in the expansion loop,
+  which aborts the process with `allocation too large`. The port throws
+  `IllegalArgumentException` with
+  `Expansion factor leaves an empty base grid` before it allocates
+  anything. The parameter validator still accepts the value, as C does,
+  and a save with such parameters still loads because `new_game` never
+  expands.
+- **Why:** an abort is not acceptable in the app. Every other accepted
+  parameter set, including a side of 1 without expansion, keeps the C
+  algorithm and the C output.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../RectTest.kt::an expansion that empties a base side is refused`
+  pins the accepted validation, the exception for `1x7e5`, `7x1e5`,
+  and `2x1e0.5`, and the normal generation of `1x7` and `7x1`.
+- **Scope:** `rect`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

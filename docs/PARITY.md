@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, and `loopy` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, and `rect` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -219,7 +219,7 @@ submenu entries when a game groups its presets.
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `dual-run` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
-| `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
+| `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `dual-run` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `dual-run` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
@@ -1907,6 +1907,34 @@ Notes:
   accepted board is effectively unbounded work, so the app must
   generate off the UI thread and a size limit is an owner decision.
   S9 is not needed because `current_key_label` is NULL.
+
+- `rect` is `dual-run`. Its five presets, the `%dx%d` parameter
+  grammar with the `%g` expansion and the `a` unique flag, the
+  validation order, the description grammar, the random tiling with
+  the singleton repairs and the two expansion passes, the solver with
+  its randomized winnowing, the stored `AUXINFO` answer, the `H`/`V`/
+  `R`/`E` moves with the drag model, the text form, the palette, the
+  frame cache, layout, input, and `requestKeys` pass the matrix in
+  `RectDescTest`, `RectGameTest`, `RectSaveTest`, `RectTraceTest`,
+  `RectInputParityTest`, and the engine `RectTest`.
+
+  The C `execute_move` S branch returns before its completion check, so
+  a cheated solve is never marked completed and its status stays 0 with
+  `Auto-solved.`; the port keeps that and a test pins it. The stored
+  answer short-circuits the solver, and the non-unique mode can return
+  a different valid tiling when the answer is missing. An expansion
+  factor that shrinks a side of 1 to 0 aborts C inside the generator;
+  the port throws before it allocates (D-022). The C square bound
+  `w * h <= INT_MAX` is checked before anything is allocated.
+
+  `rect` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the app
+  stays on C and `handles(RECT)` is false. S8 must build the four-field
+  configuration schema (Width, Height, Expansion factor,
+  `Ensure unique solution`), keep the status bar on, show
+  `Auto-solved.` and `COMPLETED!`, show the solve payload instead of
+  throwing, generate off the UI thread, and wait two releases. There is
+  no `UI` record and no preference. S9 is a tested `currentKeyLabel`
+  helper with no Android call site.
 
 ## 8. Goldens
 

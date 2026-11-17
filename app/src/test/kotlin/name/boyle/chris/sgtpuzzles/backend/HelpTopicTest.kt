@@ -95,6 +95,7 @@ class HelpTopicTest {
         SINGLES to "singles",
         PEARL to "pearl",
         LOOPY to "loopy",
+        RECT to "rect",
     )
 
     @Test

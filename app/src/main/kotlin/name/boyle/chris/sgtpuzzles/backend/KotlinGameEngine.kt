@@ -39,6 +39,7 @@ import name.boyle.chris.sgtpuzzles.engine.Pattern
 import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
+import name.boyle.chris.sgtpuzzles.engine.Rect
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Signpost
@@ -146,8 +147,8 @@ object KotlinGames {
      * `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`,
      * `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`,
      * `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`,
-     * `towers`, `unequal`, `singles`, `pearl`, and `loopy` are in
-     * dual-run: their engines pass the parity matrix, but the app still
+     * `towers`, `unequal`, `singles`, `pearl`, `loopy`, and `rect` are
+     * in dual-run: their engines pass the parity matrix, but the app still
      * uses C until the configuration dialog and the two-release wait are
      * done.
      */
@@ -171,6 +172,7 @@ object KotlinGames {
         NETSLIDE -> Netslide
         UNRULY -> Unruly
         RANGE -> Range
+        RECT -> Rect
         LIGHTUP -> Lightup
         MOSAIC -> Mosaic
         PALISADE -> Palisade

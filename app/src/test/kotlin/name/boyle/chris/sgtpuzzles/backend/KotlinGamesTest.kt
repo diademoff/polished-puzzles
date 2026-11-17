@@ -23,6 +23,7 @@ import name.boyle.chris.sgtpuzzles.engine.Pattern
 import name.boyle.chris.sgtpuzzles.engine.Pearl
 import name.boyle.chris.sgtpuzzles.engine.Pegs
 import name.boyle.chris.sgtpuzzles.engine.Range
+import name.boyle.chris.sgtpuzzles.engine.Rect
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Signpost
@@ -264,6 +265,19 @@ class KotlinGamesTest {
     fun `pearl is registered but the app still uses C`() {
         assertEquals(Pearl, KotlinGames.gameFor(PEARL))
         assertFalse(KotlinGames.handles(PEARL))
+    }
+
+    @Test
+    fun `rect is registered but the app still uses C`() {
+        assertEquals(Rect, KotlinGames.gameFor(RECT))
+        assertFalse(KotlinGames.handles(RECT))
+    }
+
+    @Test
+    fun `the rect generator matches the frozen save`() {
+        val expected = File(testdata, "saves/initial/rect/7x7.sgtp").readText()
+        val actual = KotlinGames.generate(RECT, "7x7", "12345")
+        assertEquals(expected, actual)
     }
 
     @Test
