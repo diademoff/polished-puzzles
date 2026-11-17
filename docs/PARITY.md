@@ -173,7 +173,8 @@ C wins.
 | `dsf`, `tdq`, `findloop`, `matching`, `tree234` | parity: differential tests | C behavior |
 | `divvy` | parity: `engine/Divvy.kt`, differential test | C behavior |
 | `laydomino` | parity: `engine/LayDomino.kt`, differential test | C behavior |
-| `grid`, `loopgen`, `latin` | C until the first game consumer (ADR 0006) | C |
+| `grid`, `loopgen` | C until the first game consumer (ADR 0006) | C |
+| `latin` | parity: `engine/Latin.kt`, differential test on the generic path; the per-game callbacks arrive with keen | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
 | games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, and `net` are `dual-run`, the other games are `C` | the game inventory below |
 

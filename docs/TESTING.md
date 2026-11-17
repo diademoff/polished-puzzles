@@ -48,6 +48,7 @@ sort(values, mode)      -> sorted values
 combi(r, n)             -> combinations in upstream order
 dsf(kind, n, ops)       -> roots, sizes, minima, flip senses
 divvy(w, h, k, seed|state) -> roots, sizes, attempts, encoded state
+latin(kind, seed|state, grid, maxdiff) -> grid, state, difficulty, isLatin
 tdq(n, ops)             -> every removal
 findloop(n, edges)      -> loop edges and bridges
 matching(nl, nr, adj)   -> matching and permuted adjacency
@@ -353,6 +354,16 @@ Engine tests:
   even and odd areas, one-row boards, and seeds that need several
   repair passes. `LayDominoTest` pins fixed vectors, the valid-tiling
   invariant over a sweep, and the invalid input guards.
+- `LatinParityTest` is strict. It compares `latin_generate` and
+  `latin_generate_rect` grids and the encoded generator state for
+  orders 1..9, one-row and one-column rectangles, 4x6, and 6x4, and it
+  resumes from an encoded state. It also compares the generic
+  `latin_solver` difficulty and the returned grid at every `maxdiff`
+  from 0 to 4 for complete, unique, set, extreme-set, forcing,
+  recursive, ambiguous, invalid, and impossible grids, and it pins
+  `latin_check`. `LatinTest` pins fixed vectors, the Latin square and
+  placement invariants, and the context copy and free protocol that a
+  game solver uses.
 - `PegsTest` checks the pegs parameter quirks, the state ownership, the
   text format, the key label, the loose move grammar, the lax
   completion rule, the cursor scan order, and the generator's retry

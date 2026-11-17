@@ -412,6 +412,83 @@ class OracleClient(
         )
     }
 
+    /** One `latin_generate` or `latin_generate_rect` result. */
+    data class LatinGenerated(
+        val order: Int,
+        val w: Int,
+        val h: Int,
+        val grid: List<Int>,
+        val state: String,
+    )
+
+    /** One generic `latin_solver` run: the difficulty and the grid after it. */
+    data class LatinSolved(val order: Int, val diff: Int, val grid: List<Int>)
+
+    /** Runs `latin_generate` from a seed or an encoded generator state. */
+    fun latinGenerate(o: Int, seed: String? = null, state: String? = null): LatinGenerated =
+        latinGenerateRequest(mapOf("kind" to "generate", "o" to o), seed, state)
+
+    /** Runs `latin_generate_rect` from a seed or an encoded generator state. */
+    fun latinGenerateRect(
+        w: Int,
+        h: Int,
+        seed: String? = null,
+        state: String? = null,
+    ): LatinGenerated =
+        latinGenerateRequest(mapOf("kind" to "generateRect", "w" to w, "h" to h), seed, state)
+
+    private fun latinGenerateRequest(
+        fields: Map<String, Any>,
+        seed: String?,
+        state: String?,
+    ): LatinGenerated {
+        val body = linkedMapOf<String, Any>("op" to "latin")
+        body.putAll(fields)
+        if (seed != null) body["seed"] = seed
+        if (state != null) body["state"] = state
+        val response = request(body)
+        return LatinGenerated(
+            order = response.number("order").toInt(),
+            w = response.number("w").toInt(),
+            h = response.number("h").toInt(),
+            grid = response.numberList("grid").map { it.toInt() },
+            state = response.string("state"),
+        )
+    }
+
+    /**
+     * Runs the generic `latin_solver` with the five difficulty levels
+     * equal to 0..4. The grid is modified in place by C, so the response
+     * carries the grid after the call.
+     */
+    fun latinSolve(o: Int, grid: List<Int>, maxDiff: Int): LatinSolved {
+        val response = request(
+            mapOf(
+                "op" to "latin",
+                "kind" to "solve",
+                "o" to o,
+                "grid" to grid.joinToString(" "),
+                "maxdiff" to maxDiff,
+            ),
+        )
+        return LatinSolved(
+            order = response.number("order").toInt(),
+            diff = response.number("diff").toInt(),
+            grid = response.numberList("grid").map { it.toInt() },
+        )
+    }
+
+    /** Runs `latin_check`; true means the grid is accepted as a Latin square. */
+    fun latinCheck(o: Int, grid: List<Int>): Boolean =
+        request(
+            mapOf(
+                "op" to "latin",
+                "kind" to "check",
+                "o" to o,
+                "grid" to grid.joinToString(" "),
+            ),
+        ).bool("isLatin")
+
     /** Runs a `tdq.c` script and returns every removal, including -1. */
     fun tdq(n: Int, ops: String): List<Int> =
         request(mapOf("op" to "tdq", "n" to n, "ops" to ops))

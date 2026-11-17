@@ -42,6 +42,10 @@
  *   {"op":"dsf","kind":"normal","n":10,"ops":"m 0 1 m 2 3"}
  *   {"op":"divvy","w":5,"h":5,"k":5,"seed":"12345"}
  *   {"op":"laydomino","w":6,"h":5,"seed":"12345"}
+ *   {"op":"latin","kind":"generate","o":5,"seed":"12345"}
+ *   {"op":"latin","kind":"generateRect","w":4,"h":6,"seed":"12345"}
+ *   {"op":"latin","kind":"solve","o":5,"grid":"1 0 0 0 0 ...","maxdiff":3}
+ *   {"op":"latin","kind":"check","o":3,"grid":"1 2 3 2 3 1 3 1 2"}
  *   {"op":"tdq","n":10,"ops":"a 3 a 1 r f"}
  *   {"op":"sort","values":"5 3 9 1","mode":"asc"}
  *   {"op":"combi","r":2,"n":5}
@@ -67,6 +71,7 @@
 #include <math.h>
 
 #include "puzzles.h"
+#include "latin.h"
 #include "matching.h"
 #include "tree234.h"
 
@@ -1791,6 +1796,166 @@ static void do_laydomino(const jobject *req)
     sfree(prealloc_encoded);
 }
 
+/*
+ * latin.c harness. A request carries a kind.
+ *
+ *   generate and generateRect run latin_generate and
+ *   latin_generate_rect from a seed or an encoded state, and return the
+ *   flat grid and the encoded state after the call. The state proves
+ *   that the row shuffle and the matching subroutine consume the same
+ *   stream as the Kotlin port.
+ *
+ *   solve runs the generic latin_solver with the five difficulty levels
+ *   equal to 0..4, no user solvers, and no validator, so it describes
+ *   the shared solver alone. It returns the difficulty and the grid
+ *   after the call, including the partial or first-solution grid that
+ *   the C code leaves behind.
+ *
+ *   check runs latin_check and reports whether the grid is a Latin
+ *   square, in the sense that latin_check accepts.
+ *
+ * The solver asserts on digits outside 1..order, so every request is
+ * validated before the call. A bad request is an error, never a crash.
+ */
+#define LATIN_MAX_ORDER 64
+
+static bool parse_latin_grid(const char *text, digit *grid, int cells, int order)
+{
+    const char *p = text ? text : "";
+    int i;
+
+    for (i = 0; i < cells; i++) {
+        long value;
+
+        if (!parse_next_long(&p, &value) || value < 0 || value > order)
+            return false;
+        grid[i] = (digit)value;
+    }
+    while (*p == ' ' || *p == '\t' || *p == ',')
+        p++;
+    return *p == '\0';
+}
+
+static void do_latin(const jobject *req)
+{
+    const char *kind = field_string(req, "kind");
+    const char *seed = field_string(req, "seed");
+    const char *state = field_string(req, "state");
+    long o = 0, w = 0, h = 0, maxdiff = 0;
+    random_state *rs = NULL;
+    digit *grid = NULL;
+    char *encoded = NULL;
+    int cells = 0, i;
+
+    if (!kind) {
+        put_error("latin needs a kind");
+        return;
+    }
+
+    if (!strcmp(kind, "generate") || !strcmp(kind, "generateRect")) {
+        if (!strcmp(kind, "generate")) {
+            if (!field_int(req, "o", &o) || o < 1 || o > LATIN_MAX_ORDER) {
+                put_error("latin generate needs 1 <= o <= 64");
+                return;
+            }
+            w = h = o;
+        } else {
+            if (!field_int(req, "w", &w) || !field_int(req, "h", &h) ||
+                w < 1 || h < 1 || w > LATIN_MAX_ORDER || h > LATIN_MAX_ORDER) {
+                put_error("latin generateRect needs 1 <= w, h <= 64");
+                return;
+            }
+        }
+        if (state)
+            rs = random_state_decode(state);
+        else if (seed)
+            rs = random_new(seed, (int)strlen(seed));
+        else {
+            put_error("latin needs a seed or a state");
+            return;
+        }
+
+        cells = (int)(w * h);
+        if (!strcmp(kind, "generate"))
+            grid = latin_generate((int)w, rs);
+        else
+            grid = latin_generate_rect((int)w, (int)h, rs);
+        encoded = random_state_encode(rs);
+
+        printf("{\"ok\":true,\"kind\":\"%s\",\"order\":%d,\"w\":%d,\"h\":%d,\"grid\":[",
+               kind, (int)(w > h ? w : h), (int)w, (int)h);
+        for (i = 0; i < cells; i++)
+            printf("%s%d", i ? "," : "", grid[i]);
+        fputs("],\"state\":", stdout);
+        put_json_string(encoded);
+        fputs("}\n", stdout);
+
+        sfree(grid);
+        sfree(encoded);
+        random_free(rs);
+        return;
+    }
+
+    if (!strcmp(kind, "solve")) {
+        usersolver_t solvers[5] = { NULL, NULL, NULL, NULL, NULL };
+        int diff;
+
+        if (!field_int(req, "o", &o) || o < 1 || o > LATIN_MAX_ORDER) {
+            put_error("latin solve needs 1 <= o <= 64");
+            return;
+        }
+        if (!field_int(req, "maxdiff", &maxdiff) || maxdiff < 0 || maxdiff > 4) {
+            put_error("latin solve needs 0 <= maxdiff <= 4");
+            return;
+        }
+        cells = (int)(o * o);
+        grid = snewn(cells, digit);
+        if (!parse_latin_grid(field_string(req, "grid"), grid, cells, (int)o)) {
+            sfree(grid);
+            put_error("latin grid needs o*o digits in 0..o");
+            return;
+        }
+
+        diff = latin_solver(grid, (int)o, (int)maxdiff,
+                            0, 1, 2, 3, 4,
+                            solvers, NULL, NULL, NULL, NULL);
+
+        printf("{\"ok\":true,\"kind\":\"solve\",\"order\":%d,\"diff\":%d,\"grid\":[",
+               (int)o, diff);
+        for (i = 0; i < cells; i++)
+            printf("%s%d", i ? "," : "", grid[i]);
+        fputs("]}\n", stdout);
+
+        sfree(grid);
+        return;
+    }
+
+    if (!strcmp(kind, "check")) {
+        bool invalid;
+
+        if (!field_int(req, "o", &o) || o < 1 || o > LATIN_MAX_ORDER) {
+            put_error("latin check needs 1 <= o <= 64");
+            return;
+        }
+        cells = (int)(o * o);
+        grid = snewn(cells, digit);
+        if (!parse_latin_grid(field_string(req, "grid"), grid, cells, (int)o)) {
+            sfree(grid);
+            put_error("latin grid needs o*o digits in 0..o");
+            return;
+        }
+
+        invalid = latin_check(grid, (int)o);
+        printf("{\"ok\":true,\"kind\":\"check\",\"order\":%d,\"isLatin\":%s}\n",
+               (int)o, invalid ? "false" : "true");
+
+        sfree(grid);
+        return;
+    }
+
+    put_error("latin kind must be generate, generateRect, solve, or check");
+}
+
 static void do_tdq(const jobject *req)
 {
     const char *ops = field_string(req, "ops");
@@ -2930,6 +3095,8 @@ int main(int argc, char **argv)
             do_divvy(&req);
         } else if (!strcmp(op, "laydomino")) {
             do_laydomino(&req);
+        } else if (!strcmp(op, "latin")) {
+            do_latin(&req);
         } else if (!strcmp(op, "tdq")) {
             do_tdq(&req);
         } else if (!strcmp(op, "sort")) {
