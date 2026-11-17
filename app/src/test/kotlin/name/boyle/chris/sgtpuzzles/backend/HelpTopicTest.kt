@@ -49,6 +49,7 @@ import org.junit.Test
  * - `singles.c:1886`: `"Singles", "games.singles", "singles"`
  * - `pearl.c:2805`: `"Pearl", "games.pearl", "pearl"`
  * - `galaxies.c:4121`: `"Galaxies", "games.galaxies", "galaxies"`
+ * - `solo.c:5733`: `"Solo", "games.solo", "solo"`
  *
  * The oracle is not available to app unit tests, so the expected value
  * is the third field of these initializers. `HelpActivity` accepts only
@@ -98,6 +99,7 @@ class HelpTopicTest {
         LOOPY to "loopy",
         RECT to "rect",
         GALAXIES to "galaxies",
+        SOLO to "solo",
     )
 
     @Test

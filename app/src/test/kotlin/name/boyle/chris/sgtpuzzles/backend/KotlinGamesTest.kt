@@ -31,6 +31,7 @@ import name.boyle.chris.sgtpuzzles.engine.Signpost
 import name.boyle.chris.sgtpuzzles.engine.Singles
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
+import name.boyle.chris.sgtpuzzles.engine.Solo
 import name.boyle.chris.sgtpuzzles.engine.Tents
 import name.boyle.chris.sgtpuzzles.engine.Towers
 import name.boyle.chris.sgtpuzzles.engine.Tracks
@@ -260,6 +261,23 @@ class KotlinGamesTest {
     fun `singles is registered but the app still uses C`() {
         assertEquals(Singles, KotlinGames.gameFor(SINGLES))
         assertFalse(KotlinGames.handles(SINGLES))
+    }
+
+    @Test
+    fun `solo is registered but the app still uses C`() {
+        assertEquals(Solo, KotlinGames.gameFor(SOLO))
+        assertFalse(KotlinGames.handles(SOLO))
+        val actual = KotlinGames.generate(SOLO, "3x3", "12345")
+        assertTrue(actual.contains("GAME    :4:Solo"))
+        assertTrue(actual.contains("DESC    :55:1_4c3_9b2a6_7j6a5_2b3_2e6b3a7b8e9_7b5_8a1j2_8a9b7_6c3_5"))
+        assertTrue(actual.contains("AUXINFO :"))
+    }
+
+    @Test
+    fun `the solo generator matches the frozen save`() {
+        val expected = File(testdata, "saves/initial/solo/3x3.sgtp").readText()
+        val actual = KotlinGames.generate(SOLO, "3x3", "12345")
+        assertEquals(expected, actual)
     }
 
     @Test

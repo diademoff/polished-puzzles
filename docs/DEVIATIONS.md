@@ -954,6 +954,76 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-024: `solo` defines its empty grid, hand-made ranges, and unclued killer cages
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** four hand-made inputs reach a C abort, a C hang, or
+  C undefined behavior in `solo.c`.
+
+  First, `validate_params` checks only `c < 2`, so `r == 0` and `r < 0`
+  are accepted for a non-jigsaw board. `new_game_desc` then aborts for
+  `3x0` at `encode_solve_move` (`solo.c:3234`,
+  `Assertion 'p - ret == len' failed`) and for `3x-1` in the
+  `alloc_block_structure` allocation (`allocation too large`). A
+  hand-written `3x0` save loads, reports a 49x49 board, and aborts in
+  the text form on the `(cr - 1) / vmod` division by zero. The Kotlin
+  `newDesc` and `newState` throw
+  `IllegalArgumentException("solo: the grid has no cells")` before any
+  RNG draw or allocation. `validateParams` keeps the C acceptance and
+  the C messages.
+
+  Second, a hand-made `Params` can carry a difficulty outside
+  `0..5`, a killer difficulty outside `0..3`, or a symmetry outside
+  `0..7`. `decode_params` and `custom_params` never produce one, so no
+  save or chooser value reaches it. C `validate_params` has no such
+  check; the generator's final gate `dlev.diff == dlev.maxdiff` (or the
+  killer pair) can then never hold, and the outer `while (1)` does not
+  terminate. An unknown symmetry falls through `symmetries` to the
+  single-square case but `encode_params` writes nothing, so the
+  re-encoded game is not the one that was generated. The Kotlin
+  `newDesc` throws `solo: unknown difficulty`, `solo: unknown killer
+  difficulty`, or `solo: unknown symmetry`, in that order, before the
+  first `random_bits` draw.
+
+  Third, `validate_desc` does not require a clue in every killer cage.
+  A hand-written `kgrid` with an unclued cage loads and reports the same
+  id, but the C solver asserts `usage->kclues[i] > 0`
+  (`solo.c:1749`) and the drawing path asserts `clue != 0`
+  (`solo.c:3025`). The Kotlin solver reads the missing clue as 0: a
+  single-square cage of value 0 is impossible, the minmax and sums
+  analyses have no information for that cage, and a complete grid with
+  that cage never satisfies `check_killer_cage_sum`. Drawing paints the
+  cage with `COL_ERROR` instead of aborting. The missing clue makes the
+  puzzle ambiguous, so `solve` without `AUXINFO` returns null; a stored
+  answer is still returned unchanged, as `solve_game` does.
+- **Why:** a crash, a hang, or an infinite generation loop is not
+  acceptable in the app, and each guard depends only on the input, so
+  the same request always gives the same result. Every decodable
+  parameter string is inside the ranges, so no seed, `DESC`, `AUXINFO`,
+  or `.sgtp` file of a real game changes. The killer cage results are
+  deterministic and keep the C save format.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../SoloTest.kt::hand made parameters are defined before any random draw`
+  pins the four messages, the accepted validator, the untouched RNG
+  state, and the `newState` guard;
+  `engine/src/commonTest/kotlin/.../SoloTest.kt::a killer description without a clue is defined`
+  pins the ambiguous solve, the stored-answer path, the open status, and
+  the failed completion;
+  `parity/src/test/kotlin/.../SoloSaveTest.kt::a killer save with an unclued cage is a defined port result`
+  pins the C id, the loaded state, the empty killer text form, the null
+  solve, and the stored answer;
+  `parity/src/test/kotlin/.../SoloTraceTest.kt::a killer save with an unclued cage still draws`
+  pins the error-colored cage and the four block outlines. The tests do
+  not ask the C oracle to generate the empty grid or solve or draw the
+  unclued killer save, because that kills the oracle process; the
+  one-off oracle runs above are the abort evidence.
+- **Review:** the owner should decide the final empty-grid and
+  hand-made-range behavior before `solo` is enabled in the app.
+- **Scope:** `solo`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

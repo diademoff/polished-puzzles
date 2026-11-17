@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `rect`, and `galaxies` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `rect`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -225,7 +225,7 @@ submenu entries when a game groups its presets.
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `dual-run` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
-| `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
+| `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `dual-run` |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `dual-run` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `dual-run` |
@@ -2019,6 +2019,73 @@ Notes:
   `Fifteen` casts in `KotlinGameEngine`, and the two-release wait are
   open. `currentKeyLabel` is a tested helper because C has no Android
   call site. The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
+
+- `solo` is `dual-run`. Its parameters and sixteen presets, the
+  `c x r`/`jigsaw`/`X`/killer grammar, the decode and validation order,
+  the whole generator chain, the deduction solver, the `P`/`R`/`M`/`S`
+  moves, the text form, the cursor and pencil highlight, the save file,
+  palette, drawing, layout, and input pass the matrix in
+  `SoloDescTest`, `SoloGameTest`, `SoloSaveTest`, `SoloTraceTest`,
+  `SoloInputParityTest`, and the engine `SoloTest`. The generator chain
+  is the `divvy` partition for a jigsaw, the killer cages, the
+  randomized backtracking fill with its step cap, the symmetry classes,
+  the clue removal loop, and the solver gate at the requested
+  difficulty. The solver order is blockwise positional elimination, the
+  four killer techniques, rows, columns, diagonals, numeric
+  elimination, intersection, set elimination, positional set
+  elimination, forcing chains, and recursion. `SoloDescTest` compares
+  every preset with eight seeds and their full saves, the seventeen
+  frozen descriptions at seed 12345, the decode quirks, the exact
+  validation messages, the grid/jigsaw/killer suffix grammar, and eight
+  symmetry values.
+
+  The vendored `merge_some_cages` writes each adjacent pair but never
+  increments `npairs` (`solo.c:3487-3494`), so its list is always empty
+  and it always returns false. Killer generation therefore keeps the
+  first cage layout that grades at the requested difficulty, and the
+  cage-merge loop is dead code. The port reproduces the vendored
+  behavior exactly, and the killer `DESC` and `AUXINFO` goldens pin it.
+  A literal fix (`npairs++`) changes the killer description, so the
+  frozen `3x3ka` entry and the oracle comparison fail.
+
+  `solve_game` reads `state->grid`, which C fills from `states[0]`, not
+  from the current board. The port keeps the initial clue grid on a
+  shared object, so a solve after a wrong move still returns the
+  original `S` answer; `SoloGameTest` and `SoloTest` pin the moved,
+  no-`AUXINFO`, and second-solve cases. A stored `AUXINFO` is returned
+  unchanged, as C does. The generator writes the solved grid as
+  `AUXINFO`, so every generated save matches C byte for byte.
+
+  `SoloSaveTest` reads all seventeen corpus saves, rewrites them byte
+  for byte, and compares id, status, undo, redo, text, and the C reload;
+  it makes C load a Kotlin save for every preset and eight seeds and
+  pins the `PARAMS`/`CPARAMS` split, the absence of `UI`, `TIME`,
+  `PRIVDESC`, and `HEXSEED`, and the present `AUXINFO`. In-memory
+  history covers a real click plus digit, undo with a live redo branch,
+  a `SOLVE`, and a `RESTART`, with the C text form compared after every
+  step. `SoloTraceTest` freezes all sixteen first frames, compares sized
+  frames at 32, 48, 63, 82, and 100, the 411x702 and 200x200 views,
+  cursor, pencil, and duplicate-digit error frames, and the warm path;
+  every block is one `thick_poly` at 3.000, every cell is clipped, and
+  the game allocates no blitter. `SoloInputParityTest` compares the
+  layout at six presets and four tile sizes, a real click and digit at
+  every view, three letterboxed views, clue, middle, border, drag, and
+  release no-ops, the pencil and right-button flows, the clear and mark
+  keys, the cursor and modified cursor keys, a keypad digit, undo and
+  redo, and a real completion with one event.
+
+  D-024 defines the empty grid (`r <= 0`), the hand-made difficulty,
+  killer-difficulty, and symmetry ranges, and a hand-written killer
+  description with an unclued cage. `validateParams` keeps the C
+  acceptance and messages; only `newDesc` and `newState` refuse the
+  empty grid, and only drawing and solving define the unclued cage.
+  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
+  C: the seven-field configuration dialog, the `pencil-keep-highlight`
+  preference, the `Fifteen` casts in `KotlinGameEngine`, generation off
+  the UI thread, and the two-release wait are open. `currentKeyLabel`
+  is a tested helper with no Android call site. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 ## 8. Goldens
