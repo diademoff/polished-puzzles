@@ -6,18 +6,24 @@ import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Singles
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Level: strict for the text and semantic for the rest. Game: singles.
  *
- * Saves in both directions, the history, the `SOLVE` and `RESTART`
- * records, the empty and `S` moves, the parameter split, and the exact
- * record order. Singles writes no `AUXINFO`, `PRIVDESC`, `UI`, or
- * `TIME`.
+ * Saves in both directions, the frozen corpus, the history, the `SOLVE`
+ * and `RESTART` records, the empty and `S` moves, the parameter split,
+ * and the exact record order. Singles writes no `AUXINFO`, `PRIVDESC`,
+ * `UI`, or `TIME`.
  */
 class SinglesSaveTest {
+
+    private val testdata = File(
+        System.getProperty("testdata") ?: error("testdata system property is not set"),
+    )
 
     private fun handSave(
         desc: String,
@@ -50,6 +56,54 @@ class SinglesSaveTest {
         assertEquals("$what undo", expected.canUndo, midend.canUndo)
         assertEquals("$what redo", expected.canRedo, midend.canRedo)
     }
+
+    @Test(timeout = 120_000)
+    fun `every frozen save round-trips through the Kotlin midend`() =
+        OracleClient().use { oracle ->
+            val files = File(testdata, "saves/initial/singles").listFiles()
+                ?.filter { it.isFile && it.extension == "sgtp" }
+                ?.sorted()
+                ?: emptyList()
+            assertEquals("ten presets plus the default", 11, files.size)
+
+            for (file in files) {
+                val text = file.readText()
+                val midend = Midend.fromSave(Singles, SgtpSave.parse(text))
+                assertEquals(
+                    "${file.name} canonical text",
+                    text,
+                    midend.serialise().serialise(),
+                )
+
+                val expected = oracle.id(text)
+                assertEquals("${file.name} id", expected.id, midend.id())
+                assertEquals("${file.name} status", expected.status, midend.status())
+                assertEquals("${file.name} can undo", expected.canUndo, midend.canUndo)
+                assertEquals("${file.name} can redo", expected.canRedo, midend.canRedo)
+                assertEquals("${file.name} text", oracle.text(text), midend.textFormat())
+
+                val save = SgtpSave.parse(text)
+                assertNull("${file.name} AUXINFO", save.value("AUXINFO"))
+                assertNull("${file.name} PRIVDESC", save.value("PRIVDESC"))
+                assertNull("${file.name} UI", save.value("UI"))
+                assertNull("${file.name} TIME", save.value("TIME"))
+                assertNull("${file.name} HEXSEED", save.value("HEXSEED"))
+                assertEquals(
+                    "${file.name} record order",
+                    listOf(
+                        "SAVEFILE", "VERSION", "GAME", "PARAMS", "CPARAMS",
+                        "SEED", "DESC", "NSTATES", "STATEPOS",
+                    ),
+                    save.records.map { it.key },
+                )
+            }
+
+            assertEquals(
+                "the default save is the Easy save",
+                File(testdata, "saves/initial/singles/5x5de.sgtp").readText(),
+                File(testdata, "saves/initial/singles/default.sgtp").readText(),
+            )
+        }
 
     @Test(timeout = 600_000)
     fun `every preset save round-trips in both directions`() = OracleClient().use { oracle ->
@@ -93,6 +147,34 @@ class SinglesSaveTest {
             val cLoaded = oracle.id(played.serialise())
             assertEquals(midend.id(), cLoaded.id)
             assertSame("played in C", cLoaded, Midend.fromSave(Singles, played))
+
+            // An outside click toggles `show-black-nums` and changes no
+            // state, so the save stays byte for byte the same.
+            val beforeToggle = midend.serialise().serialise()
+            val outside = listOf(
+                OracleClient.Point(2, 2, Buttons.LEFT_BUTTON),
+                OracleClient.Point(2, 2, Buttons.LEFT_RELEASE),
+            )
+            for (point in outside) midend.processKey(point.x, point.y, point.button, 32)
+            assertTrue(
+                "the outside click toggles the preference",
+                (midend.ui as Singles.Ui).showBlackNums,
+            )
+            assertEquals("the preference changes no state", beforeToggle, midend.serialise().serialise())
+            assertEquals(3, midend.stateCount)
+
+            // An undone position keeps a live redo branch, and C sees
+            // the same history position.
+            assertTrue(midend.undo())
+            val undone = midend.serialise()
+            assertTrue("the redo branch is live", midend.canRedo)
+            assertEquals(3, midend.stateCount)
+            assertEquals("2", undone.value("STATEPOS"))
+            val cUndone = oracle.id(undone.serialise())
+            assertSame("undone in C", cUndone, Midend.fromSave(Singles, undone))
+            assertTrue(midend.redo())
+            assertEquals(3, midend.stateCount)
+            assertSame("redone in C", cLoaded, Midend.fromSave(Singles, midend.serialise()))
 
             assertTrue(midend.solve())
             val solved = midend.serialise()

@@ -176,7 +176,7 @@ C wins.
 | `grid`, `loopgen` | C until the first game consumer (ADR 0006) | C |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, and `unequal` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen` is `kotlin`, `slant`, `samegame`, `flood`, `sixteen`, `flip`, `twiddle`, `pegs`, `guess`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, and `singles` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -221,7 +221,7 @@ submenu entries when a game groups its presets.
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `C` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `dual-run` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `dual-run` |
-| `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `C` |
+| `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `dual-run` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `C` |
@@ -1740,6 +1740,81 @@ Notes:
   tested helper because the Android shell has no call site (S9).
   `UNEQUAL` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(UNEQUAL)` is false.
+
+- `singles` is `dual-run`. Its parameters and ten presets, the decode
+  quirks and validation order, the description grammar, the gated
+  generator, the state, the move grammar, the error marks and the
+  sticky completion, the deduction solver, the text format, the
+  palette, drawing, layout, input, `currentKeyLabel`, and `requestKeys`
+  pass the matrix in `SinglesDescTest`, `SinglesGameTest`,
+  `SinglesSaveTest`, `SinglesTraceTest`, `SinglesInputParityTest`, and
+  the engine `SinglesTest`, including the shared `LatinParityTest`.
+
+  The generator draws one Latin rectangle of order `max(w, h)`, one
+  shuffle of the `w*h` cells, the black placement in that shuffled
+  order, and one `o`-element `best_black_col` shuffle per black cell in
+  increasing cell index. The black placement applies the solver after
+  each cell (`solve_allblackbutone`, then `solve_removesplits`), and a
+  failed solver gate reshuffles every black cell without redrawing the
+  Latin rectangle; the twenty-first failure returns to the Latin draw.
+  The solver order is the contract: `solve_sneaky` in the gate only,
+  then `singlesep`, `doubles`, `corners`, `offsetpair` at Tricky and
+  above, then the `allblackbutone`/`removesplits` loop with the `> 0`
+  tests. The eleven golden descriptions, the nine seed strings, the
+  numeric sweep, and the retry fixtures (`2x20dk`, `2x30dk`, `3x30dk`)
+  are the guard; the engine `GenerationStats` pins that both retry
+  loops ran.
+
+  The save matrix reads all eleven corpus saves (`5x5de` plus the ten
+  presets, with `default` equal to `5x5de`), rewrites them byte for
+  byte, and compares id, status, `canUndo`, `canRedo`, text, and
+  `textFormat` with C. A Kotlin save for every preset and three seeds
+  loads in C with the same id, status, and text. The short id drops the
+  difficulty, so `5x5de` and `5x5dk` share the `5x5` prefix, and
+  `2x2dk` writes `PARAMS 2x2de` and `CPARAMS 2x2dk`. In-memory history
+  round-trips a black and a circle click, an outside click that toggles
+  `show-black-nums` without changing the save, an undone position with
+  a live redo branch, a `SOLVE`, and a `RESTART` in both directions. No
+  save has an `AUXINFO`, `PRIVDESC`, `UI`, or `TIME` record.
+
+  `SinglesInputParityTest` and `SinglesGameTest` send the real
+  black/circle cycle at tiles 48, 63, 82, and 100 and at the 411x702
+  letterbox (tile 68, origin (1,147)), so a left press is
+  `empty -> black -> circle -> empty` and a right press is
+  `empty -> circle -> black -> empty`. The letterbox band toggles
+  `show-black-nums` and changes no state, with a click one cell inside
+  as the positive control. The cursor wraps at all four edges, a middle
+  press, drag, and release are inert, and an error pair is marked in
+  `COL_ERROR`. State, id, status, undo, redo, and the final frame with
+  `pointsSized` are compared. Every real black or circle change alters
+  the board and adds one move while the status stays 0; every inert
+  event changes neither the board nor the count. `requestKeys` is
+  compared on every preset: arrow mode 3 with no labels, and the
+  Android full-cursor hint gives the C midend's forced `ARROWS_ONLY`
+  (mode 1) with the same empty list.
+
+  `show-black-nums` is the only preference. C keeps it in the UI, where
+  it changes the number drawn on a black cell and nothing else; it is
+  not in `State`, the id, the save, or `DrawState.flags`. The port
+  exposes `Singles.Ui.showBlackNums` and reads it in `redraw`. Because
+  `encode_ui` is `NULL`, a load creates a fresh UI, so the app adapter
+  must apply the preference after `newUi` and after `Midend.fromSave`.
+
+  D-017 defines the 62 boundary. C accepts a side of 62, generates a
+  description whose digit 62 is `[`, and aborts in `new_game`; the port
+  rejects generation with `Puzzle is too large` before any draw and
+  keeps every side 2..61 and every preset byte-identical. Enablement
+  debt. S8 must build the three-field configuration schema (`Width`,
+  `Height`, `Difficulty` with `":Easy:Tricky"`), apply
+  `show-black-nums` after `newUi` and after `Midend.fromSave` with a
+  forced redraw, gate the status text on `wantsStatusBar` (it is
+  false), show `Unable to solve puzzle.` instead of the `solveEvent`
+  throw, remove the `Fifteen` casts, generate off the UI thread, and
+  wait two releases; generation cost is unbounded at the accepted
+  sides and is an owner size or time decision. `currentKeyLabel` is a
+  tested helper because the Android shell has no call site (S9).
+  `SINGLES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
+  `handles(SINGLES)` is false.
 
 ## 8. Goldens
 

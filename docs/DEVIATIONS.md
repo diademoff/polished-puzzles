@@ -655,6 +655,51 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-017: Singles rejects a side of 62 at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_params` accepts a side of 62
+  (`singles.c:268`). A generated board with a side of 62 has a full
+  Latin row or column of the 62 digits, so the description contains the
+  digit 62. `n2c(62)` returns `[` (`singles.c:324-332`), and the game's
+  own `c2n` returns -1 for `[` (`singles.c:334-342`). `new_game` calls
+  `unpick_desc` on that description, the decoder rejects it, and the
+  shipped build aborts at `singles.c:1452` with
+  `new_game: Assertion '!"new_game failed to unpick"' failed.`
+  (SIGABRT, exit 134). Measured with the committed oracle: `62x2de`
+  seed `5` aborts after 40.9 s, `62x2de` seed `19` aborts, and
+  `2x62de` seed `20` aborts. The Kotlin `validateParams` keeps the C
+  accept for every side in `2..62` and the three C messages. The Kotlin
+  `newDesc` rejects a side of 62 with the documented parameter message
+  `Puzzle is too large` before the first RNG draw, and
+  `Midend.newGame` reports the same message.
+- **Why:** a crash is not acceptable in the app. The guard depends only
+  on the parameters, so the same request always fails the same way. No
+  valid size changes: every side in `2..61`, every preset, every seed,
+  `DESC`, and `.sgtp` text keeps the C stream and the C output. The
+  game writes no `AUXINFO`, so there is no auxiliary answer to change.
+- **Scope note:** the rejection is at generation only. The validator
+  and `validateDesc` keep the C behavior: a hand-written `62x2de` save
+  whose description holds `Z` (61) loads, and one whose description
+  holds `[` is rejected with `Invalid character in game description`
+  before `new_game`. Only a generated description reaches the C abort.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../SinglesTest.kt::the 62 boundary is rejected before the generator runs`
+  pins the message, the untouched generator state for seeds `1`, `5`,
+  and `19`, and the accepted validator;
+  `parity/src/test/kotlin/.../SinglesDescTest.kt::a side of 62 is rejected before any draw`
+  pins the `Midend.newGame` message for the same seeds and the accepted
+  `61x2de` and `2x61de` boundary. The tests do not call the oracle
+  generation, because the `62` shapes either abort the process or do
+  not finish in the measured budget; the one-off oracle runs above are
+  the abort evidence.
+- **Review:** the owner should review this entry before `singles` is
+  enabled in the app.
+- **Scope:** `singles`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

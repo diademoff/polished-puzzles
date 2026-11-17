@@ -13,6 +13,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * Level: semantic. Game: singles.
@@ -22,6 +23,23 @@ import org.junit.Test
  * error marks, the solver, `changedState`, and the vacuity guards.
  */
 class SinglesGameTest {
+
+    private val testdata = File(
+        System.getProperty("testdata") ?: error("testdata system property is not set"),
+    )
+
+    private val upstream = UpstreamLock.commit(File(testdata.parentFile, "UPSTREAM.lock"))
+
+    private fun normalize(trace: JsonValue.Obj): String =
+        TraceNormalizer.normalize(trace, upstream)
+
+    private fun assertLines(what: String, expected: String, actual: String) {
+        val expectedLines = expected.trimEnd('\n').lines()
+        val actualLines = actual.trimEnd('\n').lines()
+        for (i in 0 until maxOf(expectedLines.size, actualLines.size)) {
+            assertEquals("$what line ${i + 1}", expectedLines.getOrNull(i), actualLines.getOrNull(i))
+        }
+    }
 
     private fun handSave(
         desc: String,
@@ -126,10 +144,16 @@ class SinglesGameTest {
                 assertEquals("'$params' arrow mode", 3, expectedKeys.arrowMode)
                 assertEquals("'$params' labels", expectedKeys.labels.size, actualKeys.labels.size)
                 assertEquals(ArrowMode.ARROWS_LEFT_RIGHT, actualKeys.arrowMode)
+                val fullKeys = Singles.requestKeys(Singles.decodeParams(params), true)
                 assertEquals(
-                    "'$params' full cursor is ignored",
-                    actualKeys,
-                    Singles.requestKeys(Singles.decodeParams(params), true),
+                    "'$params' full cursor keeps the empty label list",
+                    actualKeys.labels,
+                    fullKeys.labels,
+                )
+                assertEquals(
+                    "'$params' full cursor forces ARROWS_ONLY",
+                    ArrowMode.ARROWS_ONLY,
+                    fullKeys.arrowMode,
                 )
             }
         }
@@ -225,6 +249,7 @@ class SinglesGameTest {
                 val board = Singles.computeSize(Singles.decodeParams("5x5de"), tile).width
                 val midend = Midend.newGame(Singles, "5x5de", SEED)
                 val cumulative = ArrayList<OracleClient.Point>()
+                var previous = midend.textFormat()
                 for ((index, step) in steps.withIndex()) {
                     val points = cyclePoints(step, tile)
                     cumulative += points
@@ -243,7 +268,21 @@ class SinglesGameTest {
                         index + 2,
                         midend.stateCount,
                     )
+                    assertNotEquals(
+                        "tile $tile step $index alters the board",
+                        previous,
+                        midend.textFormat(),
+                    )
+                    assertEquals("tile $tile step $index keeps the status", 0, midend.status())
+                    previous = midend.textFormat()
                 }
+
+                val final = oracle.pointsSized(save, cumulative, board, board, recordTrace = true)
+                assertLines(
+                    "tile $tile final trace",
+                    normalize(final.trace!!),
+                    normalize(KotlinTraceSink.stateTrace(midend, tile)),
+                )
             }
         }
 
@@ -287,6 +326,32 @@ class SinglesGameTest {
                 ctrl.processKey(0, 0, Buttons.MOD_CTRL or Buttons.CURSOR_UP, 32),
             )
             assertEquals(1, ctrl.stateCount)
+
+            // Every edge wraps. The cursor starts hidden, so the first
+            // key moves and reveals it; the prefixes walk the four
+            // edges and the last step returns to (0,0).
+            val wraps = listOf(
+                listOf(Buttons.CURSOR_UP) to Pair(16, 16 + 4 * 32),
+                listOf(Buttons.CURSOR_UP, Buttons.CURSOR_LEFT) to
+                    Pair(16 + 4 * 32, 16 + 4 * 32),
+                listOf(Buttons.CURSOR_UP, Buttons.CURSOR_LEFT, Buttons.CURSOR_DOWN) to
+                    Pair(16 + 4 * 32, 16),
+                listOf(
+                    Buttons.CURSOR_UP,
+                    Buttons.CURSOR_LEFT,
+                    Buttons.CURSOR_DOWN,
+                    Buttons.CURSOR_RIGHT,
+                ) to Pair(16, 16),
+            )
+            for ((prefix, cell) in wraps) {
+                val expected = oracle.keys(save, prefix)
+                val m = Midend.newGame(Singles, "5x5de", SEED)
+                for (key in prefix) m.processKey(0, 0, key, 32)
+                assertSame("wrap $prefix", expected, m)
+                val at = m.cursorLocation(32)!!
+                assertEquals("wrap $prefix x", cell.first, at.left)
+                assertEquals("wrap $prefix y", cell.second, at.top)
+            }
 
             val shiftThenSelect = listOf(
                 Buttons.MOD_SHFT or Buttons.CURSOR_UP,

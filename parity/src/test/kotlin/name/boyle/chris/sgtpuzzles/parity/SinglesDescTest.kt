@@ -374,31 +374,40 @@ class SinglesDescTest {
     @Test(timeout = 120_000)
     fun `a side of 62 is rejected before any draw`() {
         // D-017. C accepts 62x2, generates a description that contains
-        // the digit 62 as '[', then aborts in `new_game`. The port
-        // rejects generation with the parameter message and leaves the
-        // generator untouched.
-        for (params in listOf("62x2de", "2x62de", "62x62de")) {
-            val random = RandomState.fromSeed("1")
-            val before = random.encodeState()
-            val error = try {
-                Singles.newDesc(Singles.decodeParams(params), random)
-                null
-            } catch (e: IllegalArgumentException) {
-                e.message
+        // the digit 62 as '[', then aborts in `new_game`. Measured:
+        // `62x2de` seed 5 aborts after 40.9 s with
+        // `singles.c:1452: new_game: Assertion `!"new_game failed to
+        // unpick"' failed.` (SIGABRT, exit 134); seed 19 aborts too.
+        // The port rejects generation with the parameter message and
+        // leaves the generator untouched.
+        for (seed in listOf("1", "5", "19")) {
+            for (params in listOf("62x2de", "2x62de", "62x62de")) {
+                val random = RandomState.fromSeed(seed)
+                val before = random.encodeState()
+                val error = try {
+                    Singles.newDesc(Singles.decodeParams(params), random)
+                    null
+                } catch (e: IllegalArgumentException) {
+                    e.message
+                }
+                assertEquals("$params seed $seed message", "Puzzle is too large", error)
+                assertEquals(
+                    "$params seed $seed leaves the generator untouched",
+                    before,
+                    random.encodeState(),
+                )
+                assertTrue(
+                    "$params seed $seed still passes validateParams",
+                    Singles.validateParams(Singles.decodeParams(params), true) == null,
+                )
+                val midendError = try {
+                    Midend.newGame(Singles, params, seed)
+                    null
+                } catch (e: IllegalArgumentException) {
+                    e.message
+                }
+                assertEquals("$params seed $seed midend message", "Puzzle is too large", midendError)
             }
-            assertEquals("$params message", "Puzzle is too large", error)
-            assertEquals("$params leaves the generator untouched", before, random.encodeState())
-            assertTrue(
-                "$params still passes validateParams",
-                Singles.validateParams(Singles.decodeParams(params), true) == null,
-            )
-            val midendError = try {
-                Midend.newGame(Singles, params, "1")
-                null
-            } catch (e: IllegalArgumentException) {
-                e.message
-            }
-            assertEquals("$params midend message", "Puzzle is too large", midendError)
         }
 
         // The accepted boundary is 61, and 62 is only rejected by the

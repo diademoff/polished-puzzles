@@ -1553,10 +1553,20 @@ object Singles : Game {
 
     /**
      * `game_request_keys` is NULL, so the midend leaves the arrow mode
-     * at the preset Left/Right and returns no labels.
+     * at the preset Left/Right and returns no labels. The Android
+     * full-cursor hint forces `ANDROID_ARROWS_ONLY` before the C midend
+     * calls a game with no `request_keys`
+     * (`midend_request_keys_by_game`), so the two-argument form keeps
+     * the empty label list and changes only the arrow mode.
      */
     override fun requestKeys(params: Game.Params): KeyRequest =
         KeyRequest(emptyList(), ArrowMode.ARROWS_LEFT_RIGHT)
+
+    override fun requestKeys(params: Game.Params, fullCursor: Boolean): KeyRequest =
+        KeyRequest(
+            emptyList(),
+            if (fullCursor) ArrowMode.ARROWS_ONLY else ArrowMode.ARROWS_LEFT_RIGHT,
+        )
 
     /** `game_get_cursor_location`, `singles.c:1813-1824`. */
     override fun cursorLocation(

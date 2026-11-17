@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles.parity
 
+import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
@@ -247,6 +248,130 @@ class SinglesInputParityTest {
                 midend.serialise().values("MOVE"),
             )
             assertEquals(3, midend.stateCount)
+        }
+
+    @Test(timeout = 600_000)
+    fun `requestKeys match the oracle on every preset`() =
+        OracleClient().use { oracle ->
+            for (params in oracle.presets("singles").map { it.params } + "") {
+                val save = oracle.newGame("singles", params, SEED).state
+                val decoded = Singles.decodeParams(params)
+                for (fullCursor in listOf(false, true)) {
+                    val expected = oracle.requestKeys(save, fullCursor)
+                    val actual = Singles.requestKeys(decoded, fullCursor)
+                    assertEquals(
+                        "$params/$fullCursor arrow mode",
+                        if (fullCursor) 1 else 3,
+                        expected.arrowMode,
+                    )
+                    assertEquals(
+                        "$params/$fullCursor arrow enum",
+                        if (fullCursor) ArrowMode.ARROWS_ONLY else ArrowMode.ARROWS_LEFT_RIGHT,
+                        actual.arrowMode,
+                    )
+                    assertEquals(
+                        "$params/$fullCursor label count",
+                        expected.labels.size,
+                        actual.labels.size,
+                    )
+                    assertEquals("$params/$fullCursor has no label", 0, expected.labels.size)
+                    assertEquals("$params/$fullCursor has no label", 0, actual.labels.size)
+                    for (i in expected.labels.indices) {
+                        assertEquals(
+                            "$params/$fullCursor name $i",
+                            expected.labels[i].label,
+                            actual.labels[i].name,
+                        )
+                        assertEquals(
+                            "$params/$fullCursor button $i",
+                            expected.labels[i].button,
+                            actual.labels[i].button,
+                        )
+                        assertEquals(
+                            "$params/$fullCursor arrows $i",
+                            expected.labels[i].needsArrows,
+                            actual.labels[i].needsArrows,
+                        )
+                    }
+                    assertTrue(
+                        "$params/$fullCursor no key needs arrows",
+                        actual.labels.none { it.needsArrows },
+                    )
+                }
+            }
+        }
+
+    @Test(timeout = 600_000)
+    fun `the letterbox black and circle cycles match the oracle`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("singles", "5x5de", SEED).state
+            val midend = Midend.newGame(Singles, "5x5de", SEED)
+            val geometry = midend.geometryFor(411, 702)
+            assertEquals(68, geometry.tileSize)
+            assertEquals(1, geometry.originX)
+            assertEquals(147, geometry.originY)
+
+            val steps = listOf(
+                Triple(2, 2, Buttons.LEFT_BUTTON) to "B2,2",
+                Triple(2, 2, Buttons.RIGHT_BUTTON) to "E2,2",
+                Triple(2, 2, Buttons.LEFT_BUTTON) to "B2,2",
+                Triple(2, 2, Buttons.LEFT_BUTTON) to "C2,2",
+                Triple(2, 2, Buttons.RIGHT_BUTTON) to "B2,2",
+                Triple(2, 2, Buttons.RIGHT_BUTTON) to "E2,2",
+                Triple(2, 2, Buttons.RIGHT_BUTTON) to "C2,2",
+                Triple(2, 2, Buttons.LEFT_BUTTON) to "E2,2",
+            )
+            val cumulative = ArrayList<OracleClient.Point>()
+            var previous = midend.textFormat()
+            for ((index, entry) in steps.withIndex()) {
+                val (cell, token) = entry
+                val (cx, cy, button) = cell
+                val tile = geometry.tileSize
+                val x = geometry.originX + tile / 2 + cx * tile + tile / 2
+                val y = geometry.originY + tile / 2 + cy * tile + tile / 2
+                val release = when (button) {
+                    Buttons.LEFT_BUTTON -> Buttons.LEFT_RELEASE
+                    Buttons.RIGHT_BUTTON -> Buttons.RIGHT_RELEASE
+                    else -> button
+                }
+                val points = listOf(
+                    OracleClient.Point(x, y, button),
+                    OracleClient.Point(x, y, release),
+                )
+                cumulative += points
+                val expected = oracle.pointsSized(save, cumulative, 411, 702)
+                val outcomes = apply(
+                    midend,
+                    points.map {
+                        OracleClient.Point(
+                            it.x - geometry.originX,
+                            it.y - geometry.originY,
+                            it.button,
+                        )
+                    },
+                    tile,
+                )
+                assertSame("letterbox step $index", expected.state, midend)
+                assertEquals(
+                    "letterbox step $index press",
+                    KeyOutcome.SomeEffect,
+                    outcomes.first(),
+                )
+                assertEquals("letterbox step $index release", KeyOutcome.Unused, outcomes.last())
+                assertEquals(
+                    "letterbox step $index token",
+                    token,
+                    midend.serialise().values("MOVE").last(),
+                )
+                assertEquals("letterbox step $index count", index + 2, midend.stateCount)
+                assertNotEquals(
+                    "letterbox step $index alters the board",
+                    previous,
+                    midend.textFormat(),
+                )
+                assertEquals("letterbox step $index keeps the status", 0, midend.status())
+                previous = midend.textFormat()
+            }
         }
 
     private companion object {

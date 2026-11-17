@@ -320,6 +320,54 @@ class SinglesTraceTest {
         }
     }
 
+    @Test(timeout = 600_000)
+    fun `the frame after a real black and circle change matches the oracle`() =
+        OracleClient().use { oracle ->
+            val save = oracle.newGame("singles", "5x5de", SEED).state
+            val tile = 48
+            val board = Singles.computeSize(Singles.decodeParams("5x5de"), tile).width
+            val points = click(0, 0, tile) + click(1, 0, tile, Buttons.RIGHT_BUTTON)
+            val expected = oracle.pointsSized(save, points, board, board, recordTrace = true)
+            val midend = Midend.newGame(Singles, "5x5de", SEED)
+            apply(midend, points, tile)
+            val actual = normalize(KotlinTraceSink.stateTrace(midend, tile))
+            assertLines("changed frame", normalize(expected.trace!!), actual)
+            assertTrue(
+                "a black cell and a circle ring",
+                actual.lines().any { it.startsWith("rect ") && it.endsWith(" 3") } &&
+                    actual.lines().any { it.startsWith("circle ") },
+            )
+
+            // The same two marks in the 411x702 letterbox at tile 68.
+            val geometry = Midend.newGame(Singles, "5x5de", SEED).geometryFor(411, 702)
+            assertEquals(68, geometry.tileSize)
+            val view = points.map {
+                OracleClient.Point(
+                    it.x + geometry.originX,
+                    it.y + geometry.originY,
+                    it.button,
+                )
+            }
+            val viewExpected = oracle.pointsSized(save, view, 411, 702, recordTrace = true)
+            val viewMidend = Midend.newGame(Singles, "5x5de", SEED)
+            apply(
+                viewMidend,
+                view.map {
+                    OracleClient.Point(
+                        it.x - geometry.originX,
+                        it.y - geometry.originY,
+                        it.button,
+                    )
+                },
+                geometry.tileSize,
+            )
+            assertLines(
+                "letterbox changed frame",
+                normalize(viewExpected.trace!!),
+                normalize(KotlinTraceSink.stateTrace(viewMidend, geometry.tileSize)),
+            )
+        }
+
     @Test(timeout = 300_000)
     fun `the engine warm frame after an undo repaints only the changed cell`() {
         val midend = Midend.newGame(Singles, "5x5de", SEED)

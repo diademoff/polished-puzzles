@@ -24,6 +24,7 @@ import name.boyle.chris.sgtpuzzles.engine.Range
 import name.boyle.chris.sgtpuzzles.engine.SameGame
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Signpost
+import name.boyle.chris.sgtpuzzles.engine.Singles
 import name.boyle.chris.sgtpuzzles.engine.Sixteen
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import name.boyle.chris.sgtpuzzles.engine.Tents
@@ -249,6 +250,12 @@ class KotlinGamesTest {
     fun `unequal is registered but the app still uses C`() {
         assertEquals(Unequal, KotlinGames.gameFor(UNEQUAL))
         assertFalse(KotlinGames.handles(UNEQUAL))
+    }
+
+    @Test
+    fun `singles is registered but the app still uses C`() {
+        assertEquals(Singles, KotlinGames.gameFor(SINGLES))
+        assertFalse(KotlinGames.handles(SINGLES))
     }
 
     @Test

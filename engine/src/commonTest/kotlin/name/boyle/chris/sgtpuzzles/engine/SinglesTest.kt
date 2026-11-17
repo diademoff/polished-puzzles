@@ -413,16 +413,26 @@ class SinglesTest {
 
     @Test
     fun `the 62 boundary is rejected before the generator runs`() {
-        for (paramsText in listOf("62x2de", "2x62de", "62x62de")) {
-            val random = RandomState.fromSeed("1")
-            val before = random.encodeState()
-            val error = assertFailsWith<IllegalArgumentException> {
-                Singles.newDesc(params(paramsText), random)
+        // D-017. `62x2de` seed `5` makes C generate a description that
+        // its own decoder rejects and abort at `singles.c:1452`. The
+        // port rejects the generation before any draw.
+        for (seed in listOf("1", "5")) {
+            for (paramsText in listOf("62x2de", "2x62de", "62x62de")) {
+                val random = RandomState.fromSeed(seed)
+                val before = random.encodeState()
+                val error = assertFailsWith<IllegalArgumentException> {
+                    Singles.newDesc(params(paramsText), random)
+                }
+                assertEquals("Puzzle is too large", error.message)
+                assertEquals(
+                    before,
+                    random.encodeState(),
+                    "$paramsText seed $seed touches no draw",
+                )
+                // The parameter validator still accepts the size, as C
+                // does.
+                assertNull(Singles.validateParams(params(paramsText), true))
             }
-            assertEquals("Puzzle is too large", error.message)
-            assertEquals(before, random.encodeState(), "$paramsText touches no draw")
-            // The parameter validator still accepts the size, as C does.
-            assertNull(Singles.validateParams(params(paramsText), true))
         }
     }
 
@@ -490,7 +500,12 @@ class SinglesTest {
         val keys = Singles.requestKeys(params("5x5de"))
         assertEquals(ArrowMode.ARROWS_LEFT_RIGHT, keys.arrowMode)
         assertTrue(keys.labels.isEmpty())
-        assertEquals(keys, Singles.requestKeys(params("5x5de"), true))
+        // The full-cursor hint changes only the arrow mode, as the C
+        // midend forces ARROWS_ONLY for a NULL request_keys.
+        val fullKeys = Singles.requestKeys(params("5x5de"), true)
+        assertEquals(ArrowMode.ARROWS_ONLY, fullKeys.arrowMode)
+        assertTrue(fullKeys.labels.isEmpty())
+        assertEquals(keys.labels, fullKeys.labels)
 
         // The preference is not in the save and is read only by
         // drawing and by the outside click.

@@ -3083,6 +3083,110 @@ aggressive 100x100 latency is an enablement debt:
   `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `KotlinGames.handles(UNEQUAL)` is false and the app uses C.
 
+- Singles enablement debt. S8 must build the three-field configuration
+  schema (`Width`, `Height`, `Difficulty` with `":Easy:Tricky"`), apply
+  `show-black-nums` to the live `Ui` after `newUi` and after
+  `Midend.fromSave` (there is no `UI` record) and force a redraw, gate
+  the status text on `wantsStatusBar` (it is false), show
+  `Unable to solve puzzle.` instead of throwing, remove the `Fifteen`
+  casts, generate off the UI thread, and wait two releases. The
+  generator retry loop is unbounded, so a size or time bound is an
+  owner decision. S9 is a tested `currentKeyLabel` helper with no
+  Android call site. `SINGLES` is in `KotlinGames.gameFor` and not in
+  `APP_GAMES`, so `KotlinGames.handles(SINGLES)` is false and the app
+  uses C.
+
+- `SinglesDescTest` is semantic. It compares the ten presets and the
+  default with the oracle, the eleven golden descriptions at the shared
+  seed, nine seed strings and a numeric sweep per preset, the decode
+  quirks (`5`, `5dk`, `05x5dk`, `+5x5dk`, `" 5x5dk"`, `5x5dK`, `5d`,
+  `5x`), the validation order and the three messages, the description
+  grammar, and the retry fixtures `2x20dk`, `2x30dk`, and `3x30dk`.
+  The generator draws one Latin rectangle of order `max(w, h)`, one
+  shuffle of the `w*h` cells, the black placement in the shuffled
+  order, and one `o`-element `best_black_col` shuffle per black cell in
+  increasing cell index. A failed solver gate reshuffles every black
+  cell only; the twenty-first failure returns to the Latin draw. The
+  solver order is `solve_sneaky` in the gate only, then `singlesep`,
+  `doubles`, `corners`, `offsetpair` at Tricky and above, then the
+  `allblackbutone`/`removesplits` loop with its `> 0` tests. A wrong
+  draw order still produces a valid-looking board, so only the
+  descriptions and the sweeps catch it.
+- `SinglesGameTest` is semantic and strict where a frame is compared.
+  It compares the new game, the text form, the move grammar, the real
+  black and circle cycles at tiles 48, 63, 82, and 100, the cursor and
+  its wrap at all four edges, both select keys and Enter/Space, the
+  inert middle press, drag, and release, undo and redo with a live redo
+  branch, completion and the sticky status, the three error rules,
+  every preset's `SOLVE`, the fallback to the initial state, and
+  `changedState`. Every real black or circle step alters the board and
+  adds one move with status 0, and the final frame at each tile is
+  compared with `pointsSized`.
+- `SinglesSaveTest` is strict for the save text and semantic for the
+  state. It reads all eleven corpus saves (`default` plus the ten
+  presets), rewrites them byte for byte, and compares id, status,
+  `canUndo`, `canRedo`, text, and `textFormat` with C. A Kotlin save
+  for every preset and three seeds loads in C with the same id, status,
+  and text. The short id drops the difficulty, and `2x2dk` writes
+  `PARAMS 2x2de` and `CPARAMS 2x2dk`. In-memory history covers a black
+  and a circle click, an outside click that toggles `show-black-nums`
+  and leaves the save unchanged, an undone position with a live redo
+  branch, a `SOLVE`, and a `RESTART`, and every shape reloads in both
+  engines. No save has an `AUXINFO`, `PRIVDESC`, `UI`, or `TIME`
+  record, and an empty and a hex seed keep the shared container
+  behavior.
+- `SinglesTraceTest` is strict. It compares the ten frozen traces and
+  `traceNew` for every preset, sized cold frames at tiles 48, 63, 82,
+  and 100, the 411x702 letterbox, the cursor ring, the `COL_ERROR`
+  marks, the `COL_BLACKNUM` preference frame, the two-digit text size,
+  the warm empty frame after a real input, the changed frame after a
+  real black and circle click at tile 48 and in the letterbox, and the
+  engine-only dirty frame after an undo. No frame has a blitter, a
+  clip, a thick primitive, flash, or a status bar.
+- `SinglesInputParityTest` is semantic and ui. It compares the layout
+  at five viewports and tiles 48, 63, 82, and 100, the black and circle
+  cycles at those tiles and at the 411x702 letterbox (tile 68, origin
+  (1,147)), the half-tile border, the last cell and one pixel past it,
+  the letterbox preference toggle with an inside positive control, a
+  lone release, a lone drag, and an overlapping right press. State, id,
+  status, undo, redo, and the final frame with `pointsSized` are
+  compared. Every real black or circle change alters the board and adds
+  one move; an inert event changes neither. `requestKeys` is compared
+  on every preset with and without the full-cursor hint: arrow mode 3
+  with no labels, and mode 1 (`ARROWS_ONLY`) with the same empty list
+  when the hint is set, as the C midend forces for a NULL
+  `request_keys`.
+- `KotlinGamesTest` pins that `SINGLES` maps to `Singles` in
+  `KotlinGames.gameFor` while `KotlinGames.handles(SINGLES)` is false,
+  and `HelpTopicTest` pins the `singles` help topic. `SINGLES` is not
+  in `APP_GAMES`.
+- `SinglesTest` is the engine test. It pins the parameter and decode
+  quirks, the plain `d` for an out-of-range difficulty, the saturating
+  `atoi` and `%d` parses, the validation order, the description
+  messages, the `n2c`/`c2n` alphabet and the 62 hole, the move grammar
+  and the empty move, the sticky completion, the three error rules, the
+  solver diff, the `best_black_col` fallback, the two retry counters,
+  the tiny-board downgrade, D-017, `currentKeyLabel`, `cursorLocation`,
+  the UI default, the palette, `computeSize`, and the drawstate array.
+- `show-black-nums` is the only Singles preference. C keeps it in the
+  UI, where it changes the number drawn on a black cell and nothing
+  else; it is not in `State`, the id, the save, or `DrawState.flags`.
+  The port exposes `Singles.Ui.showBlackNums` and reads it in
+  `redraw`, and `SinglesTraceTest` compares the frame with the oracle's
+  `trace` `prefs` field and pins that the save is unchanged. Because
+  `encode_ui` and `decode_ui` are `NULL`, a load creates a fresh UI, so
+  the app adapter must apply the preference after `newUi` and after
+  `Midend.fromSave`.
+- D-017. C accepts a side of 62, generates a description whose digit
+  62 is `[`, and aborts at `singles.c:1452`. `62x2de` seed `5` aborts
+  after 40.9 s (SIGABRT, exit 134), seed `19` aborts, and `2x62de` seed
+  `20` aborts; no `62` shape generated a description. The Kotlin
+  `validateParams` still accepts `2..62`, and only `newDesc` rejects a
+  side of 62 with `Puzzle is too large` before any draw. Every side
+  `2..61`, every preset, seed, and save text is unchanged. The engine
+  test pins seeds `1`, `5`, and `19` and the untouched generator state;
+  the parity test pins the same message through `Midend.newGame`.
+
 - The `Midend` state-params rule is cross-cutting. `newGame` and
   `fromGameId` build state 0 from the short (long-term) params, as
   `midend_new_game` does, and `fromSave` builds it from `CPARAMS`.
