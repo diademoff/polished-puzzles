@@ -49,6 +49,11 @@
  *   {"op":"tdq","n":10,"ops":"a 3 a 1 r f"}
  *   {"op":"sort","values":"5 3 9 1","mode":"asc"}
  *   {"op":"combi","r":2,"n":5}
+ *   {"op":"grid","kind":"new","type":"square","w":5,"h":5}
+ *   {"op":"grid","kind":"desc","type":"hats","w":5,"h":5,"seed":"12345"}
+ *   {"op":"grid","kind":"validate","type":"triangular","w":5,"h":5,"desc":"0"}
+ *   {"op":"grid","kind":"nearest","type":"square","w":5,"h":5,"x":10,"y":10}
+ *   {"op":"grid","kind":"size","type":"square","w":5,"h":5}
  *
  * Responses (flat JSON objects):
  *
@@ -74,6 +79,7 @@
 #include "latin.h"
 #include "matching.h"
 #include "tree234.h"
+#include "grid.h"
 
 struct frontend {
     midend *me;
@@ -1836,6 +1842,241 @@ static bool parse_latin_grid(const char *text, digit *grid, int cells, int order
     return *p == '\0';
 }
 
+/* ------------------------------------------------------------------ */
+/* Grids.                                                             */
+/* ------------------------------------------------------------------ */
+
+static const char *const grid_type_names[] = {
+#define GRID_NAME(upper, lower) #lower,
+    GRIDGEN_LIST(GRID_NAME)
+#undef GRID_NAME
+};
+
+static bool parse_grid_type(const char *name, grid_type *out)
+{
+    int i;
+
+    if (!name)
+        return false;
+    for (i = 0; i < GRID_TYPE_MAX; i++) {
+        if (!strcmp(name, grid_type_names[i])) {
+            *out = (grid_type)i;
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * Builds a grid for the grid operation. Returns NULL after putting an
+ * error response when the request or the description is invalid.
+ */
+static grid *grid_from_request(const jobject *req)
+{
+    const char *type_name = field_string(req, "type");
+    const char *desc = field_string(req, "desc");
+    const char *error;
+    long w = 0, h = 0;
+    grid_type type;
+    grid *g;
+
+    if (!parse_grid_type(type_name, &type)) {
+        put_error("grid needs a known type");
+        return NULL;
+    }
+    if (!field_int(req, "w", &w) || !field_int(req, "h", &h) ||
+        w < 1 || h < 1 || w > 1000 || h > 1000) {
+        put_error("grid needs 1 <= w, h <= 1000");
+        return NULL;
+    }
+
+    error = grid_validate_params(type, (int)w, (int)h);
+    if (error) {
+        put_error(error);
+        return NULL;
+    }
+    error = grid_validate_desc(type, (int)w, (int)h, desc);
+    if (error) {
+        put_error(error);
+        return NULL;
+    }
+
+    g = grid_new(type, (int)w, (int)h, desc);
+    if (!g) {
+        put_error("grid_new returned no grid");
+        return NULL;
+    }
+    return g;
+}
+
+static void do_grid(const jobject *req)
+{
+    const char *kind = field_string(req, "kind");
+    const char *type_name = field_string(req, "type");
+    const char *seed = field_string(req, "seed");
+    const char *state = field_string(req, "state");
+    long w = 0, h = 0, x = 0, y = 0, want_incentre = 0;
+    grid_type type;
+    grid *g;
+    int i, j;
+
+    if (!kind) {
+        put_error("grid needs a kind");
+        return;
+    }
+    if (!parse_grid_type(type_name, &type)) {
+        put_error("grid needs a known type");
+        return;
+    }
+
+    if (!strcmp(kind, "desc")) {
+        random_state *rs;
+        char *desc;
+        char *encoded;
+
+        if (!field_int(req, "w", &w) || !field_int(req, "h", &h) ||
+            w < 1 || h < 1 || w > 1000 || h > 1000) {
+            put_error("grid desc needs 1 <= w, h <= 1000");
+            return;
+        }
+        if (state)
+            rs = random_state_decode(state);
+        else if (seed)
+            rs = random_new(seed, (int)strlen(seed));
+        else {
+            put_error("grid desc needs a seed or a state");
+            return;
+        }
+
+        desc = grid_new_desc(type, (int)w, (int)h, rs);
+        encoded = random_state_encode(rs);
+        /* An absent description is an empty string: the oracle protocol
+         * has no null, and no grid type uses an empty description. */
+        fputs("{\"ok\":true,\"desc\":", stdout);
+        put_json_string(desc ? desc : "");
+        fputs(",\"state\":", stdout);
+        put_json_string(encoded);
+        fputs("}\n", stdout);
+
+        sfree(desc);
+        sfree(encoded);
+        random_free(rs);
+        return;
+    }
+
+    if (!strcmp(kind, "validate")) {
+        const char *error;
+
+        if (!field_int(req, "w", &w) || !field_int(req, "h", &h) ||
+            w < 1 || h < 1) {
+            put_error("grid validate needs positive w and h");
+            return;
+        }
+        error = grid_validate_desc(type, (int)w, (int)h,
+                                   field_string(req, "desc"));
+        /* No error is an empty string: the oracle protocol has no null,
+         * and every error message is non-empty. */
+        fputs("{\"ok\":true,\"error\":", stdout);
+        put_json_string(error ? error : "");
+        fputs("}\n", stdout);
+        return;
+    }
+
+    if (!strcmp(kind, "size")) {
+        int tilesize, xextent, yextent;
+        const char *error;
+
+        if (!field_int(req, "w", &w) || !field_int(req, "h", &h) ||
+            w < 1 || h < 1) {
+            put_error("grid size needs positive w and h");
+            return;
+        }
+        error = grid_validate_params(type, (int)w, (int)h);
+        if (error) {
+            put_error(error);
+            return;
+        }
+        grid_compute_size(type, (int)w, (int)h, &tilesize, &xextent, &yextent);
+        printf("{\"ok\":true,\"tilesize\":%d,\"xextent\":%d,\"yextent\":%d}\n",
+               tilesize, xextent, yextent);
+        return;
+    }
+
+    if (!strcmp(kind, "nearest")) {
+        grid_edge *edge;
+
+        if (!field_int(req, "x", &x) || !field_int(req, "y", &y)) {
+            put_error("grid nearest needs x and y");
+            return;
+        }
+        g = grid_from_request(req);
+        if (!g)
+            return;
+        edge = grid_nearest_edge(g, (int)x, (int)y);
+        printf("{\"ok\":true,\"edge\":%d}\n", edge ? edge->index : -1);
+        grid_free(g);
+        return;
+    }
+
+    if (!strcmp(kind, "new")) {
+        g = grid_from_request(req);
+        if (!g)
+            return;
+
+        /* Computing every incentre is optional: it is a separate step
+         * in the C API, and it costs time on large grids. */
+        if (field_int(req, "incentre", &want_incentre) && want_incentre) {
+            for (i = 0; i < g->num_faces; i++)
+                grid_find_incentre(g->faces[i]);
+        }
+
+        printf("{\"ok\":true,\"lowestX\":%d,\"lowestY\":%d,"
+               "\"highestX\":%d,\"highestY\":%d,\"tilesize\":%d,\"dots\":[",
+               g->lowest_x, g->lowest_y, g->highest_x, g->highest_y,
+               g->tilesize);
+        for (i = 0; i < g->num_dots; i++) {
+            grid_dot *d = g->dots[i];
+            printf("%s{\"i\":%d,\"x\":%d,\"y\":%d,\"edges\":[",
+                   i ? "," : "", d->index, d->x, d->y);
+            for (j = 0; j < d->order; j++)
+                printf("%s%d", j ? "," : "", d->edges[j] ? d->edges[j]->index : -1);
+            fputs("],\"faces\":[", stdout);
+            for (j = 0; j < d->order; j++)
+                printf("%s%d", j ? "," : "", d->faces[j] ? d->faces[j]->index : -1);
+            fputs("]}", stdout);
+        }
+        fputs("],\"edges\":[", stdout);
+        for (i = 0; i < g->num_edges; i++) {
+            grid_edge *e = g->edges[i];
+            printf("%s{\"i\":%d,\"dot1\":%d,\"dot2\":%d,\"face1\":%d,\"face2\":%d}",
+                   i ? "," : "", e->index, e->dot1->index, e->dot2->index,
+                   e->face1 ? e->face1->index : -1,
+                   e->face2 ? e->face2->index : -1);
+        }
+        fputs("],\"faces\":[", stdout);
+        for (i = 0; i < g->num_faces; i++) {
+            grid_face *f = g->faces[i];
+            printf("%s{\"i\":%d,\"order\":%d,\"edges\":[",
+                   i ? "," : "", f->index, f->order);
+            for (j = 0; j < f->order; j++)
+                printf("%s%d", j ? "," : "", f->edges[j] ? f->edges[j]->index : -1);
+            fputs("],\"dots\":[", stdout);
+            for (j = 0; j < f->order; j++)
+                printf("%s%d", j ? "," : "", f->dots[j] ? f->dots[j]->index : -1);
+            printf("],\"hasIncentre\":%s",
+                   f->has_incentre ? "true" : "false");
+            if (f->has_incentre)
+                printf(",\"ix\":%d,\"iy\":%d", f->ix, f->iy);
+            fputs("}", stdout);
+        }
+        fputs("]}\n", stdout);
+        grid_free(g);
+        return;
+    }
+
+    put_error("unknown grid kind");
+}
+
 static void do_latin(const jobject *req)
 {
     const char *kind = field_string(req, "kind");
@@ -3095,6 +3336,8 @@ int main(int argc, char **argv)
             do_divvy(&req);
         } else if (!strcmp(op, "laydomino")) {
             do_laydomino(&req);
+        } else if (!strcmp(op, "grid")) {
+            do_grid(&req);
         } else if (!strcmp(op, "latin")) {
             do_latin(&req);
         } else if (!strcmp(op, "tdq")) {

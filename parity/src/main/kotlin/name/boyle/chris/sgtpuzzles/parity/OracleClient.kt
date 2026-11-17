@@ -511,6 +511,161 @@ class OracleClient(
             .stringList("combinations")
             .map { text -> text.split(',').map { it.toInt() } }
 
+    // ----------------------------------------------------------------
+    // Grids.
+    // ----------------------------------------------------------------
+
+    data class GridDesc(val desc: String, val state: String)
+
+    /** `grid_new_desc`, plus the generator state after the call. */
+    fun gridDesc(
+        type: String,
+        w: Int,
+        h: Int,
+        seed: String? = null,
+        state: String? = null,
+    ): GridDesc {
+        val fields = linkedMapOf<String, Any>("op" to "grid", "kind" to "desc", "type" to type, "w" to w, "h" to h)
+        if (seed != null) fields["seed"] = seed
+        if (state != null) fields["state"] = state
+        val response = request(fields)
+        return GridDesc(response.string("desc"), response.string("state"))
+    }
+
+    /** `grid_validate_desc`. An empty reply means no error. */
+    fun gridValidate(type: String, w: Int, h: Int, desc: String?): String? {
+        val fields = linkedMapOf<String, Any>("op" to "grid", "kind" to "validate", "type" to type, "w" to w, "h" to h)
+        if (desc != null) fields["desc"] = desc
+        val error = request(fields).string("error")
+        return error.ifEmpty { null }
+    }
+
+    data class GridDot(
+        val index: Int,
+        val x: Int,
+        val y: Int,
+        val edges: List<Int>,
+        val faces: List<Int>,
+    )
+
+    data class GridEdge(
+        val index: Int,
+        val dot1: Int,
+        val dot2: Int,
+        val face1: Int,
+        val face2: Int,
+    )
+
+    data class GridFace(
+        val index: Int,
+        val order: Int,
+        val edges: List<Int>,
+        val dots: List<Int>,
+        val hasIncentre: Boolean,
+        val ix: Int,
+        val iy: Int,
+    )
+
+    data class GridData(
+        val lowestX: Int,
+        val lowestY: Int,
+        val highestX: Int,
+        val highestY: Int,
+        val tileSize: Int,
+        val dots: List<GridDot>,
+        val edges: List<GridEdge>,
+        val faces: List<GridFace>,
+    )
+
+    /** `grid_new`, with the full incidence lists. */
+    fun gridNew(
+        type: String,
+        w: Int,
+        h: Int,
+        desc: String? = null,
+        incentre: Boolean = false,
+    ): GridData {
+        val fields = linkedMapOf<String, Any>("op" to "grid", "kind" to "new", "type" to type, "w" to w, "h" to h)
+        if (desc != null) fields["desc"] = desc
+        if (incentre) fields["incentre"] = 1
+        val response = request(fields)
+
+        fun ints(value: JsonValue): List<Int> = (value as JsonValue.Arr).items.map {
+            (it as JsonValue.Num).value.toInt()
+        }
+        val dots = (response.field("dots") as JsonValue.Arr).items.map { item ->
+            val obj = item as JsonValue.Obj
+            GridDot(
+                index = obj.number("i").toInt(),
+                x = obj.number("x").toInt(),
+                y = obj.number("y").toInt(),
+                edges = ints(obj.field("edges")),
+                faces = ints(obj.field("faces")),
+            )
+        }
+        val edges = (response.field("edges") as JsonValue.Arr).items.map { item ->
+            val obj = item as JsonValue.Obj
+            GridEdge(
+                index = obj.number("i").toInt(),
+                dot1 = obj.number("dot1").toInt(),
+                dot2 = obj.number("dot2").toInt(),
+                face1 = obj.number("face1").toInt(),
+                face2 = obj.number("face2").toInt(),
+            )
+        }
+        val faces = (response.field("faces") as JsonValue.Arr).items.map { item ->
+            val obj = item as JsonValue.Obj
+            GridFace(
+                index = obj.number("i").toInt(),
+                order = obj.number("order").toInt(),
+                edges = ints(obj.field("edges")),
+                dots = ints(obj.field("dots")),
+                hasIncentre = obj.bool("hasIncentre"),
+                ix = (obj.fields["ix"] as? JsonValue.Num)?.value?.toInt() ?: 0,
+                iy = (obj.fields["iy"] as? JsonValue.Num)?.value?.toInt() ?: 0,
+            )
+        }
+        return GridData(
+            lowestX = response.number("lowestX").toInt(),
+            lowestY = response.number("lowestY").toInt(),
+            highestX = response.number("highestX").toInt(),
+            highestY = response.number("highestY").toInt(),
+            tileSize = response.number("tilesize").toInt(),
+            dots = dots,
+            edges = edges,
+            faces = faces,
+        )
+    }
+
+    /** `grid_nearest_edge`: the edge index, or -1. */
+    fun gridNearest(type: String, w: Int, h: Int, x: Int, y: Int, desc: String? = null): Int {
+        val fields = linkedMapOf<String, Any>(
+            "op" to "grid",
+            "kind" to "nearest",
+            "type" to type,
+            "w" to w,
+            "h" to h,
+            "x" to x,
+            "y" to y,
+        )
+        if (desc != null) fields["desc"] = desc
+        return request(fields).number("edge").toInt()
+    }
+
+    data class GridSize(val tileSize: Int, val xextent: Int, val yextent: Int)
+
+    /** `grid_compute_size`. */
+    fun gridSize(type: String, w: Int, h: Int): GridSize {
+        val response = request(
+            mapOf("op" to "grid", "kind" to "size", "type" to type, "w" to w, "h" to h),
+        )
+        return GridSize(
+            tileSize = response.number("tilesize").toInt(),
+            xextent = response.number("xextent").toInt(),
+            yextent = response.number("yextent").toInt(),
+        )
+    }
+
     /** `random_bits` from a seed or from an encoded generator state. */
     fun randomBits(
         bits: Int,

@@ -53,6 +53,7 @@ tdq(n, ops)             -> every removal
 findloop(n, edges)      -> loop edges and bridges
 matching(nl, nr, adj)   -> matching and permuted adjacency
 tree(ops)               -> operation results and index order
+grid(kind, type, w, h, ...) -> grid incidence, desc, error, edge, or size
 ```
 
 `id` re-reads a save file. It is used by the save corpus test to prove

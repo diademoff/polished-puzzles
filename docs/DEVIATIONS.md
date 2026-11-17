@@ -709,6 +709,44 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-018: `grid` defines three upstream abort and overflow paths
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** three inputs kill the C `grid` code:
+  - an empty Penrose or spectre description. `grid_desc_to_penrose_params`
+    returns before it sets `params->coords`, and the caller frees that
+    uninitialised pointer. The committed oracle exits with SIGSEGV and
+    `free(): invalid size` for `""` on both types.
+  - a one-character Penrose or spectre description. `params->ncoords =
+    strlen(desc) - 2` underflows `size_t`; the decoder allocates a huge
+    buffer and reads past the string. The Kotlin validator returns
+    `expected digit as second char of grid description` or
+    `expected digit in grid description`.
+  - an aperiodic patch that trims to nothing. `grid_new_penrose` calls
+    `grid_trim_vigorous`, which calls `dsf_new(0)`; the assertion
+    `0 < size` aborts the oracle. Measured with `penrose_p2_kite`
+    `2x2` and description `81B` (SIGABRT). The Kotlin `gridNew`
+    returns a grid with zero faces, edges and dots.
+- **Why:** the app keeps assertions, so each path is a crash in the
+  shipped build. The guards depend only on the input string and the
+  generated patch, so the result is deterministic. Valid descriptions,
+  generated descriptions, seeds, `DESC`, and `.sgtp` text keep the C
+  behavior; every generator, description and encoded RNG state is
+  compared with the oracle. A generated description can reach the empty
+  patch only at very small sizes, where upstream has no working board.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GridTest.kt::theUpstreamAbortPathsAreDefined`
+  pins the two empty-description messages, the two one-character
+  messages, and the empty `81B` grid. The parity tests do not send these
+  inputs to the oracle, because the abort would kill it; every other
+  description is compared in `GridParityTest`.
+- **Review:** the owner should review this entry before `loopy` or
+  `pearl` is enabled in the app.
+- **Scope:** `grid`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:
