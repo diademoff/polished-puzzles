@@ -1,25 +1,9 @@
 package name.boyle.chris.sgtpuzzles.parity
 
-import name.boyle.chris.sgtpuzzles.engine.Bridges
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
-import name.boyle.chris.sgtpuzzles.engine.Game
-import name.boyle.chris.sgtpuzzles.engine.Guess
-import name.boyle.chris.sgtpuzzles.engine.Keen
-import name.boyle.chris.sgtpuzzles.engine.Lightup
-import name.boyle.chris.sgtpuzzles.engine.Map as MapGame
-import name.boyle.chris.sgtpuzzles.engine.Loopy
-import name.boyle.chris.sgtpuzzles.engine.Net
-import name.boyle.chris.sgtpuzzles.engine.Palisade
-import name.boyle.chris.sgtpuzzles.engine.Pearl
+import name.boyle.chris.sgtpuzzles.engine.PortedGames
 import name.boyle.chris.sgtpuzzles.engine.Prefs
 import name.boyle.chris.sgtpuzzles.engine.PrefsException
-import name.boyle.chris.sgtpuzzles.engine.Signpost
-import name.boyle.chris.sgtpuzzles.engine.Singles
-import name.boyle.chris.sgtpuzzles.engine.Solo
-import name.boyle.chris.sgtpuzzles.engine.Towers
-import name.boyle.chris.sgtpuzzles.engine.Undead
-import name.boyle.chris.sgtpuzzles.engine.Unequal
-import name.boyle.chris.sgtpuzzles.engine.Untangle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -35,54 +19,66 @@ import java.io.File
  * the encoding, the keyword lookup, the one-key-shortcuts position, and
  * the unknown-keyword rule are compared byte for byte. Nothing is
  * generated.
+ *
+ * The matrix is [PortedGames.all], the same engine-side registry that
+ * `KotlinGames.gameFor` uses. Both modules see one list, so a ported
+ * game cannot be missing from this comparison. The oracle's `games` op
+ * is the other side: every registry name must exist there, and the
+ * empty/non-empty count is pinned below. The 21 backends with a NULL C
+ * `get_prefs` must produce an empty Kotlin schema, and the 19 with a
+ * non-NULL one must produce the C items.
  */
 class PrefsSchemaParityTest {
-
-    private data class Scheme(val game: Game, val backend: String)
-
-    private val games = listOf(
-        Scheme(Bridges, "bridges"),
-        Scheme(Guess, "guess"),
-        Scheme(Net, "net"),
-        Scheme(Lightup, "lightup"),
-        Scheme(Palisade, "palisade"),
-        Scheme(Pearl, "pearl"),
-        Scheme(Loopy, "loopy"),
-        Scheme(Signpost, "signpost"),
-        Scheme(Undead, "undead"),
-        Scheme(Untangle, "untangle"),
-        Scheme(MapGame, "map"),
-        Scheme(Keen, "keen"),
-        Scheme(Towers, "towers"),
-        Scheme(Unequal, "unequal"),
-        Scheme(Singles, "singles"),
-        Scheme(Solo, "solo"),
-    )
 
     private val testdata = File(
         System.getProperty("testdata") ?: error("testdata system property is not set"),
     )
 
     @Test
-    fun `the preference schema matches the oracle`() = OracleClient().use { oracle ->
-        for (scheme in games) {
-            val expected = oracle.prefs(scheme.backend)
+    fun `the matrix covers every ported backend`() = OracleClient().use { oracle ->
+        val oracleGames = oracle.games().toSet()
+        assertEquals(40, PortedGames.all.size)
+        for (game in PortedGames.all) {
             assertEquals(
-                "${scheme.backend} title",
-                "${scheme.game.name} preferences",
+                "${game.backendName} must be a C game",
+                true,
+                game.backendName in oracleGames,
+            )
+        }
+    }
+
+    @Test
+    fun `the preference schema matches the oracle`() = OracleClient().use { oracle ->
+        var withPrefs = 0
+        var withoutPrefs = 0
+        for (game in PortedGames.all) {
+            val expected = oracle.prefs(game.backendName)
+            assertEquals(
+                "${game.backendName} title",
+                "${game.name} preferences",
                 expected.title,
             )
             assertEquals(
-                "${scheme.backend} first item",
+                "${game.backendName} first item",
                 "one-key-shortcuts",
                 expected.items.first().kw,
             )
             val gameItems = expected.items.drop(1)
-            val actual = scheme.game.prefs
-            assertEquals("${scheme.backend} item count", gameItems.size, actual.size)
+            val actual = game.prefs
+            assertEquals("${game.backendName} item count", gameItems.size, actual.size)
+            assertEquals(
+                "${game.backendName} declares C prefs exactly when the oracle has items",
+                gameItems.isNotEmpty(),
+                game.declaresPrefs,
+            )
+            if (gameItems.isEmpty()) {
+                withoutPrefs++
+            } else {
+                withPrefs++
+            }
             for (index in actual.indices) {
                 assertPrefsItem(
-                    "${scheme.backend} item $index",
+                    "${game.backendName} item $index",
                     actual[index],
                     gameItems[index],
                 )
@@ -91,48 +87,58 @@ class PrefsSchemaParityTest {
              * every choice and a unique keyword for every item. */
             Prefs.defaults(actual)
         }
+        /* The C table has 19 non-NULL get_prefs functions and 21 NULL
+         * ones among the 40 ported backends. A new port must change this
+         * count on purpose, not by accident. */
+        assertEquals("games with a C prefs schema", 19, withPrefs)
+        assertEquals("games with a NULL C get_prefs", 21, withoutPrefs)
+        assertEquals("range has C prefs", true, PortedGames.byBackend("range")!!.declaresPrefs)
     }
 
     @Test
     fun `a preference text round-trips byte for byte`() = OracleClient().use { oracle ->
-        for (scheme in games) {
-            val state = save(scheme.backend)
-            val expectedSchema = oracle.prefs(scheme.backend).items.first()
+        var first = true
+        for (game in PortedGames.all) {
+            val backend = game.backendName
+            val state = save(backend)
+            val expectedSchema = oracle.prefs(backend).items.first()
             val fullSchema = listOf(
                 ConfigItem.Bool(
                     expectedSchema.name,
                     expectedSchema.boolean!!,
                     expectedSchema.kw!!,
                 ),
-            ) + scheme.game.prefs
-            for (text in texts(scheme.backend, scheme.game.prefs)) {
-                val expected = oracle.prefsRoundTrip(scheme.backend, state, text)
+            ) + game.prefs
+            for (text in texts(game.prefs, includeOneKeyShortcuts = first)) {
+                val expected = oracle.prefsRoundTrip(backend, state, text)
                 val actual = Prefs.parse(fullSchema, text).encode()
-                assertEquals("${scheme.backend} '$text'", expected, actual)
+                assertEquals("$backend '$text'", expected, actual)
             }
+            first = false
         }
     }
 
     @Test
     fun `a bad preference text returns the C message`() = OracleClient().use { oracle ->
-        for (scheme in games) {
-            val state = save(scheme.backend)
-            for (text in badTexts(scheme.game.prefs)) {
+        for (game in PortedGames.all) {
+            val backend = game.backendName
+            val state = save(backend)
+            for (text in badTexts(game.prefs)) {
                 val expected = try {
-                    oracle.prefsRoundTrip(scheme.backend, state, text)
+                    oracle.prefsRoundTrip(backend, state, text)
                     null
                 } catch (e: OracleException) {
                     e.message
                 }
-                assertNotNull("${scheme.backend} '$text' must be an error", expected)
+                assertNotNull("$backend '$text' must be an error", expected)
 
                 val actual = try {
-                    Prefs.parse(scheme.game.prefs, text)
+                    Prefs.parse(game.prefs, text)
                     null
                 } catch (e: PrefsException) {
                     e.message
                 }
-                assertEquals("${scheme.backend} '$text'", expected, actual)
+                assertEquals("$backend '$text'", expected, actual)
             }
         }
     }
@@ -152,10 +158,10 @@ class PrefsSchemaParityTest {
 
     /**
      * The text cases: the schema defaults, one changed item of every
-     * preference type in the schema, an unknown keyword, and the
-     * one-key-shortcuts line for the first game.
+     * preference type in the schema, an unknown keyword, and for the
+     * first game the one-key-shortcuts line.
      */
-    private fun texts(backend: String, schema: List<ConfigItem>): List<String> {
+    private fun texts(schema: List<ConfigItem>, includeOneKeyShortcuts: Boolean): List<String> {
         val texts = ArrayList<String>()
         texts += ""
         val changed = StringBuilder()
@@ -176,7 +182,7 @@ class PrefsSchemaParityTest {
         }
         if (changed.isNotEmpty()) texts += changed.toString()
         texts += "future-key=1\n"
-        if (backend == games.first().backend) {
+        if (includeOneKeyShortcuts) {
             texts += "one-key-shortcuts=false\n$changed"
         }
         return texts
