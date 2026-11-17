@@ -106,10 +106,10 @@ class GamePlayParameterizedTest(
                 SystemClock.sleep(500) // Untangle seems to need this (multiple layout passes?)
             }
             onView(withText(R.string.starting)).check(doesNotExist())
-            if (backend === FIFTEEN) {
+            if (backend in kotlinBackends) {
                 it.onActivity { activity ->
                     assert(activity.gameEngine is KotlinGameEngine) {
-                        "fifteen is not using the Kotlin backend"
+                        "$backend is not using the Kotlin backend"
                     }
                 }
             }
@@ -131,6 +131,14 @@ class GamePlayParameterizedTest(
     }
 
     companion object {
+        /**
+         * The backends the app runs on the Kotlin engine. The first
+         * enablement wave (2026-11-18) is `fifteen`, `samegame`,
+         * `flood`, and `pegs`; a game joins this set with its first
+         * wave entry in `docs/ROADMAP.md`.
+         */
+        private val kotlinBackends = setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS)
+
         data class Example(
             val backend: BackendName,
             val gameID: String,

@@ -18,6 +18,7 @@ import name.boyle.chris.sgtpuzzles.engine.Lightup
 import name.boyle.chris.sgtpuzzles.engine.Loopy
 import name.boyle.chris.sgtpuzzles.engine.Magnets
 import name.boyle.chris.sgtpuzzles.engine.Map
+import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.Mines
 import name.boyle.chris.sgtpuzzles.engine.Mosaic
 import name.boyle.chris.sgtpuzzles.engine.Net
@@ -58,9 +59,15 @@ class KotlinGamesTest {
     )
 
     @Test
-    fun `fifteen uses the Kotlin backend`() {
-        assertTrue(KotlinGames.handles(FIFTEEN))
+    fun `the first wave uses the Kotlin backend`() {
+        for (backend in listOf(FIFTEEN, SAMEGAME, FLOOD, PEGS)) {
+            assertTrue(
+                "$backend must run on the Kotlin backend",
+                KotlinGames.handles(backend),
+            )
+        }
         assertFalse(KotlinGames.handles(MINES))
+        assertFalse(KotlinGames.handles(SLANT))
     }
 
     @Test
@@ -70,15 +77,15 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `samegame is registered but the app still uses C`() {
+    fun `samegame is registered and handled`() {
         assertEquals(SameGame, KotlinGames.gameFor(SAMEGAME))
-        assertFalse(KotlinGames.handles(SAMEGAME))
+        assertTrue(KotlinGames.handles(SAMEGAME))
     }
 
     @Test
-    fun `flood is registered but the app still uses C`() {
+    fun `flood is registered and handled`() {
         assertEquals(Flood, KotlinGames.gameFor(FLOOD))
-        assertFalse(KotlinGames.handles(FLOOD))
+        assertTrue(KotlinGames.handles(FLOOD))
     }
 
     @Test
@@ -100,9 +107,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `pegs is registered but the app still uses C`() {
+    fun `pegs is registered and handled`() {
         assertEquals(Pegs, KotlinGames.gameFor(PEGS))
-        assertFalse(KotlinGames.handles(PEGS))
+        assertTrue(KotlinGames.handles(PEGS))
     }
 
     @Test
@@ -356,12 +363,54 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `only fifteen is handled and every other game stays on C`() {
+    fun `the enabled set is exactly the first wave`() {
+        val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
+        assertEquals(
+            "the first wave is fifteen, samegame, flood, and pegs",
+            setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS),
+            enabled,
+        )
         for (backend in BackendName.all) {
             assertEquals(
-                "$backend must stay on the C backend",
-                backend === FIFTEEN,
+                "$backend must use Kotlin only in the first wave",
+                backend in setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS),
                 KotlinGames.handles(backend),
+            )
+        }
+    }
+
+    @Test
+    fun `each enabled generator writes a save that loads with its backend`() {
+        val cases = listOf(
+            Triple(FIFTEEN, "4x4", "fifteen/4x4.sgtp"),
+            Triple(SAMEGAME, "5x5c3s2", "samegame/default.sgtp"),
+            Triple(FLOOD, "12x12c6m5", "flood/default.sgtp"),
+            Triple(PEGS, "7x7cross", "pegs/default.sgtp"),
+        )
+        for ((backend, params, path) in cases) {
+            val text = KotlinGames.generate(backend, params, "12345")
+            assertEquals(
+                "$backend must match the frozen save",
+                File(testdata, "saves/initial/$path").readText(),
+                text,
+            )
+            val save = SgtpSave.parse(text)
+            val game = requireNotNull(KotlinGames.gameFor(backend))
+            assertEquals(
+                "$backend wrote the wrong GAME record",
+                game.name,
+                save.value("GAME"),
+            )
+            assertEquals(
+                "$backend must resolve to the named backend",
+                backend.sourceName,
+                game.backendName,
+            )
+            val midend = Midend.fromSave(game, save)
+            assertEquals(
+                "$backend must reload its own save unchanged",
+                text,
+                midend.serialise().serialise(),
             )
         }
     }

@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.SystemClock
 import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
+import name.boyle.chris.sgtpuzzles.backend.BackendName
 import name.boyle.chris.sgtpuzzles.backend.FIFTEEN
 import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.LAST_PARAMS_PREFIX
@@ -16,6 +17,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.STATE_PREFS_NAME
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import java.io.ByteArrayOutputStream
 
 /**
  * Shared setup for the instrumented game tests.
@@ -34,24 +36,42 @@ object GamePlayTestSupport {
     const val SOLVED_4X4 = "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0"
 
     /** Forgets the saved state of fifteen, so a launch starts fresh. */
-    fun clearFifteenState(context: Context) {
+    fun clearFifteenState(context: Context) = clearBackendState(context, FIFTEEN)
+
+    /** Forgets the saved state of [backend], so a launch starts fresh. */
+    fun clearBackendState(context: Context, backend: BackendName) {
         context.getSharedPreferences(STATE_PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .remove(SAVED_BACKEND)
-            .remove(SAVED_GAME_PREFIX + FIFTEEN)
-            .remove(SAVED_COMPLETED_PREFIX + FIFTEEN)
-            .remove(LAST_PARAMS_PREFIX + FIFTEEN)
+            .remove(SAVED_GAME_PREFIX + backend)
+            .remove(SAVED_COMPLETED_PREFIX + backend)
+            .remove(LAST_PARAMS_PREFIX + backend)
             .commit()
     }
 
     /** An explicit GamePlay intent for a game ID or a parameter string. */
     fun intent(context: Context, gameIdOrParams: String): Intent =
+        intent(context, FIFTEEN, gameIdOrParams)
+
+    /** An explicit GamePlay intent for [backend] and a game ID or params. */
+    fun intent(context: Context, backend: BackendName, gameIdOrParams: String): Intent =
         Intent(
             Intent.ACTION_VIEW,
-            Uri.parse("sgtpuzzles:$FIFTEEN:$gameIdOrParams"),
+            Uri.parse("sgtpuzzles:$backend:$gameIdOrParams"),
             context,
             GamePlay::class.java,
         )
+
+    /**
+     * The live save text of a Kotlin engine, the same records that the
+     * activity writes to SharedPreferences.
+     */
+    fun saveText(engine: KotlinGameEngine): String =
+        ByteArrayOutputStream().also { engine.serialise(it) }.toString("UTF-8")
+
+    /** The number of played moves in the live save, including undo history. */
+    fun moveCount(engine: KotlinGameEngine): Int =
+        saveText(engine).lineSequence().count { it.startsWith("MOVE") }
 
     /**
      * Waits until the live engine is a [KotlinGameEngine] that satisfies
