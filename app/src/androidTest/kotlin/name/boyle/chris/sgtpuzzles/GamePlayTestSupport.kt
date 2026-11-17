@@ -13,6 +13,9 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.SAVED_BACKEND
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.SAVED_COMPLETED_PREFIX
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.SAVED_GAME_PREFIX
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.STATE_PREFS_NAME
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 
 /**
  * Shared setup for the instrumented game tests.
@@ -77,6 +80,43 @@ object GamePlayTestSupport {
     /** The status line of a loaded game, for example `Moves: 2`. */
     fun statusText(activity: GamePlay): String =
         activity.findViewById<TextView>(R.id.status_bar).text.toString()
+
+    /**
+     * Checks that the live engine stays [expected] for the whole
+     * [windowMs].
+     *
+     * An invalid dialog can still hand a configuration to the generator
+     * worker after the click returns. There is no new state to wait for,
+     * so this polls a bounded window and fails on any new engine, game
+     * ID, or parameter string. A new game always replaces the engine
+     * instance in `startGameConfirmed`.
+     */
+    fun awaitEngineUnchanged(
+        scenario: ActivityScenario<GamePlay>,
+        expected: KotlinGameEngine,
+        windowMs: Long = 1_000,
+    ) {
+        val deadline = SystemClock.uptimeMillis() + windowMs
+        var checks = 0
+        while (SystemClock.uptimeMillis() < deadline) {
+            var observed: KotlinGameEngine? = null
+            scenario.onActivity { activity ->
+                observed = activity.gameEngine as? KotlinGameEngine
+            }
+            val engine = observed
+                ?: throw AssertionError("the live engine is not a Kotlin engine")
+            assertSame("a new game replaced the engine", expected, engine)
+            assertEquals("the game ID changed", expected.gameId, engine.gameId)
+            assertEquals(
+                "the parameters changed",
+                expected.currentParams,
+                engine.currentParams,
+            )
+            checks++
+            SystemClock.sleep(50)
+        }
+        assertTrue("the settle window did not run", checks > 0)
+    }
 
     /**
      * Waits until the state store holds a save with the `SEED` record

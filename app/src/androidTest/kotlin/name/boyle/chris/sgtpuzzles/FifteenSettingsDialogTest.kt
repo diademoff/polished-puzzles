@@ -65,7 +65,11 @@ class FifteenSettingsDialogTest {
 
             onView(withText("Width and height must both be at least two"))
                 .check(matches(isDisplayed()))
-            // The dialog reports the C message and starts nothing.
+            // The dialog reports the C message and starts nothing. A
+            // generation that the dialog started by mistake would replace
+            // the engine on the worker, so hold the old engine for a
+            // bounded window instead of reading it once.
+            GamePlayTestSupport.awaitEngineUnchanged(scenario, changed)
             val afterInvalid = GamePlayTestSupport.awaitEngine(scenario)
             assertEquals(changed.gameId, afterInvalid.gameId)
             assertEquals("3x3", afterInvalid.currentParams)
