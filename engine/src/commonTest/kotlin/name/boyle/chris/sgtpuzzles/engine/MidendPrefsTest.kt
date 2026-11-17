@@ -59,12 +59,17 @@ class MidendPrefsTest {
         assertEquals("one-key-shortcuts=false\narrow-semantics=tile\n", bySave.serialisePrefs())
     }
 
+    /**
+     * C calls `midend_load_prefs` and drops the error
+     * (`android.c:648-656`), so a stored blob that no longer parses
+     * leaves the schema defaults and the game still starts.
+     */
     @Test
-    fun `an invalid factory prefs text is an error with the C message`() {
-        val error = assertFailsWithIllegalArgument {
-            Midend.newGame(Fifteen, "4x4", SEED, prefs = "arrow-semantics=nope\n")
-        }
-        assertEquals("Invalid value for enumeration", error)
+    fun `an invalid factory prefs text falls back to the defaults`() {
+        val midend = Midend.newGame(Fifteen, "4x4", SEED, prefs = "arrow-semantics=nope\n")
+        assertEquals("one-key-shortcuts=true\narrow-semantics=tile\n", midend.serialisePrefs())
+        assertFalse((midend.ui as Fifteen.Ui).invertCursor)
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(48, 48, Buttons.LEFT_BUTTON, TILE))
     }
 
     @Test
@@ -130,15 +135,6 @@ class MidendPrefsTest {
         val midend = Midend.newGame(Fifteen, "4x4", SEED)
         midend.oneKeyShortcuts = false
         assertEquals("one-key-shortcuts=false\narrow-semantics=tile\n", midend.serialisePrefs())
-    }
-
-    private fun assertFailsWithIllegalArgument(block: () -> Unit): String {
-        try {
-            block()
-        } catch (e: IllegalArgumentException) {
-            return e.message ?: error("the error has no message")
-        }
-        error("expected an IllegalArgumentException")
     }
 
     private companion object {

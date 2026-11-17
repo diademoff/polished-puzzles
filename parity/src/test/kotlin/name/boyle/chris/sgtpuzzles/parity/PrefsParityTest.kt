@@ -4,6 +4,7 @@ import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Midend
+import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Slant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -95,6 +96,49 @@ class PrefsParityTest {
             assertEquals("boolean", expected.items.first().type)
             assertEquals(true, expected.items.first().boolean)
         }
+    }
+
+    /**
+     * `android.c:648-656` and `:830-849` call `midend_load_prefs` and
+     * ignore its error, so a stored blob that no longer parses leaves
+     * the compile-time defaults in place and the game still starts.
+     *
+     * The oracle has no op that builds a midend from a junk blob, so the
+     * evidence is two steps: the oracle rejects the blob through
+     * `prefsRoundTrip`, and its default text for the same state is the
+     * text that the Kotlin factories produce after ignoring the error.
+     * The save text is compared directly with `newGame`.
+     */
+    @Test
+    fun `a bad stored prefs blob falls back to the defaults`() = OracleClient().use { oracle ->
+        val junk = "left-button=sideways\n"
+        val expectedSave = oracle.newGame("slant", "8x8de", SEED).state
+        val defaultPrefs = oracle.prefsRoundTrip("slant", expectedSave, "")
+        assertNotNull(
+            "the oracle must reject the blob",
+            try {
+                oracle.prefsRoundTrip("slant", expectedSave, junk)
+                null
+            } catch (e: OracleException) {
+                e.message
+            },
+        )
+
+        val generated = Midend.newGame(Slant, "8x8de", SEED, prefs = junk)
+        assertEquals("the save is unaffected by the bad prefs", expectedSave, generated.serialise().serialise())
+        assertEquals("a new game falls back to the defaults", defaultPrefs, generated.serialisePrefs())
+
+        val save = SgtpSave.parse(expectedSave)
+        val loaded = Midend.fromSave(Slant, save, prefs = junk)
+        assertEquals("a load is unaffected by the bad prefs", expectedSave, loaded.serialise().serialise())
+        assertEquals("a load falls back to the defaults", defaultPrefs, loaded.serialisePrefs())
+
+        val byId = Midend.fromGameId(
+            Slant,
+            "${save.value("CPARAMS")}:${save.value("DESC")}",
+            prefs = junk,
+        )
+        assertEquals("a game id falls back to the defaults", defaultPrefs, byId.serialisePrefs())
     }
 
     private fun assertPrefsItem(

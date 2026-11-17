@@ -133,18 +133,29 @@ class Midend private constructor(
         game.setPrefs(ui, prefs)
     }
 
-    /** The C preferences file text, one `kw=value` line per item. */
+    /**
+     * The C preferences file text, one `kw=value` line per item.
+     *
+     * C's `midend_save_prefs` returns the values that `set_prefs` copied
+     * into the live UI, while this writes the stored [Prefs]. Nothing in
+     * the port edits a UI preference without applying it to [Prefs]
+     * first, so the two agree; reading the live UI would need a
+     * `get_prefs` seam and has no caller today.
+     */
     fun serialisePrefs(): String = prefs.encode()
 
     /**
-     * Applies the optional `prefs` argument of a factory. The value is
-     * the frontend's stored blob, which C asserts is valid; a caller
-     * that supplies a bad one gets the C message as an error instead of
-     * a silent default.
+     * Applies the optional `prefs` argument of a factory.
+     *
+     * The stored blob is frontend data that the user or an older build
+     * may have left behind. C loads it with `midend_load_prefs` and
+     * ignores the error (`android.c:648-656`, `:830-849`), so a blob
+     * that no longer parses leaves the current values in place and the
+     * game still starts. The Kotlin factories do the same; [applyPrefs]
+     * returns the C message but nothing here throws it.
      */
     private fun applyInitialPrefs(text: String?) {
-        val error = applyPrefs(text) ?: return
-        throw IllegalArgumentException(error)
+        applyPrefs(text)
     }
 
     /**
