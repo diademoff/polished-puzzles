@@ -2,6 +2,7 @@ package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.ArrowMode
 import name.boyle.chris.sgtpuzzles.engine.Buttons
+import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Loopy
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
@@ -277,6 +278,72 @@ class LoopyGameTest {
                 assertEquals("$button click $click value", expectedChar, last)
             }
         }
+    }
+
+    @Test
+    fun `the solver ignores the player's moves`() = OracleClient().use { oracle ->
+        val params = "7x7t0de"
+        val base = oracle.newGame("loopy", params, SEED)
+        val fresh = SgtpSave.parse(oracle.solve(base.state).state).value("SOLVE")!!
+        val moved = withMoves(base.state, listOf("0y2n"))
+        val expected = SgtpSave.parse(oracle.solve(moved).state).value("SOLVE")!!
+        assertEquals("C uses state 0", fresh, expected)
+
+        val midend = Midend.fromSave(Loopy, SgtpSave.parse(moved))
+        assertEquals("player lines ignored", expected, Loopy.solve(midend.state))
+    }
+
+    @Test
+    fun `a winning click raises the completion event`() = OracleClient().use { oracle ->
+        val params = "7x7t0de"
+        val generated = oracle.newGame("loopy", params, SEED)
+        val solve = SgtpSave.parse(oracle.solve(generated.state).state).value("SOLVE")!!
+        val tokens = solveTokens(solve)
+        val lastYes = tokens.indexOfLast { it.second == 'y' }
+        assertTrue("a yes token", lastYes >= 0)
+
+        val rest = tokens.filterIndexed { i, _ -> i != lastYes }
+            .joinToString("") { "${it.first}${it.second}" }
+        val setup = appendMove(generated.state, rest)
+        val full = appendMove(generated.state, tokens.joinToString("") { "${it.first}${it.second}" })
+        assertEquals("C wins", 1, oracle.id(full).status)
+        assertEquals("setup is open", 0, oracle.id(setup).status)
+
+        val midend = Midend.fromSave(Loopy, SgtpSave.parse(setup))
+        assertEquals("open status", 0, midend.status())
+        assertFalse("no event yet", midend.takeCompletedEvent())
+
+        val edge = tokens[lastYes].first
+        val state = midend.state as Loopy.State
+        val e = state.grid.edges[edge]
+        val ui = midend.ui as Loopy.Ui
+        ui.curX = (e.dot1.x + e.dot2.x) / 2
+        ui.curY = (e.dot1.y + e.dot2.y) / 2
+        ui.curVisible = true
+        assertEquals(KeyOutcome.SomeEffect, midend.processKey(0, 0, Buttons.CURSOR_SELECT, 32))
+
+        assertEquals("win status", 1, midend.status())
+        assertTrue("completion event", midend.takeCompletedEvent())
+        assertFalse("raised once", midend.takeCompletedEvent())
+        assertEquals(
+            "winning state",
+            Midend.fromSave(Loopy, SgtpSave.parse(full)).state,
+            midend.state,
+        )
+    }
+
+    private fun solveTokens(solve: String): List<Pair<Int, Char>> {
+        require(solve.startsWith("S"))
+        val out = mutableListOf<Pair<Int, Char>>()
+        var i = 1
+        while (i < solve.length) {
+            val start = i
+            while (i < solve.length && solve[i].isDigit()) i++
+            val edge = solve.substring(start, i).toInt()
+            out += edge to solve[i]
+            i++
+        }
+        return out
     }
 
     private fun firstEdgePoint(midend: Midend, tile: Int): Triple<Int, Int, Int> {

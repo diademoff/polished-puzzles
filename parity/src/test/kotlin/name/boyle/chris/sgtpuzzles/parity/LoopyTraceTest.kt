@@ -277,6 +277,53 @@ class LoopyTraceTest {
         }
     }
 
+    @Test
+    fun `an error frame matches the oracle`() = OracleClient().use { oracle ->
+        val base = oracle.newGame("loopy", "7x7t0de", SEED).state
+        val probe = Midend.fromSave(Loopy, SgtpSave.parse(base)).state as Loopy.State
+        val dot = probe.grid.dots.first { it.order >= 3 }
+        val edges = (0 until minOf(3, dot.order)).map { dot.edges[it]!!.index }
+        val move = edges.joinToString("") { "${it}y" }
+        val save = appendMove(base, move)
+        val midend = Midend.fromSave(Loopy, SgtpSave.parse(save))
+        val state = midend.state as Loopy.State
+        assertTrue("the vertex is overfull", state.lineErrors.any { it })
+
+        val actual = TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend, 32), upstream)
+        val expected = TraceNormalizer.normalize(oracle.trace(save), upstream)
+        assertLines("error frame", expected, actual)
+        // The mistake colour is the foreground error mark.
+        assertTrue(
+            "error colour",
+            actual.lines().any { it.startsWith("thick_line ") && it.endsWith(" 4") },
+        )
+    }
+
+    @Test
+    fun `a single closed loop frame matches the oracle`() = OracleClient().use { oracle ->
+        val base = oracle.newGame("loopy", "5x5t7dh", SEED).state
+        val probe = Midend.fromSave(Loopy, SgtpSave.parse(base)).state as Loopy.State
+        val face = probe.grid.faces[0]
+        val edges = (0 until face.order).map { face.edge(it).index }
+        val move = edges.joinToString("") { "${it}y" }
+        val save = appendMove(base, move)
+        val midend = Midend.fromSave(Loopy, SgtpSave.parse(save))
+        val state = midend.state as Loopy.State
+        assertTrue("one loop", state.exactlyOneLoop)
+
+        val actual = TraceNormalizer.normalize(KotlinTraceSink.stateTrace(midend, 32), upstream)
+        val expected = TraceNormalizer.normalize(oracle.trace(save), upstream)
+        assertLines("single loop frame", expected, actual)
+    }
+
+    private fun appendMove(save: String, move: String): String {
+        val states = SgtpSave.parse(save).value("NSTATES")!!.toInt()
+        return save
+            .replace("NSTATES :1:$states", "NSTATES :1:${states + 1}")
+            .replace("STATEPOS:1:$states", "STATEPOS:1:${states + 1}") +
+            "MOVE    :${move.length}:$move\n"
+    }
+
     private fun thicknessesOf(lines: List<String>): Set<Int> =
         lines.filter { it.startsWith("thick_line ") }
             .map { it.split(" ")[1].toInt() }

@@ -230,8 +230,9 @@ class LoopyDescTest {
             "Unknown difficulty level",
             Loopy.validateParams(Loopy.Params(7, 7, 4, 0), true),
         )
-        // C asserts `diff < DIFF_MAX`; the port returns a message. The
-        // encoder writes a bare `d` rather than reading past the table.
+        // C asserts `diff < DIFF_MAX`; the port returns a message. At
+        // difficulty 4 the encoder reads the NUL that ends the table,
+        // so both engines write a bare `d`.
         assertEquals("7x7t0d", Loopy.encodeParams(Loopy.Params(7, 7, 4, 0), true))
     }
 

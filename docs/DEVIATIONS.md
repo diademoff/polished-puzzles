@@ -861,6 +861,36 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-17
 
+### D-021: `loopy` hand-made params report instead of aborting
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** two paths in `loopy` are reachable only from a
+  hand-made `Loopy.Params`, never from a save or the chooser. First,
+  `validate_params` ends with `assert(params->diff < DIFF_MAX)`
+  (`loopy.c:730`), which aborts the C process for a difficulty of 4 or
+  more. The port returns `Unknown difficulty level`. Second,
+  `encode_params` reads `diffchars[params->diff]` (`loopy.c:663`);
+  an index above 4 reads out of bounds in C, while the port writes a
+  bare `d`, which `decode_params` reads as Easy. Index 4 is in bounds
+  in C, because the array ends with a NUL, and both engines write the
+  same `7x7t0d` there.
+- **Why:** an abort is not acceptable in the app, and the app only
+  builds parameters through `decode_params` or `custom_params`, which
+  never produce a difficulty above 3. A hand-made value is therefore a
+  library-call concern, not a user path. Returning a message keeps the
+  validation contract total.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../LoopyTest.kt::validation follows the C order and the area bound`
+  pins the message and the accepted square bound;
+  `engine/src/commonTest/kotlin/.../LoopyTest.kt::the parameter grammar matches the C quirks`
+  pins the bare `d` for difficulty 4;
+  `parity/src/test/kotlin/.../LoopyDescTest.kt::the decode quirks and validation match the oracle`
+  pins the same messages through the public seam.
+- **Scope:** `loopy`
+- **Upstream:** none known
+- **Date:** 2026-11-17
+
 ## Examples
 
 Allowed:

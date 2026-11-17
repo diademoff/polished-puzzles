@@ -67,8 +67,8 @@ class LoopyTest {
         assertEquals("7x7t4", Loopy.encodeParams(Loopy.Params(7, 7, 3, 4), false))
         assertEquals("7x7t4dh", Loopy.encodeParams(Loopy.Params(7, 7, 3, 4), true))
         assertEquals("7x7t0de", Loopy.encodeParams(Loopy.Params(7, 7, 0, 0), true))
-        // A hand-made difficulty outside the table writes a bare `d`,
-        // which decodes as Easy; C reads out of bounds.
+        // At difficulty 4 C reads the array's NUL and writes the same
+        // bare `d`, which decodes as Easy; above 4 the port defines it.
         assertEquals("7x7t0d", Loopy.encodeParams(Loopy.Params(7, 7, 4, 0), true))
         assertEquals(Loopy.Params(7, 7, 0, 0), Loopy.decodeParams("7x7t0d"))
     }

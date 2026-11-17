@@ -387,9 +387,10 @@ object Loopy : Game {
 
     /**
      * `encode_params`, `loopy.c:658-665`: `%dx%dt%d`, then `d%c` in the
-     * full form. C reads `diffchars[params->diff]` out of bounds for a
-     * hand-made difficulty outside `0..3`; the port writes a bare `d`
-     * instead, which decodes as Easy and consumes no letter.
+     * full form. At difficulty 4 C reads the NUL that ends `diffchars`
+     * and writes a bare `d`, which decodes as Easy; the port writes the
+     * same text. Above 4 C reads out of bounds, and the port writes the
+     * bare `d` as its defined result.
      */
     override fun encodeParams(params: Game.Params, full: Boolean): String {
         val p = params as Params
@@ -1874,7 +1875,6 @@ object Loopy : Game {
         out.append(clicked).append(buttonChar)
 
         if (ui.autoFollow != AutoFollow.OFF) {
-            var stopBoth = false
             for (dotId in 0..1) {
                 var dot = if (dotId == 0) edge.dot1 else edge.dot2
                 var eThis = edge
@@ -1896,15 +1896,19 @@ object Loopy : Game {
                     if (found != 1) break
                     val next = eNext!!
                     if (state.lines[next.index] != state.lines[clicked]) break
-                    if (next === edge) {
-                        stopBoth = true
-                        break
-                    }
+                    /*
+                     * C jumps to `autofollow_done`, and that label is
+                     * inside the `for` body (`loopy.c:3266`, `:3278`),
+                     * so the jump ends only this direction's walk. The
+                     * next direction still runs and emits the same loop
+                     * in reverse, and those duplicate pairs are part of
+                     * the saved move. Break only the inner loop.
+                     */
+                    if (next === edge) break
                     dot = if (next.dot1 !== dot) next.dot1 else next.dot2
                     eThis = next
                     out.append(next.index).append(buttonChar)
                 }
-                if (stopBoth) break
             }
         }
         return MoveResult.Move(out.toString())

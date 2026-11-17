@@ -251,6 +251,74 @@ class LoopyInputParityTest {
         assertTrue("no move", SgtpSave.parse(expected.state).values("MOVE").isEmpty())
     }
 
+    @Test
+    fun `auto-follow reproduces the duplicated closed loop`() = OracleClient().use { oracle ->
+        // Mark the four non-loop edges at one corner face NO, then walk
+        // the cursor to the corner and adaptively follow a closed loop.
+        // C emits the loop in both directions, so the pair 1y..3y and
+        // 1y..3y appears twice in one MOVE.
+        val base = oracle.newGame("loopy", "7x7t0de", SEED).state
+        val setup = appendMove(base, "4n22n6n24n")
+        val sequence = List(60) { Buttons.CURSOR_LEFT } +
+            List(60) { Buttons.CURSOR_UP } +
+            listOf(Buttons.CURSOR_SELECT)
+        val expected = oracle.keys(setup, sequence, "auto-follow=adaptive")
+        val moves = SgtpSave.parse(expected.state).values("MOVE")
+        assertEquals("setup move", "4n22n6n24n", moves[0])
+        assertEquals("closed loop move", "0y3y2y1y1y2y3y", moves[1])
+
+        val midend = Midend.fromSave(Loopy, SgtpSave.parse(setup))
+        (midend.ui as Loopy.Ui).autoFollow = Loopy.AutoFollow.ADAPTIVE
+        for (key in sequence) midend.processKey(0, 0, key, 32)
+        assertEquals("closed loop save", expected.state, midend.serialise().serialise())
+
+        // The fixed mode ignores the existing NO edges, so it stops at
+        // the first two-edge chain.
+        val fixed = oracle.keys(setup, sequence, "auto-follow=fixed")
+        assertEquals("fixed move", "0y3y", SgtpSave.parse(fixed.state).values("MOVE")[1])
+        val fixedMidend = Midend.fromSave(Loopy, SgtpSave.parse(setup))
+        (fixedMidend.ui as Loopy.Ui).autoFollow = Loopy.AutoFollow.FIXED
+        for (key in sequence) fixedMidend.processKey(0, 0, key, 32)
+        assertEquals(
+            "fixed save",
+            fixed.state,
+            fixedMidend.serialise().serialise(),
+        )
+    }
+
+    @Test
+    fun `a select before the cursor is visible only reveals it`() = OracleClient().use { oracle ->
+        val base = oracle.newGame("loopy", "7x7t0de", SEED)
+        val reveal = oracle.keys(base.state, listOf(Buttons.CURSOR_SELECT))
+        assertTrue("reveal adds no move", SgtpSave.parse(reveal.state).values("MOVE").isEmpty())
+
+        val midend = Midend.fromSave(Loopy, SgtpSave.parse(base.state))
+        val outcome = midend.processKey(0, 0, Buttons.CURSOR_SELECT, 32)
+        assertEquals("reveal outcome", KeyOutcome.SomeEffect, outcome)
+        assertEquals("reveal save", reveal.state, midend.serialise().serialise())
+        assertTrue("cursor visible", (midend.ui as Loopy.Ui).curVisible)
+
+        // The second select on the same unknown edge is a real move, and
+        // SELECT2 sets NO, not YES.
+        val select2 = oracle.keys(
+            base.state,
+            listOf(Buttons.CURSOR_SELECT, Buttons.CURSOR_SELECT2),
+        )
+        val values = SgtpSave.parse(select2.state).values("MOVE")
+        assertEquals("select2 moves", 1, values.size)
+        assertEquals("select2 value", 'n', values[0].last())
+        midend.processKey(0, 0, Buttons.CURSOR_SELECT2, 32)
+        assertEquals("select2 save", select2.state, midend.serialise().serialise())
+    }
+
+    private fun appendMove(save: String, move: String): String {
+        val states = SgtpSave.parse(save).value("NSTATES")!!.toInt()
+        return save
+            .replace("NSTATES :1:$states", "NSTATES :1:${states + 1}")
+            .replace("STATEPOS:1:$states", "STATEPOS:1:${states + 1}") +
+            "MOVE    :${move.length}:$move\n"
+    }
+
     private fun firstEdgePoint(midend: Midend, tile: Int): Triple<Int, Int, Int> {
         val state = midend.state as Loopy.State
         val g = state.grid

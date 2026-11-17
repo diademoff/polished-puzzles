@@ -1886,12 +1886,14 @@ Notes:
 
   The port keeps the C quirks that decide output: the auto-follow walk
   tests the state of the originally clicked edge while it walks the
-  candidates, the cursor walks in grid units until the nearest edge
-  changes, and a modified cursor move is unused. The C
-  `assert(params->diff < DIFF_MAX)` is a message in the port; it is
-  unreachable from a save or the chooser, and a hand-made value writes
-  a bare `d` that decodes as Easy. The C square bound
-  `(w + 1) * (h + 1) <= INT_MAX` is pinned at 46339 and 46340.
+  candidates, and when a walk returns to the clicked edge it ends only
+  that direction, so C emits a closed loop twice in one move and the
+  port does the same. The cursor walks in grid units until the nearest
+  edge changes, and a modified cursor move is unused. The C
+  `assert(params->diff < DIFF_MAX)` is a message in the port
+  (D-021); it is unreachable from a save or the chooser, and a
+  hand-made value writes a bare `d` that decodes as Easy. The C square
+  bound `(w + 1) * (h + 1) <= INT_MAX` is pinned at 46339 and 46340.
 
   `loopy` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the
   app stays on C and `handles(LOOPY)` is false. S8 must build the
