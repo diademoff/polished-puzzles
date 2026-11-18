@@ -6,6 +6,7 @@ import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.engine.Solo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -175,6 +176,58 @@ class SoloSaveTest {
         assertTrue("C save canUndo", fromC.canUndo)
     }
 
+    @Test(timeout = 300_000)
+    fun `a restart with a different description solves the first one`() =
+        OracleClient().use { oracle ->
+            // `midend_solve` passes `states[0]` as `orig`
+            // (`midend.c:2109-2111`), so a `RESTART` record whose text
+            // differs from `DESC` still gets the first description's
+            // answer. The oracle loads the same save, so the case is
+            // expressible in the protocol. Without `AUXINFO` both
+            // engines run the solver instead of returning the stored
+            // answer.
+            val first = oracle.newGame("solo", "3x3", "1").state.withoutRecord("AUXINFO")
+            val second = oracle.newGame("solo", "3x3", "2").state.withoutRecord("AUXINFO")
+            val firstDesc = SgtpSave.parse(first).value("DESC")!!
+            val secondDesc = SgtpSave.parse(second).value("DESC")!!
+            assertNotEquals("the two descriptions differ", firstDesc, secondDesc)
+
+            val firstAnswer = SgtpSave.parse(oracle.solve(first).state).value("SOLVE")
+            val secondAnswer = SgtpSave.parse(oracle.solve(second).state).value("SOLVE")
+            assertNotEquals("the two answers differ", firstAnswer, secondAnswer)
+
+            // The restarted entry is the second description, and the
+            // solve is the first one's answer.
+            val restarted = appendRecord(first, "RESTART", secondDesc)
+            val expected = oracle.solve(restarted)
+            assertEquals(
+                "the oracle solves the first description",
+                firstAnswer,
+                SgtpSave.parse(expected.state).value("SOLVE"),
+            )
+            val midend = Midend.fromSave(Solo, SgtpSave.parse(restarted))
+            assertTrue("solve", midend.solve())
+            assertEquals("solve save", expected.state, midend.serialise().serialise())
+            assertEquals("solve status", expected.status, midend.status())
+
+            // A restart that keeps the description is the normal path:
+            // the answer is unchanged.
+            val same = appendRecord(first, "RESTART", firstDesc)
+            val expectedSame = oracle.solve(same)
+            val sameMidend = Midend.fromSave(Solo, SgtpSave.parse(same))
+            assertTrue("same description solve", sameMidend.solve())
+            assertEquals(
+                "same description save",
+                expectedSame.state,
+                sameMidend.serialise().serialise(),
+            )
+            assertEquals(
+                "same description answer",
+                firstAnswer,
+                SgtpSave.parse(expectedSame.state).value("SOLVE"),
+            )
+        }
+
     @Test(timeout = 120_000)
     fun `a killer save with an unclued cage is a defined port result`() =
         OracleClient().use { oracle ->
@@ -223,6 +276,10 @@ class SoloSaveTest {
 
     private fun midendAux(text: String): String? =
         Midend.fromSave(Solo, SgtpSave.parse(text)).auxInfo
+
+    /** The save text with one record removed, for a solver-path test. */
+    private fun String.withoutRecord(key: String): String =
+        SgtpSave.of(SgtpSave.parse(this).records.filter { it.key != key }).serialise()
 
     private fun appendRecord(save: String, key: String, move: String): String {
         val states = SgtpSave.parse(save).value("NSTATES")!!.toInt()
