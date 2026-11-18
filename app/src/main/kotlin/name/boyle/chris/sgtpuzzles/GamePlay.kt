@@ -1390,8 +1390,17 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
 
     @UsedByJNI
     override fun setStatus(status: String) {
+        // The status line is a polite live region, so every text change
+        // is spoken. The engine calls this on each redraw and timer
+        // tick, so a repeat must not reach the view: an unchanged text
+        // would be announced again.
+        val shown = status.ifEmpty { " " } // Ensure consistent height
+        if (statusBar.text.toString() == shown) return
         statusBar.apply {
-            text = status.ifEmpty { " " } // Ensure consistent height
+            text = shown
+            accessibilityLiveRegion =
+                if (status.isEmpty()) View.ACCESSIBILITY_LIVE_REGION_NONE
+                else View.ACCESSIBILITY_LIVE_REGION_POLITE
             importantForAccessibility =
                 if (status.isEmpty()) View.IMPORTANT_FOR_ACCESSIBILITY_NO else View.IMPORTANT_FOR_ACCESSIBILITY_YES
         }
