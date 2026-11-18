@@ -2,6 +2,7 @@ package name.boyle.chris.sgtpuzzles
 
 import android.content.Context
 import android.content.Intent
+import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceManager
@@ -10,10 +11,14 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.ViewMatchers.hasDescendant
+import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
+import androidx.test.espresso.matcher.ViewMatchers.withParent
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.google.android.material.materialswitch.MaterialSwitch
 import name.boyle.chris.sgtpuzzles.backend.FIFTEEN
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.CATEGORY_THIS_GAME
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.CHOOSER_STYLE_KEY
@@ -21,6 +26,8 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.CONTROLS_REMINDERS_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.NIGHT_MODE_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.ORIENTATION_KEY
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
+import name.boyle.chris.sgtpuzzles.ui.SystemColors
+import org.hamcrest.Matchers.allOf
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -124,6 +131,56 @@ class PrefsActivityTest {
             onView(withText(R.string.advancedSettings)).perform(click())
             scrollToPreference(scenario, ONE_KEY_SHORTCUTS)
             onView(withText("Keyboard shortcuts without Ctrl")).check(matches(isDisplayed()))
+        }
+    }
+
+    /**
+     * The shell palette setting is an interactive row with a Material 3
+     * switch, it is offered only where the platform has a palette, and the
+     * switch writes the stored key.
+     */
+    @Test
+    fun theSystemColorsRowIsAMaterialSwitch() {
+        val hadSetting = prefs.contains(SystemColors.KEY)
+        val before = prefs.getBoolean(SystemColors.KEY, true)
+        try {
+            ActivityScenario.launch<PrefsActivity>(
+                Intent(context, PrefsActivity::class.java),
+            ).use { scenario ->
+                scenario.onActivity { activity ->
+                    val fragment = activity.supportFragmentManager
+                        .findFragmentById(android.R.id.content) as PreferenceFragmentCompat
+                    assertEquals(
+                        "the row must be offered exactly where a palette exists",
+                        SystemColors.isAvailable(),
+                        fragment.findPreference<Preference>(SystemColors.KEY)!!.isVisible,
+                    )
+                }
+
+                scrollToPreference(scenario, SystemColors.KEY)
+                onView(withText(R.string.systemColors)).check(matches(isDisplayed()))
+                if (!SystemColors.isAvailable()) return@use
+
+                // The switch sits in the row's widget frame: two levels
+                // above it is the row that holds this title.
+                onView(
+                    allOf(
+                        isAssignableFrom(MaterialSwitch::class.java),
+                        withParent(withParent(hasDescendant(withText(R.string.systemColors)))),
+                    ),
+                ).check(matches(isDisplayed()))
+
+                onView(withText(R.string.systemColors)).perform(click())
+                assertEquals(
+                    "the switch must write '${SystemColors.KEY}'",
+                    !before,
+                    prefs.getBoolean(SystemColors.KEY, true),
+                )
+            }
+        } finally {
+            prefs.edit().apply {
+                if (hadSetting) putBoolean(SystemColors.KEY, before) else remove(SystemColors.KEY)
+            }.commit()
         }
     }
 

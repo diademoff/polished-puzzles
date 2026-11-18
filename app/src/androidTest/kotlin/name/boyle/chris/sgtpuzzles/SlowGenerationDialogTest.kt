@@ -12,7 +12,6 @@ import androidx.test.espresso.action.ViewActions.replaceText
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.RootMatchers.isPlatformPopup
-import androidx.test.espresso.matcher.ViewMatchers.hasSibling
 import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -133,7 +132,7 @@ class SlowGenerationDialogTest {
             onView(
                 allOf(
                     isAssignableFrom(EditText::class.java),
-                    hasSibling(withText(label)),
+                    TestUtils.hasFieldLabel(label),
                 ),
             ).inRoot(isDialog()).perform(replaceText("16"))
         }
@@ -150,7 +149,7 @@ class SlowGenerationDialogTest {
             onView(
                 allOf(
                     isAssignableFrom(EditText::class.java),
-                    hasSibling(withText(label)),
+                    TestUtils.hasFieldLabel(label),
                 ),
             ).inRoot(isDialog()).perform(replaceText("100"))
         }
@@ -166,7 +165,7 @@ class SlowGenerationDialogTest {
         onView(
             allOf(
                 isAssignableFrom(EditText::class.java),
-                hasSibling(withText("Grid size")),
+                TestUtils.hasFieldLabel("Grid size"),
             ),
         ).inRoot(isDialog()).perform(replaceText("9"))
         onView(isAssignableFrom(AppCompatSpinner::class.java))

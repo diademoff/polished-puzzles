@@ -8,7 +8,6 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.replaceText
 import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.hasSibling
 import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -83,12 +82,12 @@ class FifteenSettingsDialogTest {
             .check(matches(isDisplayed()))
     }
 
-    /** The text row whose label is [label], as `ConfigViewsBuilder` builds it. */
+    /** The text field whose floating label is [label], as `ConfigViewsBuilder` builds it. */
     private fun dialogField(label: String) =
         onView(
             allOf(
                 isAssignableFrom(EditText::class.java),
-                hasSibling(withText(label)),
+                TestUtils.hasFieldLabel(label),
             ),
         ).inRoot(isDialog())
 
