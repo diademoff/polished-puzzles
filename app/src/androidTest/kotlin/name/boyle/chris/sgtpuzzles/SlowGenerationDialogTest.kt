@@ -18,6 +18,7 @@ import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import name.boyle.chris.sgtpuzzles.backend.MOSAIC
 import name.boyle.chris.sgtpuzzles.backend.TOWERS
 import name.boyle.chris.sgtpuzzles.engine.Game
 import org.hamcrest.Matchers.allOf
@@ -36,6 +37,11 @@ import org.junit.runner.RunWith
  * hook. It never waits for the heavy board: Cancel is checked against
  * the live engine, and Continue is cancelled as soon as its progress
  * dialog appears.
+ *
+ * Mosaic is the slowest game of the fifth enablement wave: its
+ * aggressive `100x100` board takes 30 to 45 seconds in C. That case only
+ * checks the warning and Cancel, so the heavy generation never starts;
+ * the Continue branch is covered by the Towers case.
  */
 @RunWith(AndroidJUnit4::class)
 class SlowGenerationDialogTest {
@@ -69,6 +75,43 @@ class SlowGenerationDialogTest {
             pressDialogButton(android.R.id.button2)
             GamePlayTestSupport.awaitEngineUnchanged(scenario, before)
         }
+    }
+
+    @Test
+    fun aSlowMosaicBoardWarnsAndCancelKeepsTheCurrentGame() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        GamePlayTestSupport.clearBackendState(context, MOSAIC)
+        ActivityScenario.launch<GamePlay>(
+            GamePlayTestSupport.intent(context, MOSAIC, "10x10"),
+        ).use { scenario ->
+            val before = GamePlayTestSupport.awaitEngine(scenario) {
+                it.currentParams == "10x10"
+            }
+
+            openSlowMosaicBoard()
+            onView(withText(Game.SLOW_GENERATION_WARNING))
+                .inRoot(isDialog())
+                .check(matches(isDisplayed()))
+            pressDialogButton(android.R.id.button2)
+            GamePlayTestSupport.awaitEngineUnchanged(scenario, before)
+        }
+    }
+
+    /** Opens the custom settings dialog with a 100x100 aggressive board. */
+    private fun openSlowMosaicBoard() {
+        onView(withId(R.id.type_menu)).perform(click())
+        onView(withText(R.string.Custom_)).perform(click())
+        onView(withText("Mosaic configuration")).inRoot(isDialog())
+            .check(matches(isDisplayed()))
+        for (label in listOf("Height", "Width")) {
+            onView(
+                allOf(
+                    isAssignableFrom(EditText::class.java),
+                    hasSibling(withText(label)),
+                ),
+            ).inRoot(isDialog()).perform(replaceText("100"))
+        }
+        pressDialogButton(android.R.id.button1)
     }
 
     /** Opens the custom settings dialog with Grid size 9 and Unreasonable. */
