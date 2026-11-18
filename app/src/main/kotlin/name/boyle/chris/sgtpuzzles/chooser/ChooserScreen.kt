@@ -50,7 +50,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -298,6 +302,8 @@ private fun GameItem(
     }
     val starLabel = stringResource(if (isStarred) R.string.unstar_game else R.string.star_game)
     val currentLabel = stringResource(R.string.current_game)
+    val starredLabel = stringResource(R.string.starred)
+    val spoken = annotatedDescription(game).text
 
     val modifier = Modifier
         .fillMaxWidth()
@@ -317,8 +323,23 @@ private fun GameItem(
             onLongClick = onStarToggle,
             onClick = onClick,
         )
-        .semantics {
-            if (isCurrent) stateDescription = currentLabel
+        .semantics(mergeDescendants = true) {
+            // One talkable item: the name and the description are on the
+            // clickable node itself, not on a child beside it.
+            contentDescription = spoken
+            val states = listOfNotNull(
+                if (isStarred) starredLabel else null,
+                if (isCurrent) currentLabel else null,
+            )
+            if (states.isNotEmpty()) stateDescription = states.joinToString(", ")
+            // The badge is visual only, so the state needs an action
+            // that a screen reader can find without a long press.
+            customActions = listOf(
+                CustomAccessibilityAction(starLabel) {
+                    onStarToggle()
+                    true
+                },
+            )
         }
         .testTag(chooserGameTag(game))
 
@@ -345,7 +366,9 @@ private fun GameItem(
                     textDirection = TextDirection.Content,
                 ),
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.fillMaxWidth(),
+                // The row already speaks these words, so the drawn text
+                // is not a second stop.
+                modifier = Modifier.fillMaxWidth().clearAndSetSemantics { },
             )
         }
     }
