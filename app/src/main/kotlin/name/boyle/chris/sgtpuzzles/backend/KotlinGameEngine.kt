@@ -11,10 +11,12 @@ import name.boyle.chris.sgtpuzzles.engine.ArrowMode as EngineArrowMode
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder
 import name.boyle.chris.sgtpuzzles.config.CustomDialogBuilder
 import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
+import name.boyle.chris.sgtpuzzles.engine.Cancellation
 import name.boyle.chris.sgtpuzzles.engine.ConfigItem
 import name.boyle.chris.sgtpuzzles.engine.DrawSink
 import name.boyle.chris.sgtpuzzles.engine.Fifteen
 import name.boyle.chris.sgtpuzzles.engine.Game
+import name.boyle.chris.sgtpuzzles.engine.GenerationCancelled
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
@@ -224,13 +226,25 @@ object KotlinGames {
      * thread. It creates its own [Midend] and returns a `String`; it
      * touches no activity, view, or shared engine state. The caller owns
      * the result and posts it to the UI thread.
+     *
+     * [cancel] stops the generation between attempts and throws
+     * [GenerationCancelled] instead of returning a board. The default
+     * token is never cancelled, so a test or a caller with no cancel
+     * path is unchanged.
      */
-    fun generate(backend: BackendName, params: String, seed: String): String {
+    fun generate(
+        backend: BackendName,
+        params: String,
+        seed: String,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): String {
         val game = requireNotNull(gameFor(backend)) { "no Kotlin backend for $backend" }
         // The frontend seed reaches only frontend state, so it cannot
         // change the board or the records that the oracle writes. It
         // uses the app value here, as the C frontend does.
-        return Midend.newGame(game, params, seed, platformSeed()).serialise().serialise()
+        return Midend.newGame(game, params, seed, platformSeed(), cancel = cancel)
+            .serialise()
+            .serialise()
     }
 
     /** A fresh printable seed, used when the chooser did not provide one. */

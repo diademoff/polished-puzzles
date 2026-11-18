@@ -459,9 +459,16 @@ object Map : Game {
     override fun newDesc(params: Game.Params, random: RandomState): Description =
         newDescWithStats(params, random).description
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description = newDescWithStats(params, random, cancel).description
+
     internal fun newDescWithStats(
         params: Game.Params,
         random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
     ): Generated {
         val p = params as Params
         val w = p.w
@@ -485,6 +492,7 @@ object Map : Game {
 
         var aux: String
         while (true) {
+            cancel.check()
             stats.attempts++
 
             genmap(w, h, n, map, random)

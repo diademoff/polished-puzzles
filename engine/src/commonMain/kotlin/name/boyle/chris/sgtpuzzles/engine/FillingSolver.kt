@@ -43,10 +43,15 @@ internal object FillingSolver {
     }
 
     /** `new_game_desc`: a board, a clue minimisation, then a run-length encoding. */
-    fun newDesc(w: Int, h: Int, random: RandomState): String {
+    fun newDesc(
+        w: Int,
+        h: Int,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): String {
         val sz = w * h
         val board = IntArray(sz)
-        makeBoard(board, w, h, random)
+        makeBoard(board, w, h, random, cancel)
         minimizeClueSet(board, w, h, random)
 
         val out = StringBuilder()
@@ -81,7 +86,13 @@ internal object FillingSolver {
     // Board generation
     // ------------------------------------------------------------------
 
-    private fun makeBoard(board: IntArray, w: Int, h: Int, random: RandomState) {
+    private fun makeBoard(
+        board: IntArray,
+        w: Int,
+        h: Int,
+        random: RandomState,
+        cancel: Cancellation,
+    ) {
         val sz = w * h
         // `w == h == 2` needs a region of 3, which is above `max(w, h)`.
         val maxsize = minOf(maxOf(maxOf(w, h), 3), 9)
@@ -94,6 +105,7 @@ internal object FillingSolver {
         val directions = IntArray(4)
 
         attempt@ while (true) {
+            cancel.check()
             dsf.reinit()
             shuffle(board, random)
 

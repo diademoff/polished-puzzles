@@ -66,6 +66,7 @@ internal object MosaicSolver {
         height: Int,
         aggressive: Boolean,
         random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
     ): Generated {
         val n = width * height
         val image = BooleanArray(n)
@@ -75,6 +76,7 @@ internal object MosaicSolver {
         var acceptanceRetries = 0
 
         while (true) {
+            cancel.check()
             attempts++
 
             // `generate_image`: one `random_bits(rs, 1)` per cell.

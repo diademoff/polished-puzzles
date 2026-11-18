@@ -267,6 +267,20 @@ Notes:
   record, which is not part of the state payload.
 - `net` asks the frontend for a random seed when it jumbles tiles. The
   oracle returns a fixed seed, so the oracle path is deterministic.
+- Generation cancellation is not a deviation. The C path already stops:
+  `GameGenerator.generate` interrupts its worker and destroys the
+  generator process. The Kotlin path now stops the same way through
+  `Cancellation`: `KotlinGames.generate` passes the token to
+  `Midend.newGame` and `Game.newDesc`, and a game with a retry loop
+  reads it at the top of an attempt, so Cancel frees the worker instead
+  of letting the board run to completion. A check is a read, so an
+  accepted generation with the same seed keeps the C `DESC`,
+  `AUXINFO`, and save text;
+  `GenerationCancelTest` pins the `tracks 22x22dh` oracle text with and
+  without a token. A cancelled run throws `GenerationCancelled` and
+  publishes no game, which the shell reports as nothing rather than as
+  an error. The seam is engine-only: no Android type, no thread, and no
+  dependency.
 - `fifteen` is the first port target (`ROADMAP.md`, Phase 4). Its
   Kotlin generator, moves, history, solver, text, status, keys, save
   file, and drawing pass the matrix in `FifteenDescTest`,

@@ -347,6 +347,17 @@ object Unruly : Game {
         )
     }
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
+        val p = params as Params
+        return Description(
+            UnrulySolver.generate(p.width, p.height, p.unique, p.diff, random, cancel),
+        )
+    }
+
     // `unruly.c` retries the clue placement with no retry bound and accepts a 46340x46340 area; the largest preset is 14x14.
     override fun generationWarning(params: Game.Params): String? {
         val p = params as Params

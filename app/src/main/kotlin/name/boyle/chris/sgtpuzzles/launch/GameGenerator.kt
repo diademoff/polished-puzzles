@@ -14,6 +14,7 @@ import name.boyle.chris.sgtpuzzles.R
 import name.boyle.chris.sgtpuzzles.Utils.readAllOf
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.OLD_PUZZLESGEN_LAST_UPDATE
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.PUZZLESGEN_CLEANUP_DONE
+import name.boyle.chris.sgtpuzzles.engine.GenerationCancelled
 import java.io.File
 import java.io.IOException
 import java.util.Objects
@@ -94,9 +95,12 @@ class GameGenerator {
      * [generate], because a Kotlin generation can finish before
      * `submit` returns and the task must always see its own future.
      * The cancellation check runs before the callback, as the C path
-     * does, so a cancelled task leaves no callback. A failure is
-     * reported as [Callback.gameGeneratorFailure] instead of escaping
-     * on the worker thread.
+     * does, so a cancelled task leaves no callback. A token that
+     * stopped the work throws [GenerationCancelled], which is not a
+     * failure: it also leaves no callback, because nothing was
+     * generated. A real failure is reported as
+     * [Callback.gameGeneratorFailure] instead of escaping on the worker
+     * thread.
      */
     fun submit(
         input: GameLaunch,
@@ -116,7 +120,9 @@ class GameGenerator {
                     )
                 }
             } catch (e: Exception) {
-                if (!task.isCancelled) callback.gameGeneratorFailure(e, input)
+                if (!task.isCancelled && e !is GenerationCancelled) {
+                    callback.gameGeneratorFailure(e, input)
+                }
             }
             generated
         }

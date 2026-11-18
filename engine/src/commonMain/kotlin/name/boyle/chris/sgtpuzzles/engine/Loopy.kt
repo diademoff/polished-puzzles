@@ -576,13 +576,21 @@ object Loopy : Game {
      * until the solver reports a unique solution, `remove_clues`, and
      * the "too easy" retry.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
-        val p = params as Params
-        return Description(generate(p, random).text)
-    }
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description = Description(generate(params as Params, random, cancel).text)
 
     /** [newDesc] with the retry counts exposed for fixtures. */
-    internal fun generate(p: Params, random: RandomState): Generated {
+    internal fun generate(
+        p: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generated {
         require(p.w.toLong() * p.h <= MAX_AREA) {
             Game.AREA_TOO_LARGE
         }
@@ -598,12 +606,14 @@ object Loopy : Game {
         var tooEasyRetries = 0
 
         while (true) {
+            cancel.check()
             boardAttempts++
             lines.fill(LINE_UNKNOWN)
             errors.fill(false)
 
             // `do { add_full_clues } while (!game_has_unique_soln)`.
             while (true) {
+                cancel.check()
                 fullClueAttempts++
                 addFullClues(grid, clues, random)
                 val state = State(

@@ -499,6 +499,15 @@ object Signpost : Game {
         return Description(generation.desc, null)
     }
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
+        val generation = generate(params as Params, random, cancel)
+        return Description(generation.desc, null)
+    }
+
     // `signpost.c` refills and re-strips through the solver until an attempt passes, with no retry bound; 20x20 is eight times the largest 7x7 preset.
     override fun generationWarning(params: Game.Params): String? {
         val p = params as Params
@@ -509,7 +518,11 @@ object Signpost : Game {
     fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
         generate(params as Params, random)
 
-    private fun generate(params: Params, random: RandomState): Generation {
+    private fun generate(
+        params: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generation {
         val state = blankGame(params.w, params.h)
 
         // `validate_params` refuses both dimensions of one, but C guards
@@ -524,6 +537,7 @@ object Signpost : Game {
         var headi: Int
         var taili: Int
         while (true) {
+            cancel.check()
             blankGameInto(state)
             do {
                 if (params.forceCornerStart) {

@@ -398,6 +398,17 @@ cannot reach:
   wave, and cancels; the heavy board never starts. The Galaxies case
   sets a custom `16x16` board, the first sixth-wave size above the 225
   cell threshold, and cancels.
+- `GenerationCancelTest` starts a real slow generation and cancels it
+  while the worker is still running. It launches `towers 5de`, opens the
+  custom settings dialog, sets `9du` (seconds on the phone), continues
+  through the warning, waits for the real progress dialog, taps Cancel,
+  and then checks that the dialog and any error dialog are gone, that
+  the live engine keeps its instance, game ID, parameters, and save text
+  for the settle window, and that `GamePlay.lastGenerationCancel` is
+  cancelled. The token check is the part that fails when the worker is
+  not stopped: the shell always cancelled the future, so the previous
+  game looked the same while the board kept being generated. The case
+  never waits for the heavy board to finish.
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message

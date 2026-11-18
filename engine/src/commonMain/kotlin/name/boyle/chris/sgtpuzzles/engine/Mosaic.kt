@@ -290,6 +290,17 @@ object Mosaic : Game {
         )
     }
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
+        val p = params as Params
+        return Description(
+            MosaicSolver.generate(p.width, p.height, p.aggressive, random, cancel).desc,
+        )
+    }
+
     // `mosaic.c` grades every attempt with the solver after two shuffles; the largest preset is 50x50 and an aggressive 100x100 takes 30-45 s (PARITY).
     override fun generationWarning(params: Game.Params): String? {
         val p = params as Params

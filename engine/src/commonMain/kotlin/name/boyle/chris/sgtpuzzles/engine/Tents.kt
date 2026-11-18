@@ -290,8 +290,15 @@ object Tents : Game {
      * `new_game_desc`. The caller owns [random]; a retry draws from the
      * same stream, as C does. The aux answer is the C solution string.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
-        val generation = generate(params as Params, random)
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
+        val generation = generate(params as Params, random, cancel)
         return Description(generation.desc, generation.auxInfo)
     }
 
@@ -1249,7 +1256,11 @@ object Tents : Game {
      * the contract: a retry redraws everything, so a wrong condition
      * changes later seeds, not only the current one.
      */
-    internal fun generate(params: Params, random: RandomState): Generation {
+    internal fun generate(
+        params: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generation {
         val w = params.w
         val h = params.h
         require(w.toLong() * h <= MAX_AREA) { Game.AREA_TOO_LARGE }
@@ -1275,6 +1286,7 @@ object Tents : Game {
 
         var attempts = 0
         while (true) {
+            cancel.check()
             attempts++
 
             for (i in 0 until wh) {

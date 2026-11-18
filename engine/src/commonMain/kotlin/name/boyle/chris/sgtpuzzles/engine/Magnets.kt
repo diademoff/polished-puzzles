@@ -366,8 +366,15 @@ object Magnets : Game {
      * redraws the domino layout, the lay passes, and the strip shuffle,
      * so it changes every later seed too.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
-        val generation = generate(params as Params, random)
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
+        val generation = generate(params as Params, random, cancel)
         return Description(generation.desc, generation.auxInfo)
     }
 
@@ -618,7 +625,11 @@ object Magnets : Game {
      * a fresh [LayDomino.layout] because `clear_state` resets the
      * dominoes in C.
      */
-    internal fun generate(params: Params, random: RandomState): Generation {
+    internal fun generate(
+        params: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generation {
         val w = params.w
         val h = params.h
         val wh = w * h
@@ -627,6 +638,7 @@ object Magnets : Game {
         var layDominoRetries = 0
 
         while (true) {
+            cancel.check()
             attempts++
             val common = Common(
                 IntArray(wh) { it },

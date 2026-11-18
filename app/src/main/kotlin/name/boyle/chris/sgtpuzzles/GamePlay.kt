@@ -132,6 +132,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.UNEQUAL_SHOW_H_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.VICTORY_FLASH_KEY
 import name.boyle.chris.sgtpuzzles.databinding.CompletedDialogBinding
 import name.boyle.chris.sgtpuzzles.databinding.MainBinding
+import name.boyle.chris.sgtpuzzles.engine.Cancellation
 import name.boyle.chris.sgtpuzzles.launch.GameProgressDialog
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator.Companion.cleanUpOldExecutables
@@ -176,6 +177,15 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private var gameTypesMenu = arrayOf<MenuEntry>()
     private var currentType = 0
     private var generationInProgress: Future<*>? = null
+
+    /**
+     * The stop signal of the Kotlin generation that is running. It stays
+     * on the last token after the work stops, so the cancel test can see
+     * that the worker was told to stop.
+     */
+    @get:VisibleForTesting
+    var lastGenerationCancel: Cancellation? = null
+        private set
     private var solveEnabled = false
     private var customVisible = false
     private var undoEnabled = false
@@ -972,10 +982,15 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
              * thread. It creates its own midend and returns the save
              * text; it must not touch the activity, the view, or the
              * engine. The callback checks the future's cancellation
-             * flag and posts to the UI thread, as the C path does.
+             * flag and posts to the UI thread, as the C path does. The
+             * token reaches the generator, which checks it between
+             * attempts, so Cancel stops the work instead of letting it
+             * run to completion on the worker.
              */
+            val cancel = Cancellation()
+            lastGenerationCancel = cancel
             generationInProgress = gameGenerator.submit(launch, previousGame, this) {
-                KotlinGames.generate(backend, params, seed)
+                KotlinGames.generate(backend, params, seed, cancel)
             }
             return
         }
@@ -1132,6 +1147,9 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         }
 
     private fun stopGameGeneration() {
+        // A Kotlin generator checks this token between attempts. The C
+        // path has no such seam, so it keeps the future only.
+        lastGenerationCancel?.cancel()
         generationInProgress?.run {
             cancel(true)
             generationInProgress = null

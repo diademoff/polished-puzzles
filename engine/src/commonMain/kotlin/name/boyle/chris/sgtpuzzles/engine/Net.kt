@@ -331,7 +331,14 @@ object Net : Game {
      * taken before the shuffle, so it does not change when only the
      * barrier rate changes.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
         val p = params as Params
         require(p.width.toLong() * p.height <= MAX_AREA) {
             Game.AREA_TOO_LARGE
@@ -345,6 +352,7 @@ object Net : Game {
         val barriers = IntArray(w * h)
 
         while (true) {
+            cancel.check()
             tiles.fill(0)
             barriers.fill(0)
 

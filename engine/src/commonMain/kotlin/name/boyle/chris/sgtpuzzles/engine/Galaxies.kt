@@ -1032,15 +1032,24 @@ object Galaxies : Game {
         )
 
     /** `new_game_desc`, `galaxies.c:1446-1703`. */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
         val p = params as Params
         var state = blankGame(p.w, p.h)
         val scratch = IntArray(state.sx * state.sy)
 
         while (true) {
+            cancel.check()
             var bestWiggliness = -1
             var best: State? = null
             for (i in 0 until GENERATE_TRIES) {
+                cancel.check()
                 do {
                     clearGame(state, true)
                     generatePass(state, random, scratch, 100, GP_DOTS)

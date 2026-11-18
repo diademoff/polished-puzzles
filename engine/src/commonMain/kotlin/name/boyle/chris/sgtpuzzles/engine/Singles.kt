@@ -1218,6 +1218,12 @@ object Singles : Game {
     override fun newDesc(params: Game.Params, random: RandomState): Description =
         generateWithStats(params as Params, random).description
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description = generateWithStats(params as Params, random, cancel).description
+
     /**
      * `new_game_desc`, `singles.c:1317-1436`, with retry counters.
      *
@@ -1227,7 +1233,11 @@ object Singles : Game {
      * size keeps the C stream and description. D-031 then rejects an
      * area above [MAX_AREA] before the first draw.
      */
-    internal fun generateWithStats(params: Params, random: RandomState): Generated {
+    internal fun generateWithStats(
+        params: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generated {
         require(params.w != 62 && params.h != 62) { "Puzzle is too large" }
         require(params.w.toLong() * params.h <= MAX_AREA) {
             Game.AREA_TOO_LARGE
@@ -1250,6 +1260,7 @@ object Singles : Game {
         val stats = GenerationStats()
 
         while (true) {
+            cancel.check()
             stats.attempts++
             ss.ops.clear()
             state.impossible = false

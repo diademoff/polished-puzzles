@@ -959,6 +959,7 @@ class Midend private constructor(
             seed: String,
             platformSeed: ByteArray = DEFAULT_PLATFORM_SEED,
             prefs: String? = null,
+            cancel: Cancellation = Cancellation.NEVER,
         ): Midend {
             val effective = if (paramsText.isEmpty()) {
                 game.encodeParams(game.defaultParams(), false)
@@ -969,7 +970,7 @@ class Midend private constructor(
             game.validateParams(currentParams, true)?.let { throw IllegalArgumentException(it) }
             val params = game.decodeParams(game.encodeParams(currentParams, false))
             val random = RandomState.fromSeed(seed)
-            val generated = game.newDesc(currentParams, random)
+            val generated = game.newDesc(currentParams, random, cancel)
             // C validates the generated description with the filtered
             // `newparams`, not with `curparams` (`midend.c:1931`). No
             // ported game reads a parameter in `validateDesc` that its

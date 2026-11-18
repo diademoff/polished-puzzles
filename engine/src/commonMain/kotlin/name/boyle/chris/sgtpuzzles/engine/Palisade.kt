@@ -332,6 +332,15 @@ object Palisade : Game {
         return Description(generated.desc, generated.auxInfo)
     }
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
+        val generated = generate(params, random, cancel)
+        return Description(generated.desc, generated.auxInfo)
+    }
+
     /** [newDesc] with the attempt counts, for the generator tests. */
     internal fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
         generate(params, random)
@@ -345,7 +354,11 @@ object Palisade : Game {
      * D-007 rejects an area above [MAX_AREA] and a region count above
      * [MAX_REGIONS] before the shuffle.
      */
-    private fun generate(params: Game.Params, random: RandomState): Generation {
+    private fun generate(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generation {
         val p = params as Params
         val w = p.w
         val h = p.h
@@ -370,8 +383,9 @@ object Palisade : Game {
         var divvyAttempts = 0
         var dsf: Dsf
         while (true) {
+            cancel.check()
             soln.fill('@'.code)
-            val partition = Divvy.rectangleWithAttempts(w, h, k, random)
+            val partition = Divvy.rectangleWithAttempts(w, h, k, random, cancel)
             divvyAttempts += partition.attempts
             dsf = partition.dsf
 

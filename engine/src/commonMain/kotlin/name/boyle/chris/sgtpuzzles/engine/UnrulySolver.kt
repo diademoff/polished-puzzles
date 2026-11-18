@@ -733,13 +733,16 @@ internal object UnrulySolver {
         unique: Boolean,
         diff: Int,
         random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
     ): String {
         val s = w * h
         var grid: IntArray
         var scratch: Scratch
 
         outer@ while (true) {
+            cancel.check()
             while (true) {
+                cancel.check()
                 grid = IntArray(s)
                 scratch = newScratch(grid, w, h)
                 if (fillGame(grid, w, h, unique, scratch, random)) break

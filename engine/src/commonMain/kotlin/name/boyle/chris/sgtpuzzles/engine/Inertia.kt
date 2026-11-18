@@ -266,6 +266,12 @@ object Inertia : Game {
     override fun newDesc(params: Game.Params, random: RandomState): Description =
         Description(generate(params as Params, random).desc)
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description = Description(generate(params as Params, random, cancel).desc)
+
     /** [newDesc] with the generation attempt count, for tests. */
     fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
         generate(params as Params, random)
@@ -1082,7 +1088,11 @@ object Inertia : Game {
      * Chebyshev distance gate, and one shuffle of the candidates on
      * success.
      */
-    private fun generate(params: Params, random: RandomState): Generation {
+    private fun generate(
+        params: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generation {
         val w = params.w
         val h = params.h
         requireGeneratableArea(w, h)
@@ -1096,6 +1106,7 @@ object Inertia : Game {
         var attempts = 0
 
         while (true) {
+            cancel.check()
             attempts++
             var i = 0
             val block = wh / 5

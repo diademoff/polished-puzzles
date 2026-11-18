@@ -393,7 +393,14 @@ object Untangle : Game {
      * distance edge loop, then one or more label shuffles until the
      * circle crosses. The auxiliary answer is always written.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
         val p = params as Params
         val n = p.n
         val w = coordLimit(n)
@@ -477,6 +484,7 @@ object Untangle : Game {
         val mapping = IntArray(n) { it }
         val circle = makeCircle(n, w)
         while (true) {
+            cancel.check()
             Divvy.shuffle(mapping, random)
             var crossing = false
             outer@ for (i in edgeList.indices) {

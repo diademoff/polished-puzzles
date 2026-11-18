@@ -181,6 +181,19 @@ interface Game {
     fun newDesc(params: Params, random: RandomState): Description
 
     /**
+     * [newDesc] with a cancellation token.
+     *
+     * The token is read at the top of an attempt only, never inside a
+     * draw, so it changes no random number and an accepted generation
+     * with the same seed gives the same description either way. A game
+     * whose generation can exceed a second overrides this form and
+     * checks the token in the retry loops that can run long; the default
+     * keeps a game with one short pass unchanged.
+     */
+    fun newDesc(params: Params, random: RandomState, cancel: Cancellation): Description =
+        newDesc(params, random)
+
+    /**
      * A short shell warning when generation of [params] is known to be
      * slow, or null when it is fast. The default null keeps every game
      * that has no measured slow point unchanged.

@@ -336,8 +336,18 @@ object Dominosa : Game {
     override fun newDesc(params: Game.Params, random: RandomState): Description =
         newDescWithStats(params, random).description
 
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description = newDescWithStats(params, random, cancel).description
+
     /** [newDesc] with the retry counters, for the engine tests. */
-    internal fun newDescWithStats(params: Game.Params, random: RandomState): Generated {
+    internal fun newDescWithStats(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generated {
         val p = params as Params
         require(p.n <= MAX_N) { "Maximum number is too large for this build" }
         val n = p.n
@@ -359,6 +369,7 @@ object Dominosa : Game {
         val stats = GenerationStats()
 
         while (true) {
+            cancel.check()
             stats.attempts++
             asScratch.makeLayout(random)
 

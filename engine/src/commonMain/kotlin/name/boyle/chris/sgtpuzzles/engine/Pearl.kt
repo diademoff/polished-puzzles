@@ -384,9 +384,16 @@ object Pearl : Game {
     // Description and generation, `pearl.c:995-1481`.
     // ------------------------------------------------------------------
 
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
         val p = params as Params
-        val generated = generateClues(p, random)
+        val generated = generateClues(p, random, cancel)
         return Description(encodeDesc(p.w, p.h, generated.clues), encodeAux(p.w * p.h, generated.grid))
     }
 
@@ -406,7 +413,11 @@ object Pearl : Game {
      * the generated loop, as C does. On an accepted puzzle the unique
      * answer is the loop, so the auxiliary text is the loop either way.
      */
-    internal fun generateClues(params: Params, random: RandomState): GeneratedClues {
+    internal fun generateClues(
+        params: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): GeneratedClues {
         require(params.w.toLong() * params.h <= MAX_AREA) {
             Game.AREA_TOO_LARGE
         }
@@ -424,6 +435,7 @@ object Pearl : Game {
         var attempts = 0
 
         while (true) {
+            cancel.check()
             attempts++
             pearlLoopgen(w, h, gridOut, random, grid)
 

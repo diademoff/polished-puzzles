@@ -24,8 +24,14 @@ object Divvy {
      * attempt cap. A failed attempt consumes RNG draws, so the retry
      * order is part of the contract.
      */
-    fun rectangle(w: Int, h: Int, k: Int, random: RandomState): Dsf =
-        rectangleWithAttempts(w, h, k, random).dsf
+    fun rectangle(
+        w: Int,
+        h: Int,
+        k: Int,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Dsf =
+        rectangleWithAttempts(w, h, k, random, cancel).dsf
 
     /** [rectangle] plus the attempt count, for retry fixtures. */
     internal fun rectangleWithAttempts(
@@ -33,9 +39,11 @@ object Divvy {
         h: Int,
         k: Int,
         random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
     ): Partition {
         var attempts = 0
         while (true) {
+            cancel.check()
             attempts++
             val dsf = attempt(w, h, k, random) ?: continue
             return Partition(dsf, attempts)

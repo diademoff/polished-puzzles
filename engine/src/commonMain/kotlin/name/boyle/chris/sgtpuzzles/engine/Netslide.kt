@@ -385,7 +385,14 @@ object Netslide : Game {
      *
      * D-026 rejects an area above [MAX_AREA] before the first draw.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
         val p = params as Params
         require(p.width.toLong() * p.height <= MAX_AREA) {
             Game.AREA_TOO_LARGE
@@ -481,6 +488,7 @@ object Netslide : Game {
         var repeats = 0
         var i = 0
         while (i < moves) {
+            cancel.check()
             val dir = random.upto(4).toInt()
             val rowCol: Int
             if (dir % 2 == 0) {

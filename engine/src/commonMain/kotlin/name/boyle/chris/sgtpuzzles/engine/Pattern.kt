@@ -278,8 +278,15 @@ object Pattern : Game {
      * `/` and then drops the last character, so a non-empty last entry
      * ends with its digits and an empty one keeps the preceding slash.
      */
-    override fun newDesc(params: Game.Params, random: RandomState): Description {
-        val generation = generate(params as Params, random)
+    override fun newDesc(params: Game.Params, random: RandomState): Description =
+        newDesc(params, random, Cancellation.NEVER)
+
+    override fun newDesc(
+        params: Game.Params,
+        random: RandomState,
+        cancel: Cancellation,
+    ): Description {
+        val generation = generate(params as Params, random, cancel)
         return Description(generation.desc, generation.auxInfo)
     }
 
@@ -293,10 +300,14 @@ object Pattern : Game {
     fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
         generate(params as Params, random)
 
-    private fun generate(params: Params, random: RandomState): Generation {
+    private fun generate(
+        params: Params,
+        random: RandomState,
+        cancel: Cancellation = Cancellation.NEVER,
+    ): Generation {
         val w = params.w
         val h = params.h
-        val generated = generateSoluble(random, w, h)
+        val generated = generateSoluble(random, w, h, cancel)
         val grid = generated.grid
         val aux = StringBuilder(w * h + 1)
         aux.append('S')
@@ -335,11 +346,17 @@ object Pattern : Game {
      * Both rejects are data-dependent, so the retry count is part of the
      * random stream.
      */
-    private fun generateSoluble(random: RandomState, w: Int, h: Int): GeneratedGrid {
+    private fun generateSoluble(
+        random: RandomState,
+        w: Int,
+        h: Int,
+        cancel: Cancellation,
+    ): GeneratedGrid {
         val grid = IntArray(w * h)
         val solver = LineSolver(w, h)
         var attempts = 0
         while (true) {
+            cancel.check()
             attempts++
             generate(random, w, h, grid)
 
