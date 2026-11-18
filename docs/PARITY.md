@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); `galaxies`, `bridges`, `unruly`, `filling`, and `mines` are `kotlin` (sixth enablement wave, 2026-11-18); then `cube`, `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, `loopy`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); `galaxies`, `bridges`, `unruly`, `filling`, and `mines` are `kotlin` (sixth enablement wave, 2026-11-18); `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, and `loopy` are `kotlin` (seventh enablement wave, 2026-11-18); then `cube` and `solo` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -214,38 +214,38 @@ submenu entries when a game groups its presets.
 | `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `kotlin` |
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `kotlin` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
-| `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `dual-run` |
+| `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `kotlin` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `kotlin` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `kotlin` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `kotlin` |
 | `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `kotlin` |
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `kotlin` |
-| `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
-| `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `dual-run` |
+| `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `kotlin` |
+| `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `kotlin` |
 | `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `kotlin` |
-| `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `dual-run` |
+| `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `kotlin` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `kotlin` |
-| `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `dual-run` |
+| `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `kotlin` |
 | `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `kotlin` |
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `kotlin` |
-| `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `dual-run` |
-| `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
-| `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `dual-run` |
+| `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `kotlin` |
+| `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `kotlin` |
+| `palisade` | Palisade | 5x5, regions of 5 | 4 | yes | yes | no | no | `kotlin` |
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `kotlin` |
-| `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `dual-run` |
+| `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `kotlin` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `kotlin` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `kotlin` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `kotlin` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `kotlin` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `kotlin` |
-| `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
+| `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `kotlin` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `kotlin` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `kotlin` |
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `dual-run` (D-025, no parity) |
-| `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
+| `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `kotlin` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `kotlin` |
-| `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `dual-run` |
+| `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `kotlin` |
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `kotlin` |
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `kotlin` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `kotlin` |
@@ -561,7 +561,7 @@ Notes:
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `netslide` is `dual-run`. Its parameters and presets, the `tree234`
+- `netslide` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and presets, the `tree234`
   generator, the before-shuffle barrier candidate list, the shuffle,
   the stored `AUXINFO` answer, state, loose move grammar, slide
   arithmetic, pointer bands, cursor ring, `requestKeys`, save file,
@@ -600,9 +600,9 @@ Notes:
   generation with `Width times height is too large for this build`,
   before the first draw; the measured 300x300 phone generation is
   4.97 s. Validation and the load path keep the C behavior.
-  `KotlinGames.gameFor` knows the Kotlin game, but the
-  app still uses C: the two-release wait is open.
-  `currentKeyLabel`
+  `KotlinGames.handles(NETSLIDE)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` slides a row and a
+  column at two tile sizes. `currentKeyLabel`
   is a tested helper because C has no Android call site for it. The seam
   is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
@@ -882,7 +882,7 @@ Notes:
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `palisade` is `dual-run`. Its parameters and four presets, the decode
+- `palisade` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and four presets, the decode
   quirks and validation order, the run-length description, the
   solver-gated generator, the two-bit border state, the move grammar,
   the solve, the text format, both cursor modes, the save file, palette,
@@ -959,13 +959,14 @@ Notes:
   `SEED`, while Kotlin keeps it. No generated save and no corpus save
   reaches this path.
 
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-release wait is open. S9 is not
+  `KotlinGames.handles(PALISADE)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` toggles a fence twice
+  at two tile sizes. S9 is not
   needed, because `current_key_label` is `NULL`. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `inertia` is `dual-run`. Its parameters and three presets, the
+- `inertia` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and three presets, the
   generator, the slide and stop movement, the mine and gem rules, the
   solver, the text format, the death counter, the save file, the
   palette, drawing, layout, and input pass the matrix in
@@ -998,15 +999,16 @@ Notes:
   messages and the accepted `46340x46340` boundary; only generation is
   guarded, so a larger save or game id still loads.
 
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-release wait is open. The
+  `KotlinGames.handles(INERTIA)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` moves the dot twice at
+  two tile sizes. The
   shell shows the game's message when the board is already solved or
   dead. `currentKeyLabel` is a tested helper
   because the Android shell has no call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `tents` is `dual-run`. Its parameters and six presets, the decode
+- `tents` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and six presets, the decode
   quirks and validation order, the run-length description, the
   generator, the state, the stylus clicks and drags, the cursor and
   letter keys, completion, the solver, the text format, the save file,
@@ -1093,8 +1095,9 @@ Notes:
   against the oracle's own `SOLVE` record, and `TentsSaveTest` compares
   the generated save byte for byte for every preset and nine seeds.
   Every corpus save that already carries `AUXINFO` keeps it byte for
-  byte. `KotlinGames.gameFor` knows the
-  Kotlin game, but the app still uses C: the two-release wait is open. The
+  byte. `KotlinGames.handles(TENTS)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` places a tent twice at
+  two tile sizes. The
   shell shows the game's message
   when a hand-written board fails to solve. `currentKeyLabel` is a tested
   helper because the Android shell has no call site for it. The seam is
@@ -1469,7 +1472,7 @@ Notes:
   two vertices and presses the board corner at two tile sizes on the
   Pixel 4a 5G.
 
-- `net` is `dual-run`. Its parameters and eight presets, the decode and
+- `net` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and eight presets, the decode and
   validation quirks, the generator and its solver gate, the
   description and move grammars, the state, the FIFO solver and its
   fallback solve, the Jumble and the platform seed, the UI record, the
@@ -1549,10 +1552,11 @@ Notes:
   still loads. The unbounded retry loops are the C loops. The app
   generates off the UI thread. S9 is a
   tested `currentKeyLabel` helper with no Android call site.
-  `NET` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `handles(NET)` is false and the two-release wait still applies.
+  `KotlinGames.handles(NET)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` rotates a tile twice
+  at two tile sizes.
 
-- `tracks` is `dual-run`. Its parameters and presets, generator and
+- `tracks` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and presets, generator and
   solver gate, state, move grammar, text form, save file, palette,
   drawing, layout, and input pass the matrix in `TracksDescTest`,
   `TracksGameTest`, `TracksSaveTest`, `TracksTraceTest`,
@@ -1564,10 +1568,11 @@ Notes:
   22x22 Hard generation is 2.71 s on the phone, while 23x23 Hard is
   10.0 s on the host already. Validation and the load path keep the C
   behavior, so a hand-written `23x22` save still loads and replays its
-  moves. `KotlinGames.gameFor` knows the game, but the app still uses
-  C: the two-release wait is open.
+  moves. `KotlinGames.handles(TRACKS)` is true (seventh enablement
+  wave, 2026-11-18), and `SeventhWaveTileSizeInputTest` taps a square
+  and an edge band at two tile sizes.
 
-- `dominosa` is `dual-run`. Its parameters and presets, generator with
+- `dominosa` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and presets, generator with
   its three allocators and solver gate, solver, state, move grammar,
   text form, save file, palette, drawing, layout, and input pass the
   matrix in `DominosaDescTest`, `DominosaGameTest`,
@@ -1580,10 +1585,12 @@ Notes:
   phone and `10de` is 12.5 s. The cap is a single number on purpose;
   Basic stays fast above 9, but the measurement did not cover Hard or
   Basic at those sizes. Validation and the load path keep the C
-  behavior, so a larger save still loads. `KotlinGames.gameFor` knows
-  the game, but the app still uses C: the two-release wait is open.
+  behavior, so a larger save still loads.
+  `KotlinGames.handles(DOMINOSA)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` places and removes a
+  domino at two tile sizes.
 
-- `map` is `dual-run`. Its parameters and presets, two random streams,
+- `map` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and presets, two random streams,
   generator retry gate, solver, aux four-colouring, state, move
   grammar, text form, save file, palette, drawing, layout, and input
   pass the matrix in `MapDescTest`, `MapGameTest`, `MapSaveTest`,
@@ -1596,8 +1603,9 @@ Notes:
   test loads the C save and replays a move, so the cap is proven to be
   generation-only. The stall is seed-dependent, so the 100-region cap
   is a policy choice, not a guarantee. D-015 defines the C undefined
-  and assert paths. `KotlinGames.gameFor` knows the game, but the app
-  still uses C: the two-release wait is open.
+  and assert paths. `KotlinGames.handles(MAP)` is true (seventh
+  enablement wave, 2026-11-18), and `SeventhWaveTileSizeInputTest` drags
+  from a clue region to two other regions at two tile sizes.
 - `mines` is `kotlin` (sixth enablement wave, 2026-11-18). Its
   parameters and four presets, the decode
   and validation quirks, the deferred interactive description, the
@@ -1680,7 +1688,7 @@ Notes:
   the `TIME` record before it compares the save text. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 
-- `keen` is `dual-run`. Its parameters and ten presets, the decode
+- `keen` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and ten presets, the decode
   quirks and validation order, the Latin-square generator with its two
   order shuffles and two solver gates, the clue choice, the state and
   the shared blocks, the move grammar, the sticky completion, the
@@ -1769,9 +1777,10 @@ Notes:
   exist for this puzzle`. The
   app generates off the UI thread (`9dn` takes about 100 ms in C but
   the retry count is unbounded). `currentKeyLabel` is a tested
-  helper because the Android shell has no call site (S9). `KEEN` is in
-  `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(KEEN)` is
-  false and the two-release wait still applies.
+  helper because the Android shell has no call site (S9).
+  `KotlinGames.handles(KEEN)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` enters two digits at
+  two tile sizes.
 
 - `towers` is `kotlin` (fourth enablement wave, 2026-11-18). Its parameters and seven presets, the decode
   quirks and validation order, the Latin-square generator with the
@@ -1943,7 +1952,7 @@ Notes:
   The seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `singles` is `dual-run`. Its parameters and ten presets, the decode
+- `singles` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and ten presets, the decode
   quirks and validation order, the description grammar, the gated
   generator, the state, the move grammar, the error marks and the
   sticky completion, the deduction solver, the text format, the
@@ -2030,14 +2039,14 @@ Notes:
   after `newUi` and after `Midend.fromSave` with a forced redraw, the
   status text is gated on `wantsStatusBar` (it is false), and
   `Midend.solveAttempt` carries `Unable to solve puzzle.`. The app
-  generates off the UI thread;
-  generation cost is unbounded at the accepted sides and is an owner
-  size or time decision. `currentKeyLabel` is a
+  generates off the UI thread.
+  `currentKeyLabel` is a
   tested helper because the Android shell has no call site (S9).
-  `SINGLES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `handles(SINGLES)` is false.
+  `KotlinGames.handles(SINGLES)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` cycles black and
+  circle at two tile sizes.
 
-- `pearl` is `dual-run`. Its parameters and eight presets, the decode
+- `pearl` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and eight presets, the decode
   quirks and validation order, the `DESC` grammar, the loopgen bias,
   the solver-gated generation with the upstream clue-removal bugs, the
   state, the loose move grammar and drag model, the deduction solver,
@@ -2060,8 +2069,9 @@ Notes:
   of growing past that entry, and the clue-removal buffer is `2*w*h`
   (D-019). The oracle is not asked about any of them.
 
-  `pearl` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  the app stays on C and `handles(PEARL)` is false. The engine declares
+  `KotlinGames.handles(PEARL)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` draws a line and marks
+  two circles at two tile sizes. The engine declares
   the four-field configuration schema (Width, Height, `:Easy:Tricky`,
   `Allow unsoluble`), and the app builds the dialog from it.
   `appearance` reaches the live `Ui` after `newUi` and after
@@ -2082,7 +2092,7 @@ Notes:
   S9 is a
   tested `currentKeyLabel` helper with no Android call site.
 
-- `loopy` is `dual-run`. Its parameters and twenty presets, the loopy
+- `loopy` is `kotlin` (seventh enablement wave, 2026-11-18). Its parameters and twenty presets, the loopy
   grid-type index (a separate list, not the `GridType` order), the
   decode quirks and validation order, the `DESC` grammar with the
   optional grid description, generation (a null-bias `generate_loop`,
@@ -2107,8 +2117,9 @@ Notes:
   hand-made value writes a bare `d` that decodes as Easy. The C square
   bound `(w + 1) * (h + 1) <= INT_MAX` is pinned at 46339 and 46340.
 
-  `loopy` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the
-  app stays on C and `handles(LOOPY)` is false. The engine declares the
+  `KotlinGames.handles(LOOPY)` is true (seventh enablement wave,
+  2026-11-18), and `SeventhWaveTileSizeInputTest` draws an edge and
+  toggles another off at two tile sizes. The engine declares the
   four-field configuration schema (Width, Height, an eighteen-entry
   Grid type, and `:Easy:Normal:Tricky:Hard`), and the app builds the
   dialog from it. `draw-faint-lines` and `auto-follow` reach the live

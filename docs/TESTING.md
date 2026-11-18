@@ -357,6 +357,39 @@ cannot reach:
   run the shell's long-press callback, then injects the move and the
   release; the digit key goes through `GamePlay.sendKey`, the call the
   Compose key row makes.
+- `SeventhWaveTileSizeInputTest` is the shared device test for the
+  seventh enablement wave. One parameterized case per game
+  (`netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`,
+  `dominosa`, `map`, `keen`, `singles`, `pearl`, `loopy`) launches the
+  game from a frozen game id, reads the live `BoardGeometry`, and runs
+  a step script at the default `limitDpi`, then changes `limitDpi` to
+  `off`, checks that the tile changed and is not the preferred one, and
+  runs the second script there. Every point comes from the geometry the
+  drawing layer uses, and each game's stored preferences are reset to
+  the C defaults for the run. Each step asserts the move count, that
+  the save text changed exactly when the gesture was a move, and the
+  exact `MOVE` record. Because every case loads a game id, the suite
+  generates no board and cannot exceed a generation cap (D-007, D-008,
+  D-014, and D-026 to D-033); the caps are pinned in the engine and
+  parity tests. The C input code decides the
+  gestures: `netslide` taps a cell (inert) and then the left or top
+  margin band, which slides a row or column; `palisade` taps the board
+  corner (inert) and the lower half of a cell, which toggles the nearest
+  fence (C has no fence drag); `inertia` taps a cell, which moves the dot in the
+  nearest compass octant, and the dot's own cell (inert); `tents` taps
+  a tree (inert) and blank cells, which cycle tent then grass; `net`
+  taps the grid gutter (inert) and tiles, which rotate left; `tracks`
+  taps a square centre and an edge band, and the outer border (inert);
+  `dominosa` taps the right half of a square to place and then remove a
+  domino, and the border (inert); `map` drags from a clue-coloured
+  region to an uncoloured one (the only C path that recolours), and a
+  tap never changes the board; `keen` taps a cell and sends `1` or `2`,
+  and a digit with no highlighted cell is inert; `singles` taps a cell
+  to cycle black and circle, holds a press for the right-button circle,
+  and taps the border, which toggles the display preference only;
+  `pearl` taps a cell centre (inert), taps near an edge to draw a line,
+  and holds a press on an unlined edge to mark a circle; `loopy` taps
+  the board corner (inert) and near edges, which cycle yes and no.
 - `SlowGenerationDialogTest` opens the real type menu and the real
   settings dialog and checks the slow-generation warning. The Towers
   case sets `9du`, cancels the warning (the engine must not change), and
@@ -1623,10 +1656,13 @@ item:
   the oracle. Every valid description is unchanged.
 - Generation cost: Easy on a large board is slow. 20x20 takes about
   0.6 s and 25x25 Easy takes 39 s in C, and `validate_params` accepts an
-  area up to `INT_MAX`. The app generates off the UI thread. A size
-  bound rejects parameters that C accepts, so it needs an owner decision,
-  a deviation entry, and a test; it is not added in this slice. The
-  generation tests stay on the six presets and small boards.
+  area up to `INT_MAX`. The app generates off the UI thread, and D-027
+  rejects an area above 484 cells (22x22) at `newDesc` before the first
+  draw with `Width times height is too large for this build`; the
+  measured 22x22 Easy generation is 6.87 s on the phone, and 23x23 does
+  not finish in 12 s on the host. Validation and the load path keep the
+  C acceptance. The generation tests stay on the six presets and small
+  boards.
 - The params-dependent `can_format_as_text_now`
   (`tents.c:1390-1393`, `w <= 1998 && h <= 1998`) has no seam hook.
   `Game.canFormatAsText` is a constant and `Midend.textFormat` checks
@@ -1650,17 +1686,15 @@ item:
   whole save. Every corpus save that already carries `AUXINFO` keeps it
   byte for byte. `solve` still reads the initial grid and returns an
   existing aux verbatim.
-- The app still uses C: the two-release wait is open. The engine
-  declares the three-field configuration schema (Width, Height,
-  Difficulty with `":Easy:Tricky"`), and the app builds the dialog from
-  it with the `one-key-shortcuts` page because `get_prefs`/`set_prefs`
-  are `NULL`. Generation runs off the UI thread, and the app surfaces
-  the D-009 message. The shell shows the game's message
-  when a hand-written board fails to solve. S9 is a
-  tested `currentKeyLabel` helper with no Android call site. `TENTS` is
-  in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(TENTS)` is false and the app keeps the C backend.
-  The two-release wait also applies.
+- The app runs the Kotlin backend (seventh enablement wave,
+  2026-11-18). The engine declares the three-field configuration schema
+  (Width, Height, Difficulty with `":Easy:Tricky"`), and the app builds
+  the dialog from it with the `one-key-shortcuts` page because
+  `get_prefs`/`set_prefs` are `NULL`. Generation runs off the UI thread,
+  and the app surfaces the D-009 message. The shell shows the game's
+  message when a hand-written board fails to solve. S9 is a
+  tested `currentKeyLabel` helper with no Android call site.
+  `KotlinGamesTest` and `SeventhWaveTileSizeInputTest` cover it.
 
 `magnets` has no deviation and three enablement items:
 
@@ -1934,14 +1968,12 @@ item:
   `KotlinGameEngine.solveEvent` throws the game's
   `Midend.solveAttempt` message, and the shell shows it. Both cases are
   normal for inertia.
-- The app still uses C: the two-release wait is open. The app surfaces
-  the D-008 guard and shows the `one-key-shortcuts` page because
-  `get_prefs`/`set_prefs` are `NULL`. The
-  `inertiaFollow` DrawSink operation restores `hidePrimary`. S9 is a
-  tested public helper with no Android call site. `INERTIA` is in
-  `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(INERTIA)` is false and the app keeps the C
-  backend. The two-release wait also applies.
+- The app runs the Kotlin backend (seventh enablement wave,
+  2026-11-18). The app surfaces the D-008 guard and shows the
+  `one-key-shortcuts` page because `get_prefs`/`set_prefs` are `NULL`.
+  The `inertiaFollow` DrawSink operation restores `hidePrimary`. S9 is a
+  tested public helper with no Android call site. `KotlinGamesTest` and
+  `SeventhWaveTileSizeInputTest` cover it.
 
 `lightup` has one deviation and two enablement debts:
 
@@ -2203,13 +2235,15 @@ The first, second, and fourth decisions are port definitions, so
 - `validate_params` accepts `46340x46340`, because the area check stays
   `w > INT_MAX / h` as C writes it. Generation then allocates two
   `IntArray`s of 2,147,395,600 cells, about 17 GB, and does not finish.
-  C has the same accepted boundary and allocates about 4.3 GB. No test
-  calls `newDesc` or `newState` on a huge accepted area; only the
-  rejected `46341x46341` side is pinned. The configuration dialog needs
-  a guard before `NETSLIDE` is enabled. A guard rejects parameters that
-  C accepts, so it needs a new deviation entry and a test, and it must
-  not change any accepted normal parameter. Until then this is
-  enablement debt, not a deviation.
+  C has the same accepted boundary and allocates about 4.3 GB. D-026
+  rejects an area above 90,000 cells (300x300) at `newDesc` before the
+  first draw, with `Width times height is too large for this build`;
+  validation and the load path keep the C acceptance. `NetslideTest`
+  and `GenerationLimitTest` pin the cap and the message. A save or game
+  id above the cap still loads and plays.
+- The app runs the Kotlin backend (seventh enablement wave,
+  2026-11-18), covered by `KotlinGamesTest` and
+  `SeventhWaveTileSizeInputTest`.
 
 `mosaic` has no deviation. Three rules need care in the app, and the
 aggressive 100x100 latency is an enablement debt:
@@ -2273,16 +2307,17 @@ aggressive 100x100 latency is an enablement debt:
   deviation entry is added. `PalisadeSaveTest` pins both sides; fixing
   the shared `Midend.fromSave` would change the save text of that one
   hand-written file, and no corpus or generated save reaches it.
-- Enablement: the app still uses C: the two-release wait is open. The
-  engine declares the three-field configuration schema (Width, Height,
-  Region size), and the app builds the dialog from it. The
+- Enablement: the app runs the Kotlin backend (seventh enablement
+  wave, 2026-11-18). The engine declares the three-field configuration
+  schema (Width, Height, Region size), and the app builds the dialog
+  from it. D-007 rejects more than 50 regions at generation. The
   two-preference schema (`cursor-mode` and `clear-complete-regions`) is
   applied through `Game.setPrefs` after `newUi` and after
   `Midend.fromSave`, with a forced redraw and a key re-request.
   `KotlinGameEngine.requestKeys` already
   passes `palisadeFullCursor` to the game, and S9 is not needed because
-  `current_key_label` is `NULL`. `PALISADE` is in `KotlinGames.gameFor`
-  but not in `APP_GAMES`, so `KotlinGames.handles(PALISADE)` is false.
+  `current_key_label` is `NULL`. `KotlinGamesTest` and
+  `SeventhWaveTileSizeInputTest` cover it.
 
 `undead` has no deviation and three enablement items:
 
@@ -2751,11 +2786,13 @@ aggressive 100x100 latency is an enablement debt:
   and after `Midend.fromSave` with a forced redraw, and the shell shows
   the solve message. The app generates
   off the UI thread, and
-    the accepted `46340x46340` area and the unbounded retry loops need
-    an owner guard. S9 is a tested `currentKeyLabel` helper with no
-    Android call site. `NET` is in `KotlinGames.gameFor` and not in
-    `APP_GAMES`, so `KotlinGames.handles(NET)` is false and the app
-    keeps the C backend. The two-release wait also applies.
+    D-028 rejects an area above 10,000 cells (100x100) at `newDesc` with
+    `Width times height is too large for this build`, while validation
+    and the load path keep the C acceptance and the retry loops stay the
+    C loops. S9 is a tested `currentKeyLabel` helper with no Android call
+    site. The app runs the Kotlin backend (seventh enablement wave,
+    2026-11-18), covered by `KotlinGamesTest` and
+    `SeventhWaveTileSizeInputTest`.
 
 - `MinesDescTest` is semantic. It compares the four presets, the decode
   quirks (`9`, `+9x9`, `9x9n1.5`, `9x9X-1`, `9x9junk`, `300x6`), the
@@ -2902,12 +2939,13 @@ aggressive 100x100 latency is an enablement debt:
   Enablement debt: the engine declares the four-field configuration
   schema (Width, Height, `:Easy:Tricky:Hard`, `Disallow consecutive 1
   clues`), the status text is gated, and `Midend.solveAttempt` carries
-  the solve message. The open items are an owner size bound and a retry
-  guard for the accepted `INT_MAX` area, and the two-release wait.
-  Tracks has no preferences and no `UI`
-  record. S9 is a tested `currentKeyLabel` helper with no Android call
-  site. `TRACKS` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(TRACKS)` is false.
+  the solve message. D-029 rejects an area above 484 cells (22x22) at
+  `newDesc` with `Width times height is too large for this build`;
+  validation and the load path keep the C acceptance. Tracks has no
+  preferences and no `UI` record. S9 is a tested `currentKeyLabel`
+  helper with no Android call site. The app runs the Kotlin backend
+  (seventh enablement wave, 2026-11-18), covered by `KotlinGamesTest`
+  and `SeventhWaveTileSizeInputTest`.
 
 - `DominosaDescTest` is semantic. It compares the twelve presets and the
   default, the decode quirks (`6`, `6dh`, `6dth`, `6da`, `+6`, ` 6`,
@@ -2995,12 +3033,13 @@ aggressive 100x100 latency is an enablement debt:
   `""` for `n >= 1000`; the engine declares the two-field configuration
   schema (`Maximum number on dominoes`,
   `:Trivial:Basic:Hard:Extreme:Ambiguous`) with its twelve presets, and
-  `Midend.solveAttempt` carries the solve message. The open items are
-  an owner size bound for the accepted
-  `46339` order, and the two-release wait. Dominosa has no preferences and no `UI` record.
-  S9 is a tested `currentKeyLabel` helper with no Android call site.
-  `DOMINOSA` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(DOMINOSA)` is false and the app uses C.
+  `Midend.solveAttempt` carries the solve message. D-030 rejects a
+  maximum number above 9 at `newDesc` with `Maximum number is too large
+  for this build`; the accepted `46339` order still validates and
+  loads. Dominosa has no preferences and no `UI` record. S9 is a tested
+  `currentKeyLabel` helper with no Android call site. The app runs the
+  Kotlin backend (seventh enablement wave, 2026-11-18), covered by
+  `KotlinGamesTest` and `SeventhWaveTileSizeInputTest`.
 
 - `MapDescTest` is semantic. It compares the six presets and the
   default with the goldens and fresh oracle games, the short and full
@@ -3090,12 +3129,12 @@ aggressive 100x100 latency is an enablement debt:
   `newUi` and after `Midend.fromSave` with a forced redraw (map has no
   `UI` record), and `Map.solveGame` carries `Puzzle is inconsistent`
   and `Unable to find a unique solution for this puzzle`. The app generates off the UI
-  thread. The two-release wait still applies. The owner must decide the final
-  area and region limits
-  (D-014) and review the defined C undefined-behavior paths (D-015)
-  before enablement. `MAP` is in `KotlinGames.gameFor` and not in
-  `APP_GAMES`, so `KotlinGames.handles(MAP)` is false and the app uses
-  C. S9 is a tested `currentKeyLabel` helper with no Android call site.
+  thread. D-014 caps generation at 100 regions and keeps the 2^20 area
+  and 4096-region limits on the load path; D-015 defines the C
+  undefined-behavior paths. The app runs the Kotlin backend (seventh
+  enablement wave, 2026-11-18), covered by `KotlinGamesTest` and
+  `SeventhWaveTileSizeInputTest`. S9 is a tested `currentKeyLabel`
+  helper with no Android call site.
 
 - `KeenDescTest` is semantic. It compares the ten presets and the
   default with the oracle, the eleven golden descriptions at the shared
@@ -3153,11 +3192,12 @@ aggressive 100x100 latency is an enablement debt:
   `currentKeyLabel`, and the UI default. The engine declares the
   configuration schema, `pencil-keep-highlight` is applied after `newUi`
   and `fromSave`, the status is gated on `wantsStatusBar`, and the two
-  solve messages are carried. The Keen enablement debt is the
-  two-release wait. S9 is a tested
-  `currentKeyLabel` helper with no Android call site. `KEEN` is in
-  `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(KEEN)` is false and the app uses C.
+  solve messages are carried. No generation guard is needed:
+  validation caps the grid at 9x9, which measures 0.25-0.29 s on the
+  host. The app runs the Kotlin backend (seventh enablement wave,
+  2026-11-18), covered by `KotlinGamesTest` and
+  `SeventhWaveTileSizeInputTest`. S9 is a tested `currentKeyLabel`
+  helper with no Android call site.
 
 - `TowersDescTest` is semantic. It compares the seven presets and the
   default with the oracle, the eight golden descriptions at the shared
@@ -3367,12 +3407,12 @@ aggressive 100x100 latency is an enablement debt:
   `Midend.fromSave` (there is no `UI` record) with a forced redraw. The
   status text is gated on `wantsStatusBar` (it is false), and
   `Midend.solveAttempt` carries `Unable to solve puzzle.`. The app generates
-  off the UI thread. The two-release wait still applies. The
-  generator retry loop is unbounded, so a size or time bound is an
-  owner decision. S9 is a tested `currentKeyLabel` helper with no
-  Android call site. `SINGLES` is in `KotlinGames.gameFor` and not in
-  `APP_GAMES`, so `KotlinGames.handles(SINGLES)` is false and the app
-  uses C.
+  off the UI thread. D-031 rejects an area above 400 cells (20x20) at
+  `newDesc` with `Width times height is too large for this build`, and
+  the generator retry loop stays the C loop. S9 is a tested
+  `currentKeyLabel` helper with no Android call site. The app runs the
+  Kotlin backend (seventh enablement wave, 2026-11-18), covered by
+  `KotlinGamesTest` and `SeventhWaveTileSizeInputTest`.
 
 - `SinglesDescTest` is semantic. It compares the ten presets and the
   default with the oracle, the eleven golden descriptions at the shared
@@ -3440,9 +3480,8 @@ aggressive 100x100 latency is an enablement debt:
   when the hint is set, as the C midend forces for a NULL
   `request_keys`.
 - `KotlinGamesTest` pins that `SINGLES` maps to `Singles` in
-  `KotlinGames.gameFor` while `KotlinGames.handles(SINGLES)` is false,
-  and `HelpTopicTest` pins the `singles` help topic. `SINGLES` is not
-  in `APP_GAMES`.
+  `KotlinGames.gameFor` and that `KotlinGames.handles(SINGLES)` is
+  true, and `HelpTopicTest` pins the `singles` help topic.
 - `SinglesTest` is the engine test. It pins the parameter and decode
   quirks, the plain `d` for an out-of-range difficulty, the saturating
   `atoi` in `decodeParams` and the saturating `%d` in `executeMove`,
@@ -3777,6 +3816,29 @@ Hygiene re-run, Pixel 4a 5G (physical), 2026-11-18, Android 16 / API
   quiet. The Cancel check of the slow-warning dialog compares the saved
   game text with the engine, and an inert wave gesture holds its save
   text for a bounded settle window instead of returning at once.
+
+Seventh enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android
+16 / API 36:
+
+- `:app:connectedDebugAndroidTest` ran 107 cases: 101 passed, 0 failed,
+  6 skipped. The six skips are the same three fastlane producers and
+  three chooser goldens. `SeventhWaveTileSizeInputTest` ran all twelve
+  cases and none skipped, so each game used two non-preferred tile
+  sizes. `GamePlayParameterizedTest` now covers all 38 enabled backends
+  and the 2 that still run on C.
+- `:engine:jvmTest` -> 1151 tests, 0 failures; `:parity:test` -> 1907
+  tests, 0 failures; `:app:testDebugUnitTest` -> 105 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings;
+  `tools/check-upstream-diff.sh --strict` and
+  `tools/check-upstream-lock.sh` both pass.
+- Two gestures were fixed during the run. Palisade's exact cell centre
+  is a tie between the vertical and horizontal edges, and the one-pixel
+  density rounding chose the top fence; the test point is now three
+  quarters down the cell, which is the bottom fence at every tile size.
+  Loopy's taps were half a tile apart, so two of them landed on the
+  same edge at the live tile size; they are now one tile apart, on the
+  midpoint of each edge, and the expected moves are `3y`, `1y`, `5y`,
+  and `8y`.
 
 ## 9. CI
 

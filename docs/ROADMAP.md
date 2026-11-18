@@ -174,8 +174,11 @@ Status: `fifteen` is `kotlin` (2026-11-14). `samegame`, `flood`, and
 `slant`, `range`, `towers`, and `unequal` are `kotlin` since
 2026-11-18 (the fourth enablement wave), `magnets`, `pattern`,
 `mosaic`, `signpost`, and `untangle` are `kotlin` since 2026-11-18 (the
-fifth enablement wave), and `galaxies`, `bridges`, `unruly`, `filling`,
-and `mines` are `kotlin` since 2026-11-18 (the sixth enablement wave).
+fifth enablement wave), `galaxies`, `bridges`, `unruly`, `filling`, and
+`mines` are `kotlin` since 2026-11-18 (the sixth enablement wave), and
+`netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`,
+`map`, `keen`, `singles`, `pearl`, and `loopy` are `kotlin` since
+2026-11-18 (the seventh enablement wave). `cube` and `solo` stay on C.
 The configuration dialog comes
 from the schema declared in `Game.configure`, and the cursor is drawn
 (`Slant.kt` uses `COL_CURSOR`; `SlantTraceTest` pins the cursor frame
@@ -195,16 +198,18 @@ The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
 `pegs`, `sixteen`, `flip`, `twiddle`, `guess`, `blackbox`, `lightup`,
 `undead`, `rect`, `slant`, `range`, `towers`, `unequal`, `magnets`,
 `pattern`, `mosaic`, `signpost`, `untangle`, `galaxies`, `bridges`,
-`unruly`, `filling`, and `mines`, and bypasses the C
-generator for them. `KotlinGamesTest` pins the enabled set and the
+`unruly`, `filling`, `mines`, `netslide`, `palisade`, `inertia`,
+`tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`,
+and `loopy`, and bypasses the C generator for them. `KotlinGamesTest` pins the enabled set and the
 generated saves; `GamePlayParameterizedTest` asserts that the running
 engine is `KotlinGameEngine` for every enabled game,
 `FirstWaveTileSizeInputTest` covers the first wave,
 `SecondWaveTileSizeInputTest` covers the second wave,
 `ThirdWaveTileSizeInputTest` covers the third wave,
 `FourthWaveTileSizeInputTest` covers the fourth,
-`FifthWaveTileSizeInputTest` covers the fifth, and
-`SixthWaveTileSizeInputTest` covers the sixth, each with real
+`FifthWaveTileSizeInputTest` covers the fifth,
+`SixthWaveTileSizeInputTest` covers the sixth, and
+`SeventhWaveTileSizeInputTest` covers the seventh, each with real
 gestures at two tile sizes. The C games stay
 in the vendored tree as
 the oracle and for chooser metadata, but they are not reachable as
@@ -237,7 +242,12 @@ Rules for a wave:
   per-game switch; `KotlinGames.ENABLED` stays the emergency switch for
   all games;
 - goldens stay local (decision 4a);
-- size limits stay warning-only (decision 2b); no wave adds a hard cap.
+- the generation policy is the owner's: decision 2b made the size limits
+  warning-only, and on 2026-11-18 the owner replaced that with hard
+  maxima for the thirteen blocked games. The maxima are in `newDesc`
+  (D-026..D-034, D-007, D-008, and D-014 tightened), the measurement is
+  `work/generation-limits.md`, and each cap has a parity test at and
+  above it. A wave does not add or raise a cap on its own.
 
 First wave, 2026-11-18: `samegame`, `flood`, and `pegs` are enabled
 with `fifteen`. Each device test is green at two tile sizes on the
@@ -322,6 +332,29 @@ Kotlin hang is the C hang; no new hard cap is added.
 `16x16` galaxies board. `cube` is still deferred: its enumeration hang
 is not solved by an existing warning, because its generation is one
 pass over the accepted squares and the huge area is a memory question.
+
+Seventh wave, 2026-11-18: `netslide`, `palisade`, `inertia`, `tents`,
+`net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, and
+`loopy` are enabled. This is the thirteen-game list that a `Review:`
+deviation blocked, minus `solo`: the owner measured the real generation
+time of each game and set a hard maximum in `newDesc` before the first
+draw, so the app can no longer start an endless generation. Each game
+now has a measured cap: 90,000 cells for `netslide` (D-026), 50 regions
+for `palisade` on top of the D-007 area, 40,000 cells for `inertia`
+(D-008), 484 for `tents` (D-027), 10,000 for `net` (D-028), 484 for
+`tracks` (D-029), a maximum number of 9 for `dominosa` (D-030), 100
+regions for `map` (D-014), 400 cells for `singles` (D-031), 144 for
+`pearl` (D-032), and 400 for `loopy` (D-033). `keen` needs no cap:
+validation already stops at 9x9 and generation measures 0.48 s on the
+phone. The caps are generation-only, so every parameter set, save, and
+game id that C accepts still loads. Each of the twelve declares its
+`Game.configure` and the preference schema that matches the C
+`get_prefs`, and none has a `Review:` line. `SeventhWaveTileSizeInputTest`
+covers the twelve on the Pixel 4a 5G at two tile sizes, and every case
+loads a frozen game id, so the device suite generates no board above a
+cap. `solo` is not enabled: D-025 waives its parity and the app stays
+on C until a separate owner decision. `cube` stays on C with its note
+unchanged.
 
 The other ported games stay `dual-run` on
 C. The policy is `docs/adr/0011-enable-games-in-waves.md`.

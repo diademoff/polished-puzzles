@@ -173,8 +173,10 @@ Anything not listed here is a bug.
   `parity/src/test/kotlin/.../NetslideDescTest.kt::a NaN barrier rate is rejected instead of aborting`
   pins the message, the NaN field, and the `Midend.newGame` rejection.
   The C abort is not run, because it would kill the oracle process.
-- **Review:** the owner should review this entry before `netslide` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `netslide` is enabled in the
+  app. The direction covers the generation maximum that made it safe,
+  D-026 (area at most 90,000 cells, measured 4.97 s on the phone); this
+  entry's rejection of a NaN barrier rate stands as recorded.
 - **Scope:** `netslide`
 - **Upstream:** none known
 - **Date:** 2026-11-15
@@ -355,8 +357,10 @@ Anything not listed here is a bug.
   `parity/src/test/kotlin/.../TentsSaveTest.kt::a tree move and the overshooting description are defined errors`
   pin the `newState` and `Midend.fromSave` results. No test sends either
   description to the oracle, because the abort would kill the process.
-- **Review:** the owner should review this entry before `tents` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `tents` is enabled in the
+  app. The direction covers the generation maximum D-027 (area at most
+  484 cells, measured 6.87 s on the phone); this entry's two defined
+  rejections stand as recorded.
 - **Scope:** `tents`
 - **Upstream:** none known
 - **Date:** 2026-11-16
@@ -404,8 +408,10 @@ Anything not listed here is a bug.
   unchanged valid rates, and the message order above. The test does
   not run the C abort, because it would kill the oracle process; a
   separate one-off oracle process aborts with the assertion above.
-- **Review:** the owner should review this entry before `net` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `net` is enabled in the app.
+  The direction covers the generation maximum D-028 (area at most
+  10,000 cells, measured 3.5 s extrapolated on the phone); this entry
+  stands as recorded.
 - **Scope:** `net`
 - **Upstream:** none known
 - **Date:** 2026-11-16
@@ -453,8 +459,9 @@ Anything not listed here is a bug.
   pins a reachable save that the oracle loads. The tests do not call
   the oracle solve, because the C result is uninitialised memory; the
   one-off oracle runs above are the evidence for the abort.
-- **Review:** the owner should review this entry before `net` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `net` is enabled in the app.
+  The direction covers the generation maximum D-028 (area at most
+  10,000 cells); this entry's defined result stands as recorded.
 - **Scope:** `net`
 - **Upstream:** none known
 - **Date:** 2026-11-16
@@ -497,8 +504,10 @@ Anything not listed here is a bug.
   pins the same result directly. The tests do not call the oracle
   solve, because it would kill the oracle process; the one-off oracle
   run above is the abort evidence.
-- **Review:** the owner should review this entry before `tracks` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `tracks` is enabled in the
+  app. The direction covers the generation maximum D-029 (area at most
+  484 cells, measured 2.71 s on the phone); this entry's solver result
+  stands as recorded.
 - **Scope:** `tracks`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -547,8 +556,10 @@ Anything not listed here is a bug.
   that Kotlin returns the same solve text. The tests do not call the
   C solve, because it would kill the oracle process; the one-off
   oracle run above is the abort evidence.
-- **Review:** the owner should review this entry before `dominosa`
-  is enabled in the app.
+- **Review:** owner direction 2026-11-18: `dominosa` is enabled in the
+  app. The direction covers the generation maximum D-030 (maximum
+  number at most 9, measured 5.98 s on the phone); this entry's solve
+  text for the crafted description stands as recorded.
 - **Scope:** `dominosa`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -639,8 +650,10 @@ Anything not listed here is a bug.
   and `...::a missing canonical point is skipped instead of aborting`
   pin the four results. `parity/src/test/kotlin/.../MapGameTest.kt::a clue overwritten by a hand-written move is repaired by the solve`
   pins that the hand-written save still loads in the oracle.
-- **Review:** the owner should review this entry before `map` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `map` is enabled in the app.
+  The direction covers the generation maximum D-014 as revised (100
+  regions, measured 0.18 s on the phone); this entry's four defined
+  results stand as recorded.
 - **Scope:** `map`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -681,8 +694,10 @@ Anything not listed here is a bug.
   `Midend.solve` returns false. The tests do not call the oracle solve,
   because it would kill the oracle process; a separate one-off oracle
   run is the abort evidence above.
-- **Review:** the owner should review this entry before `keen` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `keen` is enabled in the app.
+  No generation maximum is needed: validation caps the grid at 9x9 and
+  generation measures 0.48 s on the phone. This entry's defined result
+  stands as recorded.
 - **Scope:** `keen`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -735,8 +750,10 @@ Anything not listed here is a bug.
   the oracle generation for the `62` shapes, because they either abort
   the process or do not finish in the measured budget; the one-off
   oracle runs above are the abort evidence.
-- **Review:** the owner should review this entry before `singles` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `singles` is enabled in the
+  app. The direction covers the generation maximum D-031 (area at most
+  400 cells, measured 0.25 s on the phone); this entry's 62 boundary
+  stands as recorded.
 - **Scope:** `singles`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -773,8 +790,10 @@ Anything not listed here is a bug.
   messages, and the empty `81B` grid. The parity tests do not send these
   inputs to the oracle, because the abort would kill it; every other
   description is compared in `GridParityTest`.
-- **Review:** the owner should review this entry before `loopy` or
-  `pearl` is enabled in the app.
+- **Review:** owner direction 2026-11-18: both named games, `loopy` and
+  `pearl`, are enabled in the app under D-033 and D-032. The direction
+  covers the generation maxima; this entry's defined grid results stand
+  as recorded for every other consumer.
 - **Scope:** `grid`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -845,8 +864,10 @@ Anything not listed here is a bug.
   boundary, and the repeated straight list. The oracle is not asked
   about any of these paths, because the unmodified C build overruns its
   heap.
-- **Review:** the owner should review this entry before `pearl` is
-  enabled in the app.
+- **Review:** owner direction 2026-11-18: `pearl` is enabled in the
+  app. The direction covers the generation maximum D-032 (area at most
+  144 cells, measured 0.43 s on the phone); this entry's three defined
+  overruns stand as recorded.
 - **Scope:** `pearl`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -887,8 +908,10 @@ Anything not listed here is a bug.
   builds the exact input, asserts the one face, and pins the exception
   type. The parity tests do not send the request to the oracle, because
   the vendored C loop does not return.
-- **Review:** the owner should review this entry before `loopy` or
-  `pearl` is enabled in the app.
+- **Review:** owner direction 2026-11-18: both named games, `loopy` and
+  `pearl`, are enabled in the app under D-033 and D-032. The direction
+  covers the generation maxima; this entry's one-face refusal stands as
+  recorded for every other consumer.
 - **Scope:** `loopgen`
 - **Upstream:** none known
 - **Date:** 2026-11-17

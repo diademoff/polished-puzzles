@@ -158,8 +158,8 @@ all five stay unbounded in the port, so the Kotlin hang is the C hang.
 5G at two tile sizes, and `SlowGenerationDialogTest` covers the warning
 for a custom `16x16` galaxies board.
 
-Slow-generation policy (2026-11-18): decision 2b is implemented as a
-warning, not a cap. `Game.generationWarning` is the new hook; the engine
+Slow-generation policy (2026-11-18): decision 2b was first implemented
+as a warning, not a cap. `Game.generationWarning` is the new hook; the engine
 names the parameter sets whose C generation is measurably long or
 unbounded, and the shell shows that text before a fresh generation with
 Continue and Cancel. It rejects no parameter set, draws no random
@@ -167,3 +167,27 @@ number, and writes no description. `SlowGenerationTest` pins the hook
 for every declared game and the shell gate; `SlowGenerationDialogTest`
 covers the dialog on the Pixel 4a 5G. No new size cap is added, and
 D-007, D-008, and D-014 stay as they are.
+
+Seventh wave (2026-11-18): `netslide`, `palisade`, `inertia`, `tents`,
+`net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, and
+`loopy` were enabled. These are the thirteen games that a `Review:`
+deviation blocked, minus `solo`. Earlier the same day the owner replaced
+the warning-only policy for these games with a hard maximum in
+`newDesc`, before the first draw: the direction to set the maxima and
+finish the remaining waves is the owner's review point for the caps.
+`work/generation-limits.md` is the measurement, D-007, D-008, and D-014
+were tightened, and D-026 to D-034 were added. The maxima are 90,000
+cells for `netslide`, 50 regions for `palisade`, 40,000 cells for
+`inertia`, 484 for `tents`, 10,000 for `net`, 484 for `tracks`, a
+maximum number of 9 for `dominosa`, 100 regions for `map`, 400 for
+`singles`, 144 for `pearl`, and 400 for `loopy`; `keen` needs none
+because validation caps the grid at 9x9. Each cap is generation-only,
+so every save and game id that C accepts still loads. Each of the
+twelve declares its `Game.configure` and the C preference schema, and
+its `Review:` line now records the owner direction and the cap.
+`KotlinGamesTest` now pins the 38 enabled games, and
+`SeventhWaveTileSizeInputTest` covers the twelve new ones on the Pixel
+4a 5G at two tile sizes; every case loads a frozen game id, so the
+device suite generates no board above a cap. `solo` stays on C: D-025
+waives its parity, so it needs a separate owner decision. `cube` stays
+on C with its note unchanged.
