@@ -129,6 +129,19 @@ declare the C preference schema. `KotlinGamesTest` now pins the sixteen
 enabled games, and `FourthWaveTileSizeInputTest` covers the four new
 ones on the Pixel 4a 5G at two tile sizes.
 
+Fifth wave (2026-11-18): `magnets`, `pattern`, `mosaic`, `signpost`,
+and `untangle` were enabled with the same checks. All five were the
+original candidate list, so no reserve game was needed. None has a
+`Review:` deviation, each declares its `Game.configure` and the C
+preference schema, and the only open item was a size bound, which the
+owner made warning-only (decision 2b). The measured thresholds are 224
+cells for magnets, 2500 for pattern, 2500 exclusive for mosaic, 400 for
+signpost, and 100 points for untangle. `KotlinGamesTest` now pins the
+21 enabled games, `FifthWaveTileSizeInputTest` covers the five new
+ones on the Pixel 4a 5G at two tile sizes, and
+`SlowGenerationDialogTest` covers the warning for the aggressive
+`100x100` mosaic.
+
 Slow-generation policy (2026-11-18): decision 2b is implemented as a
 warning, not a cap. `Game.generationWarning` is the new hook; the engine
 names the parameter sets whose C generation is measurably long or

@@ -312,6 +312,31 @@ cannot reach:
   (a `\` move); `towers` and `unequal` tap the outer border (inert),
   select a cell with a tap, and send a real hardware digit through
   `ViewActions.pressKey` (`R` move).
+- `FifthWaveTileSizeInputTest` is the shared device test for the fifth
+  enablement wave. One parameterized case per game (`magnets`,
+  `pattern`, `mosaic`, `signpost`, `untangle`) launches the game, reads
+  the live `BoardGeometry`, and runs a step script at the default
+  `limitDpi`, then changes `limitDpi` to `off`, checks that the tile
+  changed and is not the preferred one, and runs the second script
+  there. Every point comes from the geometry the drawing layer uses, and
+  each game's stored preferences are reset to the C defaults for the
+  run. Each step asserts the move count, that the save text changed
+  exactly when the gesture was a move, and the exact `MOVE` record. The
+  C input code decides the gestures: `magnets` clicks a cell (`+` move)
+  and the border corner (inert); `pattern` clicks an unknown cell (`F`
+  move) and the clue band (inert); `mosaic` taps a shown clue (`t`
+  move) and the half-tile margin (inert); `signpost` drags a link (`L`
+  move) and presses the final immutable number (inert); `untangle`
+  drags a vertex (`P` move) and presses the board corner (inert, outside
+  the fixed 60-pixel radius). The `untangle` record holds the last pixel
+  the drag reported, so those two steps check the vertex, the live tile
+  denominator, and a point between the start and the requested end.
+- `SlowGenerationDialogTest` opens the real type menu and the real
+  settings dialog and checks the slow-generation warning. The Towers
+  case sets `9du`, cancels the warning (the engine must not change), and
+  then continues once and cancels the progress dialog. The Mosaic case
+  sets the aggressive `100x100` board, the slowest game of the fifth
+  wave, and cancels; the heavy board never starts.
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
@@ -1614,10 +1639,10 @@ item:
 - Generation cost: the eight presets generate in under 20 ms, but
   `16x14de` takes about 5.9 s and `20x20` does not finish in 90 s.
   `validate_params` accepts an area up to `INT_MAX`, and the retry loop
-  is unbounded. The app generates off the UI thread. A size bound
-  rejects parameters that C accepts, so it needs an owner decision, a
-  deviation entry, and a test; no bound is added in this slice. No
-  test generates a huge accepted area.
+  is unbounded. The app generates off the UI thread. The owner made the
+  size bound warning-only (decision 2b): `Game.generationWarning` names
+  every board of 224 cells or more, so `16x14de` warns and no parameter
+  set is rejected. No test generates a huge accepted area.
 - `laydomino` is done. `LayDominoParityTest` compares the grid,
   prealloc grid, attempt count, and encoded random state against the
   direct `laydomino` oracle op for 15 shapes, including seeds with 1,
@@ -1633,15 +1658,16 @@ item:
   fallback after a wrong neutral domino, the `AUXINFO` path that wins
   over a wrong board, the overwrite of a wrong magnet, and the `S;`
   solve of an already solved board.
-- The app still uses C: the two-release wait is open. The engine
+- The app uses the Kotlin backend. The engine
   declares the four-field configuration schema (Width, Height,
   Difficulty with `":Easy:Tricky"`, Strip clues), and the app builds
   the dialog from it with the `one-key-shortcuts` page because
   `get_prefs`/`set_prefs` are `NULL`. Generation runs off the UI
   thread. S9 is a tested `currentKeyLabel` helper
-  with no Android call site. `MAGNETS` is in `KotlinGames.gameFor` and
-  not in `APP_GAMES`, so `KotlinGames.handles(MAGNETS)` is false and
-  the app keeps the C backend. The two-release wait also applies.
+  with no Android call site. `KotlinGames.handles(MAGNETS)` is true
+  (fifth enablement wave, 2026-11-18), and
+  `FifthWaveTileSizeInputTest` clicks a cell and the border corner at
+  two tile sizes on the Pixel 4a 5G.
 
 `pattern` has no deviation and three enablement items:
 
@@ -1731,20 +1757,21 @@ item:
   `SolveErrorParityTest` compares it with the oracle.
 - Generation cost is enablement debt: the five presets are under
   30 ms, `40x40` takes about 0.3 s, `50x50` takes about 16 s, and
-  `100x100` does not finish in a minute. The app generates off the UI thread.
-  `validate_params` accepts an area up to `INT_MAX`, so a
-  size bound rejects parameters that C accepts; that needs an owner
-  decision, a deviation entry, and a test, so no bound is added in this
-  slice. The app still uses C: the two-release wait is open. The engine
+  `100x100` does not finish in a minute. The app generates off the UI
+  thread, and the generator retries until no row or column is
+  monochrome, which is the C loop with no bound. The owner made the size
+  bound warning-only (decision 2b): `Game.generationWarning` names every
+  board of 2500 cells or more, and no parameter set is rejected. The
+  engine
   declares the two-field configuration schema (Width, Height), and the
   app builds the dialog from it with the `one-key-shortcuts` page
   because `get_prefs`/`set_prefs` are `NULL`. The status text is gated
   on `wantsStatusBar`, and `Midend.solveAttempt` carries the solve
   message. S9
   is a tested `currentKeyLabel` helper with no Android call site.
-  `PATTERN` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(PATTERN)` is false and the app keeps the C
-  backend. The two-release wait also applies.
+  `KotlinGames.handles(PATTERN)` is true (fifth enablement wave,
+  2026-11-18), and `FifthWaveTileSizeInputTest` clicks a cell and the
+  clue band at two tile sizes on the Pixel 4a 5G.
 
 `signpost` has no deviation and three enablement items:
 
@@ -1841,10 +1868,13 @@ item:
   cells `textFormat` returns `""`, which is what the oracle prints
   for the null text of `can_format_as_text_now == false`, because the
   seam constant has no params-aware hook.
-- Enablement debt. Generation runs on the calling thread; the six
+- Size bound. Generation runs on the calling thread; the six
   presets are milliseconds, but `validate_params` accepts an area up
-  to `INT_MAX`, so a size bound is an owner decision and no bound is
-  added in this slice. `Midend.solveAttempt` carries the two C solver
+  to `INT_MAX`, and the fill and strip loop retries through the solver
+  with no bound, as C does. The owner made the bound warning-only
+  (decision 2b): `Game.generationWarning` names every board of 400
+  cells or more, and no parameter set is rejected.
+  `Midend.solveAttempt` carries the two C solver
   messages, and the shell shows them. The engine declares the Width,
   Height, and `Start and end in corners` schema, and the app builds the
   dialog from it. The `Victory rotation effect` (`flash-type`)
@@ -1852,9 +1882,9 @@ item:
   and out of the state, id, status, text, and save, and the status text
   is gated on `wantsStatusBar`. S9 is a
   tested `currentKeyLabel` helper with no Android call site.
-  `SIGNPOST` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(SIGNPOST)` is false and the app keeps the C
-  backend. The two-release wait also applies.
+  `KotlinGames.handles(SIGNPOST)` is true (fifth enablement wave,
+  2026-11-18), and `FifthWaveTileSizeInputTest` drags a link and presses
+  the final immutable number at two tile sizes on the Pixel 4a 5G.
 
 `inertia` has one deviation and three open items:
 
@@ -2180,13 +2210,15 @@ aggressive 100x100 latency is an enablement debt:
 - The aggressive `100x100` board takes 30-45 s in C, because
   `hide_clues` calls the solver once per needed clue. The area is
   capped at 10000 cells, so this is latency, not a hang. The app
-  generates a board off the UI thread; the owner must decide whether to
-  accept a guard that C does not have (a deviation with a test). No test
-  generates an
+  generates a board off the UI thread. No test generates an
   aggressive `100x100`; the accepted `100x100` and `3x3333` boundaries
-  are pinned in validation only. S9 is still open, and `MOSAIC` is in
-  `KotlinGames.gameFor` but not in `APP_GAMES`, so
-  `KotlinGames.handles(MOSAIC)` is false and the app still uses C.
+  are pinned in validation only. The owner made that bound warning-only
+  (decision 2b): `Game.generationWarning` names every board above 2500
+  cells, and `SlowGenerationDialogTest` checks the warning and Cancel
+  for the aggressive `100x100` case. `KotlinGames.handles(MOSAIC)` is
+  true (fifth enablement wave, 2026-11-18), and
+  `FifthWaveTileSizeInputTest` taps a clue and the margin at two tile
+  sizes on the Pixel 4a 5G. S9 is still open.
 
 `palisade` has one deviation and two open items:
 
@@ -2428,10 +2460,10 @@ aggressive 100x100 latency is an enablement debt:
     the oracle `keys` prefs path. The three preferences
     (`snap-to-grid`, `show-crossed-edges`, `vertex-style`) are not
     serialised and never enter the state, id, status, text, or save.
-  - Enablement debt. `validate_params` accepts `n` up to
-    `INT_MAX / 3`, where the generator allocates about 17 GB, so the
-    configuration dialog and the game-id path need a bound; this is an
-    owner decision and no bound is added. `Untangle.solveGame` carries
+  - Size bound. `validate_params` accepts `n` up to
+    `INT_MAX / 3`, where the generator allocates about 17 GB. The owner
+    made the bound warning-only (decision 2b) and no parameter set is
+    rejected. `Untangle.solveGame` carries
     `Solution not known for this puzzle`
   and `Internal error: aux_info badly formatted`, and the shell shows
   the message. The engine declares the one-field `Number of points`
@@ -2440,10 +2472,12 @@ aggressive 100x100 latency is an enablement debt:
   `Midend.fromSave`, with a forced redraw for the two drawing
   preferences. The status text is gated on `wantsStatusBar` (it is
   false). S9 is not needed
-    because `current_key_label` is `NULL`. `UNTANGLE` is in
-    `KotlinGames.gameFor` and not in `APP_GAMES`, so
-    `KotlinGames.handles(UNTANGLE)` is false and the two-release wait
-    applies.
+    because `current_key_label` is `NULL`. The owner made that bound
+    warning-only (decision 2b): `Game.generationWarning` names every
+    board above 100 points.
+    `KotlinGames.handles(UNTANGLE)` is true (fifth enablement wave,
+    2026-11-18), and `FifthWaveTileSizeInputTest` drags two vertices and
+    presses the board corner at two tile sizes on the Pixel 4a 5G.
 
 - `bridges` has no deviation and three enablement items:
 
@@ -3584,6 +3618,43 @@ API 36, after the fourth-wave code commit:
   select a cell with a tap, and take a real hardware digit (`R` move).
   The test removes the stored game preferences before the run, so the
   C defaults decide the button order.
+- These rows stay manual: the pixel goldens on the reference AVD,
+  TalkBack, contrast, font scale 200%, and performance.
+
+Fifth enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 /
+API 36, after the fifth-wave code commit:
+
+- The enabled set is `fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
+  `flip`, `twiddle`, `guess`, `blackbox`, `lightup`, `undead`, `rect`,
+  `slant`, `range`, `towers`, `unequal`, `magnets`, `pattern`,
+  `mosaic`, `signpost`, and `untangle`. `KotlinGames.handles` returns
+  true for exactly these 21 and false for every other backend.
+- `:app:connectedDebugAndroidTest` ran 89 cases: 83 passed, 0 failed,
+  6 skipped. The skips are the same six as the earlier runs (three
+  fastlane screenshot producers and three chooser goldens). The five
+  new cases are `FifthWaveTileSizeInputTest[magnets]`, `[pattern]`,
+  `[mosaic]`, `[signpost]`, and `[untangle]`, and none of them skipped.
+  The 43 `GamePlayParameterizedTest` cases include the five new
+  backends and complete a game on the Kotlin engine.
+  `SlowGenerationDialogTest` ran both cases: the Towers one unchanged,
+  and the new Mosaic one warns for the aggressive `100x100` board and
+  keeps the current game on Cancel.
+- `:engine:jvmTest` -> 1135 tests, 0 failures; `:parity:test` -> 1885
+  tests, 0 failures; `:app:testDebugUnitTest` -> 112 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings.
+- This run proves the fifth wave on a device: each new game launches on
+  `KotlinGameEngine`, accepts a real gesture at two distinct tile
+  sizes, and the move count, save text, and exact `MOVE` record change
+  only when the game applies a move. The per-game gestures are the ones
+  the C input code gives: `magnets` ignores a border-corner click and
+  makes a positive magnet from a cell click; `pattern` ignores a
+  clue-band click and fills an unknown cell; `mosaic` ignores a margin
+  click and marks a shown clue; `signpost` ignores a press on the final
+  immutable number, links `(0,0)` to `(1,1)`, and then links the chain
+  on; `untangle` ignores a board-corner press and drags two vertices.
+  The `untangle` record holds the last interpolated drag pixel, not the
+  requested end, so its two steps check the vertex, the live tile
+  denominator, and a point between the start and the end.
 - These rows stay manual: the pixel goldens on the reference AVD,
   TalkBack, contrast, font scale 200%, and performance.
 

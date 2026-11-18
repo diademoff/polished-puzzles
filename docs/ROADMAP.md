@@ -172,7 +172,9 @@ Status: `fifteen` is `kotlin` (2026-11-14). `samegame`, `flood`, and
 (the second enablement wave). `blackbox`, `lightup`, `undead`, and
 `rect` are `kotlin` since 2026-11-18 (the third enablement wave).
 `slant`, `range`, `towers`, and `unequal` are `kotlin` since
-2026-11-18 (the fourth enablement wave). The configuration dialog comes
+2026-11-18 (the fourth enablement wave), and `magnets`, `pattern`,
+`mosaic`, `signpost`, and `untangle` are `kotlin` since 2026-11-18 (the
+fifth enablement wave). The configuration dialog comes
 from the schema declared in `Game.configure`, and the cursor is drawn
 (`Slant.kt` uses `COL_CURSOR`; `SlantTraceTest` pins the cursor frame
 against the oracle). The Kotlin `Game` seam, the semantic midend,
@@ -189,14 +191,16 @@ trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
 
 The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
 `pegs`, `sixteen`, `flip`, `twiddle`, `guess`, `blackbox`, `lightup`,
-`undead`, `rect`, `slant`, `range`, `towers`, and `unequal`, and bypasses the C
+`undead`, `rect`, `slant`, `range`, `towers`, `unequal`, `magnets`,
+`pattern`, `mosaic`, `signpost`, and `untangle`, and bypasses the C
 generator for them. `KotlinGamesTest` pins the enabled set and the
 generated saves; `GamePlayParameterizedTest` asserts that the running
 engine is `KotlinGameEngine` for every enabled game,
 `FirstWaveTileSizeInputTest` covers the first wave,
 `SecondWaveTileSizeInputTest` covers the second wave,
-`ThirdWaveTileSizeInputTest` covers the third wave, and
-`FourthWaveTileSizeInputTest` covers the fourth, each with real
+`ThirdWaveTileSizeInputTest` covers the third wave,
+`FourthWaveTileSizeInputTest` covers the fourth, and
+`FifthWaveTileSizeInputTest` covers the fifth, each with real
 gestures at two tile sizes. The C games stay
 in the vendored tree as
 the oracle and for chooser metadata, but they are not reachable as
@@ -278,6 +282,22 @@ not doubled. `range`, `towers`, and `unequal` each declare the C
 `get_prefs` schema: the Range mouse-button order, the two Towers
 preferences, and the Unequal `pencil-keep-highlight`. All four
 configuration dialogs come from the declared `Game.configure` schema.
+
+Fifth wave, 2026-11-18: `magnets`, `pattern`, `mosaic`, `signpost`,
+and `untangle` are enabled. Each device test is green at two tile sizes
+on the same phone and none of the five skipped. The five candidates were
+the whole list: none has a `Review:` deviation in
+`docs/DEVIATIONS.md`, each declares its `Game.configure` and the
+preference schema that matches the C `get_prefs`, and the only open item
+was the size bound, which the owner made warning-only (decision 2b).
+`Game.generationWarning` names the measured slow cases: `16x14` and
+above for magnets, 2500 cells and above for pattern, above 2500 cells
+for mosaic, 400 cells and above for signpost, and above 100 points for
+untangle. `SlowGenerationDialogTest` checks the warning and Cancel for
+the aggressive `100x100` mosaic, the slowest enabled case. The
+unbounded generator retries in pattern, signpost, and mosaic are the C
+loops; the warning names the sizes where they are long, and no new hard
+cap is added.
 
 The other ported games stay `dual-run` on
 C. The policy is `docs/adr/0011-enable-games-in-waves.md`.
