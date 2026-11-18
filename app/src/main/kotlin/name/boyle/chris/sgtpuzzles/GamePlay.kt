@@ -199,6 +199,13 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private var appStartIntentOnResume: Intent? = null
     private var swapLROn = false
 
+    /**
+     * The launch whose slow-generation warning is on screen. It keeps a
+     * second tap on a preset from opening a second warning and starting
+     * two generations, and it is cleared by every dialog exit.
+     */
+    private var slowGenerationPending: GameLaunch? = null
+
     private enum class UIVisibility(val value: Int) {
         UNDO(1), REDO(2), CUSTOM(4), SOLVE(8), STATUS(16)
     }
@@ -533,6 +540,38 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
                 startChooserAndFinish()
             }
         }
+    }
+
+    /**
+     * Warns that a fresh generation is known to be slow and returns true
+     * when the launch waits for the user. Only a Kotlin backend whose
+     * engine hook names this parameter set warns. A saved game, a game
+     * ID, and a restored local state load an existing board and never
+     * reach the dialog.
+     *
+     * Nothing has changed yet: the current game keeps its history, so
+     * Cancel leaves it as it was.
+     */
+    private fun warnOfSlowGeneration(launch: GameLaunch, isRedo: Boolean): Boolean {
+        if (slowGenerationPending != null) return true
+        val params = launch.params ?: decideParams(launch)
+        val warning = KotlinGames.generationWarning(launch, params) ?: return false
+        // A dialog on a finishing activity throws BadTokenException.
+        if (isFinishing || isDestroyed) return false
+        slowGenerationPending = launch
+        MaterialAlertDialogBuilder(this@GamePlay)
+            .setMessage(warning)
+            .setPositiveButton(android.R.string.ok) { _: DialogInterface?, _: Int ->
+                slowGenerationPending = null
+                startGame(launch, isRedo, slowWarningShown = true)
+            }
+            .setNegativeButton(android.R.string.cancel) { _: DialogInterface?, _: Int ->
+                slowGenerationPending = null
+                abort(null, launch.origin.shouldReturnToChooserOnFail)
+            }
+            .setOnCancelListener { slowGenerationPending = null }
+            .show()
+        return true
     }
 
     private fun warnOfStateLoss(
@@ -875,8 +914,9 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         startGame(launch, false)
     }
 
-    private fun startGame(launch: GameLaunch, isRedo: Boolean) {
+    private fun startGame(launch: GameLaunch, isRedo: Boolean, slowWarningShown: Boolean = false) {
         Log.d(TAG, "startGame: $launch")
+        if (!slowWarningShown && warnOfSlowGeneration(launch, isRedo)) return
         check(progress == null) { "startGame while already starting!" }
         val previousGame: String?
         if (isRedo || launch.needsGenerating) {

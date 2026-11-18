@@ -128,3 +128,13 @@ unbounded-retry debt. `range` bounds the board at `64x64`, and all three
 declare the C preference schema. `KotlinGamesTest` now pins the sixteen
 enabled games, and `FourthWaveTileSizeInputTest` covers the four new
 ones on the Pixel 4a 5G at two tile sizes.
+
+Slow-generation policy (2026-11-18): decision 2b is implemented as a
+warning, not a cap. `Game.generationWarning` is the new hook; the engine
+names the parameter sets whose C generation is measurably long or
+unbounded, and the shell shows that text before a fresh generation with
+Continue and Cancel. It rejects no parameter set, draws no random
+number, and writes no description. `SlowGenerationTest` pins the hook
+for every declared game and the shell gate; `SlowGenerationDialogTest`
+covers the dialog on the Pixel 4a 5G. No new size cap is added, and
+D-007, D-008, and D-014 stay as they are.
