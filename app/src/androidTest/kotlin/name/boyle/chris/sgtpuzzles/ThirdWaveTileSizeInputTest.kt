@@ -43,10 +43,11 @@ import org.junit.runners.Parameterized
  * computed from the live [BoardGeometry], so the cells come from the
  * same tile size and origin the drawing layer uses.
  *
- * The C input code decides each gesture, and the scripts include the
- * inert ones so the delta is honest:
+ * The C input code decides each gesture, and a script includes an inert
+ * gesture where the game has one, so the delta is honest:
  * - `blackbox` fires a laser with a tap on a top range cell, one move
- *   per unfired laser. Its shell drag mode is `PREVENT`.
+ *   per unfired laser. Every range-cell tap fires, so it contributes
+ *   no inert gesture. Its shell drag mode is `PREVENT`.
  * - `lightup` cycles a cell with a tap: one move for a light. A tap in
  *   the half-tile frame has no cell and is inert.
  * - `undead` has no `UI` record. A tap on a cell only highlights it, so
@@ -57,7 +58,9 @@ import org.junit.runners.Parameterized
  *   one move.
  *
  * Every step asserts the move count and whether the save text changed.
- * The status line is asserted where the game has one.
+ * An inert step also holds its save text for a bounded settle window,
+ * so a delayed move cannot pass as no move. The status line is
+ * asserted where the game has one.
  */
 @RunWith(Parameterized::class)
 class ThirdWaveTileSizeInputTest(private val case: Case) {
@@ -157,6 +160,8 @@ class ThirdWaveTileSizeInputTest(private val case: Case) {
                     liveSaveText(scenario),
                 )
             } else {
+                // An inert gesture returns at once, so it needs a bounded settle.
+                GamePlayTestSupport.awaitInertGesture(scenario)
                 assertEquals(
                     "${step.description} must not change the save",
                     before,

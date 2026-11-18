@@ -161,6 +161,8 @@ class SecondWaveTileSizeInputTest(private val case: Case) {
                     liveSaveText(scenario),
                 )
             } else {
+                // An inert gesture returns at once, so it needs a bounded settle.
+                GamePlayTestSupport.awaitInertGesture(scenario)
                 assertEquals(
                     "${step.description} must not change the save",
                     before,

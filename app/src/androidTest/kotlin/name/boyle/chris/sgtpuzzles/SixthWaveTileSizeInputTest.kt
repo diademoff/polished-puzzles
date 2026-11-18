@@ -215,6 +215,8 @@ class SixthWaveTileSizeInputTest(private val case: Case) {
                     liveStableSave(scenario),
                 )
             } else {
+                // An inert gesture returns at once, so it needs a bounded settle.
+                GamePlayTestSupport.awaitInertGesture(scenario)
                 assertEquals(
                     "${step.description} must not change the save",
                     before,
@@ -363,9 +365,7 @@ class SixthWaveTileSizeInputTest(private val case: Case) {
      * raw text; every other record is stable.
      */
     private fun liveStableSave(scenario: ActivityScenario<GamePlay>): String =
-        liveSaveText(scenario).lineSequence()
-            .filterNot { it.startsWith("TIME") }
-            .joinToString("\n")
+        GamePlayTestSupport.stableSave(liveEngine(scenario))
 
     private fun liveMoveCount(scenario: ActivityScenario<GamePlay>): Int =
         GamePlayTestSupport.moveCount(liveEngine(scenario))

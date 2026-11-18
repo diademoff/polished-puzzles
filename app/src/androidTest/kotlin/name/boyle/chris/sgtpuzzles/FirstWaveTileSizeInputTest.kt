@@ -191,6 +191,8 @@ class FirstWaveTileSizeInputTest(private val case: Case) {
     ) {
         awaitMoveCount(scenario, expectedTotal)
         if (delta == 0) {
+            // An inert gesture returns at once, so it needs a bounded settle.
+            GamePlayTestSupport.awaitInertGesture(scenario)
             assertEquals(
                 "$gesture made no move, so it must not rewrite the save",
                 before,

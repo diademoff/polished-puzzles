@@ -3759,6 +3759,25 @@ API 36, after the sixth-wave code commit:
 - The four screen tests, the four accessibility tests, and the three
   screenshot comparisons pass.
 
+Hygiene re-run, Pixel 4a 5G (physical), 2026-11-18, Android 16 / API
+36, after the hygiene-fix commits:
+
+- `:app:connectedDebugAndroidTest` ran 95 cases: 89 passed, 0 failed,
+  6 skipped. The six skips are the three fastlane screenshot producers
+  and the three chooser goldens. `GamePlayParameterizedTest` now asserts
+  that `gameEngine is KotlinGameEngine` equals `KotlinGames.handles(backend)`
+  in every case, so it covers all 26 enabled backends and the 14 that
+  still run on C, and a stale hand-kept list cannot narrow it.
+- `:engine:jvmTest` -> 1136 tests, 0 failures; `:parity:test` -> 1887
+  tests, 0 failures; `:app:testDebugUnitTest` -> 116 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings.
+- The slow-generation unit gate now asks the warning for a game that
+  declares a threshold and is not in `KotlinGames.APP_GAMES`, so the
+  `handles` gate, not an absent threshold, is what keeps a C backend
+  quiet. The Cancel check of the slow-warning dialog compares the saved
+  game text with the engine, and an inert wave gesture holds its save
+  text for a bounded settle window instead of returning at once.
+
 ## 9. CI
 
 Jobs:
