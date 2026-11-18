@@ -205,6 +205,16 @@ Required for every screen:
 - Errors and empty states are announced.
 - A status line is a polite live region, and the same text is not
   announced twice: a redraw or a timer tick is not a state change.
+- The game board is one node labelled with the game name and its shape,
+  carrying Undo, Redo, Restart, and Solve, and one node per play unit
+  below 400 units, each labelled from game state and each offering the
+  game's pointer buttons. Above the cap the cursor unit alone is
+  exposed and the arrow keys move it. Labels carry no coordinate that
+  `collectionItemInfo` already reports. (`docs/adr/0013-spoken-board.md`)
+- One hidden polite live region per game screen announces the diff of a
+  board change: one or two units are read in board order, three or more
+  are summarised from the cursor. The status line is not a live region
+  while the board has units, so one event is one utterance.
 
 Accessibility is an allowed area for deviations: upstream does not
 describe it. Every deviation is recorded in `DEVIATIONS.md`.

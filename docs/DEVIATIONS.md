@@ -1427,6 +1427,42 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-18
 
+### D-035: Kotlin games describe their board to a screen reader
+
+- **Area:** a11y
+- **Status:** active
+- **What differs:** upstream has no operation that describes a board as
+  text for assistive technology, and the Android shell exposes no board
+  node at all. The port adds `Game.spokenBoard`, which returns the grid
+  shape, a summary, and one `SpokenUnit` per place the player can act;
+  the shell turns it into Compose semantics nodes with
+  `collectionInfo`/`collectionItemInfo`, the four board actions, and one
+  unit node per cell and per off-grid unit. `tents` is the pilot, so its
+  cells and its row and column clues are readable and clickable without
+  sight. The C engine has no such operation, so `solo` and `cube` keep
+  one board node labelled with the game name and the status text.
+- **Why:** D-01 is the last P0 of the accessibility audit. Without board
+  state a screen reader cannot read a cell or make a move. The rejected
+  alternatives (the drawing sink, `text_format`, one generic grid) are
+  in `docs/adr/0013-spoken-board.md`. The seam reads state and UI and
+  writes neither, so no rule, seed, `DESC`, `AUXINFO`, `UI`, `TIME`, or
+  `.sgtp` value changes.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../SpokenBoardTest.kt` pins the empty
+  default, the exact `tents` unit text and actions for the frozen
+  seed-12345 board, and the 400-unit cap;
+  `app/src/test/kotlin/.../BoardSpeechTest.kt` pins the cap fallback
+  and the announcement rule for one, two, many, and no changes;
+  `app/src/androidTest/kotlin/.../BoardSemanticsTest.kt` pins the board
+  node with `collectionInfo` and the four actions, a cell label and its
+  collection position, a spoken click that makes the real move with one
+  live-region announcement, the silent status line, and a 21x21 board
+  that exposes the cursor unit only.
+- **Scope:** all Kotlin games (wave D-01/W1: `tents`), and the C
+  fallback for `solo` and `cube`
+- **Upstream:** none; upstream has no accessibility model for the board
+- **Date:** 2026-11-19
+
 ## Examples
 
 Allowed:
