@@ -2331,10 +2331,25 @@ Notes:
   `5x5db` (25 symbols) is 1.24 s on the phone, `4x4da` (16) is 0.73 s
   on the host, `3x3du` (9) is 0.45 s on the host, and the next size in
   each band does not finish. Validation and the load path keep the C
-  acceptance, so a larger save still loads. The parity test uses
-  `5x5di` for the 25-symbol band because the first Simple generation
-  in a JVM can differ from C at 5x5; that is an open, pre-existing
-  defect in the clue-removal gate, recorded in the work notes.
+  acceptance, so a larger save still loads. `SoloFirstGenerationTest`
+  pins the first 25-symbol generation of a process: it generates
+  `5x5db` and `5x5di` in a child JVM and compares the whole save with
+  the oracle, and it repeats a generation in the same child to show the
+  settled result is the same. The child runs with
+  `-XX:-UseOnStackReplacement`. That flag is a test-environment
+  workaround, not a parity claim: on Arch OpenJDK 17.0.21 the JIT
+  miscompiles the on-stack replacement of `Solo.solver`, so a fresh
+  JVM sometimes returns a different `DESC` with the same `AUXINFO` on
+  the first 25-symbol generation of the process. The port is right:
+  interpreted (`-Xint`), C1 only (`-XX:TieredStopAtLevel=1`), compiled
+  up front (`-Xcomp`), no on-stack replacement, and Java 25 all match
+  the oracle. The measurement on 2026-11-18: without the flag the same
+  test failed 5 of 6 runs, and the child disagreed with the oracle at
+  position 146 of the clue-removal loop with byte-identical `grid`,
+  `blocks`, and solver input; with the flag it passed 4 of 4. The same
+  cause explains why `GenerationLimitTest` warms `solo` up once before
+  it compares the 25-symbol band. No engine change is involved; a JVM
+  bug report is the follow-up.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
   C: the two-release wait is open. `currentKeyLabel`
   is a tested helper with no Android call site. The seam is
