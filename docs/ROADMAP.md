@@ -171,10 +171,9 @@ Status: `fifteen` is `kotlin` (2026-11-14). `samegame`, `flood`, and
 `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` since 2026-11-18
 (the second enablement wave). `blackbox`, `lightup`, `undead`, and
 `rect` are `kotlin` since 2026-11-18 (the third enablement wave).
-`slant` is `dual-run` (2026-11-14): `SlantGeneration` and `Slant` are
-in `engine/` and pass the matrix, but the app still uses C. The
-remaining slant work is enablement. The configuration dialog comes from
-the schema declared in `Game.configure`, and the cursor is drawn
+`slant`, `range`, `towers`, and `unequal` are `kotlin` since
+2026-11-18 (the fourth enablement wave). The configuration dialog comes
+from the schema declared in `Game.configure`, and the cursor is drawn
 (`Slant.kt` uses `COL_CURSOR`; `SlantTraceTest` pins the cursor frame
 against the oracle). The Kotlin `Game` seam, the semantic midend,
 `Fifteen`, and the drawing sink
@@ -190,14 +189,14 @@ trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
 
 The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
 `pegs`, `sixteen`, `flip`, `twiddle`, `guess`, `blackbox`, `lightup`,
-`undead`, and `rect`, and bypasses the C
-generator for them. It does not select it
-for `slant`; the per-game enable set in `KotlinGames` keeps slant in
-dual-run. `KotlinGamesTest` pins the enabled set and the generated
-saves; `GamePlayParameterizedTest` asserts that the running engine is
-`KotlinGameEngine` for every enabled game, `FirstWaveTileSizeInputTest`
-covers the first wave, `SecondWaveTileSizeInputTest` covers the second
-wave, and `ThirdWaveTileSizeInputTest` covers the third, each with real
+`undead`, `rect`, `slant`, `range`, `towers`, and `unequal`, and bypasses the C
+generator for them. `KotlinGamesTest` pins the enabled set and the
+generated saves; `GamePlayParameterizedTest` asserts that the running
+engine is `KotlinGameEngine` for every enabled game,
+`FirstWaveTileSizeInputTest` covers the first wave,
+`SecondWaveTileSizeInputTest` covers the second wave,
+`ThirdWaveTileSizeInputTest` covers the third wave, and
+`FourthWaveTileSizeInputTest` covers the fourth, each with real
 gestures at two tile sizes. The C games stay
 in the vendored tree as
 the oracle and for chooser metadata, but they are not reachable as
@@ -265,6 +264,20 @@ is checked before allocation, and the game has no preference page).
 declares the matching `pencil-keep-highlight` and `monsters`
 preferences. All four configuration dialogs come from the declared
 `Game.configure` schema.
+
+Fourth wave, 2026-11-18: `slant`, `range`, `towers`, and `unequal` are
+enabled. Each device test is green at two tile sizes on the same phone
+and none of the four skipped. The candidates were checked in order
+`range`, `unequal`, `towers`, `slant`: all four have no `Review:`
+deviation in `docs/DEVIATIONS.md`, no open hang or unbounded-retry debt
+in `docs/PARITY.md`, and a declared `Game.configure` plus a preference
+schema that matches C. `slant` is the original pilot: its prefs schema,
+cursor drawing, and `SlantTraceTest` were already in place; its
+two-release waiver of 2026-11-14 is superseded by the general waiver,
+not doubled. `range`, `towers`, and `unequal` each declare the C
+`get_prefs` schema: the Range mouse-button order, the two Towers
+preferences, and the Unequal `pencil-keep-highlight`. All four
+configuration dialogs come from the declared `Game.configure` schema.
 
 The other ported games stay `dual-run` on
 C. The policy is `docs/adr/0011-enable-games-in-waves.md`.

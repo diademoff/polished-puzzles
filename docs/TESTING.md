@@ -227,7 +227,8 @@ The app adapter is covered on the JVM, without an Android runtime:
   task that leaves no callback.
 - `KotlinGamesTest` checks that `handles` is true for exactly the
   enabled set (`fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
-  `flip`, `twiddle`, and `guess`) and false for
+  `flip`, `twiddle`, `guess`, `blackbox`, `lightup`, `undead`, `rect`,
+  `slant`, `range`, `towers`, and `unequal`) and false for
   every other backend, that the engine registry `PortedGames` covers
   every `BackendName` and resolves through `gameFor`, that the prefs
   gate rejects a game with C preferences but no schema (and a stray
@@ -296,6 +297,21 @@ cannot reach:
   (highlight only, no move) and a clue (the mark toggles, one move);
   `rect` taps a square centre (inert) and edge centres (`H` moves).
   `blackbox` also asserts its live status line.
+- `FourthWaveTileSizeInputTest` is the shared device test for the fourth
+  enablement wave. One parameterized case per game (`slant`, `range`,
+  `towers`, `unequal`) launches the game, reads the live
+  `BoardGeometry`, and runs a step script at the default `limitDpi`,
+  then changes `limitDpi` to `off`, checks that the tile changed and is
+  not the preferred one, and runs the second script there. Every point
+  comes from the geometry the drawing layer uses, and every game's
+  stored preferences are reset to the C defaults for the run. Each step
+  asserts the move count, that the save text changed exactly when the
+  gesture was a move, and the exact `MOVE` record. The C input code
+  decides the gestures: `range` taps a clue (inert) and an empty cell
+  (`B` move); `slant` taps the outer border (inert) and a square
+  (a `\` move); `towers` and `unequal` tap the outer border (inert),
+  select a cell with a tap, and send a real hardware digit through
+  `ViewActions.pressKey` (`R` move).
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
@@ -3139,11 +3155,12 @@ aggressive 100x100 latency is an enablement debt:
   with a forced redraw for `appearance`. The status text is gated on
   `wantsStatusBar`, and `Towers.solveGame` carries the two solve
   messages. The app generates off
-  the UI thread. The two-release wait still applies. S9 is a tested
-  `currentKeyLabel` helper with no
-  Android call site. `TOWERS` is in `KotlinGames.gameFor` and not in
-  `APP_GAMES`, so `KotlinGames.handles(TOWERS)` is false and the app
-  uses C.
+  the UI thread. `KotlinGames.gameFor` knows the Kotlin game and
+  `KotlinGames.handles` selects it for the app (fourth enablement wave,
+  2026-11-18). S9 is a tested `currentKeyLabel` helper with no
+  Android call site. `KotlinGamesTest` pins the enabled set and the
+  generated save; `FourthWaveTileSizeInputTest` selects a cell and
+  sends a real digit at two tile sizes on the Pixel 4a 5G.
 
 - `UnequalDescTest` is semantic. It compares the twelve presets and the
   default with the oracle, the thirteen golden descriptions at the
@@ -3254,11 +3271,13 @@ aggressive 100x100 latency is an enablement debt:
   `newUi` and after `Midend.fromSave` (there is no `UI` record). The
   status text is gated on `wantsStatusBar` (it is false), and
   `Midend.solveAttempt` carries `Solve operation failed` and `Solve
-  unavailable (already solved?)`. The app generates off the UI thread. The
-  two-release wait still applies. S9 is a tested
-  `currentKeyLabel` helper with no Android call site. `UNEQUAL` is in
-  `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(UNEQUAL)` is false and the app uses C.
+  unavailable (already solved?)`. The app generates off the UI thread.
+  `KotlinGames.gameFor` knows the Kotlin game and `KotlinGames.handles`
+  selects it for the app (fourth enablement wave, 2026-11-18). S9 is a
+  tested `currentKeyLabel` helper with no Android call site.
+  `KotlinGamesTest` pins the enabled set and the generated save;
+  `FourthWaveTileSizeInputTest` selects a cell and sends a real digit
+  at two tile sizes on the Pixel 4a 5G.
 
 - Singles enablement debt. The engine declares the three-field
   configuration schema (`Width`, `Height`, `Difficulty` with
@@ -3537,7 +3556,36 @@ API 36, after the third-wave code commit:
 - These rows stay manual: the pixel goldens on the reference AVD,
   TalkBack, contrast, font scale 200%, and performance.
 
-Device run on the API 36 emulator, 2026-11-14:
+Fourth enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 /
+API 36, after the fourth-wave code commit:
+
+- The enabled set is `fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
+  `flip`, `twiddle`, `guess`, `blackbox`, `lightup`, `undead`, `rect`,
+  `slant`, `range`, `towers`, and `unequal`. `KotlinGames.handles`
+  returns true for exactly these sixteen and false for every other
+  backend.
+- `:app:connectedDebugAndroidTest` ran 82 cases: 76 passed, 0 failed,
+  6 skipped. The skips are the same six as the earlier runs (three
+  fastlane screenshot producers and three chooser goldens). The four
+  new cases are `FourthWaveTileSizeInputTest[range]`, `[slant]`,
+  `[towers]`, and `[unequal]`, and none of them skipped. The 43
+  `GamePlayParameterizedTest` cases include the four new backends and
+  complete a game on the Kotlin engine.
+- `:engine:jvmTest` -> 1123 tests, 0 failures; `:parity:test` -> 1885
+  tests, 0 failures; `:app:testDebugUnitTest` -> 107 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings.
+- This run proves the fourth wave on a device: each new game launches
+  on `KotlinGameEngine`, accepts a real gesture at two distinct tile
+  sizes, and the move count, save text, and exact `MOVE` record change
+  only when the game applies a move. The per-game gestures are the ones
+  the C input code gives: `range` ignores a clue tap and blackens an
+  empty cell (`B` move); `slant` ignores a tap in the outer border and
+  cycles a square to `\`; `towers` and `unequal` ignore a border tap,
+  select a cell with a tap, and take a real hardware digit (`R` move).
+  The test removes the stored game preferences before the run, so the
+  C defaults decide the button order.
+- These rows stay manual: the pixel goldens on the reference AVD,
+  TalkBack, contrast, font scale 200%, and performance.
 
 - 63 tests, 60 passed, 3 skipped (the fastlane screenshot tests skip
   themselves without the fastlane argument), 0 failed. The Compose

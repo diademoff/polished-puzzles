@@ -119,3 +119,12 @@ allocation, and the C `get_prefs` is NULL with no Kotlin schema.
 `KotlinGamesTest` now pins the twelve enabled games, and
 `ThirdWaveTileSizeInputTest` covers the four new ones on the Pixel 4a
 5G at two tile sizes.
+
+Fourth wave (2026-11-18): `slant`, `range`, `towers`, and `unequal`
+were enabled with the same checks. `slant` is the original pilot; its
+2026-11-14 waiver is superseded by the general waiver, not added to it.
+The other three have no `Review:` deviation and no open hang or
+unbounded-retry debt. `range` bounds the board at `64x64`, and all three
+declare the C preference schema. `KotlinGamesTest` now pins the sixteen
+enabled games, and `FourthWaveTileSizeInputTest` covers the four new
+ones on the Pixel 4a 5G at two tile sizes.

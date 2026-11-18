@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); then `slant`, `cube`, `filling`, `netslide`, `unruly`, `range`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); then `cube`, `filling`, `netslide`, `unruly`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, `loopy`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -224,20 +224,20 @@ submenu entries when a game groups its presets.
 | `pattern` | Pattern | 15x15 | 5 | yes | yes | no | no | `dual-run` |
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `kotlin` |
-| `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
+| `range` | Range | 9x6 | 4 | yes | yes | no | no | `kotlin` |
 | `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `kotlin` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `kotlin` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `dual-run` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `kotlin` |
-| `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
+| `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `kotlin` |
 | `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `dual-run` (D-025, no parity) |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `dual-run` |
-| `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `dual-run` |
+| `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `kotlin` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `dual-run` |
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `kotlin` |
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `kotlin` |
-| `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `dual-run` |
+| `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `kotlin` |
 | `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `dual-run` |
 | `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `dual-run` |
 
@@ -267,15 +267,18 @@ Notes:
   oracle and chooser metadata; it is not a runtime backend. The seams are
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0008-run-fifteen-on-kotlin.md`.
-- `slant` is the second port target. Its generator, solver, state,
-  moves, undo/redo, solve, text, keys, save file, drawing, layout, and
-  input pass the matrix in `SlantDescTest`, `SlantGameTest`,
-  `SlantSaveTest`, `SlantTraceTest`, and `SlantInputParityTest`. It is
-  `dual-run`: `KotlinGames.gameFor` knows the Kotlin game, but
-  `KotlinGames.handles` keeps the app on C until the two-release wait is
-  done. The cursor is drawn (`Slant.kt` uses `COL_CURSOR`), and
-  `SlantTraceTest` pins the cursor frame against the oracle. The seams
-  are `docs/adr/0007-kotlin-game-seam.md` and
+- `slant` is `kotlin` (fourth enablement wave, 2026-11-18). Its
+  generator, solver, state, moves, undo/redo, solve, text, keys, save
+  file, drawing, layout, and input pass the matrix in `SlantDescTest`,
+  `SlantGameTest`, `SlantSaveTest`, `SlantTraceTest`, and
+  `SlantInputParityTest`. The cursor is drawn (`Slant.kt` uses
+  `COL_CURSOR`), and `SlantTraceTest` pins the cursor frame against the
+  oracle. The owner waived the two-release wait for `slant` on
+  2026-11-14; the general waiver of 2026-11-18 supersedes that one, so
+  the wait is not counted twice. `KotlinGamesTest` pins the enabled set
+  and the generated save; `FourthWaveTileSizeInputTest` taps a border
+  point (inert) and a square at two tile sizes on the Pixel 4a 5G. The
+  seams are `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 - `samegame` is `kotlin` (first enablement wave, 2026-11-18). Its
   generator, state, moves, score,
@@ -650,10 +653,11 @@ Notes:
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `range` is `dual-run`. Its parameters and presets, the `signed char`
-  decode and the validation order, the run-length description, the two
-  shuffles per generator attempt with its retries, the four-technique
-  solver, state, the `sscanf("%c,%d,%d")` move grammar, completion,
+- `range` is `kotlin` (fourth enablement wave, 2026-11-18). Its
+  parameters and presets, the `signed char` decode and the validation
+  order, the run-length description, the two shuffles per generator
+  attempt with its retries, the four-technique solver, state, the
+  `sscanf("%c,%d,%d")` move grammar, completion,
   the sticky status, the first-state solve, the hint, the empty status
   text, the cursor, `requestKeys`, the save file, palette, drawing,
   layout, and input pass the matrix in `RangeDescTest`,
@@ -711,8 +715,8 @@ Notes:
   `validate_params` bounds `w + h` at 128, so the area is at most 4096
   cells and no huge-area guard is needed.
 
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-release wait is open. `Game.prefs` declares the
+  `KotlinGames.gameFor` knows the Kotlin game and `KotlinGames.handles`
+  selects it for the app. `Game.prefs` declares the
   `Mouse button order` choice (`fill` or `dot`) and `Game.setPrefs`
   copies it to `Range.Ui.swapButtons` after `newUi` and after
   `Midend.fromSave`, because there is no `decodeUi` and a load recreates
@@ -721,8 +725,11 @@ Notes:
   swapped click; the oracle's `prefs` op is the schema check. The
   `pointsSized` and `traceWarm` preference fields still carry no range
   trace comparison. `currentKeyLabel`
-  is a tested helper because C has no Android call site for it. The
-  seam is `docs/adr/0007-kotlin-game-seam.md` and
+  is a tested helper because C has no Android call site for it.
+  `KotlinGamesTest` pins the enabled set and the generated save;
+  `FourthWaveTileSizeInputTest` taps a clue (inert) and an empty cell
+  at two tile sizes on the Pixel 4a 5G. The seam is
+  `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 - `lightup` is `dual-run`. Its parameters and nine presets, the
@@ -1656,7 +1663,7 @@ Notes:
   `KotlinGames.gameFor` and not in `APP_GAMES`, so `handles(KEEN)` is
   false and the two-release wait still applies.
 
-- `towers` is `dual-run`. Its parameters and seven presets, the decode
+- `towers` is `kotlin` (fourth enablement wave, 2026-11-18). Its parameters and seven presets, the decode
   quirks and validation order, the Latin-square generator with the
   Easy-only empty-grid pre-check before both shuffles, the clue-removal
   shuffle above Easy, the state and the shared clues, the move grammar,
@@ -1733,10 +1740,15 @@ Notes:
   solution exists for this puzzle` and `Multiple solutions exist for
   this puzzle`. The app generates off the UI thread (`9du`
   takes seconds). `currentKeyLabel` is a tested helper because the Android
-  shell has no call site (S9). `TOWERS` is in `KotlinGames.gameFor` and
-  not in `APP_GAMES`, so `handles(TOWERS)` is false.
+  shell has no call site (S9). `KotlinGames.gameFor` knows the Kotlin
+  game and `KotlinGames.handles` selects it for the app.
+  `KotlinGamesTest` pins the enabled set and the generated save;
+  `FourthWaveTileSizeInputTest` taps the outer border (inert), selects
+  a cell, and sends a real digit at two tile sizes on the Pixel 4a 5G.
+  The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `unequal` is `dual-run`. Its parameters and twelve presets, the
+- `unequal` is `kotlin` (fourth enablement wave, 2026-11-18). Its parameters and twelve presets, the
   decode quirks and validation order, the description grammar, the
   solver-gated generator, the transposed clue slice, the Adjacent
   validator gap, state, the move grammar, completion and error marks,
@@ -1813,8 +1825,13 @@ Notes:
   `Solve operation failed` and `Solve unavailable (already solved?)`. The
   app generates off the UI thread. `currentKeyLabel` is a
   tested helper because the Android shell has no call site (S9).
-  `UNEQUAL` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `handles(UNEQUAL)` is false.
+  `KotlinGames.gameFor` knows the Kotlin game and
+  `KotlinGames.handles` selects it for the app. `KotlinGamesTest` pins
+  the enabled set and the generated save;
+  `FourthWaveTileSizeInputTest` taps the outer border (inert), selects
+  a cell, and sends a real digit at two tile sizes on the Pixel 4a 5G.
+  The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 - `singles` is `dual-run`. Its parameters and ten presets, the decode
   quirks and validation order, the description grammar, the gated
