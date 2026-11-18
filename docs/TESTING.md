@@ -3495,9 +3495,10 @@ aggressive 100x100 latency is an enablement debt:
 - `KotlinGamesTest` pins the app-side selection and checks that the
   generated save is the frozen oracle save.
 - `GamePlayParameterizedTest` asserts that the running engine is
-  `KotlinGameEngine` for every enabled backend (`fifteen`, `samegame`,
-  `flood`, `pegs`, `sixteen`, `flip`, `twiddle`, and `guess`), then
-  completes the 2x2 game through the real
+  `KotlinGameEngine` exactly when `KotlinGames.handles` reports the
+  backend, so one case checks each of the 26 enabled backends and each
+  of the 14 backends that still run on C. The test keeps no list of its
+  own. It then completes the 2x2 game through the real
   shell on the emulator. The fifteen cases cover a hardware key, a tap,
   and a swipe, so tap and drag coordinate mapping is covered, not only
   key input. Parameter names include the index, so two cases with the

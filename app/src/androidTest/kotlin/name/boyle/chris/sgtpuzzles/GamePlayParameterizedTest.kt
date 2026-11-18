@@ -48,6 +48,7 @@ import name.boyle.chris.sgtpuzzles.backend.GALAXIES
 import name.boyle.chris.sgtpuzzles.backend.GUESS
 import name.boyle.chris.sgtpuzzles.backend.INERTIA
 import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
+import name.boyle.chris.sgtpuzzles.backend.KotlinGames
 import name.boyle.chris.sgtpuzzles.backend.KEEN
 import name.boyle.chris.sgtpuzzles.backend.LIGHTUP
 import name.boyle.chris.sgtpuzzles.backend.LOOPY
@@ -78,6 +79,7 @@ import name.boyle.chris.sgtpuzzles.backend.UNEQUAL
 import name.boyle.chris.sgtpuzzles.backend.UNRULY
 import name.boyle.chris.sgtpuzzles.backend.UNTANGLE
 import org.hamcrest.Matchers.containsString
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -106,12 +108,12 @@ class GamePlayParameterizedTest(
                 SystemClock.sleep(500) // Untangle seems to need this (multiple layout passes?)
             }
             onView(withText(R.string.starting)).check(doesNotExist())
-            if (backend in kotlinBackends) {
-                it.onActivity { activity ->
-                    assert(activity.gameEngine is KotlinGameEngine) {
-                        "$backend is not using the Kotlin backend"
-                    }
-                }
+            it.onActivity { activity ->
+                assertEquals(
+                    "$backend must run on the Kotlin engine exactly when KotlinGames.handles says so",
+                    KotlinGames.handles(backend),
+                    activity.gameEngine is KotlinGameEngine,
+                )
             }
             assertCompleted(false)
             onView(withId(R.id.game_view)).perform(*viewActions)
@@ -131,22 +133,6 @@ class GamePlayParameterizedTest(
     }
 
     companion object {
-        /**
-         * The backends the app runs on the Kotlin engine. The first
-         * enablement wave (2026-11-18) is `fifteen`, `samegame`,
-         * `flood`, and `pegs`; the second wave is `sixteen`, `flip`,
-         * `twiddle`, and `guess`; the third wave is `blackbox`,
-         * `lightup`, `undead`, and `rect`; the fourth wave is `slant`,
-         * `range`, `towers`, and `unequal`. A game joins this set with
-         * its wave entry in `docs/ROADMAP.md`.
-         */
-        private val kotlinBackends = setOf(
-            FIFTEEN, SAMEGAME, FLOOD, PEGS,
-            SIXTEEN, FLIP, TWIDDLE, GUESS,
-            BLACKBOX, LIGHTUP, UNDEAD, RECT,
-            SLANT, RANGE, TOWERS, UNEQUAL,
-        )
-
         data class Example(
             val backend: BackendName,
             val gameID: String,
