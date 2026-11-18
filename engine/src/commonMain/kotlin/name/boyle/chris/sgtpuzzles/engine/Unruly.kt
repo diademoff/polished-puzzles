@@ -347,6 +347,12 @@ object Unruly : Game {
         )
     }
 
+    // `unruly.c` retries the clue placement with no retry bound and accepts a 46340x46340 area; the largest preset is 14x14.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.width.toLong() * p.height > 196) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /**
      * `validate_desc`: sum the run lengths and compare the total with
      * `s + 1`. The comparison is exact, so the last letter is a

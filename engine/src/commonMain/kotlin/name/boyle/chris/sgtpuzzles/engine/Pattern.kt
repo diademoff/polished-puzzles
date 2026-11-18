@@ -283,6 +283,12 @@ object Pattern : Game {
         return Description(generation.desc, generation.auxInfo)
     }
 
+    // `pattern.c` draws and averages every cell and runs the line solver per attempt; 50x50 takes about 16 s and 100x100 is past a minute (PARITY).
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.w.toLong() * p.h >= 2500) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /** [newDesc] with the generator attempt count, for tests. */
     fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
         generate(params as Params, random)

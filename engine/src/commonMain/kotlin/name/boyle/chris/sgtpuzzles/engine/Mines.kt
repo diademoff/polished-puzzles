@@ -374,6 +374,12 @@ object Mines : Game {
         )
     }
 
+    // `mines.c` minegen re-solves after every perturbation and retries without a bound; the largest preset is 16x16 and the accepted area is 2^28 - 1.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.w.toLong() * p.h > 256) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /**
      * `new_game_desc` with `interactive = false`, the `x,y,m<mask>`
      * form. The seam always passes a drawing API, so [newDesc] never

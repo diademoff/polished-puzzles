@@ -1503,6 +1503,12 @@ object Bridges : Game {
     override fun newDesc(params: Game.Params, random: RandomState): Description =
         newDescWithStats(params, random).description
 
+    // `bridges.c` retries the island placement and gates every attempt on the solver with no retry bound; the largest preset is 15x15 and the accepted area is unbounded.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.w.toLong() * p.h > 225) Game.SLOW_GENERATION_WARNING else null
+    }
+
     internal fun newDescWithStats(params: Game.Params, random: RandomState): Generated {
         val p = params as Params
         val wh = p.w * p.h

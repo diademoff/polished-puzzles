@@ -534,6 +534,12 @@ object Untangle : Game {
         return Description(desc, aux)
     }
 
+    // `untangle.c` scans every candidate pair of the n points per pass and accepts n up to INT_MAX/3; 100 points is four times the largest 25-point preset.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.n > 100) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /** `encode_graph`: map, order each pair, then sort numerically. */
     internal fun encodeGraph(edges: List<Edge>, mapping: IntArray?): String {
         val mapped = ArrayList<Edge>(edges.size)

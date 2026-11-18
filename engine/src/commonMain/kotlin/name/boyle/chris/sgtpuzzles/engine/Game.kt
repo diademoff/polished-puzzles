@@ -60,6 +60,14 @@ interface Game {
         (flags and buttonBeatsBit(x, y)) != 0
 
     companion object {
+        /**
+         * The warning that a slow generator returns. One text keeps the
+         * shell dialog and the engine tests in agreement; a game adds
+         * the reason for its own threshold in a comment at the override.
+         */
+        const val SLOW_GENERATION_WARNING =
+            "This board may take a long time to generate."
+
         /** `SOLVE_ANIMATES`: the shell animates a solve. */
         const val SOLVE_ANIMATES = 1 shl 9
 
@@ -162,6 +170,19 @@ interface Game {
      * solution text that upstream stores in `AUXINFO`.
      */
     fun newDesc(params: Params, random: RandomState): Description
+
+    /**
+     * A short shell warning when generation of [params] is known to be
+     * slow, or null when it is fast. The default null keeps every game
+     * that has no measured slow point unchanged.
+     *
+     * This is a user warning, not a guard: it changes no parameter, no
+     * RNG draw, and no description. The shell shows it before it starts
+     * a fresh generation and lets the user continue or cancel. A game
+     * declares the parameter sets whose work is unbounded or measurably
+     * long in C, with the reason in a comment at the override.
+     */
+    fun generationWarning(params: Params): String? = null
 
     /** Returns an error message, or null when the description is valid. */
     fun validateDesc(params: Params, desc: String): String?

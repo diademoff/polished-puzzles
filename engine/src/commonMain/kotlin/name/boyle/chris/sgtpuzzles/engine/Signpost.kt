@@ -499,6 +499,12 @@ object Signpost : Game {
         return Description(generation.desc, null)
     }
 
+    // `signpost.c` refills and re-strips through the solver until an attempt passes, with no retry bound; 20x20 is eight times the largest 7x7 preset.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.w.toLong() * p.h >= 400) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /** [newDesc] with the two retry counts, for the engine tests. */
     fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
         generate(params as Params, random)

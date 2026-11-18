@@ -219,6 +219,12 @@ object Filling : Game {
         return Description(FillingSolver.newDesc(p.width, p.height, random))
     }
 
+    // `filling.c` fills the grid and runs the deduction solver per attempt; the largest preset is 17x13 and an accepted 46340x46340 board needs about 8.6 GB.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.width.toLong() * p.height > 221) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /**
      * `validate_desc`: `a`..`z` are runs and `'0'..m` are one-cell
      * clues, where `m` is `'0' + max(max(w, h), 3)`. A wide board

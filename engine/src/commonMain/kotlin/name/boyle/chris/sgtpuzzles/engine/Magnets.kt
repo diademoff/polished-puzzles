@@ -371,6 +371,12 @@ object Magnets : Game {
         return Description(generation.desc, generation.auxInfo)
     }
 
+    // `magnets.c` retries the whole fill and solver; 16x14 takes 5.9 s and 20x20 does not finish in 90 s (PARITY).
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.w.toLong() * p.h >= 224) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /** [newDesc] with the outer and `lay_dominoes` attempt counts, for tests. */
     fun newDescWithAttempts(params: Game.Params, random: RandomState): Generation =
         generate(params as Params, random)

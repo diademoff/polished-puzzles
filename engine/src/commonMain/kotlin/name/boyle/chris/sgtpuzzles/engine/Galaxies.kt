@@ -1074,6 +1074,12 @@ object Galaxies : Game {
         }
     }
 
+    // `galaxies.c` keeps the best of ten attempts over a (2w+1)(2h+1) space array and grades each with the solver; the largest preset is 15x15 and the accepted area is unbounded.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.w.toLong() * p.h > 225) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /** `dots_too_close`, `galaxies.c:1704-1715`. */
     private fun dotsTooClose(state: State): Boolean {
         val tmp = dupGame(state)

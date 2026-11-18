@@ -419,6 +419,12 @@ object Towers : Game {
     override fun newDesc(params: Game.Params, random: RandomState): Description =
         generateWithStats(params as Params, random).description
 
+    // `towers.c` retries the solver-gated generator; PARITY records 9du (`9x9` Unreasonable) at seconds while the largest preset is 6x6.
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.w >= 9) Game.SLOW_GENERATION_WARNING else null
+    }
+
     internal fun generateWithStats(params: Params, random: RandomState): Generated {
         val w = params.w
         val a = w * w

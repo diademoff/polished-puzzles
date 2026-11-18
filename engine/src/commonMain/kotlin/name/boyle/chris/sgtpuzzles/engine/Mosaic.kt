@@ -290,6 +290,12 @@ object Mosaic : Game {
         )
     }
 
+    // `mosaic.c` grades every attempt with the solver after two shuffles; the largest preset is 50x50 and an aggressive 100x100 takes 30-45 s (PARITY).
+    override fun generationWarning(params: Game.Params): String? {
+        val p = params as Params
+        return if (p.width.toLong() * p.height > 2500) Game.SLOW_GENERATION_WARNING else null
+    }
+
     /**
      * `new_game_desc` with the attempt counts, for the generator tests.
      * A retry is visible only here, not in the description.
