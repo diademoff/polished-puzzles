@@ -126,25 +126,26 @@ object KotlinGames {
      * enablement in waves (decision 1a). The first wave is `samegame`,
      * `flood`, and `pegs`; the second wave is `sixteen`, `flip`,
      * `twiddle`, and `guess`; the third wave is `blackbox`, `lightup`,
-     * `undead`, and `rect`. Each game was checked for a `Review:`
+     * `undead`, and `rect`; the fourth wave is `slant`, `range`,
+     * `towers`, and `unequal`. Each game was checked for a `Review:`
      * deviation, a flagged size or retry debt, and an undeclared
      * preference schema before it was added. A game joins this set only
      * after its device test passes, so the set is evidence, not a plan.
      * See `docs/ROADMAP.md` Phase 4 and
      * `docs/adr/0011-enable-games-in-waves.md`.
      *
-     * `slant`, `cube`, `filling`, `netslide`, `unruly`, `range`,
-     * `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`,
-     * `signpost`, `untangle`, `bridges`, `net`, `mines`, `tracks`,
-     * `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`,
-     * `pearl`, `loopy`, `galaxies`, and `solo` are in dual-run: their
-     * engines pass the parity matrix, but the app still uses C until a
-     * later wave enables them.
+     * `cube`, `filling`, `netslide`, `unruly`, `mosaic`, `palisade`,
+     * `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `untangle`,
+     * `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`,
+     * `singles`, `pearl`, `loopy`, `galaxies`, and `solo` are in
+     * dual-run: their engines pass the parity matrix, but the app still
+     * uses C until a later wave enables them.
      */
     private val APP_GAMES = setOf(
         FIFTEEN, SAMEGAME, FLOOD, PEGS,
         SIXTEEN, FLIP, TWIDDLE, GUESS,
         BLACKBOX, LIGHTUP, UNDEAD, RECT,
+        SLANT, RANGE, TOWERS, UNEQUAL,
     )
 
     /**
