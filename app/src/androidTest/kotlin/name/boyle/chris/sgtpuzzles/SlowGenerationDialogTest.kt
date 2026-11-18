@@ -18,6 +18,7 @@ import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import name.boyle.chris.sgtpuzzles.backend.GALAXIES
 import name.boyle.chris.sgtpuzzles.backend.MOSAIC
 import name.boyle.chris.sgtpuzzles.backend.TOWERS
 import name.boyle.chris.sgtpuzzles.engine.Game
@@ -42,6 +43,11 @@ import org.junit.runner.RunWith
  * aggressive `100x100` board takes 30 to 45 seconds in C. That case only
  * checks the warning and Cancel, so the heavy generation never starts;
  * the Continue branch is covered by the Towers case.
+ *
+ * Galaxies is the slow case of the sixth enablement wave: every board
+ * above 225 cells warns, so a custom `16x16` is the smallest board that
+ * does. The case checks the warning and Cancel only, so no generation
+ * starts.
  */
 @RunWith(AndroidJUnit4::class)
 class SlowGenerationDialogTest {
@@ -95,6 +101,43 @@ class SlowGenerationDialogTest {
             pressDialogButton(android.R.id.button2)
             GamePlayTestSupport.awaitEngineUnchanged(scenario, before)
         }
+    }
+
+    @Test
+    fun aSlowGalaxiesBoardWarnsAndCancelKeepsTheCurrentGame() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        GamePlayTestSupport.clearBackendState(context, GALAXIES)
+        ActivityScenario.launch<GamePlay>(
+            GamePlayTestSupport.intent(context, GALAXIES, "7x7dn"),
+        ).use { scenario ->
+            val before = GamePlayTestSupport.awaitEngine(scenario) {
+                it.currentParams == "7x7dn"
+            }
+
+            openSlowGalaxiesBoard()
+            onView(withText(Game.SLOW_GENERATION_WARNING))
+                .inRoot(isDialog())
+                .check(matches(isDisplayed()))
+            pressDialogButton(android.R.id.button2)
+            GamePlayTestSupport.awaitEngineUnchanged(scenario, before)
+        }
+    }
+
+    /** Opens the custom settings dialog with a 16x16 galaxies board. */
+    private fun openSlowGalaxiesBoard() {
+        onView(withId(R.id.type_menu)).perform(click())
+        onView(withText(R.string.Custom_)).perform(click())
+        onView(withText("Galaxies configuration")).inRoot(isDialog())
+            .check(matches(isDisplayed()))
+        for (label in listOf("Width", "Height")) {
+            onView(
+                allOf(
+                    isAssignableFrom(EditText::class.java),
+                    hasSibling(withText(label)),
+                ),
+            ).inRoot(isDialog()).perform(replaceText("16"))
+        }
+        pressDialogButton(android.R.id.button1)
     }
 
     /** Opens the custom settings dialog with a 100x100 aggressive board. */
