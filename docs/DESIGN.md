@@ -182,6 +182,8 @@ Required for every screen:
 - Do not rely on color alone.
 - Reduced motion.
 - Errors and empty states are announced.
+- A status line is a polite live region, and the same text is not
+  announced twice: a redraw or a timer tick is not a state change.
 
 Accessibility is an allowed area for deviations: upstream does not
 describe it. Every deviation is recorded in `DEVIATIONS.md`.

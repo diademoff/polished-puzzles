@@ -437,6 +437,35 @@ cannot reach:
   fail on the code before the fixes: no `game_canvas` view in
   landscape, `Undo` outside the window in RTL, and an ellipsized title
   at 200%.
+- `ShellAccessibilityTest` covers the shell accessibility findings that
+  a device can check without a screen reader. Each case fails on the
+  code before its fix.
+  `theStatusLineIsAPoliteLiveRegion` opens a solved fifteen game, reads
+  the accessibility node of `status_bar` (polite live region), taps the
+  tile left of the gap, and checks that the node is still polite when
+  the text reaches `Moves: 1`. `anUnchangedStatusIsNotWrittenToTheViewAgain`
+  counts text changes of the status view: three repeats of the same
+  text must not touch the view, and one changed text must, so the
+  polite live region cannot announce a redraw or a timer tick again.
+  `theLetterKeysAreNotSpokenAsBareLetters` opens a frozen Guess game and
+  fails if any key is described by a single letter; the `L` key must be
+  spoken as the game's own word `Labels`.
+  `theConfigurationFieldsCarryTheirOwnLabelAndAre48DpTall` opens the
+  `tents` custom dialog and checks both text rows (`Width`, `Height`)
+  expose their label as the field's hint and are at least 48dp tall,
+  and that the `Difficulty` choices row carries its own description.
+  `theKeyLabelStaysInsideTheKeyAtTwoHundredPercentText` sets the system
+  text scale to 200%, opens a frozen `keen` game, and checks the
+  resolved label size of every text key leaves room inside the key.
+  `theLandscapeStatusLineClearsTheNavigationBar` checks that the text of
+  `status_bar` ends above the bottom system bar in portrait and
+  landscape, measured against the root window insets, and that the
+  status text survives the rotation.
+- `ChooserAccessibilityTest.theRowIsOneTalkableItemWithAChangeableStarState`
+  checks that a game row is a single clickable node that carries the
+  game name, exposes no star state while unstarred, offers a custom
+  action spoken as `Add to starred`, and reports the `Starred` state
+  after that action.
 
 ## 4. Corpus
 
@@ -3907,6 +3936,61 @@ Shell P0 wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 / API
   (the test does this itself), the window layout direction (per test
   activity), and the display rotation. The per-app locale and the
   rotation settings were used for the manual screenshots and restored.
+
+Shell accessibility P1 wave, Pixel 4a 5G (physical), 2026-11-18,
+Android 16 / API 36, after the same two audits:
+
+- Seven fixes, each reproduced or measured on the phone before the
+  change. The status line was not a live region, so a move, an undo or
+  the solver changed it silently. A letter key was spoken as the bare
+  character because the shell passed `c.toString()` as the content
+  description and dropped the names the engine keeps in
+  `Game.KeyLabel.name`. A configuration field carried its label only as
+  an `addLabeledBy` relation, and its `minHeight` was written through
+  the wrong property, so it measured 45dp. The chooser row exposed no
+  star state and no action. In landscape the status line sat under the
+  navigation bar. A key label was a fixed 24sp in a 48dp key.
+- Fixes. `GamePlay.setStatus` sets
+  `ACCESSIBILITY_LIVE_REGION_POLITE` on a non-empty text and `NONE` on
+  an empty one, and returns before it touches the view when the text is
+  already shown. `GameEngine.keyNames` returns the game's own key
+  names (the C engine keeps the empty default), `Buttons` speaks them
+  and falls back to `Letter %1$s` for a key with no name.
+  `ConfigViewsBuilder` sets the field's `hint` and the spinner's
+  `contentDescription` to the row label and sets `minimumHeight`.
+  `ChooserScreen` makes the row one merged node with the name, the
+  description, a `Starred` state description and a custom action
+  spoken as `Add to starred` or `Remove from starred`; the drawn text
+  is no longer a separate stop. In landscape `status_bar` pads itself
+  by the bottom system bar. `keyLabelSize` clamps the label to 70% of
+  the key, and the label line height follows the clamped size.
+- `:app:connectedDebugAndroidTest` ran 117 cases: 111 passed, 0 failed,
+  6 skipped. The six skips are the same three fastlane producers and
+  three chooser goldens. The seven new cases are the six of
+  `ShellAccessibilityTest` and
+  `ChooserAccessibilityTest.theRowIsOneTalkableItemWithAChangeableStarState`.
+- `:engine:jvmTest` -> 1151 tests, 0 failures; `:parity:test` -> 1915
+  tests, 0 failures; `:app:testDebugUnitTest` -> 105 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings;
+  `tools/check-upstream-diff.sh --strict` and
+  `tools/check-upstream-lock.sh` both pass.
+- Each case fails on the code before its fix, with these messages:
+  `the status line 'Moves: 0' is not a polite live region
+  expected:<1> but was:<0>`, `the same status was written to the view
+  again expected:<0> but was:<3>`, `these keys are spoken as bare
+  letters: [L]`, `the text rows are not labelled Width and Height:
+  [null, null]`, `the Width field is 118px tall, below 48dp (126px)`,
+  `no custom action spoken as 'Add to starred' in []`, `the landscape
+  status line ends at 1069px, under the navigation bar (63 px, lowest
+  allowed 1017)`, and `a key label is 48.0 dp of text in a 48.0dp key
+  at 200% text`.
+- The navigation bar case ran with gesture navigation (a 63px bottom
+  inset in landscape). Both navigation modes were also checked by hand
+  with `cmd overlay enable-exclusive` and `uiautomator` dumps, then the
+  overlays were restored to gesture navigation.
+- Device state changed for the run and restored: the system text scale
+  (the test does this itself), the display rotation, and the three
+  animation scales, which Espresso needs at 0.
 
 ## 9. CI
 
