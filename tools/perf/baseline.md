@@ -4,17 +4,20 @@ Budgets and rules are in `docs/PERFORMANCE.md`. This file is the
 procedure for the Phase 0 baseline and the place where the numbers are
 recorded.
 
-Status: **partially recorded**. An emulator baseline exists and is
-recorded below as a relative reference. The absolute baseline needs a
-physical device; that part of the Phase 0 exit criterion is still open.
+Status: **tier A recorded, tier B and tablet missing**. The tier A
+numbers below come from a physical Pixel 4a 5G at 60 Hz. An emulator
+baseline is kept as a relative reference. There is one phone only, so
+the tier B and tablet parts of the Phase 0 exit criterion stay open.
 
 ## 1. Devices
 
 | Tier | Device | Android | Screen |
 |---|---|---|---|
-| A | Pixel 4a or Pixel 6a class | current | 90 Hz |
-| B | 2 GB RAM phone | 8–9 | 60 Hz |
-| Tablet | 10 inch | current | 60 Hz |
+| A | Pixel 4a 5G (the only physical device) | 16 | 60 Hz |
+| B | 2 GB RAM phone (missing) | 8–9 | 60 Hz |
+| Tablet | 10 inch (missing) | current | 60 Hz |
+
+No 90 Hz tier A phone exists, so the 90 Hz case is not measured.
 
 Record the exact model, build number, and battery state. An emulator
 may be used for relative comparisons only, never for absolute numbers
@@ -139,11 +142,139 @@ Notes:
 - Debug PSS was 97.9 MB (chooser) and 134.7 MB (fifteen 4x4); the release
   numbers above are the ones to keep.
 
-### Physical device baseline
+### Pixel 4a 5G (physical): tier A at 60 Hz, 2026-11-18
 
-Not recorded. The numbers must come from the tier A, tier B, and tablet
-devices in section 1. Until then, the Phase 0 exit criterion "the
-baseline is recorded" stays open.
+| Item | Value |
+|---|---|
+| Device | Pixel 4a (5G), `bramble` |
+| Build fingerprint | `google/bramble/bramble:14/UP1A.231105.001.B2/11260668:user/release-keys` |
+| ROM | LineageOS `23.2-20260822-NIGHTLY-bramble` |
+| Android | 16, API 36, security patch 2026-08-01 |
+| Screen | 1080x2340, 420 dpi, `supportedRefreshRates [60.000004]` |
+| Battery | 98%, USB powered, 24.8 C, thermal status 0 |
+| Build | release, R8 on, not debuggable, signed with the local debug key |
+| Commit | `31e62d51`, versionName `2026-11-18-0910-790f5851` |
+| Date | 2026-11-18 |
+
+Build and install:
+
+```sh
+SDK=$HOME/android-sdk/build-tools/36.0.0
+JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./gradlew :app:assembleRelease --max-workers=2
+$SDK/apksigner sign --ks ~/.android/debug.keystore --ks-pass pass:android \
+    --ks-key-alias androiddebugkey --key-pass pass:android \
+    --out build/perf/app-release-debugkey.apk \
+    app/build/outputs/apk/release/app-release-unsigned.apk
+adb install -r build/perf/app-release-debugkey.apk
+```
+
+The project has no release `signingConfig`, so Gradle writes
+`app-release-unsigned.apk` and `apksigner` signs it with the debug key.
+No build file was changed. The APK is still a release build: R8 runs,
+`debuggable=false`, and the baseline profile is inside the APK.
+
+After the install the device reported `status=run-from-apk`, so the app
+was not compiled yet. One `adb shell cmd package bg-dexopt-job` run
+brought it to `status=speed-profile` (reason `bg-dexopt`), and every
+number below uses that state except the row marked as first install.
+`cmd package bg-dexopt-job` is the standard background compile; it is
+not a device setting.
+
+Device state during the runs, changed with `adb shell` and restored
+afterwards:
+
+| Setting | Before | During | After |
+|---|---|---|---|
+| `global zen_mode` (DND) | 0 | 2 | 0 |
+| `system screen_brightness` | 108 | 128 | 108 |
+| `system screen_brightness_mode` | 0 | 0 | 0 |
+| `global window_animation_scale` | 1.0 | 0 | 1.0 |
+| `global transition_animation_scale` | 1.0 | 0 | 1.0 |
+| `global animator_duration_scale` | null | 0 | null (deleted) |
+
+The screen was on, the device was on USB power, and
+`stay_on_while_plugged_in` was already 2 and was not touched.
+
+Method: 10 runs per startup metric, `adb shell am start -W -S` (cold) or
+`adb shell am start -W` (warm) after `KEYCODE_HOME`, `TotalTime` read
+from the output. Frames come from `adb shell dumpsys gfxinfo <package>`
+after a `reset`. Percentiles from `gfxinfo` are histogram bin edges, so
+they are coarse (350 ms, 550 ms, 650 ms bins). Input was real touch
+injection (`adb shell input tap`) at the board tile centers.
+
+Startup, chooser and saved game:
+
+| Metric | P50 | P90 | P99 | Worst | Budget | Verdict |
+|---|---|---|---|---|---|---|
+| Cold start, chooser, speed-profile | 373 | 424 | 470 | 470 | 1000 (A) | PASS |
+| Cold start, chooser, first install (`run-from-apk`) | 606 | 617 | 624 | 624 | 1000 (A) | not steady state |
+| Warm start, chooser, app in memory | 39 | 46 | 49 | 49 | 400 | PASS |
+| Cold process + saved game, fifteen 4x4, resume | 270 | 277 | 277 | 277 | 300 (upper bound) | PASS as an upper bound |
+
+The app has no trace section or log line at the first drawn frame, so
+the in-app split of "first frame of a saved game" cannot be measured.
+The row above is the whole path from a cold process to the drawn board,
+which includes process start, so it is an upper bound for the 300 ms
+budget. The resume path is real: `GamePlay` loads `savedBackend` on a
+launch with no intent.
+
+Frames, gameplay and shell, on the same device and build:
+
+| Scene | Frames | Janky | P50 | P90 | P99 | Worst | Budget | Verdict |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| Chooser scroll, 27 s | 1078 | 0.0% | 7 | 9 | 11 | 11 | 16.7 ms, < 1% | PASS |
+| Fifteen 4x4, new board, 20 moves 1.5 s apart | 20 | 100% | 73 | 109 | 113 | 113 | 16.7 ms, < 1% | MISS |
+| Fifteen 4x4, 54 s session, 184 moves | 183 | 100% | 350 | 550 | 650 | 650 | 16.7 ms, < 1% | MISS |
+| Fifteen 4x4, same game at about 200 moves, 10 moves 1.5 s apart | 10 | 100% | 650 | 700 | 700 | 700 | 16.7 ms, < 1% | MISS |
+
+For the 54 s session, 46 four-tap cycles of real taps were injected in
+54 s, and the counters show 183 frames for 184 moves, so the board
+draws about one frame per move and the user waits that frame. The
+commands:
+
+```sh
+adb shell dumpsys gfxinfo name.boyle.chris.sgtpuzzles reset
+# taps at board tile centers, 4 cycles of taps per loop
+adb shell dumpsys gfxinfo name.boyle.chris.sgtpuzzles
+```
+
+`dumpsys gfxinfo framestats` for one move on the 184-move game shows
+where the time goes: draw start to `SyncQueued` 222 ms,
+`IssueDrawCommandsStart` to `SwapBuffers` 184 ms, `SwapBuffers` to
+`FrameCompleted` 291 ms, and 702 ms from the input event to the
+completed frame. The cause is not investigated here.
+
+Memory, size, battery:
+
+| Item | Value | Budget | Verdict |
+|---|---|---|---|
+| PSS, fifteen 4x4, steady | 68.0 MiB (69,611 kB) | baseline + 10% | recorded |
+| PSS, fifteen 4x4, right after generation | 97.1 MiB (99,460 kB) | baseline + 10% | recorded, transient |
+| APK, release, all four ABIs, unsigned | 11,129,432 B (10.61 MiB) | baseline + 5% | recorded |
+| APK, same APK signed with the debug key | 11,281,175 B (10.76 MiB) | baseline + 5% | recorded |
+| Battery | not measured | no measurable regression | UNMEASURED |
+
+Notes and limits:
+
+- The frame budget is missed by a wide margin on the game board and
+  passed by the shell. On the same device, the chooser scroll is 7 ms
+  P50 with 0% janky frames, so the device and the Compose pipeline are
+  not the limit; the board draw is.
+- The board cost grows with the number of moves in the session: 73 ms
+  P50 on a new board and 650 ms P50 at about 200 moves, with the same
+  tap spacing. The cause is not known, and nothing was changed to fix
+  it.
+- The gameplay session is 54 s, not the 10 minutes the dropped-frame
+  budget names. The 100% janky result does not depend on the length.
+- There is one phone at 60 Hz. The 90 Hz tier A case, tier B, and the
+  tablet are unmeasured, as are touch-to-visible, main-thread blocks,
+  generation progress and cancel, save and load time, Help, and
+  battery.
+- APK size is compared across different commits (the emulator row is
+  from 2026-11-14), so the +5% gate is not evaluated here.
+- The saved-game budget is met only as an upper bound; a trace marker
+  at the first frame of a loaded game would be needed for the exact
+  number.
 
 ### Compose renderer (relative only)
 
@@ -159,5 +290,8 @@ same AVD; this is a warning, not an absolute result.
 | Compose display list | 36 | 36.1% | 27 ms | 48 ms | 65 ms |
 
 The emulator uses a software GPU. Both renderers exceed the 16.7 ms
-budget on this AVD, so the absolute budget and the ten-run method in
-`PERFORMANCE.md` still need a physical device.
+budget on this AVD. This row set is history only: the physical device
+numbers above answer the absolute question, and there the Compose
+renderer also misses the budget (73 ms P50 on a new fifteen board). The
+old bitmap renderer was not rebuilt on the phone, so the P90 regression
+against it is unmeasured on hardware.

@@ -30,6 +30,11 @@ refined against the baseline and fixed in an issue or ADR.
 | B | 2 GB RAM, Android 8–9, 60Hz | lower bound for `minSdk 21` |
 | Tablet | 10", 60Hz | adaptive layouts |
 
+The only physical device is a Pixel 4a 5G at 60 Hz. It is the tier A
+reference at 60 Hz, and the budgets below are unchanged. There is no
+90 Hz tier A phone, no tier B phone, and no tablet, so those cases are
+unmeasured.
+
 An emulator is fine for relative CI checks and screenshots, but not for
 absolute numbers. Use the same AVD and host for relative comparisons,
 cold boot, and no snapshots. Absolute budgets are measured on a
@@ -191,23 +196,28 @@ For a change that affects UI, rendering, startup, or generation:
 
 - **Phase 0** — baseline: cold/warm start, jank, APK, build time.
   Record numbers and devices. The procedure is in
-  `tools/perf/baseline.md`. An emulator baseline is recorded there as a
-  relative reference. The absolute baseline needs a physical device, so
-  this exit criterion is still open.
+  `tools/perf/baseline.md`. The tier A baseline is recorded there on a
+  Pixel 4a 5G at 60 Hz, together with the emulator baseline as a
+  relative reference. Tier B and the tablet are still missing, so this
+  exit criterion is only partly closed.
 - **Phase 1** — do not make startup worse after the Compose shell. The
   shell work started before the Phase 0 baseline was recorded, as an
   explicit decision: no device was available and the shell does not
-  touch the engine. The baseline must be captured on the first
-  available device, and the Phase 1 comparison is made against it. Until
-  then, Phase 1 cannot close.
+  touch the engine. The tier A baseline now exists, but it was recorded
+  at HEAD after the shell, so it is the reference for later changes and
+  not a "before" number. The emulator is the only "before" data, so
+  Phase 1 cannot close on hardware evidence yet.
 - **Phase 2** — the renderer is not worse than the baseline on frames.
   The Compose renderer was measured on the emulator, release build,
   fifteen 4x4 with ten taps. P50 matches the old bitmap renderer
   (27–29 ms vs 29 ms); P90 and P99 are worse (40–48 ms vs 32 ms, and
-  48–65 ms vs 38 ms). The AVD uses `swiftshader_indirect`, and the
-  measurement is one short run, so this is a warning, not an absolute
-  verdict. The absolute check needs a physical device; it is D-09 in
-  `ROADMAP.md`.
+  48–65 ms vs 38 ms). The physical tier A device answers the absolute
+  question and fails it: on a new fifteen 4x4 board the Compose renderer
+  takes P50 73 ms and P90 109 ms per move, and 100% of frames are
+  janky. The same phone scrolls the chooser at P50 7 ms with 0% janky
+  frames, so the shell and the device are not the limit; the board draw
+  is. The old bitmap renderer was not rebuilt on the phone, so the P90
+  regression against it is unmeasured on hardware. D-09 stays open.
 - **Phase 3** — the KMP core is not slower than C on the parity corpus.
 - **Phase 4** — every game passes the frame and time budgets.
 - **Phase 5** — final budgets, Macrobenchmark, Baseline Profiles.
