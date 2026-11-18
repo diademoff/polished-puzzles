@@ -282,7 +282,10 @@ Notes:
   generator, solver, state, moves, undo/redo, solve, text, keys, save
   file, drawing, layout, and input pass the matrix in `SlantDescTest`,
   `SlantGameTest`, `SlantSaveTest`, `SlantTraceTest`, and
-  `SlantInputParityTest`. The cursor is drawn (`Slant.kt` uses
+  `SlantInputParityTest`. The solve is also pinned after a played move:
+  C diffs the answer against the first state, not the current board
+  (`slant.c:1596-1601`), so the answer text of a moved game is the same
+  as a fresh one. The cursor is drawn (`Slant.kt` uses
   `COL_CURSOR`), and `SlantTraceTest` pins the cursor frame against the
   oracle. The owner waived the two-release wait for `slant` on
   2026-11-14; the general waiver of 2026-11-18 supersedes that one, so

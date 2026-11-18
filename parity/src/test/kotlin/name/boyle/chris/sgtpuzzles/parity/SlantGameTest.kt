@@ -182,6 +182,43 @@ class SlantGameTest {
         }
     }
 
+    @Test
+    fun `solve after a move diffs against the first state`() = OracleClient().use { oracle ->
+        // `solve_game` reads `state`, the first entry of the history, and
+        // never `currstate` (`slant.c:1596-1601`, `midend.c:2109-2111`).
+        // The fresh answer lists every cell, so the answer after a move
+        // is the same text: the cell the move already set stays in it.
+        val tile = Slant.preferredTileSize
+        val start = oracle.newGame("slant", "5x5dh", SEED)
+        val freshAnswer = SgtpSave.parse(oracle.solve(start.state).state).value("SOLVE")!!
+        val cell = Regex(""";([\\/])(\d+),(\d+)""").find(freshAnswer)!!
+        val column = cell.groupValues[2].toInt()
+        val row = cell.groupValues[3].toInt()
+        // A left click sets `\` on a blank square, a right click sets `/`.
+        val button = if (cell.groupValues[1] == "\\") Buttons.LEFT_BUTTON else Buttons.RIGHT_BUTTON
+        val x = (column + 1) * tile + tile / 2
+        val y = (row + 1) * tile + tile / 2
+
+        val moved = oracle.key(start.state, x, y, button)
+        val movedAnswer = SgtpSave.parse(oracle.solve(moved.state).state).value("SOLVE")!!
+        assertEquals("the oracle keeps the cell in the answer", freshAnswer, movedAnswer)
+
+        val actual = Midend.newGame(Slant, "5x5dh", SEED)
+        actual.processKey(x, y, button, tile)
+        assertSame("move before solve", moved, actual)
+        assertTrue("solve after a move", actual.solve())
+        assertEquals("solve save", oracle.solve(moved.state).state, actual.serialise().serialise())
+
+        // A fresh game is unchanged: its first state is the current one.
+        val fresh = Midend.newGame(Slant, "5x5dh", SEED)
+        assertTrue("solve a fresh game", fresh.solve())
+        assertEquals(
+            "fresh save",
+            oracle.solve(start.state).state,
+            fresh.serialise().serialise(),
+        )
+    }
+
     private fun arrowMode(oracleMode: Int): ArrowMode = when (oracleMode) {
         1 -> ArrowMode.ARROWS_ONLY
         2 -> ArrowMode.ARROWS_LEFT
