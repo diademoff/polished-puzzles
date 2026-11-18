@@ -280,6 +280,22 @@ cannot reach:
   and its inert drag starts in the strip the game rejects; `guess`
   (`REVERT_TO_START`) taps submit with no draft, drags a colour into a
   guess peg, and taps submit again.
+- `ThirdWaveTileSizeInputTest` is the shared device test for the third
+  enablement wave. One parameterized case per game (`blackbox`,
+  `lightup`, `undead`, `rect`) launches the game, reads the live
+  `BoardGeometry`, and runs a step script on the board at the default
+  `limitDpi`, then changes `limitDpi` to `off`, checks that the tile
+  changed and is not the preferred one, and runs the second script
+  there. Every point comes from the geometry the drawing layer uses.
+  Each step asserts the move count and that the save text changed
+  exactly when the gesture was a move; these four games have no `UI`
+  record, so an inert tap leaves the save text alone. The C input code
+  decides the gestures: `blackbox` fires a laser with a tap on a top
+  range cell; `lightup` taps a point in the frame (no cell, inert) and
+  then white cells (one light and one move each); `undead` taps a cell
+  (highlight only, no move) and a clue (the mark toggles, one move);
+  `rect` taps a square centre (inert) and edge centres (`H` moves).
+  `blackbox` also asserts its live status line.
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
@@ -1877,9 +1893,11 @@ item:
   is empty. The truth of this rule is pinned by `LightupTest` and
   `LightupInputParityTest`; the app wiring is in place.
 - S9: `currentKeyLabel` is a tested helper with no Android call site.
-  `LIGHTUP` is in `KotlinGames.gameFor` and not in
-  `APP_GAMES`, so `KotlinGames.handles(LIGHTUP)` is false and the app
-  still uses C. The two-release wait also applies.
+  `LIGHTUP` is enabled (third enablement wave, 2026-11-18), so
+  `KotlinGames.handles(LIGHTUP)` is true; D-006 has no `Review:` line,
+  and the declared `show-lit-blobs` schema matches the non-NULL C
+  `get_prefs`. `ThirdWaveTileSizeInputTest` covers two tile sizes on
+  the Pixel 4a 5G.
 
 `unruly` has two C undefined-behavior guards, one seam decision, and
 two enablement debts:
@@ -2020,6 +2038,11 @@ hand-written description.
   last text for the same reason. A cold trace still has exactly one
   status line, and a warm frame emits a changed status exactly once;
   `BlackBoxTraceTest` pins both.
+- D-003 has no `Review:` line, so the game is enabled in the third
+  wave (2026-11-18). The game has no preference page (C `get_prefs` is
+  NULL) and declares no schema. `ThirdWaveTileSizeInputTest` fires two
+  lasers at two tile sizes on the Pixel 4a 5G and checks the move
+  count, the save text, and the status line.
 
 `cube` has one enablement debt and no deviation:
 
@@ -2306,9 +2329,14 @@ aggressive 100x100 latency is an enablement debt:
   are applied after `newUi` and after `Midend.fromSave`, with a forced
   redraw for `monsters`. The status text is gated on `wantsStatusBar`. Neither
   preference is serialised. S9 is a tested `currentKeyLabel` helper
-  with no Android call site. `UNDEAD` is in `KotlinGames.gameFor` and
-  not in `APP_GAMES`, so `KotlinGames.handles(UNDEAD)` is false and
-  the app keeps the C backend. The two-release wait also applies.
+  with no Android call site. `UNDEAD` is enabled (third enablement wave,
+  2026-11-18), so `KotlinGames.handles(UNDEAD)` is true. The game has
+  no deviation entry and no open retry or hang item; its declared
+  `pencil-keep-highlight` and `monsters` preferences match the non-NULL
+  C `get_prefs`, and its Width, Height, and difficulty configuration
+  comes from `Game.configure`. `ThirdWaveTileSizeInputTest` sends a
+  real cell tap and a real clue tap at two tile sizes on the Pixel 4a
+  5G.
 
 - `untangle` has no deviation and three enablement items:
 
@@ -3475,6 +3503,37 @@ API 36, after the second-wave code commit:
   (the shell is `UNMODIFIED`, so the press reaches the game); `guess`
   taps submit with no draft (inert), drags a colour into a peg (a draft
   in the `UI` record, no move), and taps submit again (one move).
+- These rows stay manual: the pixel goldens on the reference AVD,
+  TalkBack, contrast, font scale 200%, and performance.
+
+Third enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 /
+API 36, after the third-wave code commit:
+
+- The enabled set is `fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
+  `flip`, `twiddle`, `guess`, `blackbox`, `lightup`, `undead`, and
+  `rect`. `KotlinGames.handles` returns true for exactly these twelve
+  and false for every other backend.
+- `:app:connectedDebugAndroidTest` ran 78 cases: 72 passed, 0 failed,
+  6 skipped. The skips are the same six as the earlier runs (three
+  fastlane screenshot producers and three chooser goldens). The four
+  new cases are `ThirdWaveTileSizeInputTest[blackbox]`, `[lightup]`,
+  `[undead]`, and `[rect]`, and none of them skipped. The 43
+  `GamePlayParameterizedTest` cases include the four new backends and
+  complete a game on the Kotlin engine.
+- `:engine:jvmTest` -> 1123 tests, 0 failures; `:parity:test` -> 1885
+  tests, 0 failures; `:app:testDebugUnitTest` -> 107 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings.
+- This run proves the third wave on a device: each new game launches on
+  `KotlinGameEngine`, accepts a real tap at two distinct tile sizes,
+  and the move count and save text change only when the game applies a
+  move. The per-game gestures are the ones the C input code gives:
+  `blackbox` fires one laser per tap on a top range cell (`F` move) and
+  the status line stays `Balls marked: 0 / 1`; `lightup` ignores a tap
+  in the half-tile frame and turns a white cell into a light (`L`
+  move); `undead` only highlights a cell on a tap (no move and no save
+  text, because the game has no `UI` record) and toggles a clue mark on
+  a clue tap (`D` move); `rect` resolves a square-centre tap to no move
+  and an edge-centre tap to an `H` move.
 - These rows stay manual: the pixel goldens on the reference AVD,
   TalkBack, contrast, font scale 200%, and performance.
 

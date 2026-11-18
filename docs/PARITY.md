@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); then `slant`, `blackbox`, `cube`, `filling`, `netslide`, `unruly`, `range`, `lightup`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `undead`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `rect`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); then `slant`, `cube`, `filling`, `netslide`, `unruly`, `range`, `mosaic`, `palisade`, `inertia`, `tents`, `magnets`, `pattern`, `signpost`, `untangle`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `towers`, `unequal`, `singles`, `pearl`, `loopy`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -200,7 +200,7 @@ submenu entries when a game groups its presets.
 
 | Game | Display name | Default params | Presets | Solver | Text format | Timed | Platform randomness | Status |
 |---|---|---|---:|---|---|---|---|---|
-| `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `dual-run` |
+| `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `kotlin` |
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `dual-run` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `dual-run` |
@@ -212,7 +212,7 @@ submenu entries when a game groups its presets.
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `kotlin` |
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `dual-run` |
-| `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `dual-run` |
+| `lightup` | Light Up | 7x7 Easy | 9 | yes | yes | no | no | `kotlin` |
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `dual-run` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `dual-run` |
@@ -225,7 +225,7 @@ submenu entries when a game groups its presets.
 | `pearl` | Pearl | 8x8 Tricky | 8 | yes | yes | no | no | `dual-run` |
 | `pegs` | Pegs | 7x7 Cross | 9 | no | yes | no | no | `kotlin` |
 | `range` | Range | 9x6 | 4 | yes | yes | no | no | `dual-run` |
-| `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `dual-run` |
+| `rect` | Rectangles | 7x7 | 5 | yes | yes | no | no | `kotlin` |
 | `samegame` | Same Game | 5x5, 3 colors | 5 | no | yes | no | no | `kotlin` |
 | `signpost` | Signpost | 4x4, corner start | 6 | yes | yes | no | no | `dual-run` |
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `dual-run` |
@@ -236,7 +236,7 @@ submenu entries when a game groups its presets.
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `dual-run` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `dual-run` |
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `kotlin` |
-| `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `dual-run` |
+| `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `kotlin` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `dual-run` |
 | `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `dual-run` |
 | `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `dual-run` |
@@ -444,9 +444,15 @@ Notes:
   board nor the move count. D-003 rejects a drawn ball count above the
   cell count after the count draw instead of hanging; a count that fits
   keeps the C seed, `DESC`, and save text, whatever `maxBalls` is.
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C: the
-  two-release wait is open. The
-  seam is `docs/adr/0007-kotlin-game-seam.md` and
+  D-003 has no `Review:` line, so the game joins a wave without an
+  owner review. `KotlinGames.gameFor` knows the Kotlin game and
+  `KotlinGames.handles` selects it for the app (third enablement wave,
+  2026-11-18). The game has no preference page (C `get_prefs` is NULL).
+  `ThirdWaveTileSizeInputTest` taps two top range cells at two tile
+  sizes on the Pixel 4a 5G: a tap on an unfired range cell fires the
+  laser and adds one move, and the status line stays
+  `Balls marked: 0 / 1`.
+  The seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 - `cube` is `dual-run`. Its parameters, generator, state, roll, face
   permutation, loose move grammar, completion, status text, save file,
@@ -773,8 +779,14 @@ Notes:
   `Midend.fromSave`, and the shell forces a redraw; the value must not
   enter `DrawState.flags`, because C reads it in `tile_redraw`
   and a warm frame after a preference change alone is empty.
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-release wait is open. `currentKeyLabel` is a tested helper
+  D-006 has no `Review:` line and the two non-terminating parameter
+  sets are rejected before generation, so the game joins a wave.
+  `KotlinGames.gameFor` knows the Kotlin game and
+  `KotlinGames.handles` selects it for the app (third enablement wave,
+  2026-11-18). `ThirdWaveTileSizeInputTest` taps a frame point and two
+  white cells at two tile sizes on the Pixel 4a 5G: the frame tap has
+  no cell and changes nothing, and each white-cell tap cycles the cell
+  to a light and adds one move. `currentKeyLabel` is a tested helper
   because C has no Android
   call site for it. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
@@ -1325,9 +1337,15 @@ Notes:
   dialog from it. The status text is gated on `wantsStatusBar` (it is
   false). S9 is a tested `currentKeyLabel` helper
   with no
-  Android call site. `UNDEAD` is in `KotlinGames.gameFor` and not in
-  `APP_GAMES`, so `handles(UNDEAD)` is false and the two-release wait
-  still applies.
+  Android call site. `UNDEAD` is enabled (third enablement wave,
+  2026-11-18); its C `get_prefs` is non-NULL and the declared
+  `pencil-keep-highlight` and `monsters` preferences match it, and its
+  Width, Height, and difficulty configuration comes from
+  `Game.configure`.
+  `ThirdWaveTileSizeInputTest` taps a cell and a clue at two tile
+  sizes on the Pixel 4a 5G: the cell tap only highlights it, so it adds
+  no move and changes no save text (the game has no `UI` record), and
+  the clue tap toggles the mark and adds one move.
 
 - `untangle` is `dual-run`. Its parameters and five presets, the
   decode and validation quirks, the generator and its two RNG draws,
@@ -1986,8 +2004,13 @@ Notes:
   the port throws before it allocates (D-022). The C square bound
   `w * h <= INT_MAX` is checked before anything is allocated.
 
-  `rect` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so the app
-  stays on C and `handles(RECT)` is false. The engine declares the
+  `rect` is enabled (third enablement wave, 2026-11-18): it is in
+  `APP_GAMES` and `handles(RECT)` is true. D-022 has no `Review:` line
+  and the C square bound `w * h <= INT_MAX` is checked before anything
+  is allocated, so the game joins a wave. `ThirdWaveTileSizeInputTest`
+  taps a square centre and two edge centres at two tile sizes on the
+  Pixel 4a 5G: the centre tap resolves to no `H` or `V` move, and each
+  edge tap toggles that edge and adds one move. The engine declares the
   four-field configuration schema (Width, Height, Expansion factor,
   `Ensure unique solution`), and the app builds the dialog from it. The
   status bar stays on, showing `Auto-solved.` and `COMPLETED!`, and

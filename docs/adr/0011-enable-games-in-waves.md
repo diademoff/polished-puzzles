@@ -108,3 +108,14 @@ Second wave (2026-11-18): `sixteen`, `flip`, `twiddle`, and `guess`
 were enabled with the same checks. `KotlinGamesTest` now pins the eight
 enabled games, and `SecondWaveTileSizeInputTest` covers the four new
 ones on the Pixel 4a 5G at two tile sizes.
+
+Third wave (2026-11-18): `blackbox`, `lightup`, `undead`, and `rect`
+were enabled with the same checks. `cube` was the fourth candidate and
+is deferred: `docs/PARITY.md` records the open huge-area enumerate-and
+-hang debt, and the note requires a guard before `CUBE` is enabled.
+`rect` is the first reserve game and passed all five conditions:
+D-022 has no `Review:` line, the C square bound is checked before
+allocation, and the C `get_prefs` is NULL with no Kotlin schema.
+`KotlinGamesTest` now pins the twelve enabled games, and
+`ThirdWaveTileSizeInputTest` covers the four new ones on the Pixel 4a
+5G at two tile sizes.

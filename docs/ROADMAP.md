@@ -169,7 +169,8 @@ For each game, use the matrix from `PARITY.md`:
 Status: `fifteen` is `kotlin` (2026-11-14). `samegame`, `flood`, and
 `pegs` are `kotlin` since 2026-11-18 (the first enablement wave).
 `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` since 2026-11-18
-(the second enablement wave).
+(the second enablement wave). `blackbox`, `lightup`, `undead`, and
+`rect` are `kotlin` since 2026-11-18 (the third enablement wave).
 `slant` is `dual-run` (2026-11-14): `SlantGeneration` and `Slant` are
 in `engine/` and pass the matrix, but the app still uses C. The
 remaining slant work is enablement. The configuration dialog comes from
@@ -188,14 +189,16 @@ trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
 `FifteenSaveTest`, and `FifteenTraceTest`.
 
 The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
-`pegs`, `sixteen`, `flip`, `twiddle`, and `guess`, and bypasses the C
+`pegs`, `sixteen`, `flip`, `twiddle`, `guess`, `blackbox`, `lightup`,
+`undead`, and `rect`, and bypasses the C
 generator for them. It does not select it
 for `slant`; the per-game enable set in `KotlinGames` keeps slant in
 dual-run. `KotlinGamesTest` pins the enabled set and the generated
 saves; `GamePlayParameterizedTest` asserts that the running engine is
 `KotlinGameEngine` for every enabled game, `FirstWaveTileSizeInputTest`
-covers the first wave, and `SecondWaveTileSizeInputTest` covers the
-second wave, each with real gestures at two tile sizes. The C games stay
+covers the first wave, `SecondWaveTileSizeInputTest` covers the second
+wave, and `ThirdWaveTileSizeInputTest` covers the third, each with real
+gestures at two tile sizes. The C games stay
 in the vendored tree as
 the oracle and for chooser metadata, but they are not reachable as
 gameplay backends.
@@ -241,9 +244,27 @@ None of the four has a `Review:` deviation or an open retry or hang
 debt in `docs/PARITY.md`. `sixteen`, `flip`, and `twiddle` have a NULL
 C `get_prefs` and no Kotlin schema; `guess` has a non-NULL C
 `get_prefs` and declares the matching one-item `show-labels` schema,
-which the preference page builds from. The reserve list for a later
-wave is `blackbox`, `filling`, `lightup`, `mosaic`, `pattern`,
-`signpost`, `undead`, and `untangle`; none of them is enabled here.
+which the preference page builds from. The reserve list for the next
+wave was checked again; none of its games is enabled here.
+
+Third wave, 2026-11-18: `blackbox`, `lightup`, `undead`, and `rect` are
+enabled. Each device test is green at two tile sizes on the same phone
+and none of the four skipped. The candidates were checked in order
+`blackbox`, `lightup`, `undead`, `cube`: `blackbox` (D-003 has no
+`Review:` line and the drawn-count guard is in place), `lightup`
+(D-006 has no `Review:` line and both non-terminating parameter sets
+are rejected before generation), and `undead` (no deviation) qualify.
+`cube` is deferred: `docs/PARITY.md` records an open enablement debt,
+where an accepted `46340x46340` area enumerates every square and hangs,
+and the note says the game needs a guard before `CUBE` is enabled.
+`rect` fills that slot (D-022 has no `Review:` line, the C square bound
+is checked before allocation, and the game has no preference page).
+`blackbox` and `rect` have a NULL C `get_prefs` and no schema;
+`lightup` has a non-NULL C `get_prefs` and declares the matching
+`show-lit-blobs` preference; `undead` has a non-NULL C `get_prefs` and
+declares the matching `pencil-keep-highlight` and `monsters`
+preferences. All four configuration dialogs come from the declared
+`Game.configure` schema.
 
 The other ported games stay `dual-run` on
 C. The policy is `docs/adr/0011-enable-games-in-waves.md`.
