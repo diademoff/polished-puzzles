@@ -45,7 +45,7 @@ class GenerationLimitTest {
         assertEquals(9, Dominosa.MAX_N)
         assertEquals(100, Map.MAX_GENERATION_REGIONS)
         assertEquals(400, Singles.MAX_AREA)
-        assertEquals(144, Pearl.MAX_AREA)
+        assertEquals(121, Pearl.MAX_AREA)
         assertEquals(400, Loopy.MAX_AREA)
 
         assertEquals(25, Solo.maxSymbols(soloDiff("5x5db")))
@@ -152,10 +152,10 @@ class GenerationLimitTest {
     }
 
     @Test
-    fun `pearl refuses an area above 144 before any draw`() {
+    fun `pearl refuses an area above 121 before any draw`() {
         assertRefusedAbove(
             Pearl,
-            "13x12de",
+            "12x11de",
             "Width times height is too large for this build",
         )
     }

@@ -31,9 +31,9 @@ import org.junit.Test
  * count, never the difficulty of an area game.
  *
  * The above-cap tests show that the guard is generation-only. The
- * three hand-written saves and the C-generated map save are loaded by
- * the oracle and by [Midend.fromSave], and one move is replayed by
- * both engines.
+ * hand-written saves and the C-generated map save are loaded by the
+ * oracle and by [Midend.fromSave], and one move is replayed by both
+ * engines.
  */
 class GenerationLimitTest {
 
@@ -122,8 +122,12 @@ class GenerationLimitTest {
         assertGenerates(Singles, "singles", "20x20de", "12345")
 
     @Test(timeout = 300_000)
-    fun `pearl generates at 12x12`() =
-        assertGenerates(Pearl, "pearl", "12x12de", "12345")
+    fun `pearl generates at 11x11`() =
+        assertGenerates(Pearl, "pearl", "11x11de", "12345")
+
+    @Test(timeout = 300_000)
+    fun `pearl generates its largest preset`() =
+        assertGenerates(Pearl, "pearl", "12x8de", "12345")
 
     @Test(timeout = 300_000)
     fun `loopy generates at 20x20`() =
@@ -192,6 +196,78 @@ class GenerationLimitTest {
         val save = handSave("Inertia", "201x200", desc, "2")
         assertEquals(null, Inertia.validateDesc(Inertia.decodeParams("201x200"), desc))
         assertSaveLoads(Inertia, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a palisade save above 50 regions loads and plays`() {
+        // 26x20 is 520 cells and 52 regions. Every cell carries clue 0,
+        // which loads: only generation is capped.
+        val desc = "0".repeat(26 * 20)
+        val save = handSave("Palisade", "26x20n10", desc, "F1,0,0")
+        assertEquals(null, Palisade.validateDesc(Palisade.decodeParams("26x20n10"), desc))
+        assertSaveLoads(Palisade, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a netslide save above 90,000 cells loads and plays`() {
+        // 301x300 is 90,300 cells: one empty tile per cell. Sliding row
+        // 0 by one cell is a legal move on an empty row.
+        val desc = "0".repeat(301 * 300)
+        val save = handSave("Netslide", "301x300b1", desc, "R0,1")
+        assertEquals(null, Netslide.validateDesc(Netslide.decodeParams("301x300b1"), desc))
+        assertSaveLoads(Netslide, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a net save above 10,000 cells loads and plays`() {
+        // 101x100 is 10,100 cells: no clues and no barriers. Turning
+        // cell 0 clockwise is a legal move.
+        val desc = "0".repeat(101 * 100)
+        val save = handSave("Net", "101x100", desc, "A0,0")
+        assertEquals(null, Net.validateDesc(Net.decodeParams("101x100"), desc))
+        assertSaveLoads(Net, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a dominosa save above n=9 loads and plays`() {
+        // n=10 needs every number from 0 to 10 exactly 12 times: the
+        // board is 11x12. The first domino joins cells 0 and 1.
+        val desc = (0..10).joinToString("") { n ->
+            (if (n < 10) "$n" else "[$n]").repeat(12)
+        }
+        val save = handSave("Dominosa", "10de", desc, "D0,1")
+        assertEquals(null, Dominosa.validateDesc(Dominosa.decodeParams("10de"), desc))
+        assertSaveLoads(Dominosa, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a singles save above 400 cells loads and plays`() {
+        // 21x20 is 420 cells, each with clue 1. Marking a cell is a
+        // legal move; the load path does not solve the board.
+        val desc = "1".repeat(21 * 20)
+        val save = handSave("Singles", "21x20de", desc, "B0,0")
+        assertEquals(null, Singles.validateDesc(Singles.decodeParams("21x20de"), desc))
+        assertSaveLoads(Singles, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a pearl save above 121 cells loads and plays`() {
+        // 12x11 is 132 cells, all white. Marking edge 1 of cell 0,0 is
+        // a legal move.
+        val desc = "W".repeat(12 * 11)
+        val save = handSave("Pearl", "12x11de", desc, "M1,0,0")
+        assertEquals(null, Pearl.validateDesc(Pearl.decodeParams("12x11de"), desc))
+        assertSaveLoads(Pearl, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a loopy save above 400 cells loads and plays`() {
+        // 21x20 squares is 420 faces, all without clues. Setting edge 0
+        // is a legal move.
+        val desc = "0".repeat(21 * 20)
+        val save = handSave("Loopy", "21x20t0dh", desc, "0y")
+        assertEquals(null, Loopy.validateDesc(Loopy.decodeParams("21x20t0dh"), desc))
+        assertSaveLoads(Loopy, save)
     }
 
     @Test(timeout = 300_000)
