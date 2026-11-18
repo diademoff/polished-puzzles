@@ -11,4 +11,11 @@
 	<dimen name="space_s">8dp</dimen>
 	<dimen name="space_m">16dp</dimen>
 	<dimen name="space_l">24dp</dimen>
+
+	<!--
+	  Reading measure of the shell on a medium or expanded window, and the
+	  Material 3 maximum dialog width (docs/adr/0012-adaptive-layouts.md).
+	-->
+	<dimen name="shell_content_max_width">840dp</dimen>
+	<dimen name="shell_dialog_max_width">560dp</dimen>
 </resources>

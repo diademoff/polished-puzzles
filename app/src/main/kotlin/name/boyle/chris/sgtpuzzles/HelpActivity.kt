@@ -26,6 +26,7 @@ import androidx.webkit.WebViewClientCompat
 import name.boyle.chris.sgtpuzzles.NightModeHelper.ActivityWithNightMode
 import name.boyle.chris.sgtpuzzles.databinding.ActivityHelpBinding
 import name.boyle.chris.sgtpuzzles.ui.applyToolbarSideInsets
+import name.boyle.chris.sgtpuzzles.ui.capReadingWidth
 import java.io.IOException
 import java.text.MessageFormat
 import java.util.regex.Pattern
@@ -46,6 +47,8 @@ class HelpActivity : ActivityWithNightMode() {
         binding.toolbar.applyToolbarSideInsets()
         setSupportActionBar(binding.toolbar)
         webView = binding.webView
+        // The help text keeps the shell reading measure on a large window.
+        webView.capReadingWidth()
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         ViewCompat.setOnApplyWindowInsetsListener(webView) { v, windowInsets ->
             val insets = windowInsets.getInsets(systemBars() or displayCutout() or ime())

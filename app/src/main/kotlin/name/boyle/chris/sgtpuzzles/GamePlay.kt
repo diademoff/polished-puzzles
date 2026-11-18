@@ -101,6 +101,9 @@ import name.boyle.chris.sgtpuzzles.buttons.ButtonsView
 import name.boyle.chris.sgtpuzzles.buttons.SEEN_SWAP_L_R_TOAST
 import name.boyle.chris.sgtpuzzles.buttons.SWAP_L_R_KEY
 import name.boyle.chris.sgtpuzzles.ui.applyToolbarSideInsets
+import name.boyle.chris.sgtpuzzles.ui.capReadingWidth
+import name.boyle.chris.sgtpuzzles.ui.isMediumOrWider
+import name.boyle.chris.sgtpuzzles.ui.windowSizeClass
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder.Event.CFG_SETTINGS
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.ARROW_KEYS_KEY_SUFFIX
@@ -211,6 +214,14 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private var _wasNight = false
     private var appStartIntentOnResume: Intent? = null
     private var swapLROn = false
+
+    /**
+     * The window width class of this activity's window. It is read from
+     * the live configuration, so an in-place resize is followed without
+     * recreating the activity. `ui/WindowSize.kt` holds the only rule.
+     */
+    private val sizeClass
+        get() = windowSizeClass(resources.configuration)
 
     /**
      * The launch whose slow-generation warning is on screen. It keeps a
@@ -602,6 +613,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             }
             .setOnCancelListener { slowGenerationPending = null }
             .show()
+            .capReadingWidth()
         return true
     }
 
@@ -630,6 +642,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
                     abort(null, returnToChooser)
                 }
                 .show()
+                .capReadingWidth()
         } else {
             continueLoading.run()
         }
@@ -1351,10 +1364,13 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
      * (invalidateOptionsMenu() does not help here)  */
     private fun rethinkActionBarCapacity() {
         menu?.apply {
-            val dm = resources.displayMetrics
-            val screenWidthDIP = (dm.widthPixels.toDouble() / dm.density).roundToInt()
+            // The window width class decides how much text the action bar
+            // can show. A compact window keeps icon-only actions and
+            // borrows the title's space for them; a medium or wider
+            // window has room for the title and the action labels.
+            val wide = sizeClass.isMediumOrWider
             val state =
-                if (screenWidthDIP >= 480) (SHOW_AS_ACTION_ALWAYS or SHOW_AS_ACTION_WITH_TEXT) else SHOW_AS_ACTION_ALWAYS
+                if (wide) (SHOW_AS_ACTION_ALWAYS or SHOW_AS_ACTION_WITH_TEXT) else SHOW_AS_ACTION_ALWAYS
             for (i in listOf(R.id.game_menu, R.id.type_menu, R.id.help_menu)) {
                 findItem(i).setShowAsAction(state)
             }
@@ -1368,8 +1384,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
                 redoItem.setShowAsAction(state)
                 updateUndoRedoEnabled()
             }
-            // emulator at 598 dip looks bad with title+undo; GT-N7100 at 640dip looks good
-            supportActionBar?.setDisplayShowTitleEnabled(screenWidthDIP > 620 || undoRedoKbd)
+            supportActionBar?.setDisplayShowTitleEnabled(wide || undoRedoKbd)
         }
     }
 
@@ -1380,6 +1395,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             .setIcon(android.R.drawable.ic_dialog_alert)
             .setOnCancelListener(if (returnToChooser) DialogInterface.OnCancelListener { startChooserAndFinish() } else null)
             .show()
+            .capReadingWidth()
     }
 
     @UsedByJNI
@@ -1427,6 +1443,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             startChooserAndFinish()
         }
         d.show()
+        d.capReadingWidth()
     }
 
     @UsedByJNI

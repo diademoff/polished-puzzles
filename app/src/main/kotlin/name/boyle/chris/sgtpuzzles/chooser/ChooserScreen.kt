@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -34,6 +36,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,8 +50,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -66,6 +72,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import name.boyle.chris.sgtpuzzles.R
 import name.boyle.chris.sgtpuzzles.backend.BackendName
+import name.boyle.chris.sgtpuzzles.ui.isMediumOrWider
+import name.boyle.chris.sgtpuzzles.ui.windowSizeClass
 
 /** Test tag of the scrollable grid. */
 const val CHOOSER_GRID_TAG = "chooser-grid"
@@ -114,8 +122,12 @@ internal fun chooserSections(
  * [compact] shows icons only; otherwise each game shows its name and one
  * line of description. Long press toggles the starred state; the long
  * press is exposed to TalkBack with a label.
+ *
+ * [sizeClass] is the window width class. On a medium or expanded window
+ * the list keeps the shell reading measure and is centred, so a tablet
+ * does not stretch one game across the whole screen.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun ChooserScreen(
     games: List<BackendName>,
@@ -130,10 +142,14 @@ fun ChooserScreen(
     onSettings: () -> Unit,
     onHelp: () -> Unit,
     onFeedback: () -> Unit,
+    sizeClass: WindowSizeClass = windowSizeClass(LocalConfiguration.current),
 ) {
     val entries = remember(games, starred) { chooserSections(games, starred) }
     val gridState = rememberLazyGridState()
     var helpMenuOpen by remember { mutableStateOf(false) }
+    val margin = dimensionResource(
+        if (sizeClass.isMediumOrWider) R.dimen.space_l else R.dimen.space_m,
+    )
 
     ScrollToCurrentGame(scrollToken, current, entries, gridState)
 
@@ -200,45 +216,53 @@ fun ChooserScreen(
             )
         },
     ) { innerPadding ->
-        LazyVerticalGrid(
-            state = gridState,
-            columns = GridCells.Adaptive(minSize = if (compact) 72.dp else 298.dp),
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .testTag(CHOOSER_GRID_TAG),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 8.dp,
-                bottom = 16.dp,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            items(
-                items = entries,
-                span = { entry ->
-                    if (entry is ChooserEntry.Section) GridItemSpan(maxLineSpan) else GridItemSpan(1)
-                },
-                key = { entry ->
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Adaptive(minSize = if (compact) 72.dp else 298.dp),
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(max = dimensionResource(R.dimen.shell_content_max_width))
+                    .fillMaxWidth()
+                    .testTag(CHOOSER_GRID_TAG),
+                contentPadding = PaddingValues(
+                    start = margin,
+                    end = margin,
+                    top = 8.dp,
+                    bottom = 16.dp,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(
+                    items = entries,
+                    span = { entry ->
+                        if (entry is ChooserEntry.Section) GridItemSpan(maxLineSpan) else GridItemSpan(1)
+                    },
+                    key = { entry ->
+                        when (entry) {
+                            is ChooserEntry.Section -> "section-${entry.title}"
+                            is ChooserEntry.Game -> chooserGameTag(entry.game)
+                        }
+                    },
+                ) { entry ->
                     when (entry) {
-                        is ChooserEntry.Section -> "section-${entry.title}"
-                        is ChooserEntry.Game -> chooserGameTag(entry.game)
+                        is ChooserEntry.Section -> SectionHeader(entry.title)
+                        is ChooserEntry.Game -> GameItem(
+                            game = entry.game,
+                            isCurrent = entry.game === current,
+                            isStarred = entry.game in starred,
+                            compact = compact,
+                            isNight = isNight,
+                            onStarToggle = { onStarToggle(entry.game) },
+                            onClick = { onGameClick(entry.game) },
+                        )
                     }
-                },
-            ) { entry ->
-                when (entry) {
-                    is ChooserEntry.Section -> SectionHeader(entry.title)
-                    is ChooserEntry.Game -> GameItem(
-                        game = entry.game,
-                        isCurrent = entry.game === current,
-                        isStarred = entry.game in starred,
-                        compact = compact,
-                        isNight = isNight,
-                        onStarToggle = { onStarToggle(entry.game) },
-                        onClick = { onGameClick(entry.game) },
-                    )
                 }
             }
         }

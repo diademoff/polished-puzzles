@@ -27,6 +27,7 @@ import name.boyle.chris.sgtpuzzles.config.ConfigBuilder.Event.CFG_DESC
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder.Event.CFG_SEED
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder.Event.CFG_SETTINGS
 import name.boyle.chris.sgtpuzzles.intValue
+import name.boyle.chris.sgtpuzzles.ui.capReadingWidth
 import kotlin.math.sqrt
 
 /** Wraps views from ConfigViewsBuilder in a dialog and applies game-specific alterations. */
@@ -161,7 +162,9 @@ class CustomDialogBuilder private constructor(
 
     @UsedByJNI
     override fun dialogShow() {
-        dialogBuilder.create().show()
+        val dialog = dialogBuilder.create()
+        dialog.show()
+        dialog.capReadingWidth()
     }
 
     companion object {

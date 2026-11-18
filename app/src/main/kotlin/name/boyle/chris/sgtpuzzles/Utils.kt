@@ -16,6 +16,7 @@ import androidx.core.net.toUri
 import androidx.core.text.HtmlCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import name.boyle.chris.sgtpuzzles.databinding.FeedbackDialogBinding
+import name.boyle.chris.sgtpuzzles.ui.capReadingWidth
 import java.io.IOException
 import java.io.InputStream
 import java.text.MessageFormat
@@ -70,7 +71,7 @@ object Utils {
             BuildConfig.VERSION_NAME
         )
         binding.versionRow.setOnClickListener { copyVersionToClipboard(context) }
-        MaterialAlertDialogBuilder(context).setView(binding.root).show()
+        MaterialAlertDialogBuilder(context).setView(binding.root).show().capReadingWidth()
     }
 
     @JvmStatic
@@ -90,6 +91,7 @@ object Utils {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+            .capReadingWidth()
     }
 
     @JvmStatic
@@ -108,6 +110,7 @@ object Utils {
                     """.trimIndent()
                 )
                 .show()
+                .capReadingWidth()
         }
     }
 

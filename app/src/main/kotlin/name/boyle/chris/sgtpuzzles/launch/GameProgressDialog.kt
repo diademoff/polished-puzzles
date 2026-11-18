@@ -8,6 +8,7 @@ import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import name.boyle.chris.sgtpuzzles.R
 import name.boyle.chris.sgtpuzzles.databinding.ProgressDialogBinding
+import name.boyle.chris.sgtpuzzles.ui.capReadingWidth
 
 /**
  * Blocks the screen while a game is generated or resumed.
@@ -43,6 +44,7 @@ class GameProgressDialog(
         dialog.setCanceledOnTouchOutside(false)
         dialog.setOnCancelListener { onCancel() }
         dialog.show()
+        dialog.capReadingWidth()
         if (launch.needsGenerating) {
             revealResetAfterDelay()
         }

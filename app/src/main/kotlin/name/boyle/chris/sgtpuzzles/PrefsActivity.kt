@@ -43,6 +43,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.PLACEHOLDER_SEND_FEEDBA
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.UNEQUAL_SHOW_H_KEY
 import name.boyle.chris.sgtpuzzles.ui.SystemColors
 import name.boyle.chris.sgtpuzzles.ui.applyToolbarSideInsets
+import name.boyle.chris.sgtpuzzles.ui.capReadingWidth
 
 class PrefsActivity : ActivityWithNightMode(),
     PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
@@ -124,6 +125,13 @@ class PrefsActivity : ActivityWithNightMode(),
             appCompatActivity.setSupportActionBar(toolbar)
             appCompatActivity.supportActionBar?.setDisplayHomeAsUpEnabled(true)
             return root
+        }
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            // On a medium or expanded window the rows keep the shell
+            // reading measure instead of one long line across the screen.
+            listView.capReadingWidth()
         }
 
         fun onCreateCurrentGamePrefs(backend: BackendName?, thisGameCategory: PreferenceCategory) {
