@@ -1,6 +1,7 @@
 package name.boyle.chris.sgtpuzzles.launch
 
 import name.boyle.chris.sgtpuzzles.backend.FIFTEEN
+import name.boyle.chris.sgtpuzzles.engine.GenerationCancelled
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -112,6 +113,28 @@ class GameGeneratorTest {
         assertTrue(
             runCatching { future.get() }.exceptionOrNull() is CancellationException,
         )
+    }
+
+    @Test
+    fun `a cancelled generation reports no failure and no game`() {
+        val launch = launch()
+        var success: GameLaunch? = null
+        var failure: Exception? = null
+        val callback = object : GameGenerator.Callback {
+            override fun gameGeneratorSuccess(launch: GameLaunch, previousGame: String?) {
+                success = launch
+            }
+
+            override fun gameGeneratorFailure(e: Exception, launch: GameLaunch) {
+                failure = e
+            }
+        }
+
+        val future = generator.submit(launch, null, callback) { throw GenerationCancelled() }
+
+        assertNull(future.get(5, TimeUnit.SECONDS))
+        assertNull("a cancelled generation published a game", success)
+        assertNull("a cancelled generation reported an error", failure)
     }
 
     private fun launch(): GameLaunch =
