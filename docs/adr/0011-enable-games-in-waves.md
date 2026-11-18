@@ -142,6 +142,22 @@ ones on the Pixel 4a 5G at two tile sizes, and
 `SlowGenerationDialogTest` covers the warning for the aggressive
 `100x100` mosaic.
 
+Sixth wave (2026-11-18): `galaxies`, `bridges`, `unruly`, `filling`,
+and `mines` were enabled with the same checks. All five were the
+candidate list, so no reserve game was needed and `cube` stays on C: its
+enumeration hang is not solved by an existing warning, because its
+generation is one pass over the accepted squares and a huge area is a
+memory question. None of the five has a `Review:` deviation, each
+declares its `Game.configure` and the C preference schema, and the only
+open item was a size or retry bound, which the owner made warning-only
+(decision 2b). The thresholds are 225 cells for galaxies and bridges,
+196 for unruly, 221 for filling, and 256 for mines; the C retry loops in
+all five stay unbounded in the port, so the Kotlin hang is the C hang.
+`KotlinGamesTest` now pins the 26 enabled games,
+`SixthWaveTileSizeInputTest` covers the five new ones on the Pixel 4a
+5G at two tile sizes, and `SlowGenerationDialogTest` covers the warning
+for a custom `16x16` galaxies board.
+
 Slow-generation policy (2026-11-18): decision 2b is implemented as a
 warning, not a cap. `Game.generationWarning` is the new hook; the engine
 names the parameter sets whose C generation is measurably long or

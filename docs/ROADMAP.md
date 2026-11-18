@@ -172,9 +172,11 @@ Status: `fifteen` is `kotlin` (2026-11-14). `samegame`, `flood`, and
 (the second enablement wave). `blackbox`, `lightup`, `undead`, and
 `rect` are `kotlin` since 2026-11-18 (the third enablement wave).
 `slant`, `range`, `towers`, and `unequal` are `kotlin` since
-2026-11-18 (the fourth enablement wave), and `magnets`, `pattern`,
+2026-11-18 (the fourth enablement wave), `magnets`, `pattern`,
 `mosaic`, `signpost`, and `untangle` are `kotlin` since 2026-11-18 (the
-fifth enablement wave). The configuration dialog comes
+fifth enablement wave), and `galaxies`, `bridges`, `unruly`, `filling`,
+and `mines` are `kotlin` since 2026-11-18 (the sixth enablement wave).
+The configuration dialog comes
 from the schema declared in `Game.configure`, and the cursor is drawn
 (`Slant.kt` uses `COL_CURSOR`; `SlantTraceTest` pins the cursor frame
 against the oracle). The Kotlin `Game` seam, the semantic midend,
@@ -192,15 +194,17 @@ trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
 The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
 `pegs`, `sixteen`, `flip`, `twiddle`, `guess`, `blackbox`, `lightup`,
 `undead`, `rect`, `slant`, `range`, `towers`, `unequal`, `magnets`,
-`pattern`, `mosaic`, `signpost`, and `untangle`, and bypasses the C
+`pattern`, `mosaic`, `signpost`, `untangle`, `galaxies`, `bridges`,
+`unruly`, `filling`, and `mines`, and bypasses the C
 generator for them. `KotlinGamesTest` pins the enabled set and the
 generated saves; `GamePlayParameterizedTest` asserts that the running
 engine is `KotlinGameEngine` for every enabled game,
 `FirstWaveTileSizeInputTest` covers the first wave,
 `SecondWaveTileSizeInputTest` covers the second wave,
 `ThirdWaveTileSizeInputTest` covers the third wave,
-`FourthWaveTileSizeInputTest` covers the fourth, and
-`FifthWaveTileSizeInputTest` covers the fifth, each with real
+`FourthWaveTileSizeInputTest` covers the fourth,
+`FifthWaveTileSizeInputTest` covers the fifth, and
+`SixthWaveTileSizeInputTest` covers the sixth, each with real
 gestures at two tile sizes. The C games stay
 in the vendored tree as
 the oracle and for chooser metadata, but they are not reachable as
@@ -298,6 +302,26 @@ the aggressive `100x100` mosaic, the slowest enabled case. The
 unbounded generator retries in pattern, signpost, and mosaic are the C
 loops; the warning names the sizes where they are long, and no new hard
 cap is added.
+
+Sixth wave, 2026-11-18: `galaxies`, `bridges`, `unruly`, `filling`,
+and `mines` are enabled. All five were the candidate list, so no
+reserve game was needed and `cube` stays on C. Each device test is
+green at two tile sizes on the same phone and none of the five skipped.
+None has a `Review:` deviation in `docs/DEVIATIONS.md`: `bridges` and
+`unruly` have no entry at all, `filling` is D-004, `mines` is D-002
+(the Android presets), and `galaxies` is D-023, and none of those three
+has a `Review:` line. Each declares its `Game.configure` and the
+preference schema that matches the C `get_prefs`. The only open item
+was the size or retry bound, which the owner made warning-only
+(decision 2b): `Game.generationWarning` names every board above 225
+cells for `galaxies` and `bridges`, above 196 for `unruly`, above 221
+for `filling`, and above 256 for `mines`. The C generator retry loops
+in all five are unbounded and the port keeps them unchanged, so the
+Kotlin hang is the C hang; no new hard cap is added.
+`SlowGenerationDialogTest` checks the warning and Cancel for a custom
+`16x16` galaxies board. `cube` is still deferred: its enumeration hang
+is not solved by an existing warning, because its generation is one
+pass over the accepted squares and the huge area is a memory question.
 
 The other ported games stay `dual-run` on
 C. The policy is `docs/adr/0011-enable-games-in-waves.md`.

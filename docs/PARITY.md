@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); then `cube`, `filling`, `netslide`, `unruly`, `palisade`, `inertia`, `tents`, `bridges`, `net`, `mines`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, `loopy`, `galaxies`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); `galaxies`, `bridges`, `unruly`, `filling`, and `mines` are `kotlin` (sixth enablement wave, 2026-11-18); then `cube`, `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, `loopy`, and `solo` are `dual-run`, the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -201,14 +201,14 @@ submenu entries when a game groups its presets.
 | Game | Display name | Default params | Presets | Solver | Text format | Timed | Platform randomness | Status |
 |---|---|---|---:|---|---|---|---|---|
 | `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `kotlin` |
-| `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `dual-run` |
+| `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `kotlin` |
 | `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `dual-run` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
-| `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `dual-run` |
+| `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `kotlin` |
 | `flip` | Flip | 5x5 Crosses | 6 | yes | yes | no | no | `kotlin` |
 | `flood` | Flood | 12x12, 6 colors | 7 | yes | yes | no | no | `kotlin` |
-| `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `dual-run` |
+| `galaxies` | Galaxies | 7x7 Normal | 6 | yes | yes | no | no | `kotlin` |
 | `guess` | Guess | 6 colors, 4 pegs | 2 | yes | no | no | no | `kotlin` |
 | `inertia` | Inertia | 10x8 | 3 | yes | yes | no | no | `dual-run` |
 | `keen` | Keen | 6x6 Normal | 10 | yes | no | no | no | `dual-run` |
@@ -216,7 +216,7 @@ submenu entries when a game groups its presets.
 | `loopy` | Loopy | 7x7 Easy, Square | 20 | yes | yes | no | no | `dual-run` |
 | `magnets` | Magnets | 6x5 Tricky | 8 | yes | yes | no | no | `kotlin` |
 | `map` | Map | 20x15, 30 regions | 6 | yes | no | no | no | `dual-run` |
-| `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `dual-run` |
+| `mines` | Mines | 9x9, 10 mines | 4 | yes | yes | yes | no | `kotlin` |
 | `mosaic` | Mosaic | 10x10, aggressive | 6 | yes | yes | no | no | `kotlin` |
 | `net` | Net | 5x5, non-wrapping | 8 | yes | no | no | yes | `dual-run` |
 | `netslide` | Netslide | 3x3 | 9 | yes | no | no | no | `dual-run` |
@@ -238,7 +238,7 @@ submenu entries when a game groups its presets.
 | `twiddle` | Twiddle | 3x3, radius 2 | 8 | yes | yes | no | no | `kotlin` |
 | `undead` | Undead | 4x4 Normal | 8 | yes | yes | no | no | `kotlin` |
 | `unequal` | Unequal | 4x4 Easy | 12 | yes | yes | no | no | `kotlin` |
-| `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `dual-run` |
+| `unruly` | Unruly | 8x8 Trivial | 7 | yes | yes | no | no | `kotlin` |
 | `untangle` | Untangle | 10 points | 5 | yes | no | no | no | `kotlin` |
 
 Notes:
@@ -479,7 +479,8 @@ Notes:
   app still uses C: the huge-area guard and the two-release wait are open. The
   seam is
   `docs/adr/0007-kotlin-game-seam.md`.
-- `filling` is `dual-run`. Its parameters, description generator,
+- `filling` is `kotlin` (sixth enablement wave, 2026-11-18). Its
+  parameters, description generator,
   deduction solver, state, move grammar, completion, status text, save
   file, palette, drawing, layout, input, and `requestKeys` pass the
   matrix in `FillingDescTest`, `FillingGameTest`,
@@ -532,11 +533,17 @@ Notes:
   result, because the oracle aborts on that board.
 
   `validate_params` accepts `46340x46340`, and generation then
-  allocates about 8.6 GB of boards and hangs, as C does. That guard is
-  enablement debt, not a deviation (see `TESTING.md`). `KotlinGames.gameFor`
-  knows the Kotlin game, but the app still uses C: the huge-area guard, the S9
-  call site for `currentKeyLabel`,
-  and the two-release wait are open. The seam is
+  allocates about 8.6 GB of boards. The C `make_board` restarts the
+  whole board through `goto retry` with no bound, and the port keeps
+  that loop in `FillingSolver.makeBoard`. The owner made the size bound
+  warning-only (decision 2b): `Game.generationWarning` names every board
+  above 221 cells, the largest preset, and no parameter set is rejected.
+  No test generates a huge accepted area. The S9 call site for
+  `currentKeyLabel` is open.
+  `KotlinGames.handles(FILLING)` is true (sixth enablement wave,
+  2026-11-18), and `SixthWaveTileSizeInputTest` clicks the half-tile
+  border, the digit with no selection, a region, and its digit at two
+  tile sizes on the Pixel 4a 5G. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
@@ -583,7 +590,8 @@ Notes:
   is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `unruly` is `dual-run`. Its parameters and presets, the run-length
+- `unruly` is `kotlin` (sixth enablement wave, 2026-11-18). Its
+  parameters and presets, the run-length
   description, the nested fill and winnow loops, the five-technique
   deduction solver, state, loose move grammar, completion, the empty
   status text, the cursor, `requestKeys`, the save file, palette,
@@ -641,15 +649,18 @@ Notes:
   `validate_params` accepts `46340x46340`, and the generator's retry
   loops are unbounded, so a huge accepted area would allocate a
   2.1-billion-cell grid and mask, more than 10 GB in this port, and run
-  the solver over it. No test calls `newDesc` or `newState` on a huge
-  accepted area; `validateParams` pins both the accepted `46340x46340`
-  boundary and the rejected `65536x65536` side, and the generation
-  tests run with a timeout. That guard is enablement debt, not a
-  deviation (see `TESTING.md`). `KotlinGames.gameFor` knows the
-  Kotlin game, but the app still uses C: the huge-area guard and the
-  two-release wait are open. `currentKeyLabel` is a tested helper because C
-  has no Android
-  call site for it. The seam is
+  the solver over it. The C `new_game_desc` retries the fill and winnow
+  loop with no bound, and `UnrulySolver.generate` is that loop. No test
+  calls `newDesc` or `newState` on a huge accepted area;
+  `validateParams` pins both the accepted `46340x46340` boundary and the
+  rejected `65536x65536` side, and the generation tests run with a
+  timeout. The owner made the size bound warning-only (decision 2b):
+  `Game.generationWarning` names every board above 196 cells, the
+  largest preset, and no parameter set is rejected. `currentKeyLabel` is
+  a tested helper because C has no Android call site for it.
+  `KotlinGames.handles(UNRULY)` is true (sixth enablement wave,
+  2026-11-18), and `SixthWaveTileSizeInputTest` clicks the half-tile
+  border and a cell at two tile sizes on the Pixel 4a 5G. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
@@ -1510,7 +1521,8 @@ Notes:
   tested `currentKeyLabel` helper with no Android call site.
   `NET` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(NET)` is false and the two-release wait still applies.
-- `mines` is `dual-run`. Its parameters and four presets, the decode
+- `mines` is `kotlin` (sixth enablement wave, 2026-11-18). Its
+  parameters and four presets, the decode
   and validation quirks, the deferred interactive description, the
   gated generator with its RNG order and two upstream quirks, the
   first-click public/private description pair, the move grammar, the
@@ -1575,15 +1587,21 @@ Notes:
   chord, a letterbox click, and a click after death or a win change
   neither, each followed by a positive control.
 
-  Enablement debt. Mines has no preferences, so the engine declares
-  only the four-field `Width`, `Height`, `Mines` (with the `%` rule),
-  and `Ensure solubility` schema, and `Midend.solveAttempt` carries the
+  Mines has no preferences, so the engine declares only the four-field
+  `Width`, `Height`, `Mines` (with the `%` rule), and `Ensure
+  solubility` schema, and `Midend.solveAttempt` carries the
   `Game has not been started yet` message. Generation runs on the app's
-  worker. The open items are an owner size bound for the accepted
-  `2^28 - 1` area, a guard for the unbounded retry loop, and the
-  two-release wait. `MINES` is in `KotlinGames.gameFor` and not in
-  `APP_GAMES`, so `handles(MINES)` is false and the app uses C. The
-  seam is `docs/adr/0007-kotlin-game-seam.md`.
+  worker. `validate_params` accepts an area up to `2^28 - 1`, and the C
+  `minegen` retries with no bound, which the port mirrors. The owner
+  made the size bound warning-only (decision 2b):
+  `Game.generationWarning` names every board above 256 cells, the
+  largest preset, and no parameter set is rejected.
+  `KotlinGames.handles(MINES)` is true (sixth enablement wave,
+  2026-11-18), and `SixthWaveTileSizeInputTest` taps the border, opens a
+  tile, and holds a press to flag a covered tile at two tile sizes on
+  the Pixel 4a 5G. Mines is the one timed game, so the device test drops
+  the `TIME` record before it compares the save text. The seam is
+  `docs/adr/0007-kotlin-game-seam.md`.
 
 - `keen` is `dual-run`. Its parameters and ten presets, the decode
   quirks and validation order, the Latin-square generator with its two
@@ -2044,7 +2062,8 @@ Notes:
   the UI thread. There is no `UI` record and no preference. S9 is a
   tested `currentKeyLabel` helper with no Android call site.
 
-- `galaxies` is `dual-run`. Its parameters and six presets, the
+- `galaxies` is `kotlin` (sixth enablement wave, 2026-11-18). Its
+  parameters and six presets, the
   `%dx%dd[char]` grammar, the validation order, the description grammar,
   the generator, the deduction solver with its recursion, state, the
   `E`/`U`/`M`/`A`/`S` moves, the text form, the cursor and key labels,
@@ -2116,16 +2135,22 @@ Notes:
   which reproduces the C difficulty-2 string. `galaxies` has no
   preference and no `UI` record, and no error colour or error frame.
 
-  Enablement debt. `validate_params` accepts an area up to about 5.36e8
-  cells: `23169x23169` is accepted and `23170x23170` is rejected by the
+  `validate_params` accepts an area up to about 5.36e8 cells:
+  `23169x23169` is accepted and `23170x23170` is rejected by the
   `4*w*h` bound. Generation then allocates the `(2w+1)(2h+1)` space
-  array, so a large accepted board is effectively unbounded work. No
-  guard is added and no test generates such a board; the app generates
-  off the UI thread, and a size limit is an owner decision.
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses C:
-  the two-release wait is open. `currentKeyLabel` is a tested helper because C
-  has no Android
-  call site. The seam is `docs/adr/0007-kotlin-game-seam.md` and
+  array, so a large accepted board is effectively unbounded work. The C
+  generator retries until the solver grades the board at the requested
+  difficulty, with ten wiggliness attempts per try and no bound on the
+  tries, and the port keeps that loop. The owner made the size bound
+  warning-only (decision 2b): `Game.generationWarning` names every board
+  above 225 cells, the largest preset, and no parameter set is rejected.
+  No test generates a huge accepted board. `currentKeyLabel` is a
+  tested helper because C has no Android call site.
+  `KotlinGames.handles(GALAXIES)` is true (sixth enablement wave,
+  2026-11-18), and `SixthWaveTileSizeInputTest` clicks an occupied
+  square, clicks an edge, holds a press in the board corner, and right
+  drags an arrow from a dot to a square at two tile sizes on the Pixel
+  4a 5G. The seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
 - `solo` is `dual-run` in the engine, with **no parity claim** for the

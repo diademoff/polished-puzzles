@@ -331,12 +331,40 @@ cannot reach:
   the fixed 60-pixel radius). The `untangle` record holds the last pixel
   the drag reported, so those two steps check the vertex, the live tile
   denominator, and a point between the start and the requested end.
+- `SixthWaveTileSizeInputTest` is the shared device test for the sixth
+  enablement wave. One parameterized case per game (`galaxies`,
+  `bridges`, `unruly`, `filling`, `mines`) launches the game, reads the
+  live `BoardGeometry`, and runs a step script at the default
+  `limitDpi`, then changes `limitDpi` to `off`, checks that the tile
+  changed and is not the preferred one, and runs the second script
+  there. Every point comes from the geometry the drawing layer uses, and
+  each game's stored preferences are reset to the C defaults for the
+  run. Each step asserts the move count, that the save text changed
+  exactly when the gesture was a move, and the exact `MOVE` record. The
+  save comparison drops the `TIME` record, because `mines` is the one
+  timed game and its clock rewrites that record on every tick. The C
+  input code decides the gestures: `galaxies` clicks an occupied square
+  (inert) and an edge (`E` move), holds a press in the board corner
+  (inert), and right drags from a dot to a square (`A` move);
+  `bridges` clicks an empty cell (inert), drags from an island to the
+  next one (`L` move), and clicks an island for the C lock (`M` move);
+  `unruly` clicks the half-tile border (inert) and a cell (`P` move);
+  `filling` clicks the border and sends the digit with no selection
+  (both inert), then clicks a region and sends its digit (`i_N` move);
+  `mines` taps the border (inert), opens a tile (`O` move), and flags a
+  covered tile with a held press (`F` move). A held press becomes
+  `RIGHT_BUTTON`, so the test injects the down, lets the main looper
+  run the shell's long-press callback, then injects the move and the
+  release; the digit key goes through `GamePlay.sendKey`, the call the
+  Compose key row makes.
 - `SlowGenerationDialogTest` opens the real type menu and the real
   settings dialog and checks the slow-generation warning. The Towers
   case sets `9du`, cancels the warning (the engine must not change), and
   then continues once and cancels the progress dialog. The Mosaic case
   sets the aggressive `100x100` board, the slowest game of the fifth
-  wave, and cancels; the heavy board never starts.
+  wave, and cancels; the heavy board never starts. The Galaxies case
+  sets a custom `16x16` board, the first sixth-wave size above the 225
+  cell threshold, and cancels.
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
@@ -1946,7 +1974,7 @@ item:
   the Pixel 4a 5G.
 
 `unruly` has two C undefined-behavior guards, one seam decision, and
-two enablement debts:
+one size bound:
 
 - `encode_params` indexes `unruly_diffchars[diff]` with no bound
   (`unruly.c:238`). Validation runs before every encoding in the
@@ -1975,16 +2003,19 @@ two enablement debts:
   `newState` on a huge accepted area; `validateParams` pins the
   accepted `46340x46340` side, and `UnrulyDescTest` compares the
   rejected `65536x65536` message with C.
-  The configuration dialog needs a guard before `UNRULY` is enabled.
-  A guard rejects parameters that C accepts, so it needs a new
-  deviation entry and a test, and it must not change any accepted
-  normal parameter. Until then this is enablement debt, not a
-  deviation.
+  The owner made the size bound warning-only (decision 2b):
+  `Game.generationWarning` names every board above 196 cells, the
+  largest preset, and no parameter set is rejected. No guard is added,
+  and no deviation entry is needed.
 - The generator retries without a bound in two nested loops
   (`unruly.c:1379-1476`). A solver defect that over-fills can make the
-  "too easy" test fail forever. The generation tests run with a
-  timeout; no production guard is added, because a bound would change
-  the seed stream.
+  "too easy" test fail forever. `UnrulySolver.generate` is that loop, so
+  the C hang and the Kotlin hang are the same hang. The generation tests
+  run with a timeout; no production guard is added, because a bound
+  would change the seed stream. `KotlinGames.handles(UNRULY)` is true
+  (sixth enablement wave, 2026-11-18), and
+  `SixthWaveTileSizeInputTest` clicks the border and a cell at two tile
+  sizes on the Pixel 4a 5G.
 
 `range` has one C undefined-behavior guard, one C-defined solver rule,
 one seam decision, and one enablement debt:
@@ -2144,17 +2175,21 @@ one C solver defect, one deviation, and one enablement debt:
 The first, second, and fourth decisions are port definitions, so
 `DEVIATIONS.md` gains only D-004.
 
-`filling` has one enablement debt:
+`filling` has one size bound:
 
 - `validate_params` accepts `46340x46340`, because the area check stays
   `w > INT_MAX / h` as C writes it. Generation then allocates about
-  8.6 GB of `int` boards and does not finish. No test calls `newDesc`
-  or `newState` on a huge accepted area; only the rejected
-  `46341x46341` boundary is pinned. The configuration dialog needs a
-  guard before `FILLING` is enabled. A guard rejects parameters that C
-  accepts, so it needs a new deviation entry and a test, and it must not
-  change any accepted normal parameter. Until then this is enablement
-  debt, not a deviation.
+  8.6 GB of `int` boards. No test calls `newDesc` or `newState` on a
+  huge accepted area; only the rejected `46341x46341` boundary is
+  pinned. The C `make_board` restarts the whole board through
+  `goto retry` with no bound, and `FillingSolver.makeBoard` keeps that
+  loop. The owner made the size bound warning-only (decision 2b):
+  `Game.generationWarning` names every board above 221 cells, the
+  largest preset, and no parameter set is rejected. `KotlinGames.handles`
+  is true (sixth enablement wave, 2026-11-18), and
+  `SixthWaveTileSizeInputTest` clicks the border, the digit with no
+  selection, a region, and its digit at two tile sizes on the Pixel 4a
+  5G.
 
 `netslide` has one deviation and one enablement debt:
 
@@ -2567,18 +2602,23 @@ aggressive 100x100 latency is an enablement debt:
     initial board and executes the `AUXINFO` answer there, then diffs
     against the current state. Running the answer on the current board
     would leave a player's wrong bridge in place.
-  - Enablement debt. The engine declares the seven configuration items
-  and the `show-hints` preference, and the app builds the dialog from
-  that schema. The preference is applied after `newUi` and after
-  `Midend.fromSave` and forces a redraw, because it is not serialised
-  and not in the drawstate. `Bridges.solveGame` carries
+  - Size bound and preferences. The engine declares the seven
+  configuration items and the `show-hints` preference, and the app
+  builds the dialog from that schema. The preference is applied after
+  `newUi` and after `Midend.fromSave` and forces a redraw, because it is
+  not serialised and not in the drawstate. `Bridges.solveGame` carries
   `Generated aux string is not a valid move (!).` and `Game does not
-  have a (non-recursive) solution.`, and the shell shows the message. The
-  accepted `46340x46340` area and the unbounded retry
-    loop need an owner guard; generation already runs on the app's
-    worker. `BRIDGES` is in `KotlinGames.gameFor` and not in
-    `APP_GAMES`, so `KotlinGames.handles(BRIDGES)` is false and the
-    app keeps the C backend. The two-release wait also applies.
+  have a (non-recursive) solution.`, and the shell shows the message.
+  The accepted `46340x46340` area is warning-only (owner decision 2b):
+  `Game.generationWarning` names every board above 225 cells, the
+  largest preset, and no parameter set is rejected. The island
+  placement retries the whole board with no bound, and the per-attempt
+  island tries stop at the C `MAX_NEWISLAND_TRIES`, so the C and Kotlin
+  loops hang alike. Generation already runs on the app's worker.
+  `KotlinGames.handles(BRIDGES)` is true (sixth enablement wave,
+  2026-11-18), and `SixthWaveTileSizeInputTest` clicks an empty cell,
+  drags an island to the next one, and clicks an island for the lock at
+  two tile sizes on the Pixel 4a 5G.
 
 - `net` has two deviations (D-010 and D-011):
 
@@ -2790,13 +2830,19 @@ aggressive 100x100 latency is an enablement debt:
   reaches it: `atoi` and the move `%d` scan saturate, `decode_ui` keeps
   the low 32 bits as glibc does, a non-hex bitmap character reads as
   zero, and an impossible perturbation returns no change so the
-  generator retries. Enablement debt: mines has no preferences, so the
+  generator retries. Mines has no preferences, so the
   engine declares only the four-field configuration schema (Width,
   Height, Mines with the `%` rule, `Ensure solubility`), and
-  `Midend.solveAttempt` carries the solve message. The open items are
-  an owner size bound and a retry guard, and the two-release wait.
-  `MINES` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
-  `KotlinGames.handles(MINES)` is false.
+  `Midend.solveAttempt` carries the solve message. The size bound and
+  the retry loop are warning-only (owner decision 2b):
+  `Game.generationWarning` names every board above 256 cells, the
+  largest preset, and no parameter set is rejected. The C `minegen`
+  retries with no bound and unlocks the big perturbations after 100
+  attempts, and the port keeps both rules, so the C and Kotlin loops
+  hang alike. `KotlinGames.handles(MINES)` is true (sixth enablement
+  wave, 2026-11-18), and `SixthWaveTileSizeInputTest` taps the border,
+  opens a tile, and holds a press to flag a covered tile at two tile
+  sizes on the Pixel 4a 5G.
 
 - `TracksDescTest` is semantic. It compares the twelve presets, the
   short and full encodings, the `PARAMS ...dt` / `CPARAMS ...dN` split,
@@ -3655,6 +3701,48 @@ API 36, after the fifth-wave code commit:
   The `untangle` record holds the last interpolated drag pixel, not the
   requested end, so its two steps check the vertex, the live tile
   denominator, and a point between the start and the end.
+- These rows stay manual: the pixel goldens on the reference AVD,
+  TalkBack, contrast, font scale 200%, and performance.
+
+Sixth enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 /
+API 36, after the sixth-wave code commit:
+
+- The enabled set is `fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
+  `flip`, `twiddle`, `guess`, `blackbox`, `lightup`, `undead`, `rect`,
+  `slant`, `range`, `towers`, `unequal`, `magnets`, `pattern`,
+  `mosaic`, `signpost`, `untangle`, `galaxies`, `bridges`, `unruly`,
+  `filling`, and `mines`. `KotlinGames.handles` returns true for
+  exactly these 26 and false for every other backend.
+- `:app:connectedDebugAndroidTest` ran 95 cases: 89 passed, 0 failed,
+  6 skipped. The skips are the same six as the earlier runs (three
+  fastlane screenshot producers and three chooser goldens). The five
+  new cases are `SixthWaveTileSizeInputTest[galaxies]`, `[bridges]`,
+  `[unruly]`, `[filling]`, and `[mines]`, and none of them skipped.
+  The 43 `GamePlayParameterizedTest` cases include the new backends and
+  complete a game on the Kotlin engine. `SlowGenerationDialogTest` ran
+  three cases: Towers and Mosaic unchanged, and the new Galaxies one
+  warns for a custom `16x16` board and keeps the current game on
+  Cancel.
+- `:engine:jvmTest` -> 1135 tests, 0 failures; `:parity:test` -> 1885
+  tests, 0 failures; `:app:testDebugUnitTest` -> 113 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings.
+- This run proves the sixth wave on a device: each new game launches on
+  `KotlinGameEngine`, accepts a real gesture at two distinct tile
+  sizes, and the move count, save text, and exact `MOVE` record change
+  only when the game applies a move. The per-game gestures are the ones
+  the C input code gives: `galaxies` ignores a click on an occupied
+  square and a corner press, toggles an edge (`E1,2`), and right drags
+  an arrow (`A5,1,5,3`); `bridges` ignores a click on an empty cell,
+  bridges an island to the next one (`L1,0,4,0,1` and `L1,0,1,3,1`),
+  and locks an island (`M4,0`); `unruly` ignores a border click and
+  places `P1,0,0` and `P1,1,1`; `filling` ignores a border click and a
+  digit with no selection, then fills `0_1` and `10_1` from a region
+  click and its digit; `mines` ignores a border tap, opens `O0,0`, and
+  flags `F8,8` with a held press. The held press is a real injected
+  down, the shell's long-press callback, a move, and a release; the
+  digit goes through `GamePlay.sendKey`. The save comparison drops the
+  `TIME` record, because `mines` is the one timed game and its clock
+  rewrites that record on every tick.
 - These rows stay manual: the pixel goldens on the reference AVD,
   TalkBack, contrast, font scale 200%, and performance.
 
