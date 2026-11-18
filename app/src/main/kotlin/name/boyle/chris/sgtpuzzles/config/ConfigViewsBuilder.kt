@@ -63,7 +63,14 @@ abstract class ConfigViewsBuilder(
             setText(value)
             width =
                 context.resources.getDimensionPixelSize(if (whichEvent == CFG_SETTINGS.jni) R.dimen.dialog_edit_text_width else R.dimen.dialog_long_edit_text_width)
-            minHeight = context.dip(48f)
+            // 48dp is the minimum touch target; `minimumHeight` is the
+            // property that the platform reads for the minimum height.
+            minimumHeight = context.dip(48f)
+            // The label is also the hint, so the field carries its own
+            // label for a screen reader instead of only a relation to
+            // the sibling text. The field is never empty, so the hint
+            // stays out of sight.
+            hint = name
             setSelectAllOnFocus(true)
             onApply += { engine.configSetString(name, text.toString(), false) }
         }
@@ -108,6 +115,9 @@ abstract class ConfigViewsBuilder(
                 setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             }
             setSelection(selection)
+            // The spinner has no text of its own, so the label must be
+            // part of its node rather than only a relation to a sibling.
+            contentDescription = name
             layoutParams = TableRow.LayoutParams(
                 context.resources.getDimensionPixelSize(R.dimen.dialog_spinner_width),
                 context.dip(48f)
