@@ -31,6 +31,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 
+/** Test tag for the one composable that paints the board. */
+const val BOARD_CANVAS_TAG = "board-canvas"
+
 /**
  * Draws a [BoardFrame] on a Compose Canvas.
  *

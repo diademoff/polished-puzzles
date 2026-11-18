@@ -64,6 +64,7 @@ import androidx.preference.PreferenceManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_AUTO
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_OFF
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_ON
@@ -156,6 +157,7 @@ import java.util.concurrent.Future
 import java.util.regex.Pattern
 import kotlin.math.max
 import kotlin.math.roundToInt
+import name.boyle.chris.sgtpuzzles.render.BOARD_CANVAS_TAG
 import name.boyle.chris.sgtpuzzles.render.BoardCanvas
 import name.boyle.chris.sgtpuzzles.ui.SgTPuzzlesTheme
 
@@ -382,7 +384,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
                     frame = gameView.renderFrame.value,
                     colours = gameView.renderColours.value,
                     matrix = gameView.renderMatrix.value,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag(BOARD_CANVAS_TAG),
                 )
             }
         }
