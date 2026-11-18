@@ -860,6 +860,113 @@ object Tents : Game {
         return ""
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell, then one unit per row clue and one unit per
+     * column clue, which are outside the grid and so carry no position.
+     * A cell is its content, and its pointer buttons are the game's own
+     * cycle from `dragXform`: `Tent` and `Green` on grass, `Clear` on a
+     * tent, and nothing on a tree, where a click changes nothing.
+     *
+     * Above [BOARD_UNIT_CAP] cells only the cursor cell is exposed, as
+     * `board-a11y-spec.md` S2 decides; the arrow keys move it.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val h = s.height
+        val t = tileSize
+        val errors = findErrors(w, h, s.shared.numbers, s.grid)
+
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = "",
+            text = { x, y ->
+                val content = when (s.grid[y * w + x]) {
+                    TREE -> "tree"
+                    TENT -> "tent"
+                    NONTENT -> "marked"
+                    else -> "empty"
+                }
+                val cursor = if (u.cdisp && u.cx == x && u.cy == y) ", cursor" else ""
+                val wrong = if (errors[y * w + x] != 0) SPOKEN_WRONG else ""
+                "Row ${y + 1}, column ${x + 1}, $content$cursor$wrong"
+            },
+            actions = { x, y -> cycle(s.grid[y * w + x]) },
+        )
+
+        val clues = buildList {
+            for (y in 0 until h) {
+                val n = s.shared.numbers[w + y]
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = t / 2 + w * t + 1,
+                        top = t / 2 + y * t,
+                        width = t * 3 / 2 - 1,
+                        height = t,
+                        text = "Row ${y + 1}, $n ${tents(n)}" +
+                            wrongClue(errors[w * h + w + y]),
+                    ),
+                )
+            }
+            for (x in 0 until w) {
+                val n = s.shared.numbers[x]
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = t / 2 + x * t,
+                        top = t / 2 + h * t + 1,
+                        width = t,
+                        height = t * 3 / 2 - 1,
+                        text = "Column ${x + 1}, $n ${tents(n)}" +
+                            wrongClue(errors[w * h + x]),
+                    ),
+                )
+            }
+        }
+
+        // The cursor is at (cx, cy) even while it is hidden, so the cap
+        // can always name one cell.
+        val cursor = cells.units[u.cy * w + u.cx]
+        return cells.copy(units = cells.units + clues).capped(cursor)
+    }
+
+    /**
+     * The pointer cycle of one cell, the button meanings of `dragXform`
+     * in the words of `current_key_label`. A tree ignores both buttons,
+     * and both buttons clear a tent, so one action is enough there.
+     */
+    private fun cycle(value: Int): List<SpokenAction> = when (value) {
+        TREE -> emptyList()
+        TENT -> listOf(SpokenAction("Clear", Buttons.LEFT_BUTTON))
+        NONTENT -> listOf(
+            SpokenAction("Clear", Buttons.LEFT_BUTTON),
+            SpokenAction("Tent", Buttons.RIGHT_BUTTON),
+        )
+
+        else -> listOf(
+            SpokenAction("Tent", Buttons.LEFT_BUTTON),
+            SpokenAction("Green", Buttons.RIGHT_BUTTON),
+        )
+    }
+
+    private fun tents(count: Int): String = if (count == 1) "tent" else "tents"
+
+    private fun wrongClue(error: Int): String = if (error != 0) SPOKEN_WRONG else ""
+
     /** `game_compute_size`: the borders are truncated separately. */
     override fun computeSize(params: Game.Params, tileSize: Int): Size {
         val p = params as Params
