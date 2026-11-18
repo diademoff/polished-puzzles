@@ -218,6 +218,19 @@ For a change that affects UI, rendering, startup, or generation:
   frames, so the shell and the device are not the limit; the board draw
   is. The old bitmap renderer was not rebuilt on the phone, so the P90
   regression against it is unmeasured on hardware. D-09 stays open.
+
+  The board draw was then fixed (`BoardRecorder` kept every pass of the
+  session and every frame replayed all of them; a frame now holds one
+  pass, and the shell forces a full repaint before each one). On the
+  same phone, release build, fifteen 4x4, twenty moves 1.2 s apart:
+  P50 17 ms, P99 18 ms on a new board, and P50 12 ms, P99 14 ms at
+  about 100 and 200 moves. The move count no longer changes the frame
+  time, and the janky share falls from 100% to 0–1% on a warm session.
+  The 16.7 ms budget is met at 100 and 200 moves and missed by about
+  1–2 ms on a new board, where the GPU composition alone is 11 ms and
+  the UI thread is clean. D-09 stays open for the new-board case and
+  for the P90 comparison against the bitmap renderer; D-02 stays open
+  for tier B and the tablet.
 - **Phase 3** — the KMP core is not slower than C on the parity corpus.
 - **Phase 4** — every game passes the frame and time budgets.
 - **Phase 5** — final budgets, Macrobenchmark, Baseline Profiles.

@@ -136,7 +136,26 @@ the Kotlin seam and the midend lifecycle were missing.
     `KotlinGameEngine.redraw`, which draws the game itself; the app
     clears on a resize and a forced redraw, not after every move.
 
-12. **No deviation.** No game rule, RNG draw, seed, `DESC`, `.sgtp`,
+12. **The shell repaints the whole board before every pass.** The
+    Compose renderer must keep the pixels a game does not redraw, and
+    it does that by keeping the passes added together. `BoardRecorder`
+    drops the passes before a pass that paints a rectangle of colour
+    over everything the scene has drawn, so a full repaint keeps a
+    frame at one pass. The app therefore forces one before every pass:
+    `KotlinGameEngine.redraw` calls `Midend.forceRedraw`, and the C
+    shell calls `GameEngine.forceFullRedraw`, which is
+    `midend_force_redraw`, after every key event, timer tick, restart,
+    and solve. Both replace the drawstate, so the next redraw is a
+    full board and the first-draw clear covers the frame before it.
+    Without this the recorded scene grows with the move count and
+    every Compose frame replays the whole session.
+
+    The trace sink is unaffected: it is not a `BoardRecorder`, and its
+    traces still describe one redraw of one drawstate. The C frame
+    cost now has two passes per input, which is smaller than one
+    accumulated frame after a few moves.
+
+13. **No deviation.** No game rule, RNG draw, seed, `DESC`, `.sgtp`,
     `AUXINFO`, palette, or frozen golden changes. The games that use
     `NoDrawState` emit exactly the same trace as before, and the parity
     suite pins that byte for byte.

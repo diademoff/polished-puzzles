@@ -238,6 +238,44 @@ adb shell dumpsys gfxinfo name.boyle.chris.sgtpuzzles reset
 adb shell dumpsys gfxinfo name.boyle.chris.sgtpuzzles
 ```
 
+### Board frame fix, same phone, 2026-11-18
+
+`BoardRecorder` used to keep every drawing pass of the session and
+`BoardCanvas` replayed all of them on every Compose frame, so the frame
+cost followed the move count. A pass that repaints the window now drops
+the passes before it, and the shell forces one before every redraw:
+`KotlinGameEngine.redraw` calls `Midend.forceRedraw`, the C shell calls
+`GameEngine.forceFullRedraw` after key events, timer ticks, restart, and
+solve. Release build, R8 on, `pm clear` before each scene, `cmd
+package bg-dexopt-job` to `status=speed-profile`, twenty moves 1.2 s
+apart, `dumpsys gfxinfo` after a `reset`:
+
+| Scene | Frames | Janky (deadline / legacy) | P50 | P90 | P99 | Budget | Verdict |
+|---|---:|---:|---:|---:|---:|---|---|
+| Fifteen 4x4, new board, 20 moves | 20 | 80% / 0% | 17 | 17 | 18 | 16.7 ms, < 1% | MISS by 1–2 ms |
+| Fifteen 4x4, about 100 moves | 101 | 1.0% / 1.0% | 12 | 13 | 15 | 16.7 ms, < 1% | PASS |
+| Fifteen 4x4, about 200 moves | 100 | 0.0% / 0.0% | 12 | 13 | 14 | 16.7 ms, < 1% | PASS |
+
+`framestats` for one move on the fixed build: input to `DrawStart`
+1–2 ms, `DrawStart` to `SyncQueued` 2.9–4.1 ms (it was 202 ms at about
+210 moves before the fix), `IssueDrawCommandsStart` to `SwapBuffers`
+1.8 ms (it was 192 ms), `SwapBuffers` to `FrameCompleted` 9.7 ms. The
+UI thread is now clean (`Slow UI thread` 0); the residual on a new
+board is the 11 ms GPU composition, which the chooser shares.
+
+PSS, same build, fifteen 4x4 after about 100 moves:
+78,046 kB (76.2 MiB), against 77,333 kB (75.5 MiB) measured on the old
+build the same day. The recorded baseline is 69,611 kB on an older
+build, so this is +12% against that row and +0.9% against the build it
+replaces. Two earlier attempts are recorded here because they were
+rejected: keeping the pixels in a Compose image cost +30 MB of PSS
+(Gfx dev and native heap) and did not meet the frame budget, and
+resetting the scene at every pass without a full repaint broke every
+game that draws only its changes.
+
+Every scene above ran with the device settings from the tier A table
+restored afterwards.
+
 `dumpsys gfxinfo framestats` for one move on the 184-move game shows
 where the time goes: draw start to `SyncQueued` 222 ms,
 `IssueDrawCommandsStart` to `SwapBuffers` 184 ms, `SwapBuffers` to
@@ -260,10 +298,11 @@ Notes and limits:
   passed by the shell. On the same device, the chooser scroll is 7 ms
   P50 with 0% janky frames, so the device and the Compose pipeline are
   not the limit; the board draw is.
-- The board cost grows with the number of moves in the session: 73 ms
+- The board cost grew with the number of moves in the session: 73 ms
   P50 on a new board and 650 ms P50 at about 200 moves, with the same
-  tap spacing. The cause is not known, and nothing was changed to fix
-  it.
+  tap spacing. The cause was that the recorded scene kept every drawing
+  pass and every frame replayed all of them. The "Board frame fix"
+  section below records the fix and the numbers after it.
 - The gameplay session is 54 s, not the 10 minutes the dropped-frame
   budget names. The 100% janky result does not depend on the length.
 - There is one phone at 60 Hz. The 90 Hz tier A case, tier B, and the
