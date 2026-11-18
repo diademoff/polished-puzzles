@@ -15,7 +15,9 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.width
 import androidx.preference.PreferenceFragmentCompat
 import androidx.test.core.app.ActivityScenario
@@ -30,6 +32,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
+import name.boyle.chris.sgtpuzzles.chooser.CHOOSER_GRID_TAG
 import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
 import name.boyle.chris.sgtpuzzles.render.BOARD_CANVAS_TAG
@@ -38,20 +41,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.FileInputStream
 
 /**
- * Level: instrumentation. The shell in the three configurations that a
- * portrait, left-to-right, 100% text run cannot see.
+ * Level: instrumentation. The shell in the configurations that a
+ * portrait, left-to-right, 100% text run on a phone window cannot see.
  *
- * Each case is a P0 from `docs/DESIGN.md` section 14: the board was
- * missing in landscape, the button bar was placed outside the window in
- * right-to-left layouts, and the settings titles were ellipsized at 200%
- * text. The cases check the result, not the code that produces it: a
- * canvas that paints, keys inside the window, wrapped titles.
+ * Each case is a P0 or a large-screen rule from `docs/DESIGN.md` section
+ * 14: the board was missing in landscape, the button bar was placed
+ * outside the window in right-to-left layouts, the settings titles were
+ * ellipsized at 200% text, and a tablet window stretched the shell across
+ * its width. The cases check the result, not the code that produces it: a
+ * canvas that paints, keys inside the window, wrapped titles, a list that
+ * keeps the reading measure.
  */
 @RunWith(AndroidJUnit4::class)
 class ShellLayoutTest {
@@ -63,9 +69,21 @@ class ShellLayoutTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private var scenario: ActivityScenario<GamePlay>? = null
     private var originalOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    private var originalWindowSize: String? = null
+
+    /**
+     * The window size override of the device, if any, so every case leaves
+     * the display as it found it. The tests simulate a large window on the
+     * phone with `wm size`; nothing else about the device is changed.
+     */
+    @Before
+    fun rememberWindowSize() {
+        originalWindowSize = WINDOW_SIZE_OVERRIDE.find(shell("wm size"))?.groupValues?.get(1)
+    }
 
     @After
     fun restore() {
+        restoreWindowSize()
         scenario?.let { game ->
             game.onActivity { it.requestedOrientation = originalOrientation }
             game.close()
@@ -204,9 +222,164 @@ class ShellLayoutTest {
         }
     }
 
-    /** The canvas view is present, laid out, and paints more than one colour. */
-    private fun assertTheBoardPaints(game: ActivityScenario<GamePlay>) {
+    /**
+     * A large window keeps the shell at its reading measure. The chooser
+     * list and the settings list are capped at
+     * `shell_content_max_width` and centred, so a tablet shows a
+     * comfortable column instead of one row across 900dp.
+     */
+    @Test
+    fun theShellKeepsTheReadingMeasureOnAnExpandedWindow() {
+        withWindowSize(EXPANDED_WIDTH, EXPANDED_HEIGHT) {
+            ActivityScenario.launch<GameChooser>(
+                Intent(context, GameChooser::class.java),
+            ).use {
+                awaitWindowWidth(EXPANDED_MIN_WIDTH_DP)
+                val cap = dimensionDp(R.dimen.shell_content_max_width)
+                val grid = awaitChooserGridWidth(cap)
+                val root = composeRule.onRoot().getUnclippedBoundsInRoot()
+                assertEquals(
+                    "the capped chooser list is not centred in the ${windowWidthDp()}dp window: $grid in $root",
+                    (root.width - grid.width).value / 2,
+                    grid.left.value,
+                    1f,
+                )
+            }
+
+            ActivityScenario.launch<PrefsActivity>(
+                Intent(context, PrefsActivity::class.java),
+            ).use { prefs ->
+                awaitWindowWidth(EXPANDED_MIN_WIDTH_DP)
+                val capPx = context.resources.getDimensionPixelSize(R.dimen.shell_content_max_width)
+                val rows = awaitSettingsRows(prefs)
+                assertEquals(
+                    "the settings rows are ${rows.width}px wide, not capped at $capPx",
+                    capPx,
+                    rows.width,
+                )
+                assertEquals(
+                    "the capped settings rows are not centred",
+                    (rows.parentLeft + (rows.parentWidth - rows.width) / 2).toFloat(),
+                    rows.left.toFloat(),
+                    1f,
+                )
+            }
+        }
+    }
+
+    /**
+     * A resize keeps the game. The window grows while a game is open, so
+     * the activity handles `screenSize` in place instead of being
+     * recreated: the board is drawn at the new size, the game ID and the
+     * save text are the same, the key bar is still usable, and a real tap
+     * still moves the tile it hits on the new geometry.
+     */
+    @Test
+    fun theGameSurvivesAWindowResize() {
+        val game = launchSolvedFifteen()
+        val before = GamePlayTestSupport.awaitEngine(game)
+        val gameId = before.gameId
+
+        // The phone window is the control: the same assertions hold here.
+        assertTheBoardPaints(game)
+        assertTheKeyBarIsUsable(game, "phone window")
+
+        withWindowSize(EXPANDED_WIDTH, EXPANDED_HEIGHT) {
+            awaitWindowWidth(EXPANDED_MIN_WIDTH_DP)
+            SystemClock.sleep(ROTATION_SETTLE_MS)
+            assertTheBoardFrameIsDrawn(game, awaitBoard(game))
+            val resized = GamePlayTestSupport.awaitEngine(game)
+            assertEquals("the game id changed on resize", gameId, resized.gameId)
+            assertEquals(
+                "the saved game changed on resize",
+                GamePlayTestSupport.stableSave(before),
+                GamePlayTestSupport.stableSave(resized),
+            )
+            assertTheKeyBarIsUsable(game, "expanded window")
+
+            tapTileRow3Column2(game)
+            awaitStatus(game, "Moves: 1")
+            val afterMove = GamePlayTestSupport.awaitEngine(game)
+            assertEquals(
+                "the tap after the resize moved the wrong tile",
+                listOf("M2,3"),
+                SgtpSave.parse(GamePlayTestSupport.saveText(afterMove)).values("MOVE"),
+            )
+
+            // A wide window puts the key bar in a side column, which is the
+            // arrangement a tablet in landscape uses.
+            shell("wm size ${EXPANDED_HEIGHT}x${EXPANDED_WIDTH}")
+            awaitWindowWidth(EXPANDED_MIN_WIDTH_DP)
+            awaitOrientation(ORIENTATION_LANDSCAPE)
+            SystemClock.sleep(ROTATION_SETTLE_MS)
+            assertTheBoardFrameIsDrawn(game, awaitBoard(game))
+            assertTheKeyBarIsUsable(game, "expanded window, landscape")
+            val landscape = GamePlayTestSupport.awaitEngine(game)
+            assertEquals("the game id changed in the landscape window", gameId, landscape.gameId)
+            assertEquals(
+                "the saved game changed in the landscape window",
+                GamePlayTestSupport.stableSave(afterMove),
+                GamePlayTestSupport.stableSave(landscape),
+            )
+        }
+
+        // Back at the phone window, the same board is still drawn.
+        SystemClock.sleep(ROTATION_SETTLE_MS)
+        assertTheBoardPaints(game)
+        assertTheKeyBarIsUsable(game, "phone window after the resize")
+        assertEquals(
+            "the game id changed on the way back to the phone window",
+            gameId,
+            GamePlayTestSupport.awaitEngine(game).gameId,
+        )
+    }
+
+    /**
+     * The canvas view is present, laid out, and its renderer published a
+     * frame. This is the board check for a simulated large window, where
+     * the screen coordinates do not fit the physical screenshot.
+     */
+    private fun assertTheBoardFrameIsDrawn(game: ActivityScenario<GamePlay>, board: BoardGeometry) {
         var canvas: View? = null
+        game.onActivity { activity ->
+            canvas = activity.findViewById(R.id.game_canvas)
+        }
+        val view = requireNotNull(canvas)
+        assertTrue(
+            "the canvas has no size: ${view.width}x${view.height}",
+            view.width > 0 && view.height > 0,
+        )
+        assertTrue("the canvas is not displayed", view.isShown)
+        assertTrue(
+            "the board geometry is empty: $board",
+            board.tileSize > 0 && board.width > 0 && board.height > 0,
+        )
+        composeRule.onNodeWithTag(BOARD_CANVAS_TAG).assertIsDisplayed()
+        val deadline = SystemClock.uptimeMillis() + 5_000
+        var ops = 0
+        while (SystemClock.uptimeMillis() < deadline) {
+            game.onActivity { activity ->
+                ops = activity.getGameView().renderFrame.value?.ops?.size ?: 0
+            }
+            if (ops > 0) return
+            SystemClock.sleep(100)
+        }
+        throw AssertionError("the board frame has no drawing operations")
+    }
+
+    /** The Undo key is on screen, is at least 48dp, and stays inside the window. */
+    private fun assertTheKeyBarIsUsable(game: ActivityScenario<GamePlay>, where: String) {
+        val undo = composeRule.onNodeWithContentDescription("Undo")
+        undo.assertIsDisplayed()
+        val bounds = undo.getUnclippedBoundsInRoot()
+        val keySize = dimensionDp(R.dimen.keySize)
+        assertEquals("the Undo key is not $keySize dp wide in the $where", keySize, bounds.width.value, 0.5f)
+        assertTrue("the Undo key is below 48dp in the $where", keySize >= 48f)
+        assertKeyInsideWindow(game, bounds.left.value, "Undo ($where)")
+    }
+
+    /** The canvas view is present, laid out, and paints more than one colour. */
+    private fun assertTheBoardPaints(game: ActivityScenario<GamePlay>) {        var canvas: View? = null
         game.onActivity { activity ->
             canvas = activity.findViewById(R.id.game_canvas)
             assertNotNull("the game layout has no game_canvas view", canvas)
@@ -403,6 +576,89 @@ class ShellLayoutTest {
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     }
 
+    /**
+     * Runs [body] in a simulated window of [width] by [height] pixels and
+     * puts the device window back afterwards. The density is not touched,
+     * so a test that changes the size keeps the in-place resize path of
+     * `android:configChanges` instead of a recreation.
+     */
+    private fun withWindowSize(width: Int, height: Int, body: () -> Unit) {
+        try {
+            shell("wm size ${width}x$height")
+            body()
+        } finally {
+            restoreWindowSize()
+        }
+    }
+
+    private fun restoreWindowSize() {
+        if (originalWindowSize == null) shell("wm size reset") else shell("wm size $originalWindowSize")
+    }
+
+    /** Waits until this process sees a window at least [minDp] wide. */
+    private fun awaitWindowWidth(minDp: Int) {
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            if (context.resources.configuration.screenWidthDp >= minDp) return
+            SystemClock.sleep(50)
+        }
+        throw AssertionError(
+            "the window is ${context.resources.configuration.screenWidthDp}dp wide, not $minDp",
+        )
+    }
+
+    private fun windowWidthDp(): Int = context.resources.configuration.screenWidthDp
+
+    private fun dimensionDp(id: Int): Float {
+        val resources = context.resources
+        return resources.getDimension(id) / resources.displayMetrics.density
+    }
+
+    /** Waits until the chooser list reaches the reading measure [capDp]. */
+    private fun awaitChooserGridWidth(capDp: Float): DpRect {
+        var bounds: DpRect? = null
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            composeRule.waitForIdle()
+            bounds = composeRule.onNodeWithTag(CHOOSER_GRID_TAG).getUnclippedBoundsInRoot()
+            if (kotlin.math.abs(bounds.width.value - capDp) <= 1f) return bounds
+            SystemClock.sleep(50)
+        }
+        throw AssertionError(
+            "the chooser list is ${bounds?.width?.value}dp wide, not capped at ${capDp}dp",
+        )
+    }
+
+    /** The bounds of the settings list and of the container it is capped in. */
+    private data class SettingsRows(
+        val width: Int,
+        val left: Int,
+        val parentWidth: Int,
+        val parentLeft: Int,
+    )
+
+    /** Waits until the settings list is narrower than the window. */
+    private fun awaitSettingsRows(prefs: ActivityScenario<PrefsActivity>): SettingsRows {
+        var rows = SettingsRows(0, 0, 0, 0)
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        while (SystemClock.uptimeMillis() < deadline) {
+            prefs.onActivity { activity ->
+                val fragment = activity.supportFragmentManager
+                    .findFragmentById(android.R.id.content) as PreferenceFragmentCompat
+                val list = fragment.listView
+                val parent = list.parent as View
+                val listLocation = IntArray(2).also { list.getLocationOnScreen(it) }
+                val parentLocation = IntArray(2).also { parent.getLocationOnScreen(it) }
+                rows = SettingsRows(list.width, listLocation[0], parent.width, parentLocation[0])
+            }
+            if (rows.width > 0 && rows.width < rows.parentWidth) return rows
+            SystemClock.sleep(50)
+        }
+        throw AssertionError(
+            "the settings list is ${rows.width} of ${rows.parentWidth}px, not capped",
+        )
+    }
+
     private fun fontScale(): Float =
         shell("settings get system font_scale").trim().toFloatOrNull() ?: 1f
 
@@ -437,5 +693,17 @@ class ShellLayoutTest {
 
         /** The platform rotation animation, during which touches are dropped. */
         const val ROTATION_SETTLE_MS = 600L
+
+        /**
+         * A simulated large window: 2400 by 3000 logical pixels at the
+         * phone's 420 dpi is 914 by 1143dp, so the window width class is
+         * expanded (840dp and wider) and the shape is still portrait.
+         */
+        const val EXPANDED_WIDTH = 2400
+        const val EXPANDED_HEIGHT = 3000
+        const val EXPANDED_MIN_WIDTH_DP = 840
+
+        /** The `wm size` line that holds a window size override, if any. */
+        val WINDOW_SIZE_OVERRIDE = Regex("Override size: (\\d+x\\d+)")
     }
 }
