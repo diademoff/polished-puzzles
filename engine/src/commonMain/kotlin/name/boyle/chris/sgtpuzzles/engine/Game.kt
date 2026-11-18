@@ -510,6 +510,18 @@ interface Game {
 
     /** The cursor rectangle for the shell, or null when there is no cursor. */
     fun cursorLocation(ui: Ui, state: State, tileSize: Int): CursorRect? = null
+
+    /**
+     * The board as a screen reader reads it, in game coordinates (D-01).
+     *
+     * One unit per place the player can act, built from game state and
+     * not from pixels. The default is empty, so a game without the seam
+     * keeps the shell's single board stop and nothing else changes.
+     * `gridSpeech` in `SpokenBoard.kt` builds the plain tile case; a game
+     * appends its units outside the grid and applies `capped`.
+     */
+    fun spokenBoard(state: State, ui: Ui, tileSize: Int): SpokenBoard =
+        SpokenBoard(0, 0, "", emptyList())
 }
 
 data class Preset(val title: String, val params: String)
