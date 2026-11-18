@@ -263,8 +263,11 @@ Anything not listed here is a bug.
   compares `25x20n10` seed `12345` with the oracle, `DESC`, `AUXINFO`,
   and save included;
   `parity/.../PalisadeDescTest.kt::the huge area is accepted by validation but refused at generation`
-  pins that validation keeps the C behavior. No test calls the oracle
-  on `46340x46340`; that probe was killed by the OS.
+  pins that validation keeps the C behavior;
+  `.../GenerationLimitTest.kt::a palisade save above 50 regions loads and plays`
+  loads a hand-written `26x20n10` save (52 regions) in both engines and
+  replays one move. No test calls the oracle on `46340x46340`; that
+  probe was killed by the OS.
 - **Scope:** `palisade`
 - **Upstream:** none known
 - **Date:** 2026-11-16, revised 2026-11-18
@@ -283,8 +286,8 @@ Anything not listed here is a bug.
   attempt loop does not finish. Generation time is linear in the area
   here: `200x200` extrapolates to about 6.7 s on the phone, and
   `250x250` is 10.8 s measured. The Kotlin `validateParams`
-  keeps the C messages and still accepts `46340x46340`, the exact
-  2^20 boundary (`1024x1024`), and every preset. The Kotlin `newDesc`
+  keeps the C messages and still accepts `46340x46340` and every
+  preset; it has no area ceiling of its own. The Kotlin `newDesc`
   rejects an area above 40,000 cells (`200x200`) with
   `Width times height is too large for this build` before any RNG draw
   or allocation. `newState` is unchanged, so a hand-written game id
@@ -506,8 +509,8 @@ Anything not listed here is a bug.
   run above is the abort evidence.
 - **Review:** owner direction 2026-11-18: `tracks` is enabled in the
   app. The direction covers the generation maximum D-029 (area at most
-  484 cells, measured 2.71 s on the phone); this entry's solver result
-  stands as recorded.
+  484 cells, 2.8-24.1 s on the phone over seeds 1-6); this entry's
+  solver result stands as recorded.
 - **Scope:** `tracks`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -558,8 +561,8 @@ Anything not listed here is a bug.
   oracle run above is the abort evidence.
 - **Review:** owner direction 2026-11-18: `dominosa` is enabled in the
   app. The direction covers the generation maximum D-030 (maximum
-  number at most 9, measured 5.98 s on the phone); this entry's solve
-  text for the crafted description stands as recorded.
+  number at most 9, 0.9-18.4 s on the phone over seeds 1-5); this
+  entry's solve text for the crafted description stands as recorded.
 - **Scope:** `dominosa`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -866,8 +869,8 @@ Anything not listed here is a bug.
   heap.
 - **Review:** owner direction 2026-11-18: `pearl` is enabled in the
   app. The direction covers the generation maximum D-032 (area at most
-  144 cells, measured 0.43 s on the phone); this entry's three defined
-  overruns stand as recorded.
+  121 cells, 1.1-5.6 s on the phone over seeds 1-6); this entry's three
+  defined overruns stand as recorded.
 - **Scope:** `pearl`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -1148,7 +1151,9 @@ Anything not listed here is a bug.
   random state;
   `...::the caps are the measured numbers` pins `MAX_AREA == 90_000`;
   `parity/.../GenerationLimitTest.kt::netslide generates at 300x300`
-  compares the cap with the oracle, save included.
+  compares the cap with the oracle, save included;
+  `...::a netslide save above 90,000 cells loads and plays` loads a
+  hand-written `301x300b1` save in both engines and replays one move.
 - **Scope:** `netslide`
 - **Upstream:** none known
 - **Date:** 2026-11-18
@@ -1206,7 +1211,9 @@ Anything not listed here is a bug.
   random state;
   `...::the caps are the measured numbers` pins `MAX_AREA == 10_000`;
   `parity/.../GenerationLimitTest.kt::net generates at 100x100`
-  compares the cap with the oracle, save included.
+  compares the cap with the oracle, save included;
+  `...::a net save above 10,000 cells loads and plays` loads a
+  hand-written `101x100` save in both engines and replays one move.
 - **Scope:** `net`
 - **Upstream:** none known
 - **Date:** 2026-11-18
@@ -1216,15 +1223,25 @@ Anything not listed here is a bug.
 - **Area:** behavior
 - **Status:** active
 - **What differs:** C accepts any area up to `INT_MAX`. Hard is the
-  slow difficulty: `22x22dh` is 0.75 s on the host and 2.71 s on the
-  measured phone, and `23x23dh` is 10.0 s on the host already. The
-  Kotlin `newDesc` rejects an area above 484 cells (`22x22`) with
+  slow difficulty, and the cost is seed-sensitive. On the Pixel 4a 5G,
+  one cold ART process per measurement, seeds 1-6, the port takes
+  2.8-24.1 s at `22x22dh` (4 of 6 seeds over 10 s), 0.9-24.5 s at
+  `21x21dh`, and 0.9-13.5 s at `20x20dh`; the host Kotlin time at
+  `22x22dh` seed 12345 is 0.75 s, so the old single-seed number was one
+  observation, not a margin. The Kotlin `newDesc` rejects an area above
+  484 cells (`22x22`) with
   `Width times height is too large for this build` before the first
   RNG draw. `validateParams` stays the C function, so a larger save or
   game id still loads and plays.
-- **Why:** the step between 22x22 and 23x23 is sharp, and the cap
-  keeps the phone under the target with a 3.7x margin. No preset is
-  near it: the largest is 15x15.
+- **Why:** the cap bounds the attempt, not the seed: no measured cap
+  above the 15x15 preset kept every seed under 10 s, so the cap stays at
+  the measured `22x22` and the entry records the real spread instead of
+  a margin. The step between 22x22 and 23x23 is still sharp (`23x23dh`
+  is 10.0 s on the host). No preset or `testdata` save is near the cap:
+  the largest are 15x15 and `15x15dt`. The cap is generation-only: it
+  depends only on the parameters, it draws no random number, and it
+  leaves `validateParams`, the RNG, `DESC`, `AUXINFO`, and `.sgtp` text
+  alone.
 - **Test:**
   `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::tracks refuses an area above 484 before any draw`
   pins the `23x22dh` rejection, the fixed message, and the untouched
@@ -1236,34 +1253,44 @@ Anything not listed here is a bug.
   hand-written `23x22dh` save in both engines and replays one move.
 - **Scope:** `tracks`
 - **Upstream:** none known
-- **Date:** 2026-11-18
+- **Date:** 2026-11-18, revised 2026-11-18
 
 ### D-030: Dominosa refuses a maximum number above 9 at generation
 
 - **Area:** behavior
 - **Status:** active
 - **What differs:** C accepts a maximum number up to `INT_MAX - 2`.
-  Extreme is the slow difficulty: `9de` is 2.95 s on the host and
-  5.98 s on the measured phone, and `10de` is 12.5 s on the phone;
-  `11de` does not finish. The Kotlin `newDesc` rejects a maximum
-  number above 9 with `Maximum number is too large for this build`
-  before the first RNG draw. `validateParams` stays the C function, so
-  a larger save or game id still loads and plays.
+  Extreme is the slow difficulty, and the cost is seed-sensitive. On
+  the Pixel 4a 5G, one cold ART process per measurement, seeds 1-5, the
+  port takes 0.9-18.4 s at `9de` (seed 1 12.9 s and seed 3 18.4 s) and
+  0.2-4.1 s at `8de`; the single-seed host number (`9de` 2.95 s) was
+  one observation. `10de` was not swept again; it measured 12.5 s with
+  the earlier method. The Kotlin `newDesc` rejects a maximum number
+  above 9 with `Maximum number is too large for this build` before the
+  first RNG draw. `validateParams` stays the C function, so a larger
+  save or game id still loads and plays.
 - **Why:** one cap is the honest rule from the measurement. A
   difficulty-dependent cap would give Basic players 15 and more, since
   Basic at 15 is only 0.08 s, but Hard was never measured above 15 and
-  Basic never above 15, so that rule is untested. No preset is
-  forbidden: the largest is `9db`.
+  Basic never above 15, so that rule is untested. A cap of 8 would stay
+  under 10 s for every measured seed, but it would forbid the `9db`
+  preset and the `9db` save in `testdata`, so the cap stays at 9 and the
+  worst measured seed is recorded above. The cap is generation-only: it
+  depends only on the parameters, it draws no random number, and it
+  leaves `validateParams`, the RNG, `DESC`, `AUXINFO`, and `.sgtp` text
+  alone. No preset is forbidden: the largest is `9db`.
 - **Test:**
   `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::dominosa refuses a maximum number above 9 before any draw`
   pins the `10db` rejection with the fast difficulty, the fixed
   message, and the untouched random state;
   `...::the caps are the measured numbers` pins `MAX_N == 9`;
   `parity/.../GenerationLimitTest.kt::dominosa generates at 9`
-  compares `9db` with the oracle, save included.
+  compares `9db` with the oracle, save included;
+  `...::a dominosa save above n=9 loads and plays` loads a hand-written
+  `10de` save in both engines and replays one move.
 - **Scope:** `dominosa`
 - **Upstream:** none known
-- **Date:** 2026-11-18
+- **Date:** 2026-11-18, revised 2026-11-18
 
 ### D-031: Singles refuses an area above 400 cells at generation
 
@@ -1288,37 +1315,50 @@ Anything not listed here is a bug.
   keeps the D-017 `62x2de` message;
   `...::the caps are the measured numbers` pins `MAX_AREA == 400`;
   `parity/.../GenerationLimitTest.kt::singles generates at 20x20`
-  compares `20x20de` with the oracle, save included.
+  compares `20x20de` with the oracle, save included;
+  `...::a singles save above 400 cells loads and plays` loads a
+  hand-written `21x20de` save in both engines and replays one move.
 - **Scope:** `singles`
 - **Upstream:** none known
 - **Date:** 2026-11-18
 
-### D-032: Pearl refuses an area above 144 cells at generation
+### D-032: Pearl refuses an area above 121 cells at generation
 
 - **Area:** behavior
 - **Status:** active
 - **What differs:** C accepts any area up to `INT_MAX / h`. The step
-  between 12x12 and 13x13 is the sharpest in the measurement:
-  `12x12de` is 0.18 s on the host and 0.43 s on the measured phone,
-  `13x13de` is 43.9 s on the phone, and `14x14de` does not finish. The
-  Kotlin `newDesc` rejects an area above 144 cells (`12x12`) with
+  between 11x11 and 12x12 is the sharpest in the measurement, and the
+  cost is seed-sensitive. On the Pixel 4a 5G, one cold ART process per
+  measurement, seeds 1-6, the port takes 1.1-5.6 s at `11x11de` and
+  0.9-25.7 s at `12x12de` (4 of 6 seeds over 10 s: 13.9, 17.9, 18.0,
+  and 25.7 s). The earlier single-seed numbers (0.18 s on the host and
+  0.43 s on the phone at 12x12) were one lucky seed. `13x13de` is
+  43.9 s on the phone and `14x14de` does not finish. The Kotlin
+  `newDesc` rejects an area above 121 cells (`11x11`) with
   `Width times height is too large for this build` before the first
   RNG draw. `validateParams` stays the C function, so a larger save or
   game id still loads and plays.
-- **Why:** a deterministic rejection is better than a minute-long
-  generation, and the cap keeps the phone under the target. No preset
-  is near it: the largest is 12x8. D-019 keeps its own generator
-  guards.
+- **Why:** only 11x11 keeps every measured seed under 10 s, and it is
+  still above the largest preset (`12x8de`, 96 cells) and above every
+  `testdata` save. A deterministic rejection is better than a
+  minute-long generation. D-019 keeps its own generator guards. The cap
+  is generation-only: it depends only on the parameters, it draws no
+  random number, and it leaves `validateParams`, the RNG, `DESC`,
+  `AUXINFO`, and `.sgtp` text alone.
 - **Test:**
-  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::pearl refuses an area above 144 before any draw`
-  pins the `13x12de` rejection, the fixed message, and the untouched
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::pearl refuses an area above 121 before any draw`
+  pins the `12x11de` rejection, the fixed message, and the untouched
   random state;
-  `...::the caps are the measured numbers` pins `MAX_AREA == 144`;
-  `parity/.../GenerationLimitTest.kt::pearl generates at 12x12`
-  compares `12x12de` with the oracle, save included.
+  `...::the caps are the measured numbers` pins `MAX_AREA == 121`;
+  `parity/.../GenerationLimitTest.kt::pearl generates at 11x11`
+  compares `11x11de` with the oracle, save included;
+  `...::pearl generates its largest preset` compares `12x8de`, so the
+  cap cannot forbid a preset;
+  `...::a pearl save above 121 cells loads and plays` loads a
+  hand-written `12x11de` save in both engines and replays one move.
 - **Scope:** `pearl`
 - **Upstream:** none known
-- **Date:** 2026-11-18
+- **Date:** 2026-11-18, revised 2026-11-18
 
 ### D-033: Loopy refuses an area above 400 cells at generation
 
@@ -1344,7 +1384,9 @@ Anything not listed here is a bug.
   random state;
   `...::the caps are the measured numbers` pins `MAX_AREA == 400`;
   `parity/.../GenerationLimitTest.kt::loopy generates at 20x20`
-  compares `20x20t0dh` with the oracle, save included.
+  compares `20x20t0dh` with the oracle, save included;
+  `...::a loopy save above 400 cells loads and plays` loads a
+  hand-written `21x20t0dh` save in both engines and replays one move.
 - **Scope:** `loopy`
 - **Upstream:** none known
 - **Date:** 2026-11-18

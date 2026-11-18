@@ -343,13 +343,15 @@ now has a measured cap: 90,000 cells for `netslide` (D-026), 50 regions
 for `palisade` on top of the D-007 area, 40,000 cells for `inertia`
 (D-008), 484 for `tents` (D-027), 10,000 for `net` (D-028), 484 for
 `tracks` (D-029), a maximum number of 9 for `dominosa` (D-030), 100
-regions for `map` (D-014), 400 cells for `singles` (D-031), 144 for
+regions for `map` (D-014), 400 cells for `singles` (D-031), 121 for
 `pearl` (D-032), and 400 for `loopy` (D-033). `keen` needs no cap:
 validation already stops at 9x9 and generation measures 0.48 s on the
 phone. The caps are generation-only, so every parameter set, save, and
 game id that C accepts still loads. Each of the twelve declares its
 `Game.configure` and the preference schema that matches the C
-`get_prefs`, and none has a `Review:` line. `SeventhWaveTileSizeInputTest`
+`get_prefs`, and each keeps its `Review:` entry: the entry records the
+owner direction of 2026-11-18 for the seventh wave in ADR 0011, which
+is what cleared the review. `SeventhWaveTileSizeInputTest`
 covers the twelve on the Pixel 4a 5G at two tile sizes, and every case
 loads a frozen game id, so the device suite generates no board above a
 cap. `solo` is not enabled: D-025 waives its parity and the app stays

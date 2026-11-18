@@ -1565,10 +1565,10 @@ Notes:
   track edge that aborts the C solver. D-029 rejects an area above 484
   cells (22x22) at `newDesc` before the first draw with
   `Width times height is too large for this build`: the measured
-  22x22 Hard generation is 2.71 s on the phone, while 23x23 Hard is
-  10.0 s on the host already. Validation and the load path keep the C
-  behavior, so a hand-written `23x22` save still loads and replays its
-  moves. `KotlinGames.handles(TRACKS)` is true (seventh enablement
+  22x22 Hard generation is 2.8-24.1 s on the phone over seeds 1-6,
+  while 23x23 Hard is 10.0 s on the host already. Validation and the
+  load path keep the C behavior, so a hand-written `23x22` save still
+  loads and replays its moves. `KotlinGames.handles(TRACKS)` is true (seventh enablement
   wave, 2026-11-18), and `SeventhWaveTileSizeInputTest` taps a square
   and an edge band at two tile sizes.
 
@@ -1581,8 +1581,9 @@ Notes:
   inventory row lists the details. D-013 covers a validated
   description whose highest domino has no placement. D-030 rejects a
   maximum number above 9 at `newDesc` before the first draw with
-  `Maximum number is too large for this build`: `9de` is 5.98 s on the
-  phone and `10de` is 12.5 s. The cap is a single number on purpose;
+  `Maximum number is too large for this build`: `9de` is 0.9-18.4 s on
+  the phone over seeds 1-5 and `10de` is 12.5 s with one seed. The cap
+  is a single number on purpose;
   Basic stays fast above 9, but the measurement did not cover Hard or
   Basic at those sizes. Validation and the load path keep the C
   behavior, so a larger save still loads.
@@ -2082,13 +2083,14 @@ Notes:
   preference is a
   `Ui` field read by the UI-aware `computeSize` and by drawing; it is
   not serialized and not in the drawstate, so a redraw without the
-  resize keeps the old geometry. Generation keeps the C cost:
-  `12x12de` is 0.18 s on the host and 0.43 s on the phone, while
-  `13x13de` is 43.9 s on the phone and `14x14de` does not finish.
-  D-032 rejects an area above 144 cells (12x12) at `newDesc` before the
-  first draw, with a fixed message. Validation and the load path keep
-  the C parameter bound, so a larger save still loads. The app
-  generates off the UI thread. D-019 keeps its own generator guards.
+  resize keeps the old geometry. Generation keeps the C cost and is
+  seed-sensitive: `11x11de` is 1.1-5.6 s on the phone over seeds 1-6,
+  `12x12de` is 0.9-25.7 s over the same seeds, `13x13de` is 43.9 s, and
+  `14x14de` does not finish. D-032 rejects an area above 121 cells
+  (11x11) at `newDesc` before the first draw, with a fixed message.
+  Validation and the load path keep the C parameter bound, so a larger
+  save still loads. The app generates off the UI thread. D-019 keeps
+  its own generator guards.
   S9 is a
   tested `currentKeyLabel` helper with no Android call site.
 
@@ -2362,7 +2364,8 @@ Notes:
   it compares the 25-symbol band. No engine change is involved; a JVM
   bug report is the follow-up.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the two-release wait is open. `currentKeyLabel`
+  C: D-025 waives its parity, so enabling it needs a separate owner
+  decision. `currentKeyLabel`
   is a tested helper with no Android call site. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.

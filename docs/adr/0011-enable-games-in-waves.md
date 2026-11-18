@@ -180,8 +180,11 @@ were tightened, and D-026 to D-034 were added. The maxima are 90,000
 cells for `netslide`, 50 regions for `palisade`, 40,000 cells for
 `inertia`, 484 for `tents`, 10,000 for `net`, 484 for `tracks`, a
 maximum number of 9 for `dominosa`, 100 regions for `map`, 400 for
-`singles`, 144 for `pearl`, and 400 for `loopy`; `keen` needs none
-because validation caps the grid at 9x9. Each cap is generation-only,
+`singles`, 121 for `pearl`, and 400 for `loopy`; `keen` needs none
+because validation caps the grid at 9x9. Late on 2026-11-18 the `pearl`
+maximum was tightened from 144 to 121 cells after a six-seed sweep
+(D-032); the direction itself is unchanged, and the other maxima are
+unchanged. Each cap is generation-only,
 so every save and game id that C accepts still loads. Each of the
 twelve declares its `Game.configure` and the C preference schema, and
 its `Review:` line now records the owner direction and the cap.
