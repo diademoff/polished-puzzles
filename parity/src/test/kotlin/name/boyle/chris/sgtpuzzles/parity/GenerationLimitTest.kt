@@ -131,15 +131,17 @@ class GenerationLimitTest {
 
     /**
      * 25 symbols is the Simple, Block, and Intersect cap. Intersect is
-     * used because the first Simple generation of a JVM can differ from
-     * C at 5x5.
+     * used so the 25-symbol case stays inside the test budget.
      *
-     * A first-generation defect in `solo` can also make the first
-     * 5x5 Intersect board differ from C, with an identical encoded
-     * random state and `AUXINFO`; every later call matches C. That is
-     * pre-existing, it is not part of this change, and it is recorded in
-     * the work notes. One generation is discarded so this test compares
-     * the settled result.
+     * A first generation of a process can differ from C at 5x5: on
+     * OpenJDK 17 the JIT miscompiles the on-stack replacement of
+     * `Solo.solver`, so the first 25-symbol board of a JVM sometimes
+     * comes back with a different description and the same `AUXINFO`.
+     * The port is not at fault, the measurement is in `docs/PARITY.md`,
+     * and `SoloFirstGenerationTest` pins the fresh-JVM case with the
+     * JIT's on-stack replacement turned off. One generation is
+     * discarded here so this cap test compares the settled result in the
+     * shared test JVM.
      */
     @Test(timeout = 300_000)
     fun `solo generates at the 25 symbol cap`() {
