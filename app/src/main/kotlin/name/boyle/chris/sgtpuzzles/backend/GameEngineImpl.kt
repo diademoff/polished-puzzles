@@ -67,6 +67,7 @@ class GameEngineImpl @UsedByJNI private constructor(
     external override fun restartEvent()
     external override fun solveEvent()
     external override fun resizeEvent(x: Int, y: Int, bottomInset: Int)
+    external override fun forceFullRedraw()
     external override fun serialise(baos: ByteArrayOutputStream)
     override val currentParams: String? external get
     external override fun setCursorVisibility(visible: Boolean)

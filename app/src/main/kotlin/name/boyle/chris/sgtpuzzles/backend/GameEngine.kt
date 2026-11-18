@@ -81,6 +81,17 @@ interface GameEngine {
     fun restartEvent()
     fun solveEvent()
     fun resizeEvent(x: Int, y: Int, bottomInset: Int)
+
+    /**
+     * Repaints the whole board before the next redraw, as
+     * `midend_force_redraw` does.
+     *
+     * The renderer keeps the pixels of the passes a game does not
+     * redraw, and a full repaint lets it drop them. Without this, a game
+     * that caches its drawing leaves a frame that grows with the move
+     * count.
+     */
+    fun forceFullRedraw()
     fun serialise(baos: ByteArrayOutputStream)
     val currentParams: String?
     fun setCursorVisibility(visible: Boolean)
@@ -122,6 +133,7 @@ interface GameEngine {
             override fun restartEvent() {}
             override fun solveEvent() {}
             override fun resizeEvent(x: Int, y: Int, bottomInset: Int) {}
+            override fun forceFullRedraw() {}
             override fun serialise(baos: ByteArrayOutputStream) {}
             override val currentParams: String? get() = null
             override fun setCursorVisibility(visible: Boolean) {}

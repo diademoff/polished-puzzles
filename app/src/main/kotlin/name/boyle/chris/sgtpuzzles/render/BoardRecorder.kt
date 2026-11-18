@@ -10,6 +10,13 @@ import name.boyle.chris.sgtpuzzles.backend.GameEngine
  * JVM test can feed it the oracle trace and compare the result. The
  * Compose half is `BoardCanvas`.
  *
+ * A pass may draw only what changed, and the frontend must keep the
+ * rest (ADR 0010), so the recorded scene is the passes added together.
+ * A pass that paints over the whole window makes the earlier passes
+ * invisible, and the engines repaint the window on every redraw, so the
+ * scene is normally one pass. Without that trim it grew with every
+ * move and every Compose frame replayed the whole session.
+ *
  * Blitters are stored as the operations that produced the saved region.
  * A load replays them inside the saved rectangle, which reproduces the
  * pixels without a mutable bitmap.
@@ -27,6 +34,9 @@ class BoardRecorder : GameEngine.ViewCallbacks {
     private var nextBlitter = 0
     private var baseSize = 0
 
+    /** The area the scene paints, for the trim. */
+    private var sceneBounds: Bounds? = null
+
     /** Called when one drawing pass is complete. */
     var onFrame: (BoardFrame) -> Unit = {}
 
@@ -38,17 +48,127 @@ class BoardRecorder : GameEngine.ViewCallbacks {
     }
 
     override fun endDraw() {
+        if (paintsOverScene()) {
+            scene.clear()
+            sceneBounds = null
+        }
         val firstOfScene = scene.isEmpty()
         scene.addAll(current)
+        for (op in current) sceneBounds = union(sceneBounds, boundsOf(op))
         current.clear()
         if (firstOfScene) baseSize = scene.size
         onFrame(BoardFrame(scene.toList(), LinkedHashMap(blitters)))
     }
 
     /**
-     * True when incremental updates have grown the scene far beyond one
-     * full board. The owner should reset and force a full redraw; drawing
-     * the whole history every frame would get slower with every move.
+     * True when this pass paints a rectangle of colour over everything
+     * the scene has drawn.
+     *
+     * The engines clear the window on a new drawstate, and the shell
+     * forces that before every redraw, so normally every pass clears
+     * over the one before it and the scene holds one pass. A pass that
+     * draws only a change fails the test and is added, which is what the
+     * game expects.
+     */
+    private fun paintsOverScene(): Boolean {
+        val bounds = sceneBounds ?: return false
+        return current.any { op ->
+            op is DrawOp.FillRect && op.w > 0 && op.h > 0 &&
+                op.x <= bounds.left &&
+                op.y <= bounds.top &&
+                op.x + op.w >= bounds.right &&
+                op.y + op.h >= bounds.bottom
+        }
+    }
+
+    private fun union(a: Bounds?, b: Bounds?): Bounds? = when {
+        a == null -> b
+        b == null -> a
+        else -> Bounds(
+            minOf(a.left, b.left),
+            minOf(a.top, b.top),
+            maxOf(a.right, b.right),
+            maxOf(a.bottom, b.bottom),
+        )
+    }
+
+    /**
+     * The area one operation paints. An outline falls half a thickness
+     * outside its points and a glyph can reach past its box; a pixel of
+     * either at the window edge is redrawn by the next full pass, so
+     * both are measured by their geometry. Over-estimating only makes
+     * the trim less likely, never wrong.
+     */
+    private fun boundsOf(op: DrawOp): Bounds? = when (op) {
+        is DrawOp.FillRect -> Bounds(
+            op.x.toFloat(),
+            op.y.toFloat(),
+            (op.x + op.w).toFloat(),
+            (op.y + op.h).toFloat(),
+        )
+
+        is DrawOp.Line -> Bounds(
+            minOf(op.x1, op.x2),
+            minOf(op.y1, op.y2),
+            maxOf(op.x1, op.x2),
+            maxOf(op.y1, op.y2),
+        )
+
+        is DrawOp.Poly -> {
+            var left = Float.MAX_VALUE
+            var top = Float.MAX_VALUE
+            var right = -Float.MAX_VALUE
+            var bottom = -Float.MAX_VALUE
+            var i = 0
+            while (i + 1 < op.points.size) {
+                val x = (op.points[i] + op.ox).toFloat()
+                val y = (op.points[i + 1] + op.oy).toFloat()
+                left = minOf(left, x)
+                top = minOf(top, y)
+                right = maxOf(right, x)
+                bottom = maxOf(bottom, y)
+                i += 2
+            }
+            if (left > right) null else Bounds(left, top, right, bottom)
+        }
+
+        is DrawOp.Circle -> Bounds(
+            op.x - op.r,
+            op.y - op.r,
+            op.x + op.r,
+            op.y + op.r,
+        )
+
+        is DrawOp.Text -> {
+            val size = op.size.toFloat()
+            val width = 0.75f * size * maxOf(1, op.text.length)
+            Bounds(
+                op.x - width,
+                op.y - 1.5f * size,
+                op.x + width,
+                op.y + 0.75f * size,
+            )
+        }
+
+        is DrawOp.BlitterLoad -> {
+            val snapshot = blitters[op.id]
+            if (snapshot == null) null else Bounds(
+                op.x.toFloat(),
+                op.y.toFloat(),
+                (op.x + snapshot.w).toFloat(),
+                (op.y + snapshot.h).toFloat(),
+            )
+        }
+
+        is DrawOp.Clip, is DrawOp.Unclip -> null
+    }
+
+    private data class Bounds(val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+    /**
+     * True when the scene has grown far beyond one board. The trim
+     * leaves one pass, so this is a backstop for a game that redraws
+     * neither the window nor its own changes.
      */
     val shouldCompact: Boolean
         get() = scene.size > maxOf(MIN_SCENE_OPS, baseSize * 4)
@@ -57,6 +177,7 @@ class BoardRecorder : GameEngine.ViewCallbacks {
     fun reset() {
         scene.clear()
         current.clear()
+        sceneBounds = null
         baseSize = 0
     }
 

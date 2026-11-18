@@ -847,7 +847,16 @@ class KotlinGameEngine private constructor(
         redraw()
     }
 
+    override fun forceFullRedraw() {
+        // redraw() replaces the drawstate itself, so nothing is needed
+        // here; see the forceRedraw() call below.
+    }
+
     private fun redraw() {
+        // Every pass repaints the whole board: a fresh cache draws
+        // everything, and the first-draw clear lets the renderer drop
+        // the passes before it instead of replaying the session.
+        midend.forceRedraw()
         val drawState = midend.ensureDrawState(geometry.tileSize, sink)
         viewCallbacks.startDraw()
         // The midend owns the first-draw flag, as `midend_redraw` does.

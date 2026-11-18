@@ -238,6 +238,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             MsgType.TIMER -> {
                 if (progress == null) {
                     gameEngine.timerTick()
+                    gameEngine.forceFullRedraw()
                     if (currentBackend === INERTIA) {
                         gameView.ensureCursorVisible(gameEngine.cursorLocation)
                     }
@@ -704,7 +705,10 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         gameMenu.setOnMenuItemClickListener { item: MenuItem ->
             when (item.itemId) {
                 R.id.new_game -> startNewGame()
-                R.id.restart -> gameEngine.restartEvent()
+                R.id.restart -> {
+                    gameEngine.restartEvent()
+                    gameEngine.forceFullRedraw()
+                }
                 R.id.solve -> solveMenuItemClicked()
                 R.id.load -> loadGame()
                 R.id.save -> try {
@@ -725,6 +729,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private fun solveMenuItemClicked() {
         try {
             gameEngine.solveEvent()
+            gameEngine.forceFullRedraw()
         } catch (e: IllegalArgumentException) {
             messageBox(getString(R.string.Error), e.message, false)
         }
@@ -1178,6 +1183,9 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             return
         }
         gameEngine.keyEvent(x, y, maybeSwapMouse(k))
+        // Repaint the whole board, so the renderer drops the passes
+        // before it instead of replaying the session on every frame.
+        gameEngine.forceFullRedraw()
         if (GameView.CURSOR_KEYS.contains(k)
             || (currentBackend === INERTIA && k == '\n'.code)
             || (currentBackend === UNTANGLE && k == ' '.code)) {

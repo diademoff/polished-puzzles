@@ -363,6 +363,17 @@ JNIEXPORT void JNICALL Java_name_boyle_chris_sgtpuzzles_backend_GameEngineImpl_r
 	midend_force_redraw(fe->me);
 }
 
+/*
+ * Repaints the whole board: a new drawstate, then one redraw. The
+ * renderer keeps the pixels of the passes a game skips, so a full
+ * repaint lets it drop them and keeps a frame the size of one pass.
+ */
+JNIEXPORT void JNICALL Java_name_boyle_chris_sgtpuzzles_backend_GameEngineImpl_forceFullRedraw(JNIEnv *env, jobject gameEngine)
+{
+	ENV_TO_FE_OR_RETURN()
+	midend_force_redraw(fe->me);
+}
+
 JNIEXPORT void JNICALL Java_name_boyle_chris_sgtpuzzles_backend_GameEngineImpl_timerTick(JNIEnv *env, jobject gameEngine)
 {
 	ENV_TO_FE_OR_RETURN()
