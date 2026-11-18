@@ -2,6 +2,10 @@
 <resources>
     <style name="PrefsTheme" parent="PreferenceThemeOverlay">
         <item name="android:layout">@layout/prefs</item>
+        <!-- The Material styles of the preference subclasses leave the
+             title single-line, which ellipsizes it at large text sizes.
+             Every row must wrap its title instead. -->
+        <item name="singleLineTitle">false</item>
     </style>
 
     <!-- The completed-game prompt is a bottom panel, not a modal dialog.
