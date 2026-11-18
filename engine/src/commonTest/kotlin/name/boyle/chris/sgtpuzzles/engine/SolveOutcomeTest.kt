@@ -44,6 +44,14 @@ class SolveOutcomeTest {
         val game = object : Game by Fifteen {
             override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
                 SolveOutcome(null, null)
+
+            // `Game by Fifteen` delegates the three-argument overload
+            // to Fifteen, so a delegating game overrides both.
+            override fun solveGame(
+                state: Game.State,
+                auxInfo: String?,
+                initialState: Game.State,
+            ): SolveOutcome = solveGame(state, auxInfo)
         }
         val midend = Midend.newGame(game, "4x4", SEED)
         assertEquals("Solve operation failed", midend.solveAttempt())
@@ -55,6 +63,12 @@ class SolveOutcomeTest {
         val game = object : Game by Fifteen {
             override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
                 SolveOutcome(null, "The puzzle is already solved")
+
+            override fun solveGame(
+                state: Game.State,
+                auxInfo: String?,
+                initialState: Game.State,
+            ): SolveOutcome = solveGame(state, auxInfo)
         }
         val midend = Midend.newGame(game, "4x4", SEED)
         assertEquals("The puzzle is already solved", midend.solveAttempt())
@@ -76,6 +90,12 @@ class SolveOutcomeTest {
         val game = object : Game by Fifteen {
             override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
                 SolveOutcome(null, null)
+
+            override fun solveGame(
+                state: Game.State,
+                auxInfo: String?,
+                initialState: Game.State,
+            ): SolveOutcome = solveGame(state, auxInfo)
         }
         assertFalse(Midend.newGame(game, "4x4", SEED).solve())
         assertTrue(Midend.newGame(Fifteen, "4x4", SEED).solve())

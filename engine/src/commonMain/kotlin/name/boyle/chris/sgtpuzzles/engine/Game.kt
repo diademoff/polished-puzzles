@@ -201,6 +201,23 @@ interface Game {
     fun solveGame(state: State, auxInfo: String? = null): SolveOutcome =
         SolveOutcome(solve(state, auxInfo), null)
 
+    /**
+     * `solve_game` with the first state of the history, the `orig`
+     * argument of `midend_solve` (`midend.c:2109-2111`). C solves from
+     * the state the history started at, not from the current entry, so
+     * a `RESTART` record with a different description still solves the
+     * first description.
+     *
+     * The default drops [initialState] and calls [solveGame], so every
+     * game whose solver reads only the current state is unchanged.
+     * `solo` overrides this. The other games read the first state from
+     * their own snapshot (`Shared`, `initial`), which equals
+     * [initialState] for every history the app writes; a `RESTART` with
+     * a different description exists only in a hand-written save.
+     */
+    fun solveGame(state: State, auxInfo: String?, initialState: State): SolveOutcome =
+        solveGame(state, auxInfo)
+
     /** Applies one move, or returns null when the move is invalid. */
     fun executeMove(state: State, move: String): State?
 

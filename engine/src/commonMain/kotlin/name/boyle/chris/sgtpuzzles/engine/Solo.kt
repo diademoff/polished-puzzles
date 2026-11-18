@@ -2993,14 +2993,25 @@ object Solo : Game {
 
     /** `solve_game`, `solo.c:4302-4341`. */
     override fun solve(state: Game.State, auxInfo: String?): String? =
-        solveGame(state, auxInfo).move
+        solveOutcome(state, auxInfo).move
+
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
+        solveOutcome(state, auxInfo)
 
     /**
-     * `solve_game` (`solo.c:4301-4340`). A stored answer is returned as
-     * is. The solver reports `DIFF_IMPOSSIBLE` and `DIFF_AMBIGUOUS`,
-     * with the two C messages.
+     * `solve_game` (`solo.c:4301-4340`). C reads only `state`, the first
+     * state of the history, and never `currstate` (`midend.c:2109`), so
+     * a restart with a different description solves the first one. A
+     * stored answer is returned as is. The solver reports
+     * `DIFF_IMPOSSIBLE` and `DIFF_AMBIGUOUS`, with the two C messages.
      */
-    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+    override fun solveGame(
+        state: Game.State,
+        auxInfo: String?,
+        initialState: Game.State,
+    ): SolveOutcome = solveOutcome(initialState, auxInfo)
+
+    private fun solveOutcome(state: Game.State, auxInfo: String?): SolveOutcome {
         if (auxInfo != null) return SolveOutcome(auxInfo, null)
         val s = state as State
         val cr = s.cr

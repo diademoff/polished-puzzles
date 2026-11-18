@@ -439,13 +439,17 @@ class Midend private constructor(
      * returns the C message. The messages are the three branches of
      * `midend.c:2096-2123`: no solver, no move (with the game's text when
      * it has one), and a move that `execute_move` rejects.
+     *
+     * The game also receives `states[0]`, because C passes it as the
+     * `orig` argument (`midend.c:2109-2111`). A game that solves from
+     * the first state, such as `solo`, uses it.
      */
     fun solveAttempt(): String? {
         if (!game.canSolve) {
             return "This game does not support the Solve operation"
         }
         val previous = state
-        val outcome = game.solveGame(previous, auxInfo)
+        val outcome = game.solveGame(previous, auxInfo, entries[0].state)
         val move = outcome.move ?: return outcome.error ?: "Solve operation failed"
         val solved = game.executeMove(previous, move)
             ?: return "Solve unavailable (already solved?)"

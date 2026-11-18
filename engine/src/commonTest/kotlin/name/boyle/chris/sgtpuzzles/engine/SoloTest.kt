@@ -320,6 +320,41 @@ class SoloTest {
     }
 
     @Test
+    fun `a solve sees the first state of a restarted history`() {
+        // `midend_solve` passes `states[0]` as `orig` (`midend.c:2109`),
+        // so a `RESTART` with a different description still solves the
+        // first description. The midend passes the first state itself.
+        val first = Midend.newGame(Solo, "3x3", "1")
+        val second = Midend.newGame(Solo, "3x3", "2")
+        assertNotEquals(first.desc, second.desc)
+        assertNotEquals(first.auxInfo, second.auxInfo)
+
+        val restarted = Midend.fromSave(
+            Solo,
+            SgtpSave.of(
+                first.serialise().records.filter { it.key != "AUXINFO" }
+                    .dropLast(2)
+                    .plus(listOf(
+                        SaveRecord("NSTATES", "2"),
+                        SaveRecord("STATEPOS", "2"),
+                        SaveRecord("RESTART", second.desc),
+                    )),
+            ),
+        )
+        assertEquals(first.desc, restarted.desc, "DESC stays the first description")
+        assertTrue(
+            (restarted.state as Solo.State).shared.initialGrid
+                .contentEquals((second.state as Solo.State).shared.initialGrid),
+            "the current entry is the restarted description",
+        )
+        assertTrue(restarted.solve())
+        val move = SgtpSave.parse(restarted.serialise().serialise()).value("SOLVE")
+        assertEquals(first.auxInfo, move, "the answer is the first description's")
+        assertEquals(move, Solo.solve(first.state, null), "the first state solves the same move")
+        assertNotEquals(move, Solo.solve(second.state, null), "the restarted description differs")
+    }
+
+    @Test
     fun `key labels cursor and changed state match the C game`() {
         val midend = Midend.newGame(Solo, "3x3", "12345")
         val ui = midend.ui as Solo.Ui
