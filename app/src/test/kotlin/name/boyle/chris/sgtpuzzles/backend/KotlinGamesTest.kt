@@ -59,13 +59,14 @@ class KotlinGamesTest {
     )
 
     /**
-     * The games enabled by the four 2026-11-18 waves, in wave order.
+     * The games enabled by the waves of 2026-11-18, in wave order.
      */
     private val enabledGames = setOf(
         FIFTEEN, SAMEGAME, FLOOD, PEGS,
         SIXTEEN, FLIP, TWIDDLE, GUESS,
         BLACKBOX, LIGHTUP, UNDEAD, RECT,
         SLANT, RANGE, TOWERS, UNEQUAL,
+        MAGNETS, PATTERN, MOSAIC, SIGNPOST, UNTANGLE,
     )
 
     @Test
@@ -195,9 +196,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `mosaic is registered but the app still uses C`() {
+    fun `mosaic is registered and handled`() {
         assertEquals(Mosaic, KotlinGames.gameFor(MOSAIC))
-        assertFalse(KotlinGames.handles(MOSAIC))
+        assertTrue(KotlinGames.handles(MOSAIC))
     }
 
     @Test
@@ -219,27 +220,27 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `magnets is registered but the app still uses C`() {
+    fun `magnets is registered and handled`() {
         assertEquals(Magnets, KotlinGames.gameFor(MAGNETS))
-        assertFalse(KotlinGames.handles(MAGNETS))
+        assertTrue(KotlinGames.handles(MAGNETS))
     }
 
     @Test
-    fun `pattern is registered but the app still uses C`() {
+    fun `pattern is registered and handled`() {
         assertEquals(Pattern, KotlinGames.gameFor(PATTERN))
-        assertFalse(KotlinGames.handles(PATTERN))
+        assertTrue(KotlinGames.handles(PATTERN))
     }
 
     @Test
-    fun `signpost is registered but the app still uses C`() {
+    fun `signpost is registered and handled`() {
         assertEquals(Signpost, KotlinGames.gameFor(SIGNPOST))
-        assertFalse(KotlinGames.handles(SIGNPOST))
+        assertTrue(KotlinGames.handles(SIGNPOST))
     }
 
     @Test
-    fun `untangle is registered but the app still uses C`() {
+    fun `untangle is registered and handled`() {
         assertEquals(Untangle, KotlinGames.gameFor(UNTANGLE))
-        assertFalse(KotlinGames.handles(UNTANGLE))
+        assertTrue(KotlinGames.handles(UNTANGLE))
     }
 
     @Test
@@ -373,12 +374,12 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `the enabled set is exactly the four waves`() {
+    fun `the enabled set is exactly the five waves`() {
         val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
         assertEquals(
-            "the four waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
+            "the five waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
                 "twiddle, guess, blackbox, lightup, undead, rect, slant, range, " +
-                "towers, and unequal",
+                "towers, unequal, magnets, pattern, mosaic, signpost, and untangle",
             enabledGames,
             enabled,
         )
@@ -410,6 +411,11 @@ class KotlinGamesTest {
             Triple(RANGE, "9x6", "range/9x6.sgtp"),
             Triple(TOWERS, "5de", "towers/5de.sgtp"),
             Triple(UNEQUAL, "4de", "unequal/4de.sgtp"),
+            Triple(MAGNETS, "6x5de", "magnets/6x5de.sgtp"),
+            Triple(PATTERN, "15x15", "pattern/15x15.sgtp"),
+            Triple(MOSAIC, "10x10", "mosaic/10x10.sgtp"),
+            Triple(SIGNPOST, "4x4c", "signpost/4x4c.sgtp"),
+            Triple(UNTANGLE, "10", "untangle/10.sgtp"),
         )
         for ((backend, params, path) in cases) {
             val text = KotlinGames.generate(backend, params, "12345")
