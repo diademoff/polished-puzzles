@@ -226,7 +226,8 @@ The app adapter is covered on the JVM, without an Android runtime:
   a `RuntimeException` mapped to the failure callback, and a cancelled
   task that leaves no callback.
 - `KotlinGamesTest` checks that `handles` is true for exactly the
-  enabled set (`fifteen`, `samegame`, `flood`, and `pegs`) and false for
+  enabled set (`fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
+  `flip`, `twiddle`, and `guess`) and false for
   every other backend, that the engine registry `PortedGames` covers
   every `BackendName` and resolves through `gameFor`, that the prefs
   gate rejects a game with C preferences but no schema (and a stray
@@ -263,6 +264,22 @@ cannot reach:
   their move gesture is a tap (`samegame` needs two, select then
   remove); `pegs` is `REVERT_OFF_SCREEN`, so its tap cancels and its
   swipe moves a peg.
+- `SecondWaveTileSizeInputTest` is the shared device test for the second
+  enablement wave. One parameterized case per game (`sixteen`, `flip`,
+  `twiddle`, `guess`) launches the game, reads the live `BoardGeometry`,
+  and runs a step script on the board at the default `limitDpi`, then
+  changes `limitDpi` to `off`, checks that the tile changed and is not
+  the preferred one, and runs the second script there. Every point is
+  computed from the geometry the drawing layer uses, so the cells come
+  from the same tile and origin. Each step asserts the move count, that
+  the save text changed exactly when the gesture was a move or a stored
+  draft, and the status line when the game has one. The shell's
+  `dragMode` decides the gestures: `sixteen` (`PREVENT`) taps the frame
+  band and its swipe is swallowed; `flip` (`PREVENT`) taps a cell and
+  its swipe is swallowed; `twiddle` (`UNMODIFIED`) taps a rotation band
+  and its inert drag starts in the strip the game rejects; `guess`
+  (`REVERT_TO_START`) taps submit with no draft, drags a colour into a
+  guess peg, and taps submit again.
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
@@ -3351,7 +3368,8 @@ aggressive 100x100 latency is an enablement debt:
   generated save is the frozen oracle save.
 - `GamePlayParameterizedTest` asserts that the running engine is
   `KotlinGameEngine` for every enabled backend (`fifteen`, `samegame`,
-  `flood`, and `pegs`), then completes the 2x2 game through the real
+  `flood`, `pegs`, `sixteen`, `flip`, `twiddle`, and `guess`), then
+  completes the 2x2 game through the real
   shell on the emulator. The fifteen cases cover a hardware key, a tap,
   and a swipe, so tap and drag coordinate mapping is covered, not only
   key input. Parameter names include the index, so two cases with the
@@ -3428,6 +3446,35 @@ API 36, at the first-wave code commit `58c7b52e`:
   shell allows: `samegame` and `flood` are `PREVENT` drag games, so the
   tap is their move and the swipe is deliberately inert; `pegs` moves
   on the swipe and its tap cancels the drag.
+- These rows stay manual: the pixel goldens on the reference AVD,
+  TalkBack, contrast, font scale 200%, and performance.
+
+Second enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 /
+API 36, after the second-wave code commit:
+
+- The enabled set is `fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
+  `flip`, `twiddle`, and `guess`. `KotlinGames.handles` returns true
+  for exactly these eight and false for every other backend.
+- `:app:connectedDebugAndroidTest` ran 74 cases: 68 passed, 0 failed,
+  6 skipped. The skips are the same six as the earlier run (three
+  fastlane screenshot producers and three chooser goldens). The four
+  new cases are `SecondWaveTileSizeInputTest[sixteen]`, `[flip]`,
+  `[twiddle]`, and `[guess]`. The 43 `GamePlayParameterizedTest` cases
+  include the four new backends and complete a game on the Kotlin
+  engine.
+- `:engine:jvmTest` -> 1123 tests, 0 failures; `:parity:test` -> 1885
+  tests, 0 failures; `:app:testDebugUnitTest` -> 107 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings.
+- This run proves the second wave on a device: each new game launches on
+  `KotlinGameEngine`, accepts a real gesture at two distinct tile sizes,
+  and the move count and save text change only when the game applies a
+  move or stores a draft. The per-game gestures are the ones the shell
+  allows: `sixteen` taps a frame band and its swipe is swallowed by
+  `PREVENT`; `flip` taps a cell and its swipe is swallowed; `twiddle`
+  taps a rotation band and its inert drag starts in the rejected strip
+  (the shell is `UNMODIFIED`, so the press reaches the game); `guess`
+  taps submit with no draft (inert), drags a colour into a peg (a draft
+  in the `UI` record, no move), and taps submit again (one move).
 - These rows stay manual: the pixel goldens on the reference AVD,
   TalkBack, contrast, font scale 200%, and performance.
 

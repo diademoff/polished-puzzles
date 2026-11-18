@@ -168,6 +168,8 @@ For each game, use the matrix from `PARITY.md`:
 
 Status: `fifteen` is `kotlin` (2026-11-14). `samegame`, `flood`, and
 `pegs` are `kotlin` since 2026-11-18 (the first enablement wave).
+`sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` since 2026-11-18
+(the second enablement wave).
 `slant` is `dual-run` (2026-11-14): `SlantGeneration` and `Slant` are
 in `engine/` and pass the matrix, but the app still uses C. The
 remaining slant work is enablement. The configuration dialog comes from
@@ -186,13 +188,15 @@ trace. The evidence is `FifteenDescTest`, `FifteenGameTest`,
 `FifteenSaveTest`, and `FifteenTraceTest`.
 
 The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
-and `pegs`, and bypasses the C generator for them. It does not select it
+`pegs`, `sixteen`, `flip`, `twiddle`, and `guess`, and bypasses the C
+generator for them. It does not select it
 for `slant`; the per-game enable set in `KotlinGames` keeps slant in
 dual-run. `KotlinGamesTest` pins the enabled set and the generated
 saves; `GamePlayParameterizedTest` asserts that the running engine is
-`KotlinGameEngine` for every enabled game, and
-`FirstWaveTileSizeInputTest` sends a real tap and a real swipe at two
-tile sizes for the first wave. The C games stay in the vendored tree as
+`KotlinGameEngine` for every enabled game, `FirstWaveTileSizeInputTest`
+covers the first wave, and `SecondWaveTileSizeInputTest` covers the
+second wave, each with real gestures at two tile sizes. The C games stay
+in the vendored tree as
 the oracle and for chooser metadata, but they are not reachable as
 gameplay backends.
 
@@ -229,7 +233,19 @@ First wave, 2026-11-18: `samegame`, `flood`, and `pegs` are enabled
 with `fifteen`. Each device test is green at two tile sizes on the
 Pixel 4a 5G (Android 16 / API 36), and each of the three has no
 `Review:` deviation, no flagged size or retry debt, and no preference
-page (C `get_prefs` is NULL). The other ported games stay `dual-run` on
+page (C `get_prefs` is NULL).
+
+Second wave, 2026-11-18: `sixteen`, `flip`, `twiddle`, and `guess` are
+enabled. Each device test is green at two tile sizes on the same phone.
+None of the four has a `Review:` deviation or an open retry or hang
+debt in `docs/PARITY.md`. `sixteen`, `flip`, and `twiddle` have a NULL
+C `get_prefs` and no Kotlin schema; `guess` has a non-NULL C
+`get_prefs` and declares the matching one-item `show-labels` schema,
+which the preference page builds from. The reserve list for a later
+wave is `blackbox`, `filling`, `lightup`, `mosaic`, `pattern`,
+`signpost`, `undead`, and `untangle`; none of them is enabled here.
+
+The other ported games stay `dual-run` on
 C. The policy is `docs/adr/0011-enable-games-in-waves.md`.
 
 Exit criteria per game:

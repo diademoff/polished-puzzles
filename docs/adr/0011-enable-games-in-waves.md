@@ -94,12 +94,17 @@ Negative:
 
 ### Verification of this ADR
 
-- `KotlinGamesTest` pins the enabled set as exactly `fifteen`,
-  `samegame`, `flood`, and `pegs`, checks `handles` for every backend,
-  and reloads a generated save for each enabled game through `Midend`.
+- `KotlinGamesTest` pins the enabled set, checks `handles` for every
+  backend, and reloads a generated save for each enabled game through
+  `Midend`.
 - `GamePlayParameterizedTest` asserts `KotlinGameEngine` for every
   enabled backend.
 - `FirstWaveTileSizeInputTest` covers the first wave on the Pixel 4a 5G
   at two tile sizes.
 - `docs/TESTING.md` records the device totals, the JVM totals, and the
   lint result for this wave.
+
+Second wave (2026-11-18): `sixteen`, `flip`, `twiddle`, and `guess`
+were enabled with the same checks. `KotlinGamesTest` now pins the eight
+enabled games, and `SecondWaveTileSizeInputTest` covers the four new
+ones on the Pixel 4a 5G at two tile sizes.
