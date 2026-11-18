@@ -1,4 +1,5 @@
 import java.io.File
+import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
@@ -53,13 +54,49 @@ fun idForSimon(): String {
     return gitCommand("rev-parse", "--short", mergeBase).ifEmpty { "UNOFFICIAL" }
 }
 
+/*
+ * The `https://host/owner/repo` base of a git remote, or null when the
+ * remote is not a web or SSH one. An SSH remote is rewritten to https so
+ * the issue link works in a browser; a local path has no web form, and
+ * the caller falls back to the upstream URL.
+ */
+fun issueBaseURL(remote: String): String? {
+    val text = remote.trim()
+    val uri = try {
+        URI(text)
+    } catch (_: Exception) {
+        null
+    }
+    val host: String
+    val path: String
+    when {
+        uri?.host != null && uri.scheme in setOf("http", "https") -> {
+            host = uri.host
+            path = uri.path.orEmpty()
+        }
+        uri?.host != null && uri.scheme == "ssh" -> {
+            host = uri.host
+            path = uri.path.orEmpty()
+        }
+        else -> {
+            val scp = Regex("^[^@/]+@([^:/]+):(.+)$").find(text) ?: return null
+            host = scp.groupValues[1]
+            path = scp.groupValues[2]
+        }
+    }
+    val clean = path.trim('/').removeSuffix(".git").trim('/')
+    if (clean.split('/').size < 2) {
+        return null
+    }
+    return "https://$host/$clean"
+}
+
 fun issuesURL(): String {
+    val fallback = "https://github.com/diademoff/polished-puzzles"
     val repository = providers.environmentVariable("GITHUB_REPOSITORY").orNull
     val baseURL = when {
         !repository.isNullOrBlank() -> "https://github.com/$repository"
-        else -> gitCommand("ls-remote", "--get-url", "origin")
-            .ifEmpty { "https://github.com/diademoff/polished-puzzles" }
-            .replaceFirst(Regex("\\.git/*$"), "")
+        else -> issueBaseURL(gitCommand("ls-remote", "--get-url", "origin")) ?: fallback
     }
     return "$baseURL/issues"
 }
