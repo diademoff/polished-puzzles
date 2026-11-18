@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The switch widget of a settings row. A Material 3 switch, not the
+  AppCompat one: the track and the thumb come from the theme roles.
+  The row itself handles the click, so the switch is not clickable; the
+  48dp minimum keeps the target size.
+-->
+<com.google.android.material.materialswitch.MaterialSwitch
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/switchWidget"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:minWidth="48dp"
+    android:minHeight="48dp"
+    android:focusable="false"
+    android:clickable="false"
+    android:background="@null" />

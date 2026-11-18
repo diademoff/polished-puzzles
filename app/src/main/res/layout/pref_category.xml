@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A settings section header. Material 3 labels a section with a
+  title-small label in the one accent color, not with a large body
+  heading, so the rows stay the loudest part of the screen.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/space_l"
+    android:paddingStart="@dimen/space_m"
+    android:paddingEnd="@dimen/space_m"
+    android:background="?android:attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:baselineAligned="false"
+    tools:ignore="Overdraw">
+
+    <RelativeLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:paddingTop="@dimen/space_s"
+        android:paddingBottom="@dimen/space_s">
+
+        <TextView
+            android:id="@android:id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceTitleSmall"
+            android:textColor="?attr/colorPrimary"
+            android:textAlignment="viewStart" />
+
+        <TextView
+            android:id="@android:id/summary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@android:id/title"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textAlignment="viewStart"
+            android:maxLines="10" />
+
+    </RelativeLayout>
+
+</LinearLayout>

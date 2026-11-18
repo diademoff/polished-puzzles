@@ -6,6 +6,36 @@
              title single-line, which ellipsizes it at large text sizes.
              Every row must wrap its title instead. -->
         <item name="singleLineTitle">false</item>
+        <!-- Preferences keep their own model; only the rows and the
+             section labels use Material 3 list metrics and type. -->
+        <item name="preferenceStyle">@style/PrefsTheme.Row</item>
+        <item name="preferenceScreenStyle">@style/PrefsTheme.Row</item>
+        <item name="dialogPreferenceStyle">@style/PrefsTheme.Row</item>
+        <item name="switchPreferenceCompatStyle">@style/PrefsTheme.Switch</item>
+        <item name="seekBarPreferenceStyle">@style/PrefsTheme.SeekBar</item>
+        <item name="preferenceCategoryStyle">@style/PrefsTheme.Category</item>
+        <item name="preferenceFragmentCompatStyle">@style/PrefsTheme.List</item>
+    </style>
+
+    <style name="PrefsTheme.Row" parent="Preference.Material">
+        <item name="android:layout">@layout/pref_row</item>
+    </style>
+
+    <style name="PrefsTheme.Switch" parent="Preference.SwitchPreferenceCompat.Material">
+        <item name="android:layout">@layout/pref_row</item>
+        <item name="android:widgetLayout">@layout/pref_widget_switch</item>
+    </style>
+
+    <style name="PrefsTheme.SeekBar" parent="Preference.SeekBarPreference.Material">
+        <item name="android:layout">@layout/pref_seekbar</item>
+    </style>
+
+    <style name="PrefsTheme.Category" parent="Preference.Category.Material">
+        <item name="android:layout">@layout/pref_category</item>
+    </style>
+
+    <style name="PrefsTheme.List" parent="PreferenceFragment.Material">
+        <item name="android:divider">@drawable/pref_divider</item>
     </style>
 
     <!-- The completed-game prompt is a bottom panel, not a modal dialog.

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A settings row with Material 3 list-item metrics: 16dp side padding,
+  16dp vertical padding so a one-line row reaches the 56dp list height,
+  and body-large/body-medium text that wraps and grows with the font
+  scale. The widget frame is the library's contract: the switch, the
+  value or the copy icon is attached here.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="56dp"
+    android:gravity="center_vertical"
+    android:paddingStart="@dimen/space_m"
+    android:paddingEnd="@dimen/space_m"
+    android:background="?android:attr/selectableItemBackground"
+    android:clipToPadding="false"
+    android:baselineAligned="false"
+    tools:ignore="Overdraw,RtlSymmetry">
+
+    <RelativeLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:paddingTop="@dimen/space_m"
+        android:paddingBottom="@dimen/space_m">
+
+        <TextView
+            android:id="@android:id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceBodyLarge"
+            android:textColor="?attr/colorOnSurface" />
+
+        <TextView
+            android:id="@android:id/summary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@android:id/title"
+            android:paddingTop="@dimen/space_xs"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textAlignment="viewStart"
+            android:maxLines="10" />
+
+    </RelativeLayout>
+
+    <LinearLayout
+        android:id="@android:id/widget_frame"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:gravity="end|center_vertical"
+        android:paddingStart="@dimen/space_m"
+        android:orientation="vertical" />
+
+</LinearLayout>
