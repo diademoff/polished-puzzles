@@ -86,6 +86,24 @@ internal fun keysResultFor(
 }
 
 /**
+ * The game's own key names of a Kotlin game, by button character.
+ *
+ * `android.c` drops the names and returns only the buttons, which is
+ * enough for the screen but not for a screen reader: the shell cannot
+ * tell a "Labels" key from a bare "L". The names stay in the engine for
+ * a front end that shows them.
+ */
+internal fun keyNamesFor(
+    game: Game,
+    params: Game.Params,
+    fullCursor: Boolean,
+): Map<Char, String> = buildMap {
+    for (label in game.requestKeys(params, fullCursor).labels) {
+        if (label.name.isNotEmpty()) put(label.button.toChar(), label.name)
+    }
+}
+
+/**
  * The display name to position map of an open dialog.
  *
  * `configItemWithName` (`android.c:402-414`) scans the list from the
@@ -645,6 +663,12 @@ class KotlinGameEngine private constructor(
         params: String?,
         palisadeFullCursor: Boolean,
     ): GameEngine.KeysResult = keysResultFor(game, midend.currentParams, palisadeFullCursor)
+
+    override fun keyNames(
+        backend: BackendName,
+        params: String?,
+        palisadeFullCursor: Boolean,
+    ): Map<Char, String> = keyNamesFor(game, midend.currentParams, palisadeFullCursor)
 
     override fun timerTick() {
         val now = System.nanoTime()

@@ -75,6 +75,15 @@ interface GameEngine {
 
     fun requestKeys(backend: BackendName, params: String?, palisadeFullCursor: Boolean): KeysResult?
 
+    /**
+     * The game's own names for the keys it asks for, by button
+     * character, for a screen reader. `android.c` keeps the names in the
+     * engine and returns only the buttons, so the C engine has no names
+     * and the shell falls back to its own wording.
+     */
+    fun keyNames(backend: BackendName, params: String?, palisadeFullCursor: Boolean): Map<Char, String> =
+        emptyMap()
+
     fun timerTick()
     fun htmlHelpTopic(): String?
     fun keyEvent(x: Int, y: Int, k: Int)

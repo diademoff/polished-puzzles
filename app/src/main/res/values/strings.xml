@@ -101,6 +101,8 @@ Version %s"</string>
     <string name="About_this_app">About this app</string>
     <string name="Undo">Undo</string>
     <string name="Redo">Redo</string>
+    <!-- Spoken name of a key whose game gives it no name. -->
+    <string name="key_letter">Letter %1$s</string>
     <string name="Settings">Settings</string>
     <string name="Show_solution">Show solution</string>
     <!--  Settings -->

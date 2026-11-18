@@ -1248,6 +1248,9 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             arrowMode.value = newArrowMode
             swapLR.value = swap
             disableCharacterIcons.value = disableCharacterIcons(whichBackend)
+            keyNames.value = whichBackend?.let {
+                gameEngine.keyNames(it, gameEngine.currentParams, isPalisadeFullCursor())
+            } ?: emptyMap()
             undoEnabled.value = this@GamePlay.undoEnabled
             redoEnabled.value = this@GamePlay.redoEnabled
         }

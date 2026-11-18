@@ -36,6 +36,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -57,9 +58,11 @@ import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -69,6 +72,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.sp
@@ -125,9 +129,13 @@ import name.boyle.chris.sgtpuzzles.buttons.ArrowMode.NO_ARROWS
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.KEYBOARD_BORDERS_KEY
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.min
 
 const val SEEN_SWAP_L_R_TOAST = "seenSwapLRToast"
 const val SWAP_L_R_KEY = '*'
+
+/** Test tag of the drawn label inside a text key. */
+const val KEY_LABEL_TAG = "key-label"
 
 @UsedByJNI
 enum class ArrowMode {
@@ -149,6 +157,7 @@ class ButtonsView(context: Context, attrs: AttributeSet? = null) :
     val swapLR = mutableStateOf(false)
     val hidePrimary = mutableStateOf(false)
     val disableCharacterIcons = mutableStateOf("")
+    val keyNames = mutableStateOf<Map<Char, String>>(emptyMap())
     val backend: MutableState<BackendName> = mutableStateOf(UNTANGLE)
     val undoEnabled = mutableStateOf(false)
     val redoEnabled = mutableStateOf(false)
@@ -182,13 +191,15 @@ class ButtonsView(context: Context, attrs: AttributeSet? = null) :
             LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE,
             borders,
             onKeyListener,
-            onSwapLRListener
+            onSwapLRListener,
+            keyNames
         )
     }
 }
 
 private class ImmutableBool(override val value: Boolean) : State<Boolean>
 private class ImmutableString(override val value: String) : State<String>
+private class ImmutableKeyNames(override val value: Map<Char, String> = emptyMap()) : State<Map<Char, String>>
 
 @Composable
 private fun Buttons(
@@ -203,7 +214,8 @@ private fun Buttons(
     isLandscape: Boolean,
     borders: State<Boolean>,
     onKey: State<(Int, Boolean) -> Unit>,
-    onSwapLR: State<(Boolean) -> Unit>
+    onSwapLR: State<(Boolean) -> Unit>,
+    keyNames: State<Map<Char, String>> = ImmutableKeyNames()
 ) {
     BoxWithConstraints {
         val keyList = keys.value.toList()
@@ -289,7 +301,8 @@ private fun Buttons(
                     swapLR,
                     borders,
                     onKey,
-                    onSwapLR
+                    onSwapLR,
+                    keyNames
                 )
             }
 
@@ -369,7 +382,8 @@ private fun Characters(
     swapLR: MutableState<Boolean>,
     borders: State<Boolean>,
     onKey: State<(Int, Boolean) -> Unit>,
-    onSwapLR: State<(Boolean) -> Unit>
+    onSwapLR: State<(Boolean) -> Unit>,
+    keyNames: State<Map<Char, String>>
 ) {
     val length = characters.size
     var minorDp = minorStartDp
@@ -406,7 +420,8 @@ private fun Characters(
             swapLR,
             borders,
             onKey,
-            onSwapLR
+            onSwapLR,
+            keyNames
         )
         minor++
         minorDp += keySize
@@ -424,7 +439,8 @@ private fun Character(
     swapLR: MutableState<Boolean>,
     borders: State<Boolean>,
     onKey: State<(Int, Boolean) -> Unit>,
-    onSwapLR: State<(Boolean) -> Unit>
+    onSwapLR: State<(Boolean) -> Unit>,
+    keyNames: State<Map<Char, String>>
 ) {
     when (c.code) {
         GameView.UI_UNDO, 'U'.code -> IconKeyButton(
@@ -454,7 +470,7 @@ private fun Character(
         )
 
         else -> {
-            CharacterButton(backend, c, offset, disableCharacterIcons, borders, onKey)
+            CharacterButton(backend, c, offset, disableCharacterIcons, borders, onKey, keyNames)
         }
     }
 }
@@ -647,7 +663,8 @@ private fun CharacterButton(
     offset: IntOffset,
     disableCharacterIcons: State<String>,
     borders: State<Boolean>,
-    onKey: State<(Int, Boolean) -> Unit>
+    onKey: State<(Int, Boolean) -> Unit>,
+    keyNames: State<Map<Char, String>>
 ) {
     val lowerChar = c.lowercaseChar()
     val shouldTryIcon =
@@ -657,9 +674,15 @@ private fun CharacterButton(
     } else {
         null
     }
+    // A bare "L" tells a screen reader nothing. The game names its own
+    // keys (for example "Labels"); a game that names none, and every
+    // data-entry key, is spoken as a letter so it is not mistaken for
+    // punctuation.
+    val spoken = keyNames.value[c]
+        ?: if (c.isLetter()) stringResource(R.string.key_letter, c.uppercaseChar().toString()) else c.toString()
     if (icon != null) {
         IconKeyButton(
-            c.code, icon, contentDescription = c.toString(),
+            c.code, icon, contentDescription = spoken,
             onKey, offset, borders = borders
         )
     } else {
@@ -668,7 +691,7 @@ private fun CharacterButton(
         // keys for data entry to be uppercase in unequal because that matches the board.
         val label = (if (backend.value == UNEQUAL) c.uppercaseChar() else c).toString()
         TextKeyButton(
-            c.code, contentDescription = c.toString(),
+            c.code, contentDescription = spoken,
             onKey, offset, label = label, borders = borders)
     }
 }
@@ -723,9 +746,38 @@ private fun TextKeyButton(
         enabled = enabled,
         borders = borders
     ) {
-        Text(label, fontSize = 24.sp, fontWeight = FontWeight.Normal)
+        Text(
+            label,
+            // The button's label style brings a fixed line height that
+            // the font scale can outgrow, so the line follows the font.
+            style = LocalTextStyle.current.copy(
+                fontSize = keyLabelSize(),
+                lineHeight = TextUnit.Unspecified,
+            ),
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.testTag(KEY_LABEL_TAG),
+        )
     }
 }
+
+/**
+ * The text of a key, in sp, clamped to the key.
+ *
+ * The key is a fixed `R.dimen.keySize` and the label is 24sp. The label
+ * follows the system text scale, so at 200% it would be 48sp in a 48dp
+ * box and run over the key. The clamp keeps the drawn glyphs inside the
+ * key and still lets them grow until they fill it.
+ */
+@Composable
+private fun keyLabelSize(): TextUnit {
+    val density = LocalDensity.current
+    val keySizeDp = dimensionResource(id = R.dimen.keySize)
+    val largestThatFits = (keySizeDp.value * KEY_LABEL_FRACTION) / density.fontScale
+    return min(24f, largestThatFits).sp
+}
+
+/** The share of the key height a one-line label may use. */
+private const val KEY_LABEL_FRACTION = 0.7f
 
 fun Modifier.autoRepeat(
     interactionSource: InteractionSource,
