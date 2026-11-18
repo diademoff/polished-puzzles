@@ -6,6 +6,7 @@ import android.graphics.RectF
 import androidx.annotation.VisibleForTesting
 import name.boyle.chris.sgtpuzzles.buttons.ArrowMode
 import name.boyle.chris.sgtpuzzles.config.ConfigBuilder
+import name.boyle.chris.sgtpuzzles.engine.SpokenBoard
 import name.boyle.chris.sgtpuzzles.launch.MenuEntry
 import java.io.ByteArrayOutputStream
 
@@ -112,6 +113,16 @@ interface GameEngine {
     val colours: FloatArray
     fun suggestDensity(x: Int, y: Int): Float
     val cursorLocation: RectF
+
+    /**
+     * The board as a screen reader reads it, in view coordinates (D-01
+     * A3), or null when the engine cannot describe its board.
+     *
+     * The Kotlin engine asks the game and adds the board origin. The C
+     * engine has no such operation, so the shell falls back to one board
+     * node labelled with the game name and the status text.
+     */
+    val spokenBoard: SpokenBoard? get() = null
     @get:VisibleForTesting
     val gameSizeInGameCoords: Point
     @VisibleForTesting

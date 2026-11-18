@@ -68,6 +68,7 @@ import name.boyle.chris.sgtpuzzles.backend.GameEngine.ViewCallbacks
 import name.boyle.chris.sgtpuzzles.backend.UsedByJNI
 import name.boyle.chris.sgtpuzzles.render.BoardFrame
 import name.boyle.chris.sgtpuzzles.render.BoardRecorder
+import name.boyle.chris.sgtpuzzles.render.BoardSpeech
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
@@ -92,9 +93,21 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
     private val _renderColours = mutableStateOf(IntArray(0))
     private val _renderMatrix = mutableStateOf(FloatArray(16))
 
+    /**
+     * What a screen reader says about the board (D-01 A3). The activity
+     * refreshes it at the end of every engine drawing pass, so it always
+     * describes the state that is on screen.
+     */
+    private val _boardSpeech = mutableStateOf<BoardSpeech?>(null)
+
+    /** The last announcement of the polite live region; empty is silence. */
+    private val _boardAnnouncement = mutableStateOf("")
+
     val renderFrame: MutableState<BoardFrame?> get() = _renderFrame
     val renderColours: MutableState<IntArray> get() = _renderColours
     val renderMatrix: MutableState<FloatArray> get() = _renderMatrix
+    val boardSpeech: MutableState<BoardSpeech?> get() = _boardSpeech
+    val boardAnnouncement: MutableState<String> get() = _boardAnnouncement
 
     init {
         boardRecorder.onFrame = { _renderFrame.value = it }
@@ -845,6 +858,8 @@ class GameView(context: Context, attrs: AttributeSet?) : View(context, attrs), V
     @UsedByJNI
     override fun endDraw() {
         boardRecorder.endDraw()
+        // The board speech describes the state the engine just drew.
+        parent.onBoardRedrawn()
         if (boardRecorder.shouldCompact && !compacting) {
             compacting = true
             post {

@@ -62,7 +62,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceManager
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import name.boyle.chris.sgtpuzzles.GameView.LimitDPIMode.LIMIT_AUTO
@@ -135,7 +137,9 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.UNEQUAL_SHOW_H_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.VICTORY_FLASH_KEY
 import name.boyle.chris.sgtpuzzles.databinding.CompletedDialogBinding
 import name.boyle.chris.sgtpuzzles.databinding.MainBinding
+import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.Cancellation
+import name.boyle.chris.sgtpuzzles.engine.SpokenUnit
 import name.boyle.chris.sgtpuzzles.launch.GameProgressDialog
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator.Companion.cleanUpOldExecutables
@@ -163,6 +167,13 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import name.boyle.chris.sgtpuzzles.render.BOARD_CANVAS_TAG
 import name.boyle.chris.sgtpuzzles.render.BoardCanvas
+import name.boyle.chris.sgtpuzzles.render.BoardLiveRegion
+import name.boyle.chris.sgtpuzzles.render.BoardSemantics
+import name.boyle.chris.sgtpuzzles.render.BoardSpeech
+import name.boyle.chris.sgtpuzzles.render.BoardUtterance
+import name.boyle.chris.sgtpuzzles.render.cursorUnit
+import name.boyle.chris.sgtpuzzles.render.units
+import name.boyle.chris.sgtpuzzles.render.utteranceFor
 import name.boyle.chris.sgtpuzzles.ui.SgTPuzzlesTheme
 import name.boyle.chris.sgtpuzzles.ui.SystemColors
 
@@ -200,6 +211,19 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     private var redoToGame: String? = null
     private var gameWantsTimer = false
 
+    /**
+     * The board speech of the previous drawing pass, for the diff that
+     * the live region announces (D-01 section 6).
+     */
+    private var lastBoardSpeech: BoardSpeech? = null
+    private var lastCursorUnit: SpokenUnit? = null
+
+    /** True while the board has units, so the status line stays silent. */
+    private var boardHasUnits = false
+
+    /** The announcement that waits for the flood window to close. */
+    private var pendingAnnouncement: String? = null
+
     // specifically the screenshots test
     @get:VisibleForTesting
     var gameEngine = GameEngine.NOT_LOADED_YET
@@ -235,7 +259,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     }
 
     private enum class MsgType {
-        TIMER, COMPLETED, BACK_TIME_ELAPSED
+        TIMER, COMPLETED, BACK_TIME_ELAPSED, ANNOUNCE
     }
 
     private val onBackPressedCallback = object : OnBackPressedCallback(false) {
@@ -286,6 +310,12 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
 
             MsgType.BACK_TIME_ELAPSED -> {
                 onBackPressedCallback.isEnabled = false
+            }
+
+            MsgType.ANNOUNCE -> {
+                val text = pendingAnnouncement ?: return
+                pendingAnnouncement = null
+                gameView.boardAnnouncement.value = text
             }
         }
     }
@@ -406,12 +436,32 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             // (for example the background behind the canvas) in the same
             // world as the rest of the screen.
             SgTPuzzlesTheme(dynamicColor = SystemColors.isEnabled(this@GamePlay)) {
-                BoardCanvas(
-                    frame = gameView.renderFrame.value,
-                    colours = gameView.renderColours.value,
-                    matrix = gameView.renderMatrix.value,
-                    modifier = Modifier.fillMaxSize().testTag(BOARD_CANVAS_TAG),
-                )
+                Box(Modifier.fillMaxSize()) {
+                    BoardCanvas(
+                        frame = gameView.renderFrame.value,
+                        colours = gameView.renderColours.value,
+                        matrix = gameView.renderMatrix.value,
+                        modifier = Modifier.fillMaxSize().testTag(BOARD_CANVAS_TAG),
+                    )
+                    // D-01: the board node and its units come from game
+                    // state, not from the pixels above, and the live
+                    // region carries the diff of one board event.
+                    gameView.boardSpeech.value?.let { speech ->
+                        BoardSemantics(
+                            speech = speech,
+                            matrix = gameView.renderMatrix.value,
+                            onUnitClick = ::sendUnitClick,
+                            onUndo = { sendKey(0, 0, GameView.UI_UNDO) },
+                            onRedo = { sendKey(0, 0, GameView.UI_REDO) },
+                            onRestart = ::restartGame,
+                            onSolve = { solveMenuItemClicked() },
+                        )
+                    }
+                    BoardLiveRegion(
+                        text = gameView.boardAnnouncement.value,
+                        modifier = Modifier.align(Alignment.BottomEnd),
+                    )
+                }
             }
         }
         ViewCompat.setOnApplyWindowInsetsListener(gameView) { v, windowInsets ->
@@ -750,10 +800,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         gameMenu.setOnMenuItemClickListener { item: MenuItem ->
             when (item.itemId) {
                 R.id.new_game -> startNewGame()
-                R.id.restart -> {
-                    gameEngine.restartEvent()
-                    gameEngine.forceFullRedraw()
-                }
+                R.id.restart -> restartGame()
                 R.id.solve -> solveMenuItemClicked()
                 R.id.load -> loadGame()
                 R.id.save -> try {
@@ -778,6 +825,100 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         } catch (e: IllegalArgumentException) {
             messageBox(getString(R.string.Error), e.message, false)
         }
+    }
+
+    /** The Restart action of the menu and of the board node. */
+    private fun restartGame() {
+        gameEngine.restartEvent()
+        gameEngine.forceFullRedraw()
+    }
+
+    /**
+     * Refreshes the board speech at the end of every engine drawing
+     * pass, and schedules the diff announcement (D-01 A3, section 6).
+     *
+     * It runs on the UI thread. The engine has just drawn the new
+     * state, and for the Kotlin engine the board comes from that state,
+     * so the spoken board and the pixels cannot disagree.
+     */
+    internal fun onBoardRedrawn() {
+        if (!::gameView.isInitialized) return
+        val speech = BoardSpeech(
+            board = gameEngine.spokenBoard,
+            name = currentBackend?.displayName ?: "",
+            status = statusBar.text.toString().trim(),
+            canUndo = undoEnabled,
+            canRedo = redoEnabled,
+            canSolve = solveEnabled,
+        )
+        val previous = lastBoardSpeech
+        val previousCursor = lastCursorUnit
+        // This runs inside the engine drawing callback. The C engine
+        // cannot describe its board and any further engine call from
+        // inside its own callback would re-enter it, so a C game has no
+        // cursor, no units, and no announcement.
+        val described = speech.board != null
+        val cursor = if (described) cursorUnitOf(speech) else null
+        gameView.boardSpeech.value = speech
+        boardHasUnits = speech.units().isNotEmpty()
+        lastBoardSpeech = speech
+        lastCursorUnit = cursor
+        // A new board and a completion have nothing to diff; the
+        // completed dialog is the completion announcement.
+        if (previous == null || !described || gameEngine.isCompletedNow) return
+        val text = announcementText(utteranceFor(previous, previousCursor, speech, cursor))
+            ?: return
+        pendingAnnouncement = text
+        handler.removeMessages(MsgType.ANNOUNCE.ordinal)
+        handler.sendMessageDelayed(
+            handler.obtainMessage(MsgType.ANNOUNCE.ordinal),
+            ANNOUNCE_FLOOD_MILLIS,
+        )
+    }
+
+    /** The unit at the engine cursor, or null while the cursor is hidden. */
+    private fun cursorUnitOf(speech: BoardSpeech): SpokenUnit? {
+        val cursor = gameEngine.cursorLocation
+        if (cursor.width() <= 0f || cursor.height() <= 0f) return null
+        val x = ((cursor.left + cursor.right) / 2f).roundToInt()
+        val y = ((cursor.top + cursor.bottom) / 2f).roundToInt()
+        return speech.cursorUnit(x, y)
+    }
+
+    /** The spoken form of one utterance, with the shell's own words. */
+    private fun announcementText(utterance: BoardUtterance): String? = when (utterance) {
+        BoardUtterance.None -> null
+        is BoardUtterance.Changed -> {
+            val wrong = if (utterance.wrong) getString(R.string.board_wrong) + " " else ""
+            wrong + utterance.texts.joinToString(". ") + "."
+        }
+        is BoardUtterance.Many -> if (utterance.cursor != null) {
+            utterance.cursor + ", " +
+                resources.getQuantityString(
+                    R.plurals.board_other_cells,
+                    utterance.others,
+                    utterance.others,
+                )
+        } else {
+            resources.getQuantityString(
+                R.plurals.board_changed_cells,
+                utterance.others,
+                utterance.others,
+            )
+        }
+        is BoardUtterance.Cursor -> utterance.text + "."
+    }
+
+    /**
+     * One pointer action on a spoken unit: the press and the release at
+     * the unit centre, exactly the pair a finger produces (D-01 S3).
+     * The coordinates are the view's, so they meet the same geometry.
+     */
+    private fun sendUnitClick(unit: SpokenUnit, button: Int) {
+        val x = unit.left + unit.width / 2
+        val y = unit.top + unit.height / 2
+        sendKey(x, y, button)
+        sendKey(x, y, button + (Buttons.LEFT_RELEASE - Buttons.LEFT_BUTTON))
     }
 
     private val typeClickListener = MenuItem.OnMenuItemClickListener { item: MenuItem ->
@@ -1079,6 +1220,10 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             return
         }
         currentBackend = startingBackend
+        // A new engine starts a new board, so the diff of the previous
+        // board says nothing about it.
+        lastBoardSpeech = null
+        lastCursorUnit = null
         refreshColours()
         gameView.resetZoomForClear()
         gameView.clear()
@@ -1456,8 +1601,10 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         if (statusBar.text.toString() == shown) return
         statusBar.apply {
             text = shown
+            // D-01 section 6: while the board has units it speaks the
+            // change, so a polite status line here would say it twice.
             accessibilityLiveRegion =
-                if (status.isEmpty()) View.ACCESSIBILITY_LIVE_REGION_NONE
+                if (status.isEmpty() || boardHasUnits) View.ACCESSIBILITY_LIVE_REGION_NONE
                 else View.ACCESSIBILITY_LIVE_REGION_POLITE
             importantForAccessibility =
                 if (status.isEmpty()) View.IMPORTANT_FOR_ACCESSIBILITY_NO else View.IMPORTANT_FOR_ACCESSIBILITY_YES
@@ -1645,6 +1792,13 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         const val MAX_SAVE_SIZE: Long = 1000000 // 1MB; we only have 16MB of heap
         private const val TIMER_INTERVAL = 20
         private const val PREVENT_BACK_AFTER_KEY_PRESS_MILLIS = 600
+
+        /**
+         * The D-01 section 6 flood window: at most one announcement per
+         * 300 ms, and the last text wins, so key auto-repeat speaks about
+         * three times a second and the final position is always spoken.
+         */
+        private const val ANNOUNCE_FLOOD_MILLIS = 300L
 
         /** Whether to show data-entry keys, as opposed to undo/redo/swap-L-R which are always shown.
          * We show data-entry if we either don't have a real hardware keyboard (we usually don't),

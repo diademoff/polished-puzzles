@@ -20,6 +20,7 @@ import name.boyle.chris.sgtpuzzles.engine.GenerationCancelled
 import name.boyle.chris.sgtpuzzles.engine.KeyOutcome
 import name.boyle.chris.sgtpuzzles.engine.Midend
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
+import name.boyle.chris.sgtpuzzles.engine.SpokenBoard
 import name.boyle.chris.sgtpuzzles.engine.Text
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.MenuEntry
@@ -804,6 +805,24 @@ class KotlinGameEngine private constructor(
                 (geometry.originY + cursor.top).toFloat(),
                 (geometry.originX + cursor.left + cursor.width).toFloat(),
                 (geometry.originY + cursor.top + cursor.height).toFloat(),
+            )
+        }
+
+    /**
+     * The game's spoken board with the board origin added, so the unit
+     * rectangles are in the same coordinates as a touch (D-01 A3).
+     */
+    override val spokenBoard: SpokenBoard
+        get() {
+            val board = game.spokenBoard(midend.state, midend.ui, geometry.tileSize)
+            if (geometry.originX == 0 && geometry.originY == 0) return board
+            return board.copy(
+                units = board.units.map {
+                    it.copy(
+                        left = it.left + geometry.originX,
+                        top = it.top + geometry.originY,
+                    )
+                },
             )
         }
 

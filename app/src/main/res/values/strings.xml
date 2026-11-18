@@ -102,6 +102,23 @@ Version %s"</string>
     <string name="About_this_app">About this app</string>
     <string name="Undo">Undo</string>
     <string name="Redo">Redo</string>
+    <!-- D-01: the board node a screen reader focuses. %1$s is the game
+         name, %2$d the rows, %3$d the columns. -->
+    <string name="board_label_grid">%1$s, %2$d by %3$d.</string>
+    <!-- D-01: the board node of a game with no grid, and the C fallback. -->
+    <string name="board_label_plain">%1$s.</string>
+    <!-- D-01: three or more cells changed, after the cursor unit. -->
+    <plurals name="board_other_cells">
+        <item quantity="one">and %1$d other cell.</item>
+        <item quantity="other">and %1$d other cells.</item>
+    </plurals>
+    <!-- D-01: three or more cells changed and the cursor is not one of them. -->
+    <plurals name="board_changed_cells">
+        <item quantity="one">%1$d cell changed.</item>
+        <item quantity="other">%1$d cells changed.</item>
+    </plurals>
+    <!-- D-01: a changed unit gained the game's wrong marker. -->
+    <string name="board_wrong">Wrong.</string>
     <!-- Spoken name of a key whose game gives it no name. -->
     <string name="key_letter">Letter %1$s</string>
     <string name="Settings">Settings</string>
