@@ -59,12 +59,13 @@ class KotlinGamesTest {
     )
 
     /**
-     * The games enabled by the three 2026-11-18 waves, in wave order.
+     * The games enabled by the four 2026-11-18 waves, in wave order.
      */
     private val enabledGames = setOf(
         FIFTEEN, SAMEGAME, FLOOD, PEGS,
         SIXTEEN, FLIP, TWIDDLE, GUESS,
         BLACKBOX, LIGHTUP, UNDEAD, RECT,
+        SLANT, RANGE, TOWERS, UNEQUAL,
     )
 
     @Test
@@ -76,13 +77,13 @@ class KotlinGamesTest {
             )
         }
         assertFalse(KotlinGames.handles(MINES))
-        assertFalse(KotlinGames.handles(SLANT))
+        assertFalse(KotlinGames.handles(CUBE))
     }
 
     @Test
-    fun `slant is dual-run but the app still uses C`() {
+    fun `slant is registered and handled`() {
         assertEquals(Slant, KotlinGames.gameFor(SLANT))
-        assertFalse(KotlinGames.handles(SLANT))
+        assertTrue(KotlinGames.handles(SLANT))
     }
 
     @Test
@@ -188,9 +189,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `range is registered but the app still uses C`() {
+    fun `range is registered and handled`() {
         assertEquals(Range, KotlinGames.gameFor(RANGE))
-        assertFalse(KotlinGames.handles(RANGE))
+        assertTrue(KotlinGames.handles(RANGE))
     }
 
     @Test
@@ -272,15 +273,15 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `towers is registered but the app still uses C`() {
+    fun `towers is registered and handled`() {
         assertEquals(Towers, KotlinGames.gameFor(TOWERS))
-        assertFalse(KotlinGames.handles(TOWERS))
+        assertTrue(KotlinGames.handles(TOWERS))
     }
 
     @Test
-    fun `unequal is registered but the app still uses C`() {
+    fun `unequal is registered and handled`() {
         assertEquals(Unequal, KotlinGames.gameFor(UNEQUAL))
-        assertFalse(KotlinGames.handles(UNEQUAL))
+        assertTrue(KotlinGames.handles(UNEQUAL))
     }
 
     @Test
@@ -372,11 +373,12 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `the enabled set is exactly the three waves`() {
+    fun `the enabled set is exactly the four waves`() {
         val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
         assertEquals(
-            "the three waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
-                "twiddle, guess, blackbox, lightup, undead, and rect",
+            "the four waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
+                "twiddle, guess, blackbox, lightup, undead, rect, slant, range, " +
+                "towers, and unequal",
             enabledGames,
             enabled,
         )
@@ -404,6 +406,10 @@ class KotlinGamesTest {
             Triple(LIGHTUP, "7x7b20s3d0", "lightup/7x7b20s3d0.sgtp"),
             Triple(UNDEAD, "4x4dn", "undead/4x4dn.sgtp"),
             Triple(RECT, "7x7", "rect/7x7.sgtp"),
+            Triple(SLANT, "5x5de", "slant/5x5de.sgtp"),
+            Triple(RANGE, "9x6", "range/9x6.sgtp"),
+            Triple(TOWERS, "5de", "towers/5de.sgtp"),
+            Triple(UNEQUAL, "4de", "unequal/4de.sgtp"),
         )
         for ((backend, params, path) in cases) {
             val text = KotlinGames.generate(backend, params, "12345")

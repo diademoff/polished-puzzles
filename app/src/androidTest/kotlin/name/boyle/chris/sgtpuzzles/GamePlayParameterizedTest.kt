@@ -136,13 +136,15 @@ class GamePlayParameterizedTest(
          * enablement wave (2026-11-18) is `fifteen`, `samegame`,
          * `flood`, and `pegs`; the second wave is `sixteen`, `flip`,
          * `twiddle`, and `guess`; the third wave is `blackbox`,
-         * `lightup`, `undead`, and `rect`. A game joins this set with
+         * `lightup`, `undead`, and `rect`; the fourth wave is `slant`,
+         * `range`, `towers`, and `unequal`. A game joins this set with
          * its wave entry in `docs/ROADMAP.md`.
          */
         private val kotlinBackends = setOf(
             FIFTEEN, SAMEGAME, FLOOD, PEGS,
             SIXTEEN, FLIP, TWIDDLE, GUESS,
             BLACKBOX, LIGHTUP, UNDEAD, RECT,
+            SLANT, RANGE, TOWERS, UNEQUAL,
         )
 
         data class Example(
