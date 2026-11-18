@@ -413,6 +413,30 @@ cannot reach:
 - `FifteenChooserLaunchTest` clicks the `fifteen` row in the real
   chooser and checks that `GamePlay` opens with the Kotlin engine and
   `Moves: 0`.
+- `ShellLayoutTest` covers the three shell configurations that the
+  portrait, left-to-right, 100% text run cannot see; each was a P0 in
+  `docs/DESIGN.md` section 14.
+  `theBoardIsDrawnInLandscape` opens a solved fifteen game, checks that
+  the `game_canvas` view exists, has a non-zero size, is displayed, and
+  that a screenshot of its bounds carries more than one colour, then
+  rotates to landscape and back and repeats the check. At every step
+  the game id and the save text (without the `TIME` record) must be
+  unchanged. `theButtonBarStaysInTheWindowInRtl` sets the window layout
+  direction to right-to-left, as a right-to-left locale does, and
+  checks that the Undo and Redo keys are 48dp and lie inside both the
+  key bar and the window. It then taps the tile left of the gap and
+  asserts the exact `MOVE` record `M2,3`, because a mirrored board
+  would move the tile on the right, and clicks Undo, which must return
+  the status to `Moves: 0`. The board and the key geometry do not
+  mirror; the shell around them does. The third case,
+  `theSettingsTitlesWrapAtTwoHundredPercentText`, sets the system text
+  scale to 200%, finds the `Show reminders of controls` title, and
+  asserts that the layout carries no ellipsis, that the view is at
+  least as tall as its layout, and that the title wrapped to two lines.
+  It restores the original scale in a `finally` block. All three cases
+  fail on the code before the fixes: no `game_canvas` view in
+  landscape, `Undo` outside the window in RTL, and an ellipsized title
+  at 200%.
 
 ## 4. Corpus
 
@@ -3839,6 +3863,50 @@ Seventh enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android
   same edge at the live tile size; they are now one tile apart, on the
   midpoint of each edge, and the expected moves are `3y`, `1y`, `5y`,
   and `8y`.
+
+Shell P0 wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 / API
+36, after the shell accessibility and guideline audits:
+
+- Three P0 defects, all reproduced on the phone before the fix. The
+  board was not drawn in landscape: `layout-land/main.xml` had no
+  `game_canvas` view, so the Compose board had nothing to draw on and
+  `GameView.onDraw` stayed empty. The button bar was off-screen in a
+  right-to-left layout: the key box placed its content at the start
+  edge and then added positive absolute offsets, so every key landed
+  outside the window. Settings titles ellipsized at 200% text:
+  `PreferenceThemeOverlay` maps the `SwitchPreferenceCompat` and
+  `ListPreference` styles to their Material variants, which set
+  `android:layout` but not `singleLineTitle`, so the title view kept
+  the layout's `singleLine="true"`.
+- Fixes. `layout-land/main.xml` now wraps `GameView` in the same
+  `game_area` FrameLayout as portrait, with the transparent `ComposeView`
+  under the transparent `GameView`, and the same layout rules, so the
+  board keeps its geometry. `Buttons` places the key box at the
+  absolute top left (`BiasAbsoluteAlignment`); `BiasAlignment` is
+  direction-aware and mirrors its horizontal bias, which is why it
+  does not fix the layout. `PrefsTheme` sets `singleLineTitle` to
+  `false`, which reaches every preference subclass style.
+- `:app:connectedDebugAndroidTest` ran 110 cases: 104 passed, 0 failed,
+  6 skipped. The six skips are the same three fastlane producers and
+  three chooser goldens. The three new cases are
+  `ShellLayoutTest.theBoardIsDrawnInLandscape`,
+  `theButtonBarStaysInTheWindowInRtl`, and
+  `theSettingsTitlesWrapAtTwoHundredPercentText`.
+- `:engine:jvmTest` -> 1151 tests, 0 failures; `:parity:test` -> 1915
+  tests, 0 failures; `:app:testDebugUnitTest` -> 105 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings;
+  `tools/check-upstream-diff.sh --strict` and
+  `tools/check-upstream-lock.sh` both pass.
+- The three cases fail on the old code for the three separate reasons:
+  `the game layout has no game_canvas view`, `The component with
+  ContentDescription = 'Undo' ... is not displayed`, and `the title is
+  ellipsized at 200% text: lines=1 maxLines=1 ellipsize=MARQUEE`. The
+  RTL case checks the exact `MOVE` record, so it would also fail if the
+  board mirrored.
+- Device state changed for the run and restored: the system text scale
+  (the test does this itself), the window layout direction (per test
+  activity), and the display rotation. The per-app locale and the
+  rotation settings were used for the manual screenshots and restored.
 
 ## 9. CI
 
