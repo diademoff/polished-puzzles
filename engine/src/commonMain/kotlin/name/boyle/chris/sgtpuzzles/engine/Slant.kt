@@ -197,6 +197,22 @@ object Slant : Game {
     override fun solve(state: Game.State, auxInfo: String?): String? =
         solveGame(state, auxInfo).move
 
+    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome =
+        solveOutcome(state, auxInfo, state)
+
+    /**
+     * `solve_game` with the first state of the history, the `orig`
+     * argument of `midend_solve` (`midend.c:2109-2111`). C reads
+     * `state`, not `currstate`, for both the clues and the diff
+     * (`slant.c:1550-1601`), so a cell that a move already set to the
+     * answer value stays in the move.
+     */
+    override fun solveGame(
+        state: Game.State,
+        auxInfo: String?,
+        initialState: Game.State,
+    ): SolveOutcome = solveOutcome(initialState, auxInfo, initialState)
+
     /**
      * `solve_game` (`slant.c:1544-1592`). A stored answer is used
      * directly. Otherwise `slant_solve` reports 0 for a contradiction
@@ -204,8 +220,13 @@ object Slant : Game {
      * short `aux` is a seam guard: C reads `w*h` bytes without a length,
      * so no C message applies.
      */
-    override fun solveGame(state: Game.State, auxInfo: String?): SolveOutcome {
+    private fun solveOutcome(
+        state: Game.State,
+        auxInfo: String?,
+        against: Game.State,
+    ): SolveOutcome {
         val s = state as State
+        val board = against as State
         val w = s.params.width
         val h = s.params.height
         val soln = IntArray(w * h)
@@ -232,7 +253,8 @@ object Slant : Game {
         for (y in 0 until h) {
             for (x in 0 until w) {
                 val value = if (soln[y * w + x] == -1) -1 else 1
-                if (s.soln[y * w + x] != value) {
+                // C diffs `state->soln`, the first board of the history.
+                if (board.soln[y * w + x] != value) {
                     move.append(';')
                     move.append(if (value < 0) '\\' else '/')
                     move.append(x).append(',').append(y)
