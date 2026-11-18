@@ -224,7 +224,7 @@ Anything not listed here is a bug.
 - **Upstream:** none known
 - **Date:** 2026-11-15
 
-### D-007: Palisade refuses an area above 2^20 cells at generation
+### D-007: Palisade refuses an area above 2^20 cells and 50 regions at generation
 
 - **Area:** behavior
 - **Status:** active
@@ -232,32 +232,42 @@ Anything not listed here is a bug.
   `INT_MAX` cells, including `46340x46340` (2,147,395,600 cells).
   `new_game_desc` then allocates the clue, rim, scratch, winnow-order,
   and `4*wh` addable tables, which is tens of gigabytes, and the
-  generator does not finish. The Kotlin `validateParams` keeps the C
-  messages and still accepts `46340x46340`, the exact 2^20 boundary,
-  and every normal preset. The Kotlin `newDesc` rejects an area above
-  2^20 cells with `Width times height is too large for this build`
-  before any RNG draw or allocation. `newState` is unchanged, so a
-  hand-written game id with a huge area still allocates; only
-  generation is guarded.
+  generator does not finish. The measured generation cost follows the
+  region count `w*h/k`, not the area: `25x20n10` (50 regions) takes
+  about 7.2 s on the phone, `28x20n10` (56) 9.4 s, and `30x20n10` (60)
+  27.1 s, while `25x20n5` (100 regions) does not finish. The Kotlin
+  `validateParams` keeps the C messages and still accepts
+  `46340x46340`, the exact 2^20 boundary, and every normal preset. The
+  Kotlin `newDesc` rejects an area above 2^20 cells with `Width times
+  height is too large for this build`, and a region count above 50 with
+  `Too many regions to generate in this build`, before any RNG draw or
+  allocation. `newState` is unchanged, so a hand-written game id with a
+  huge area or region count still allocates; only generation is
+  guarded.
 - **Why:** a hang or an out-of-memory crash in the generator is worse
-  than a deterministic rejection. The guard depends only on the
-  parameters and the message is fixed, so the same request always fails
-  the same way. No seed, `DESC`, `AUXINFO`, or `.sgtp` text of a valid
-  game changes, because no preset is near the limit.
+  than a deterministic rejection. The region cap is the measured one:
+  the largest preset is 18 regions, so no preset changes. The guards
+  depend only on the parameters and the messages are fixed, so the
+  same request always fails the same way. No seed, `DESC`, `AUXINFO`,
+  or `.sgtp` text of a valid game changes.
 - **Test:**
   `engine/src/commonTest/kotlin/.../PalisadeTest.kt::the huge area is accepted by validation and guarded at generation`
   pins the accepted boundary, the `2^20` and `1025x1024n8` cases, and
   the message;
-  `parity/src/test/kotlin/.../PalisadeDescTest.kt::the huge area is accepted by validation but refused at generation`
+  `.../GenerationLimitTest.kt::palisade refuses more than 50 regions before any draw`
+  pins the 52-region case, the exact message, and the untouched random
+  state;
+  `parity/src/test/kotlin/.../GenerationLimitTest.kt::palisade generates at 50 regions`
+  compares `25x20n10` seed `12345` with the oracle, `DESC`, `AUXINFO`,
+  and save included;
+  `parity/.../PalisadeDescTest.kt::the huge area is accepted by validation but refused at generation`
   pins that validation keeps the C behavior. No test calls the oracle
   on `46340x46340`; that probe was killed by the OS.
-- **Review:** the owner should decide the final area limit before
-  `palisade` is enabled in the app.
 - **Scope:** `palisade`
 - **Upstream:** none known
-- **Date:** 2026-11-16
+- **Date:** 2026-11-16, revised 2026-11-18
 
-### D-008: Inertia refuses an area above 2^20 cells at generation
+### D-008: Inertia refuses an area above 40,000 cells at generation
 
 - **Area:** behavior
 - **Status:** active
@@ -268,39 +278,44 @@ Anything not listed here is a bug.
   allocates a `w*h` grid and three `w*h*8` scratch arrays
   (`inertia.c:234-243`): two byte arrays of about 17 GB each and an
   int array of about 69 GB, plus the grid. The unbounded `while (1)`
-  attempt loop does not finish. The Kotlin `validateParams`
-  keeps the C messages and still accepts `46340x46340`, the exact 2^20
-  boundary (`1024x1024`), and every preset. The Kotlin `newDesc`
-  rejects an area above 2^20 cells with
+  attempt loop does not finish. Generation time is linear in the area
+  here: `200x200` extrapolates to about 6.7 s on the phone, and
+  `250x250` is 10.8 s measured. The Kotlin `validateParams`
+  keeps the C messages and still accepts `46340x46340`, the exact
+  2^20 boundary (`1024x1024`), and every preset. The Kotlin `newDesc`
+  rejects an area above 40,000 cells (`200x200`) with
   `Width times height is too large for this build` before any RNG draw
   or allocation. `newState` is unchanged, so a hand-written game id
   with a huge area still follows the C allocation; only generation is
   guarded.
 - **Why:** a hang or an out-of-memory crash in the generator is worse
-  than a deterministic rejection. The guard depends only on the
-  parameters and the message is fixed, so the same request always fails
-  the same way. No seed, `DESC`, `AUXINFO`, or `.sgtp` text of a valid
-  game changes, because no preset is near the limit.
+  than a deterministic rejection, and 250x250 is over the phone time
+  target. The guard depends only on the parameters and the message is
+  fixed, so the same request always fails the same way. No seed, `DESC`,
+  `AUXINFO`, or `.sgtp` text of a valid game changes.
 - **Test:**
   `engine/src/commonTest/kotlin/.../InertiaTest.kt::generation refuses a huge area before any RNG draw`
-  pins the accepted `46340x46340` and `1024x1024` boundaries in
-  validation, the rejected `1025x1024` area, and the message;
+  pins the accepted `46340x46340` and `200x200` boundaries in
+  validation, the rejected `201x200` area, and the message;
   `InertiaTest.kt::the area guard leaves the RNG state untouched`
   pins that the encoded `RandomState` is byte-identical before and
   after a refused `newDesc`; `InertiaTest.kt::the generation boundary
-  is exactly 2^20 cells` pins `MAX_AREA == 1 shl 20` and the
+  is exactly 40,000 cells` pins `MAX_AREA == 40_000` and the
   generation guard on both sides of the limit. That test calls the
-  guard directly, because a full `1024x1024` generation is too large
-  for a unit test.
-  `parity/src/test/kotlin/.../InertiaDescTest.kt::the huge area is accepted by validation but refused at generation`
+  guard directly, because a full 200x200 generation is 1.9 s and is
+  covered by parity.
+  `parity/.../InertiaDescTest.kt::the huge area is accepted by validation but refused at generation`
   pins that validation keeps the C boundary and that `Midend.newGame`
-  throws the message. No test calls the oracle on `46340x46340`; that
-  probe does not terminate.
-- **Review:** the owner should decide the final area limit before
-  `inertia` is enabled in the app.
+  throws the message;
+  `parity/.../GenerationLimitTest.kt::inertia generates at 200x200`
+  compares the cap with the oracle;
+  `.../GenerationLimitTest.kt::an inertia save above 40,000 cells loads and plays`
+  loads a hand-written `201x200` save in both engines and replays one
+  move. No test calls the oracle on `46340x46340`; that probe does not
+  terminate.
 - **Scope:** `inertia`
 - **Upstream:** none known
-- **Date:** 2026-11-16
+- **Date:** 2026-11-16, revised 2026-11-18
 
 ### D-009: Tents rejects two descriptions that abort the C decoder
 
@@ -548,32 +563,49 @@ Anything not listed here is a bug.
   the graph (`map.c:1430`) and `new_state` allocates `4*wh` ints for
   the four quadrants (`map.c:1887-1888`). Both products overflow
   `int` for a large accepted board, and the allocations exhaust the
-  heap long before that. The Kotlin `validateParams` keeps every C
+  heap long before that. Generation is cheap when it succeeds and then
+  stalls for specific seeds at larger region counts: `60x60n250dn` is
+  0.012 s at seed 1 and does not finish at seed 12345, and
+  `100x100n300dn` reverses. The Kotlin `validateParams` keeps every C
   message and the exact C boundary (`32767x32767` is accepted,
   `32768x32768` is rejected, neither is allocated). The Kotlin
-  `newDesc`, `newState`, and `validateDesc` reject a board above
-  2^20 cells with `Width times height is too large for this build`,
-  and a board above 4096 regions with `Too many regions for this
-  build`, before any RNG draw or allocation.
+  `newDesc` rejects a board above 2^20 cells with `Width times height
+  is too large for this build` and a board above 100 regions with
+  `Too many regions for this build`, before any RNG draw or
+  allocation. `newState` and `validateDesc` keep the 2^20-cell and
+  4096-region structural limits, so a save above the generation cap
+  still loads while it fits the allocations.
 - **Why:** an integer overflow or an out-of-memory crash is worse
-  than a deterministic rejection. The guards depend only on the
-  parameters, so the same request always fails the same way. No
-  preset is near either limit: the largest is 30x25 with 75
-  regions. Every seed, `DESC`, `AUXINFO`, golden, and `.sgtp` file
-  of a valid game is unchanged.
+  than a deterministic rejection, and the measured 100-region board is
+  0.18 s on the phone while the 200-region probe hung. The generation
+  guards depend only on the parameters, so the same request always
+  fails the same way. No preset is near either limit: the largest is
+  30x25 with 75 regions, and the corpus is smaller. Every seed, `DESC`,
+  `AUXINFO`, golden, and `.sgtp` file of a valid game is unchanged.
+  The region cap is a policy choice, not a guarantee: the stall is
+  seed-dependent, so no useful region count bounds every seed.
 - **Test:**
   `engine/src/commonTest/kotlin/.../MapTest.kt::the generation guard rejects a board it cannot build`
-  pins both boundaries and the unchanged C validation messages;
+  pins both structural boundaries and the unchanged C validation
+  messages;
   `...::a refused generation draws no random number` pins that the
-  two guards run before the first draw;
+  guards run before the first draw;
   `...::newState refuses a huge board before it allocates` pins the
-  same two messages on the load path. No test allocates a board of
-  that size.
-- **Review:** the owner should decide the final area and region
-  limits before `map` is enabled in the app.
+  structural messages on the load path;
+  `.../GenerationLimitTest.kt::map refuses more than 100 regions at generation only`
+  pins the 101-region rejection, the fixed message, the untouched
+  random state, and that `validateDesc` does not use the generation
+  cap;
+  `...::the map generation cap leaves the load cap alone` pins 100 and
+  4096 as separate numbers;
+  `parity/.../GenerationLimitTest.kt::map generates at 100 regions`
+  compares `100x100n100dn` seed `12345` with the oracle, and
+  `...::a map save above 100 regions loads and plays` loads the C
+  `60x60n200dn` seed 1 state, replays a move, and compares the save.
+  No test allocates a board above the structural limits.
 - **Scope:** `map`
 - **Upstream:** none known
-- **Date:** 2026-11-17
+- **Date:** 2026-11-17, revised 2026-11-18
 
 ### D-015: Map defines the C undefined and assert paths
 
@@ -1068,6 +1100,267 @@ Anything not listed here is a bug.
 - **Scope:** `solo`
 - **Upstream:** none known
 - **Date:** 2026-11-17
+
+### D-026: Netslide refuses an area above 90,000 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C `validate_params` accepts every area up to
+  `INT_MAX`. Generation is linear in the area and has no cliff:
+  `300x300` is 0.58 s on the host and 4.97 s on the measured phone,
+  while `200x200` is 0.18 s. The Kotlin `newDesc` rejects an area above
+  90,000 cells (`300x300`) with
+  `Width times height is too large for this build` before the first
+  RNG draw. `validateParams` stays the C function, so a hand-written
+  save or game id with a larger board still loads and plays.
+- **Why:** this is a policy cap, not a measured cliff, and it keeps a
+  phone generation under five seconds and the allocation small. A
+  400x400 board extrapolates to about 9 s on the phone and
+  1000x1000 to about 55 s. No preset is near the cap: the largest is
+  5x5, so every seed, `DESC`, `AUXINFO`, and `.sgtp` text of an
+  accepted parameter set is unchanged.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::netslide refuses an area above 90,000 before any draw`
+  pins the `301x300b1` rejection, the fixed message, and the untouched
+  random state;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 90_000`;
+  `parity/.../GenerationLimitTest.kt::netslide generates at 300x300`
+  compares the cap with the oracle, save included.
+- **Scope:** `netslide`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-027: Tents refuses an area above 484 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts any area up to `INT_MAX`. Easy is the
+  slow difficulty because it needs a board that the easy solver also
+  solves: `22x22de` is 3.66 s on the host and 6.87 s on the measured
+  phone, and `23x23de` does not finish in 12 s on the host. The Kotlin
+  `newDesc` rejects an area above 484 cells (`22x22`) with
+  `Width times height is too large for this build` before the first
+  RNG draw. `validateParams` stays the C function, so a larger save or
+  game id still loads and plays.
+- **Why:** the measured 22x22 Easy board is the largest that stays
+  under the phone target. The cap is a policy choice with a margin of
+  about 30 percent, and the easy generator retries, so the exact phone
+  time varies between seeds; 21x21 would be safer. No preset is near
+  the cap: the largest is 15x15, so no accepted parameter set changes.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::tents refuses an area above 484 before any draw`
+  pins the `23x22dt` rejection, the fixed message, and the untouched
+  random state;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 484`;
+  `parity/.../GenerationLimitTest.kt::tents generates at 22x22`
+  compares `22x22dt` (the fast difficulty at the cap) with the oracle;
+  `...::a tents save above 484 cells loads and plays` loads a
+  hand-written `23x22dt` save in both engines and replays one move.
+- **Scope:** `tents`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-028: Net refuses an area above 10,000 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts any area up to `INT_MAX`. The uniqueness
+  search keeps generation flat until about 80x80: `100x100` is 0.87 s
+  on the host (about 3.5 s on the phone extrapolated), `125x125` is
+  10.1 s on the measured phone, and `200x200` does not finish. The
+  Kotlin `newDesc` rejects an area above 10,000 cells (`100x100`) with
+  `Width times height is too large for this build` before the first
+  RNG draw. `validateParams` stays the C function, so a larger save or
+  game id still loads and plays.
+- **Why:** a deterministic rejection is better than an effectively
+  endless retry loop, and the cap keeps the phone under the target.
+  The two largest measured points are not monotonic, so the cost has a
+  random component and the cap is a policy choice. No preset is near
+  it: the largest is 11x11.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::net refuses an area above 10,000 before any draw`
+  pins the `101x100` rejection, the fixed message, and the untouched
+  random state;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 10_000`;
+  `parity/.../GenerationLimitTest.kt::net generates at 100x100`
+  compares the cap with the oracle, save included.
+- **Scope:** `net`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-029: Tracks refuses an area above 484 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts any area up to `INT_MAX`. Hard is the
+  slow difficulty: `22x22dh` is 0.75 s on the host and 2.71 s on the
+  measured phone, and `23x23dh` is 10.0 s on the host already. The
+  Kotlin `newDesc` rejects an area above 484 cells (`22x22`) with
+  `Width times height is too large for this build` before the first
+  RNG draw. `validateParams` stays the C function, so a larger save or
+  game id still loads and plays.
+- **Why:** the step between 22x22 and 23x23 is sharp, and the cap
+  keeps the phone under the target with a 3.7x margin. No preset is
+  near it: the largest is 15x15.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::tracks refuses an area above 484 before any draw`
+  pins the `23x22dh` rejection, the fixed message, and the untouched
+  random state;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 484`;
+  `parity/.../GenerationLimitTest.kt::tracks generates at 22x22`
+  compares `22x22dh` with the oracle, save included;
+  `...::a tracks save above 484 cells loads and plays` loads a
+  hand-written `23x22dh` save in both engines and replays one move.
+- **Scope:** `tracks`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-030: Dominosa refuses a maximum number above 9 at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts a maximum number up to `INT_MAX - 2`.
+  Extreme is the slow difficulty: `9de` is 2.95 s on the host and
+  5.98 s on the measured phone, and `10de` is 12.5 s on the phone;
+  `11de` does not finish. The Kotlin `newDesc` rejects a maximum
+  number above 9 with `Maximum number is too large for this build`
+  before the first RNG draw. `validateParams` stays the C function, so
+  a larger save or game id still loads and plays.
+- **Why:** one cap is the honest rule from the measurement. A
+  difficulty-dependent cap would give Basic players 15 and more, since
+  Basic at 15 is only 0.08 s, but Hard was never measured above 15 and
+  Basic never above 15, so that rule is untested. No preset is
+  forbidden: the largest is `9db`.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::dominosa refuses a maximum number above 9 before any draw`
+  pins the `10db` rejection with the fast difficulty, the fixed
+  message, and the untouched random state;
+  `...::the caps are the measured numbers` pins `MAX_N == 9`;
+  `parity/.../GenerationLimitTest.kt::dominosa generates at 9`
+  compares `9db` with the oracle, save included.
+- **Scope:** `dominosa`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-031: Singles refuses an area above 400 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts a side up to 62 (`singles.c:268`; D-017
+  rejects 62 at generation for its own reason). Easy is retry-driven
+  and not monotonic in the side: `20x20de` is 0.096 s on the host and
+  0.25 s on the measured phone, `21x21de` is 9.88 s on the phone, and
+  `24x24de` is 26.75 s. The Kotlin `newDesc` keeps the D-017 side-62
+  check first, then rejects an area above 400 cells (a side of 20 on a
+  square board) with `Width times height is too large for this build`
+  before the first RNG draw. `validateParams` and the load path stay
+  the C functions, so a larger save or game id still loads and plays.
+- **Why:** the 21x21 step is a 40x increase on the phone. The cap is
+  an area rather than a side, so a 25x16 board is refused as well; the
+  measurement bounded the area. No preset is near it: the largest is
+  12x12.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::singles refuses an area above 400 before any draw`
+  pins the `21x20de` rejection and the untouched random state, and
+  keeps the D-017 `62x2de` message;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 400`;
+  `parity/.../GenerationLimitTest.kt::singles generates at 20x20`
+  compares `20x20de` with the oracle, save included.
+- **Scope:** `singles`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-032: Pearl refuses an area above 144 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts any area up to `INT_MAX / h`. The step
+  between 12x12 and 13x13 is the sharpest in the measurement:
+  `12x12de` is 0.18 s on the host and 0.43 s on the measured phone,
+  `13x13de` is 43.9 s on the phone, and `14x14de` does not finish. The
+  Kotlin `newDesc` rejects an area above 144 cells (`12x12`) with
+  `Width times height is too large for this build` before the first
+  RNG draw. `validateParams` stays the C function, so a larger save or
+  game id still loads and plays.
+- **Why:** a deterministic rejection is better than a minute-long
+  generation, and the cap keeps the phone under the target. No preset
+  is near it: the largest is 12x8. D-019 keeps its own generator
+  guards.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::pearl refuses an area above 144 before any draw`
+  pins the `13x12de` rejection, the fixed message, and the untouched
+  random state;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 144`;
+  `parity/.../GenerationLimitTest.kt::pearl generates at 12x12`
+  compares `12x12de` with the oracle, save included.
+- **Scope:** `pearl`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-033: Loopy refuses an area above 400 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts any area up to the square bound. Hard
+  with square faces is the measured case: `20x20t0dh` is 0.79 s on the
+  host and 4.14 s on the measured phone, and `25x25t0dh` is 11.36 s on
+  the phone. The Kotlin `newDesc` rejects an area above 400 cells
+  (`20x20`) with `Width times height is too large for this build`
+  before the first RNG draw, for every grid type. `validateParams`
+  stays the C function, so a larger save or game id still loads and
+  plays.
+- **Why:** the cap keeps every grid type near the phone target for the
+  measured square case. The other seventeen grid types have more faces
+  per cell and were not swept; 20x20 triangular is about 6 s on the
+  phone extrapolated, so a per-type cap would need its own
+  measurements and is not claimed. No preset is near the cap: the
+  largest is 7x7. D-018, D-020, and D-021 keep their own guards.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::loopy refuses an area above 400 before any draw`
+  pins the `21x20t0dh` rejection, the fixed message, and the untouched
+  random state;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 400`;
+  `parity/.../GenerationLimitTest.kt::loopy generates at 20x20`
+  compares `20x20t0dh` with the oracle, save included.
+- **Scope:** `loopy`
+- **Upstream:** none known
+- **Date:** 2026-11-18
+
+### D-034: Solo refuses a symbol count above the difficulty band at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts `c*r` up to 31 symbols and retries until
+  the solver grades the board. The measured cost depends on the
+  difficulty: with Recursive, `3x3du` (9 symbols) is 0.45 s on the
+  host and `4x4du` does not finish; with Set and Extreme, `4x4da`
+  is 0.73 s and `5x5da` does not finish; with Block, Simple, and
+  Intersect, `5x5db` is 0.54 s on the host and 1.24 s on the measured
+  phone, while `6x5db` is 6.1 s in C and does not finish in the Kotlin
+  host. The Kotlin `newDesc` rejects a symbol count above 25 for
+  Block, Simple, and Intersect, above 16 for Set and Extreme, and
+  above 9 for Recursive, with
+  `Board size and difficulty are too large to generate in this build`
+  before the first allocation or draw. `validateParams` stays the C
+  function, so a larger save or game id still loads and plays.
+- **Why:** one cap per difficulty band is what the measurement
+  supports; a single cap would forbid the 16-symbol Simple and Set
+  presets or allow the 30-symbol board that does not finish. No preset
+  is forbidden: the largest are 9 symbols at Set and 16 at Simple.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::solo refuses every difficulty band above its cap before any draw`
+  pins `2x13db` (26), `2x9da` and `2x9de` (18), and `2x5du` (10), the
+  fixed message, and the untouched random state;
+  `...::the solo guard accepts each band at its boundary` pins 25, 16,
+  and 9 through `requireGeneratableSize`;
+  `...::the caps are the measured numbers` pins the three
+  `maxSymbols` results;
+  `parity/.../GenerationLimitTest.kt` compares `5x5di` (25 symbols,
+  Intersect), `4x4da` (16, Set), and `3x3du` (9, Recursive) with the
+  oracle, save included.
+- **Scope:** `solo`
+- **Upstream:** none known
+- **Date:** 2026-11-18
 
 ## Examples
 

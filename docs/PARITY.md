@@ -596,9 +596,12 @@ Notes:
   number` instead of reproducing the C abort at `netslide.c:629`.
   `validate_params` accepts `46340x46340` and generation then allocates
   about 17 GB of two `IntArray`s and does not finish, as C does with
-  about 4.3 GB. That guard is enablement debt, not a deviation (see
-  `TESTING.md`). `KotlinGames.gameFor` knows the Kotlin game, but the
-  app still uses C: the huge-area guard and the two-release wait are open.
+  about 4.3 GB. D-026 rejects an area above 90,000 cells (300x300) at
+  generation with `Width times height is too large for this build`,
+  before the first draw; the measured 300x300 phone generation is
+  4.97 s. Validation and the load path keep the C behavior.
+  `KotlinGames.gameFor` knows the Kotlin game, but the
+  app still uses C: the two-release wait is open.
   `currentKeyLabel`
   is a tested helper because C has no Android call site for it. The seam
   is `docs/adr/0007-kotlin-game-seam.md` and
@@ -938,8 +941,12 @@ Notes:
 
   D-007 covers generation: C accepts an area up to `INT_MAX` and then
   allocates tens of gigabytes, so the port rejects an area above 2^20
-  cells at `newDesc` before any RNG draw. Validation keeps the C
-  messages and the accepted `46340x46340` boundary. The app's
+  cells, and a region count `w*h/k` above 50, at `newDesc` before any
+  RNG draw. The region cap is the measured one: 25x20n10 (50 regions)
+  is 7.2 s on the phone and 30x20n10 (60) is 27.1 s, while no preset
+  has more than 18 regions. Validation keeps the C messages and the
+  accepted `46340x46340` boundary; only generation is guarded, so a
+  larger save or game id still loads. The app's
   configuration dialog must surface that guard.
 
   One save difference is recorded as debt, not as a deviation.
@@ -985,12 +992,14 @@ Notes:
   D-008 covers generation: C accepts an area up to `INT_MAX`, then
   `gengrid` allocates two byte arrays of about 17 GB each and an int
   array of about 69 GB for `46340x46340`, plus the grid, and does not
-  finish. The port rejects an area above 2^20 cells at `newDesc` before
-  any RNG draw. Validation keeps the C messages and the accepted
-  `46340x46340` boundary; only generation is guarded.
+  finish. The port rejects an area above 40,000 cells (200x200) at
+  `newDesc` before any RNG draw; the measured 250x250 generation is
+  10.8 s on the phone, so 200x200 is the cap. Validation keeps the C
+  messages and the accepted `46340x46340` boundary; only generation is
+  guarded, so a larger save or game id still loads.
 
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: the D-008 guard message and the two-release wait are open. The
+  C: the two-release wait is open. The
   shell shows the game's message when the board is already solved or
   dead. `currentKeyLabel` is a tested helper
   because the Android shell has no call site for it. The seam is
@@ -1062,11 +1071,14 @@ Notes:
   every valid description is unchanged and no generated board reaches
   either path.
 
-  Enablement debt. `validate_params` accepts any area up to `INT_MAX`,
-  and Easy on a large board is slow: 20x20 takes about 0.6 s and 25x25
-  Easy takes 39 s in C. Generation runs on the app's worker, and a
-  size bound is an owner decision that needs a deviation entry and a
-  test. The params-dependent `can_format_as_text_now`
+  D-027 covers generation: C accepts any area up to `INT_MAX`, and
+  Easy on a large board is slow: 20x20 takes about 0.6 s and 25x25
+  Easy 39 s in C. The port rejects an area above 484 cells (22x22) at
+  `newDesc` before the first draw, with a fixed message; the measured
+  22x22 Easy generation is 6.87 s on the phone and 23x23 Easy does not
+  finish in 12 s on the host. Validation and the load path keep the C
+  behavior, so a larger save or game id still loads. The
+  params-dependent `can_format_as_text_now`
   (`tents.c:1390-1393`, `w <= 1998 && h <= 1998`) has no seam hook:
   `Game.canFormatAsText` is a constant and `Midend.textFormat` checks
   only that constant, so a hand-written board above 1998 cells would
@@ -1529,12 +1541,63 @@ Notes:
   around`, `Barrier probability`, `Ensure unique solution`), and the
   app builds the dialog from it. `Game.setPrefs` applies the
   `unlocked-loops` boolean after `newUi` and after `Midend.fromSave`
-  with a forced redraw, and the shell shows the solve message. The
-  accepted `46340x46340` area and the unbounded retry
-  loops need an owner guard. The app generates off the UI thread. S9 is a
+  with a forced redraw, and the shell shows the solve message. D-028
+  rejects an area above 10,000 cells (100x100) at `newDesc` before the
+  first draw, with a fixed message; the measured 100x100 host
+  generation is 0.87 s and 125x125 is 10.1 s on the phone. Validation
+  and the load path keep the C behavior, so a larger save or game id
+  still loads. The unbounded retry loops are the C loops. The app
+  generates off the UI thread. S9 is a
   tested `currentKeyLabel` helper with no Android call site.
   `NET` is in `KotlinGames.gameFor` and not in `APP_GAMES`, so
   `handles(NET)` is false and the two-release wait still applies.
+
+- `tracks` is `dual-run`. Its parameters and presets, generator and
+  solver gate, state, move grammar, text form, save file, palette,
+  drawing, layout, and input pass the matrix in `TracksDescTest`,
+  `TracksGameTest`, `TracksSaveTest`, `TracksTraceTest`,
+  `TracksInputParityTest`, and the engine `TracksTest`; the game
+  inventory row lists the details. D-012 covers the outer non-clue
+  track edge that aborts the C solver. D-029 rejects an area above 484
+  cells (22x22) at `newDesc` before the first draw with
+  `Width times height is too large for this build`: the measured
+  22x22 Hard generation is 2.71 s on the phone, while 23x23 Hard is
+  10.0 s on the host already. Validation and the load path keep the C
+  behavior, so a hand-written `23x22` save still loads and replays its
+  moves. `KotlinGames.gameFor` knows the game, but the app still uses
+  C: the two-release wait is open.
+
+- `dominosa` is `dual-run`. Its parameters and presets, generator with
+  its three allocators and solver gate, solver, state, move grammar,
+  text form, save file, palette, drawing, layout, and input pass the
+  matrix in `DominosaDescTest`, `DominosaGameTest`,
+  `DominosaSaveTest`, `DominosaTraceTest`,
+  `DominosaInputParityTest`, and the engine `DominosaTest`; the game
+  inventory row lists the details. D-013 covers a validated
+  description whose highest domino has no placement. D-030 rejects a
+  maximum number above 9 at `newDesc` before the first draw with
+  `Maximum number is too large for this build`: `9de` is 5.98 s on the
+  phone and `10de` is 12.5 s. The cap is a single number on purpose;
+  Basic stays fast above 9, but the measurement did not cover Hard or
+  Basic at those sizes. Validation and the load path keep the C
+  behavior, so a larger save still loads. `KotlinGames.gameFor` knows
+  the game, but the app still uses C: the two-release wait is open.
+
+- `map` is `dual-run`. Its parameters and presets, two random streams,
+  generator retry gate, solver, aux four-colouring, state, move
+  grammar, text form, save file, palette, drawing, layout, and input
+  pass the matrix in `MapDescTest`, `MapGameTest`, `MapSaveTest`,
+  `MapTraceTest`, `MapInputParityTest`, and the engine `MapTest`; the
+  game inventory row lists the details. D-014 keeps the 2^20-cell and
+  4096-region structural limits on `newState` and `validateDesc`, and
+  adds a generation-only cap of 100 regions with
+  `Too many regions for this build`: `100x100n100dn` is 0.18 s on the
+  phone, while `60x60n200dn` seed 12345 hung for 30 s. The 200-region
+  test loads the C save and replays a move, so the cap is proven to be
+  generation-only. The stall is seed-dependent, so the 100-region cap
+  is a policy choice, not a guarantee. D-015 defines the C undefined
+  and assert paths. `KotlinGames.gameFor` knows the game, but the app
+  still uses C: the two-release wait is open.
 - `mines` is `kotlin` (sixth enablement wave, 2026-11-18). Its
   parameters and four presets, the decode
   and validation quirks, the deferred interactive description, the
@@ -1689,6 +1752,12 @@ Notes:
   subtraction or division block, and C then aborts at
   `assert(n == 2)` in `solver_common` (`keen.c:377`). D-016 defines the
   Kotlin result as `DIFF_IMPOSSIBLE`; no generated game reaches it.
+
+  Size bound. No generation guard is needed. `validate_params` already
+  rejects a grid size outside `3..9` with `Grid size must be between 3
+  and 9`, so the largest possible board is 9x9. The measured host cost
+  is flat at 0.25-0.29 s across every difficulty, and Unreasonable is
+  0.48 s on the phone. No new rule and no deviation entry is added.
 
   Enablement debt. The engine declares the four-field configuration
   schema (`Grid size`, `Difficulty` with
@@ -1946,7 +2015,12 @@ Notes:
   D-017 defines the 62 boundary. C accepts a side of 62, generates a
   description whose digit 62 is `[`, and aborts in `new_game`; the port
   rejects generation with `Puzzle is too large` before any draw and
-  keeps every side 2..61 and every preset byte-identical. The largest
+  keeps every side 2..61 and every preset byte-identical. D-031 then
+  rejects an area above 400 cells (a side of 20 on a square board) with
+  `Width times height is too large for this build` before any draw;
+  the measured 21x21 Easy generation is 9.88 s on the phone and 20x20
+  is 0.25 s. Validation and the load path keep the C behavior, so a
+  larger save still loads. The largest
   accepted side (`61x2de` seed `3`) is compared with the oracle, and a
   hand-written `62x2de` save with `Z` still loads in both engines.
   Enablement
@@ -1998,10 +2072,14 @@ Notes:
   preference is a
   `Ui` field read by the UI-aware `computeSize` and by drawing; it is
   not serialized and not in the drawstate, so a redraw without the
-  resize keeps the old geometry. Generation keeps the C cost and the C
-  parameter bound: a `13x13` board takes seconds and `14x14` or larger
-  does not finish in the measured budget. The app generates off the UI
-  thread. A size limit is an owner decision (D-019). S9 is a
+  resize keeps the old geometry. Generation keeps the C cost:
+  `12x12de` is 0.18 s on the host and 0.43 s on the phone, while
+  `13x13de` is 43.9 s on the phone and `14x14de` does not finish.
+  D-032 rejects an area above 144 cells (12x12) at `newDesc` before the
+  first draw, with a fixed message. Validation and the load path keep
+  the C parameter bound, so a larger save still loads. The app
+  generates off the UI thread. D-019 keeps its own generator guards.
+  S9 is a
   tested `currentKeyLabel` helper with no Android call site.
 
 - `loopy` is `dual-run`. Its parameters and twenty presets, the loopy
@@ -2037,11 +2115,12 @@ Notes:
   `Ui` after `newUi` and after `Midend.fromSave` (there is no `UI`
   record) with a forced redraw, the status line stays off
   (`wantsStatusBar` is false), and `Midend.solveAttempt` carries the
-  solve payload. Generation
-  keeps the C cost and the C parameter bound; a large accepted board
-  is effectively unbounded work, so the app generates off the UI thread
-  and a size limit is an owner decision.
-  S9 is not needed because `current_key_label` is NULL.
+  solve payload. D-033 rejects an area above 400 cells (20x20) at
+  `newDesc` before the first draw, for every grid type, with a fixed
+  message; the measured 20x20 squares Hard generation is 4.14 s on the
+  phone and 25x25 is 11.36 s. Validation and the load path keep the C
+  parameter bound, so a larger save still loads. The app generates off
+  the UI thread. S9 is not needed because `current_key_label` is NULL.
 
 - `rect` is `dual-run`. Its five presets, the `%dx%d` parameter
   grammar with the `%g` expansion and the `a` unique flag, the
@@ -2245,6 +2324,17 @@ Notes:
   description with an unclued cage. `validateParams` keeps the C
   acceptance and messages; only `newDesc` and `newState` refuse the
   empty grid, and only drawing and solving define the unclued cage.
+  D-034 bounds generation by difficulty band: 25 symbols for Block,
+  Simple, and Intersect, 16 for Set and Extreme, and 9 for Recursive,
+  with `Board size and difficulty are too large to generate in this
+  build` before the first draw. The bands come from the measurement:
+  `5x5db` (25 symbols) is 1.24 s on the phone, `4x4da` (16) is 0.73 s
+  on the host, `3x3du` (9) is 0.45 s on the host, and the next size in
+  each band does not finish. Validation and the load path keep the C
+  acceptance, so a larger save still loads. The parity test uses
+  `5x5di` for the 25-symbol band because the first Simple generation
+  in a JVM can differ from C at 5x5; that is an open, pre-existing
+  defect in the clue-removal gate, recorded in the work notes.
   `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
   C: the two-release wait is open. `currentKeyLabel`
   is a tested helper with no Android call site. The seam is
