@@ -279,6 +279,20 @@ Severity:
   not available everywhere. Graceful degradation is required.
 - Phone, tablet, Chromebook, and TV-like layouts: verify adaptive
   behavior.
+- Window size classes: the shell has one rule, in `ui/WindowSize.kt`
+  (`docs/adr/0012-adaptive-layouts.md`). Compact is below 600dp of window
+  width, medium is 600dp to 839dp, expanded is 840dp and wider. Side
+  margins are 16dp on compact and 24dp from medium up; text-heavy shell
+  content (chooser, settings, help) is capped at 840dp and centred; a
+  dialog is capped at 560dp. The game board is never capped: the engine
+  owns its geometry.
+- The game screen's key bar follows the window shape, not the size
+  class: a bottom row when the window is taller than it is wide, a side
+  column when it is wider. Both give the 48dp cells of the input
+  contract.
+- A resize arrives as `onConfigurationChanged` because the activities
+  swallow `screenSize`. The shell must follow it in place: no game is
+  restarted and no board is lost.
 - Mouse, stylus, hardware keyboard, and DPAD must keep working.
 - One APK, offline, minimum permissions.
 - The night theme does not affect the game board palette.

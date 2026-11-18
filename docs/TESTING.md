@@ -450,9 +450,9 @@ cannot reach:
 - `FifteenChooserLaunchTest` clicks the `fifteen` row in the real
   chooser and checks that `GamePlay` opens with the Kotlin engine and
   `Moves: 0`.
-- `ShellLayoutTest` covers the three shell configurations that the
-  portrait, left-to-right, 100% text run cannot see; each was a P0 in
-  `docs/DESIGN.md` section 14.
+- `ShellLayoutTest` covers the shell configurations that the portrait,
+  left-to-right, 100% text run on a phone window cannot see; each was a
+  P0 or a large-screen rule in `docs/DESIGN.md` section 14.
   `theBoardIsDrawnInLandscape` opens a solved fifteen game, checks that
   the `game_canvas` view exists, has a non-zero size, is displayed, and
   that a screenshot of its bounds carries more than one colour, then
@@ -470,10 +470,28 @@ cannot reach:
   scale to 200%, finds the `Show reminders of controls` title, and
   asserts that the layout carries no ellipsis, that the view is at
   least as tall as its layout, and that the title wrapped to two lines.
-  It restores the original scale in a `finally` block. All three cases
-  fail on the code before the fixes: no `game_canvas` view in
-  landscape, `Undo` outside the window in RTL, and an ellipsized title
-  at 200%.
+  It restores the original scale in a `finally` block.
+  `theShellKeepsTheReadingMeasureOnAnExpandedWindow` simulates an
+  expanded window with `wm size 2400x3000`, which is 914dp by 1143dp at
+  the phone's 420 dpi, opens the real chooser and the real settings
+  screen, and asserts that the chooser list is 840dp wide and centred
+  and that the settings rows are 840dp wide and centred.
+  `theGameSurvivesAWindowResize` opens a solved fifteen game at the
+  phone window, grows the window to the same simulated expanded size
+  while the game is open, and asserts that the board frame carries
+  drawing operations, that the game id and the save text are unchanged,
+  that the Undo key is on screen, at least 48dp, and inside the window,
+  that a real tap applies `M2,3`, and that a wider-than-tall simulated
+  window switches the layout to landscape with the key bar in its side
+  column and the same save text. It returns to the phone window and
+  asserts the board is still drawn and the game is still the same. Both
+  cases restore the `wm size` override in a `finally` block. The two
+  reading-measure cases fail on the code before the change: `the
+  chooser list is 914.2857dp wide, not capped at 840.0dp` and `the
+  settings list is 2400 of 2400px, not capped`.
+  All five cases fail on the code before their fixes: no `game_canvas`
+  view in landscape, `Undo` outside the window in RTL, an ellipsized
+  title at 200%, and the two uncapped lists.
 - `ShellAccessibilityTest` covers the shell accessibility findings that
   a device can check without a screen reader. Each case fails on the
   code before its fix.
@@ -4028,6 +4046,43 @@ Android 16 / API 36, after the same two audits:
 - Device state changed for the run and restored: the system text scale
   (the test does this itself), the display rotation, and the three
   animation scales, which Espresso needs at 0.
+
+Adaptive layout wave, Pixel 4a 5G (physical), 2026-11-19, Android 16 /
+API 36:
+
+- The shell has one window size class rule now (`ui/WindowSize.kt`,
+  `docs/adr/0012-adaptive-layouts.md`). It is fed by the allowed
+  dependency `androidx.compose.material3:material3-window-size-class`,
+  whose version comes from the Compose BOM. The chooser list, the
+  settings list, and the help page keep the 840dp reading measure and
+  are centred from the medium class up; dialogs are capped at 560dp;
+  the game screen shows its title and action labels from the medium
+  class up instead of at the old 480dp and 620dp thresholds. The board,
+  the key grid, the engine, and the parity resources are untouched.
+- `:app:connectedDebugAndroidTest` ran 132 cases: 126 passed, 0 failed,
+  6 skipped; the task took 4 min 31 s. The six skips are the three
+  fastlane producers and the three chooser goldens, as before. The two
+  new cases are
+  `ShellLayoutTest.theShellKeepsTheReadingMeasureOnAnExpandedWindow`
+  and `theGameSurvivesAWindowResize`; both use `wm size 2400x3000`
+  (914dp by 1143dp at 420 dpi) to simulate an expanded window on the
+  phone, and both restore the override in a `finally` block.
+- The two new cases fail on the code before the change: `the chooser
+  list is 914.2857dp wide, not capped at 840.0dp` and `the settings
+  list is 2400 of 2400px, not capped`.
+- `:engine:jvmTest` -> 1154 tests, 0 failures; `:parity:test` -> 1915
+  tests, 0 failures (both re-run with `--rerun-tasks`);
+  `:app:testDebugUnitTest` -> 106 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings, the same count as before;
+  `tools/check-upstream-diff.sh --strict`,
+  `tools/check-upstream-lock.sh`, and `git diff --check` are clean.
+- Device state changed for the run and restored: the `wm size` override
+  of the two window cases, the display rotation, and the three
+  animation scales. `wm density`, `font_scale`,
+  `accelerometer_rotation`, and `user_rotation` were left at the values
+  the run started with (420, 1.0, 1, 0). Screenshots of the shell at an
+  expanded window are in `/tmp/opencode/adaptive/` and are not
+  committed.
 
 ## 9. CI
 
