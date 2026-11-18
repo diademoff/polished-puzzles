@@ -13,7 +13,6 @@ import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -27,6 +26,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.safeDrawing
@@ -37,6 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -273,69 +274,75 @@ private fun Buttons(
         // a right-to-left layout and then adds the same positive offsets,
         // so every key lands outside the window. The keyboard geometry is
         // physical; the shell still mirrors around it.
-        Box(modifier = Modifier
-            .background(colorResource(id = R.color.keyboard_background))
-            .width(totalWidth)
-            .height(totalHeight),
-            contentAlignment = BiasAbsoluteAlignment(-1f, -1f)) {
+        Surface(
+            modifier = Modifier.width(totalWidth).height(totalHeight),
+            color = colorResource(id = R.color.keyboard_surface),
+            contentColor = colorResource(id = R.color.keyboard_foreground),
+            shape = RectangleShape,
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = BiasAbsoluteAlignment(-1f, -1f),
+            ) {
 
-            if (majors > 0) {
-                val minorStartDp: Dp =
-                    ((maxDpMinusArrows - (minorsPerMajor * keySize)) / 2)
-                val majorStartDp: Dp =
-                    if (majors < 3 && hasArrows) (arrowMajors - majors) * keySize else 0.dp
-                Characters(
-                    backend,
-                    keyList,
-                    isLandscape,
-                    undoEnabled,
-                    redoEnabled,
-                    keySize,
-                    minorsPerMajor,
-                    minorsPerMajorWithoutArrows,
-                    majorWhereArrowsStart,
-                    majors,
-                    minorStartDp,
-                    majorStartDp,
-                    disableCharacterIcons,
-                    swapLR,
-                    borders,
-                    onKey,
-                    onSwapLR,
-                    keyNames
-                )
-            }
-
-            if (hasArrows) {
-                val arrowsRightEdge: Dp = if (isLandscape) largerWidth else maxDp
-                val arrowsBottomEdge: Dp = if (isLandscape) maxDp - bottomInset else largerHeight
-                Arrows(
-                    backend,
-                    keySize,
-                    arrowMode,
-                    swapLR,
-                    hidePrimary,
-                    arrowRows,
-                    arrowsRightEdge,
-                    arrowsBottomEdge,
-                    borders,
-                    onKey
-                )
-            }
-
-            if (majors > 0 || hasArrows) {
-                if (isLandscape)
-                    Spacer(
-                        Modifier
-                            .offset(largerWidth, 0.dp)
-                            .width(spaceAfterKeys)
+                if (majors > 0) {
+                    val minorStartDp: Dp =
+                        ((maxDpMinusArrows - (minorsPerMajor * keySize)) / 2)
+                    val majorStartDp: Dp =
+                        if (majors < 3 && hasArrows) (arrowMajors - majors) * keySize else 0.dp
+                    Characters(
+                        backend,
+                        keyList,
+                        isLandscape,
+                        undoEnabled,
+                        redoEnabled,
+                        keySize,
+                        minorsPerMajor,
+                        minorsPerMajorWithoutArrows,
+                        majorWhereArrowsStart,
+                        majors,
+                        minorStartDp,
+                        majorStartDp,
+                        disableCharacterIcons,
+                        swapLR,
+                        borders,
+                        onKey,
+                        onSwapLR,
+                        keyNames
                     )
-                else
-                    Spacer(
-                        Modifier
-                            .offset(0.dp, largerHeight)
-                            .height(spaceAfterKeys)
+                }
+
+                if (hasArrows) {
+                    val arrowsRightEdge: Dp = if (isLandscape) largerWidth else maxDp
+                    val arrowsBottomEdge: Dp = if (isLandscape) maxDp - bottomInset else largerHeight
+                    Arrows(
+                        backend,
+                        keySize,
+                        arrowMode,
+                        swapLR,
+                        hidePrimary,
+                        arrowRows,
+                        arrowsRightEdge,
+                        arrowsBottomEdge,
+                        borders,
+                        onKey
                     )
+                }
+
+                if (majors > 0 || hasArrows) {
+                    if (isLandscape)
+                        Spacer(
+                            Modifier
+                                .offset(largerWidth, 0.dp)
+                                .width(spaceAfterKeys)
+                        )
+                    else
+                        Spacer(
+                            Modifier
+                                .offset(0.dp, largerHeight)
+                                .height(spaceAfterKeys)
+                        )
+                }
             }
         }
     }
@@ -779,6 +786,9 @@ private fun keyLabelSize(): TextUnit {
 /** The share of the key height a one-line label may use. */
 private const val KEY_LABEL_FRACTION = 0.7f
 
+/** The M3 alpha of a disabled container: the content color at 12%. */
+private const val DISABLED_KEY_CONTAINER_ALPHA = 0.12f
+
 fun Modifier.autoRepeat(
     interactionSource: InteractionSource,
     repeatable: Boolean,
@@ -827,14 +837,16 @@ private fun KeyButton(
     content: @Composable (RowScope.() -> Unit),
 ) {
     val background =
-        if (on.value) R.color.key_background_on
-        else if (borders.value) R.color.key_background_border
-        else R.color.keyboard_background
+        if (on.value) R.color.key_surface_on else R.color.key_surface
+    val foreground = colorResource(R.color.keyboard_foreground)
+    // M3 disabled colors: the container is the content color at 12%, the
+    // content is kept at a readable tone. The old disabled container was
+    // the enabled one, so a disabled key looked like a bare glyph.
     val buttonColors = ButtonDefaults.buttonColors(
-        colorResource(background),
-        colorResource(R.color.keyboard_foreground),
-        colorResource(background),
-        colorResource(R.color.keyboard_foreground_disabled)
+        containerColor = colorResource(background),
+        contentColor = foreground,
+        disabledContainerColor = foreground.copy(alpha = DISABLED_KEY_CONTAINER_ALPHA),
+        disabledContentColor = colorResource(R.color.keyboard_foreground_disabled),
     )
     CompositionLocalProvider {
         val inputModeManager = LocalInputModeManager.current
@@ -857,7 +869,9 @@ private fun KeyButton(
                 }
                 .border(
                     if (borders.value) 1.dp else 0.dp,
-                    colorResource(id = R.color.keyboard_background)
+                    // The border is the bar behind the keys, so a key is
+                    // separated from its neighbour without a second color.
+                    colorResource(id = R.color.keyboard_surface)
                 )
                 // applied even if not repeatable, for consistency of acting on press not release
                 .autoRepeat(
