@@ -191,6 +191,17 @@ an enablement wave (`docs/adr/0011-enable-games-in-waves.md`), so the
 older "two-release wait" sentences in the per-game notes name the gate
 that the waiver replaced; they do not enable a game.
 
+### Seam item S9: the current-key label
+
+`Game.currentKeyLabel` is a tested helper, and S9 is not applicable to
+the Android shell: this frontend never displays a current key label.
+Only the Emscripten frontend reads `midend_current_key_label`
+(`emcc.c:310-311`); `android.c` has no call, and the shell's on-screen
+keys are the static `key_label.name` values that
+`midend_request_keys_by_game` returns (`android.c:778-806`). The helper
+stays because another frontend or a future on-screen hint may use it.
+The per-game S9 sentences below name this decision.
+
 ### Game inventory
 
 Measured from the code at the vendored revision. Presets are counted
@@ -538,8 +549,8 @@ Notes:
   that loop in `FillingSolver.makeBoard`. The owner made the size bound
   warning-only (decision 2b): `Game.generationWarning` names every board
   above 221 cells, the largest preset, and no parameter set is rejected.
-  No test generates a huge accepted area. The S9 call site for
-  `currentKeyLabel` is open.
+  No test generates a huge accepted area. S9 is not applicable
+  (section 7): the Android shell never displays `current_key_label`.
   `KotlinGames.handles(FILLING)` is true (sixth enablement wave,
   2026-11-18), and `SixthWaveTileSizeInputTest` clicks the half-tile
   border, the digit with no selection, a region, and its digit at two
@@ -1229,10 +1240,10 @@ Notes:
   undo, redo, completion, and both solver errors. A 2x2 board pins the
   `numsi` clear bound: the loop stops at `n-1`, the completion check
   reads a stale `numsi[n]`, and the removed cell is linked and numbered
-  again; the text after one more move matches C. The seam gives the
-  game only the current state, so `State` carries the initial board and
-  `solveAttempt` tries the current state and then the initial one, as
-  C does; a link that breaks the current board pins the fallback. A
+  again; the text after one more move matches C. `State` carries the
+  initial board and `solveAttempt` tries the current state and then the
+  initial one, as C does; a link that breaks the current board pins the
+  fallback. A
   board that the solver completes has one forced solution, so two
   successful but different payloads cannot occur; the order is pinned
   Kotlin-only with a different solved board as the fallback.
@@ -1462,10 +1473,10 @@ Notes:
   even when only the barrier rate changes.
 
   `solve_game` reads the first state in C and diffs the current one.
-  The seam passes only the current state, so `Net.Shared` keeps the
-  decoded initial board and `Net.solveAttempt` runs `AUXINFO` or the
-  solver on that board; `NetGameTest` and `NetSaveTest` pin a solve
-  from the initial state and after real moves.
+  `Net.Shared` keeps the decoded initial board, and `Net.solveAttempt`
+  runs `AUXINFO` or the solver on that board; `NetGameTest` and
+  `NetSaveTest` pin a solve from the initial state and after real
+  moves.
 
   `NetSaveTest` reads all nine corpus saves, rewrites them byte for
   byte, and compares id, status, undo, redo, text, `AUXINFO`, and `UI`
@@ -2193,14 +2204,18 @@ Notes:
   does not overflow. No parity is claimed for these cases.
 
   `solve_game` reads `state->grid`, which C fills from `states[0]`, not
-  from the current board. The port keeps the initial clue grid on a
-  shared object, so a solve after a wrong move still returns the
-  original `S` answer; `SoloGameTest` and `SoloTest` pin the moved,
-  no-`AUXINFO`, and second-solve cases. A stored `AUXINFO` is returned
-  unchanged, as C does. Open gap: a legal `RESTART` with a different
-  description still solves from the current entry's grid, because the
-  seam gives `solve` only the current state. This is not parity-tested
-  and is part of the no-parity decision for `solo`. The generator
+  from the current board. `Game.solveGame` has a three-argument
+  overload that carries `states[0]` beside the current state, as
+  `midend_solve` does (`midend.c:2109-2111`), and `Midend.solveAttempt`
+  passes it. Solo solves from that first state, so a legal `RESTART`
+  with a different description returns the first description's answer,
+  as C does. The state keeps the initial clue grid on a shared object,
+  so a solve after a wrong move also returns the original `S` answer;
+  `SoloGameTest` and `SoloTest` pin the moved, no-`AUXINFO`, and
+  second-solve cases, and
+  `SoloSaveTest::a restart with a different description solves the
+  first one` pins the restarted save against the oracle. A stored
+  `AUXINFO` is returned unchanged, as C does. The generator
   writes the solved grid as `AUXINFO`, so every generated save outside
   D-025 matches C byte for byte.
 

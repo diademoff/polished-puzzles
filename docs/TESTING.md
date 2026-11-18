@@ -1881,10 +1881,10 @@ item:
   one forced solution; the test attaches a different solved board as
   the fallback and checks that it is never used.
 - The two-state solve is measured C behavior. `solve_game` tries the
-  current state first and the decoded initial state second. The seam
-  gives `Game.solve` only the current state, so `State` carries the
-  initial board and `solveAttempt` reproduces the order. A link that
-  makes the current board impossible returning the initial board's
+  current state first and the decoded initial state second. `State`
+  carries the initial board and `solveAttempt` reproduces the order. A
+  link that makes the current board impossible returning the initial
+  board's
   `SOLVE` record pins it; the `S` move sets `usedSolve`, so the solve
   reaches status 1 without a completion event.
 - The text form keeps the C `state->h` column bound. For `w > h` the
@@ -2253,7 +2253,8 @@ aggressive 100x100 latency is an enablement debt:
   for the aggressive `100x100` case. `KotlinGames.handles(MOSAIC)` is
   true (fifth enablement wave, 2026-11-18), and
   `FifthWaveTileSizeInputTest` taps a clue and the margin at two tile
-  sizes on the Pixel 4a 5G. S9 is still open.
+  sizes on the Pixel 4a 5G. S9 is not applicable (PARITY section 7):
+  the Android shell never displays `current_key_label`.
 
 `palisade` has one deviation and two open items:
 
@@ -2598,10 +2599,10 @@ aggressive 100x100 latency is an enablement debt:
     is creation order in the generator and row-major after `new_game`;
     `game_state_diff` walks that order, so the generated `AUXINFO` is
     in creation order while a hint diff is in row-major order.
-  - `Game.solve` receives only the current state, so the port keeps the
-    initial board and executes the `AUXINFO` answer there, then diffs
-    against the current state. Running the answer on the current board
-    would leave a player's wrong bridge in place.
+  - `Game.solve` keeps the initial board, so the port executes the
+    `AUXINFO` answer there, then diffs against the current state.
+    Running the answer on the current board would leave a player's
+    wrong bridge in place.
   - Size bound and preferences. The engine declares the seven
   configuration items and the `show-hints` preference, and the app
   builds the dialog from that schema. The preference is applied after
@@ -2718,10 +2719,10 @@ aggressive 100x100 latency is an enablement debt:
     `AUXINFO` is the unshuffled grid and pins the generator before the
     shuffle.
   - The initial-state solve is a seam rule. C `solve_game` reads
-    `states[0]` for the answer and the current state for the diff; the
-    Kotlin seam passes only the current state, so `Net.Shared` keeps
-    the decoded initial board. A solve after real moves therefore
-    matches C, and `NetGameTest` and `NetSaveTest` pin both shapes.
+    `states[0]` for the answer and the current state for the diff;
+    `Net.Shared` keeps the decoded initial board. A solve after real
+    moves therefore matches C, and `NetGameTest` and `NetSaveTest` pin
+    both shapes.
   - The base UI is preserved on a load. C creates the `UI` with
     `new_ui` and then decodes `org` and `cx`/`cy` on top; the record
     does not contain the cursor, `cur_visible`, the drag state, the
