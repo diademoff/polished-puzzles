@@ -58,9 +58,15 @@ class KotlinGamesTest {
         System.getProperty("testdata") ?: error("testdata system property is not set"),
     )
 
+    /**
+     * The games enabled by the two 2026-11-18 waves, in wave order.
+     */
+    private val enabledGames =
+        setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS, SIXTEEN, FLIP, TWIDDLE, GUESS)
+
     @Test
-    fun `the first wave uses the Kotlin backend`() {
-        for (backend in listOf(FIFTEEN, SAMEGAME, FLOOD, PEGS)) {
+    fun `the enabled waves use the Kotlin backend`() {
+        for (backend in enabledGames) {
             assertTrue(
                 "$backend must run on the Kotlin backend",
                 KotlinGames.handles(backend),
@@ -89,21 +95,21 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `sixteen is registered but the app still uses C`() {
+    fun `sixteen is registered and handled`() {
         assertEquals(Sixteen, KotlinGames.gameFor(SIXTEEN))
-        assertFalse(KotlinGames.handles(SIXTEEN))
+        assertTrue(KotlinGames.handles(SIXTEEN))
     }
 
     @Test
-    fun `flip is registered but the app still uses C`() {
+    fun `flip is registered and handled`() {
         assertEquals(Flip, KotlinGames.gameFor(FLIP))
-        assertFalse(KotlinGames.handles(FLIP))
+        assertTrue(KotlinGames.handles(FLIP))
     }
 
     @Test
-    fun `twiddle is registered but the app still uses C`() {
+    fun `twiddle is registered and handled`() {
         assertEquals(Twiddle, KotlinGames.gameFor(TWIDDLE))
-        assertFalse(KotlinGames.handles(TWIDDLE))
+        assertTrue(KotlinGames.handles(TWIDDLE))
     }
 
     @Test
@@ -113,9 +119,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `guess is registered but the app still uses C`() {
+    fun `guess is registered and handled`() {
         assertEquals(Guess, KotlinGames.gameFor(GUESS))
-        assertFalse(KotlinGames.handles(GUESS))
+        assertTrue(KotlinGames.handles(GUESS))
     }
 
     @Test
@@ -363,17 +369,17 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `the enabled set is exactly the first wave`() {
+    fun `the enabled set is exactly the two waves`() {
         val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
         assertEquals(
-            "the first wave is fifteen, samegame, flood, and pegs",
-            setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS),
+            "the two waves are fifteen, samegame, flood, pegs, sixteen, flip, twiddle, and guess",
+            enabledGames,
             enabled,
         )
         for (backend in BackendName.all) {
             assertEquals(
-                "$backend must use Kotlin only in the first wave",
-                backend in setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS),
+                "$backend must use Kotlin only in an enablement wave",
+                backend in enabledGames,
                 KotlinGames.handles(backend),
             )
         }
@@ -386,6 +392,10 @@ class KotlinGamesTest {
             Triple(SAMEGAME, "5x5c3s2", "samegame/default.sgtp"),
             Triple(FLOOD, "12x12c6m5", "flood/default.sgtp"),
             Triple(PEGS, "7x7cross", "pegs/default.sgtp"),
+            Triple(SIXTEEN, "4x4", "sixteen/default.sgtp"),
+            Triple(FLIP, "5x5c", "flip/default.sgtp"),
+            Triple(TWIDDLE, "3x3n2", "twiddle/default.sgtp"),
+            Triple(GUESS, "c6p4g10Bm", "guess/default.sgtp"),
         )
         for ((backend, params, path) in cases) {
             val text = KotlinGames.generate(backend, params, "12345")

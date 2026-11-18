@@ -134,10 +134,12 @@ class GamePlayParameterizedTest(
         /**
          * The backends the app runs on the Kotlin engine. The first
          * enablement wave (2026-11-18) is `fifteen`, `samegame`,
-         * `flood`, and `pegs`; a game joins this set with its first
-         * wave entry in `docs/ROADMAP.md`.
+         * `flood`, and `pegs`; the second wave is `sixteen`, `flip`,
+         * `twiddle`, and `guess`. A game joins this set with its wave
+         * entry in `docs/ROADMAP.md`.
          */
-        private val kotlinBackends = setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS)
+        private val kotlinBackends =
+            setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS, SIXTEEN, FLIP, TWIDDLE, GUESS)
 
         data class Example(
             val backend: BackendName,
