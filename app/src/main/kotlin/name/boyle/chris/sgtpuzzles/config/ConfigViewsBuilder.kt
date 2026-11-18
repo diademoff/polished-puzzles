@@ -5,21 +5,22 @@ import android.util.TypedValue
 import android.util.TypedValue.COMPLEX_UNIT_DIP
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import android.widget.TableLayout
 import android.widget.TableRow
-import androidx.appcompat.widget.AppCompatCheckBox
-import androidx.appcompat.widget.AppCompatEditText
 import androidx.appcompat.widget.AppCompatSpinner
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import name.boyle.chris.sgtpuzzles.R
 import name.boyle.chris.sgtpuzzles.Utils.listFromSeparated
 import name.boyle.chris.sgtpuzzles.backend.UsedByJNI
-import name.boyle.chris.sgtpuzzles.config.ConfigBuilder.Event.CFG_SETTINGS
 
 /** Expresses midend's config_items as Views. */
 abstract class ConfigViewsBuilder(
@@ -58,44 +59,40 @@ abstract class ConfigViewsBuilder(
         })
     }
 
-    fun addStringView(whichEvent: Int, name: String, value: String): ConfigBuilder.TextRowParts {
-        val editText = AppCompatEditText(themedContext).apply {
-            setText(value)
-            width =
-                context.resources.getDimensionPixelSize(if (whichEvent == CFG_SETTINGS.jni) R.dimen.dialog_edit_text_width else R.dimen.dialog_long_edit_text_width)
-            // 48dp is the minimum touch target; `minimumHeight` is the
-            // property that the platform reads for the minimum height.
-            minimumHeight = context.dip(48f)
-            // The label is also the hint, so the field carries its own
-            // label for a screen reader instead of only a relation to
-            // the sibling text. The field is never empty, so the hint
-            // stays out of sight.
+    fun addStringView(name: String, value: String): ConfigBuilder.TextRowParts {
+        // An M3 text field: the label is the floating hint of the field,
+        // so the field carries its own label for a screen reader and the
+        // value is never separated from it. Outlined, like the rest of
+        // the shell. The minimum width leaves room for the label, and the
+        // field is 56dp tall, above the 48dp target.
+        val input = TextInputLayout(themedContext).apply {
             hint = name
+            minimumWidth =
+                context.resources.getDimensionPixelSize(R.dimen.dialog_long_edit_text_width)
+            layoutParams = TableRow.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { span = 2 }
+        }
+        val editText = TextInputEditText(input.context).apply {
+            setText(value)
             setSelectAllOnFocus(true)
             onApply += { engine.configSetString(name, text.toString(), false) }
         }
-        val label = AppCompatTextView(themedContext).apply {
-            text = name
-            setPadding(
-                0,
-                0,
-                context.resources.getDimensionPixelSize(R.dimen.dialog_padding_horizontal),
-                0
-            )
-            gravity = Gravity.END
-        }
-        attachLabel(label, editText)
+        input.addView(editText)
         val tr = TableRow(themedContext).apply {
-            addView(label)
-            addView(editText)
+            addView(input)
+            // The floating label of a field sits on its own outline, so
+            // two fields need a gap to stay two fields.
+            setPadding(0, 0, 0, context.dip(8f))
             gravity = Gravity.CENTER_VERTICAL
             table.addView(this)
         }
-        return ConfigBuilder.TextRowParts(tr, label, editText)
+        return ConfigBuilder.TextRowParts(tr, input, editText)
     }
 
     fun addBooleanView(name: String, checked: Boolean): CheckBox {
-        return AppCompatCheckBox(themedContext).apply {
+        return MaterialCheckBox(themedContext).apply {
             text = name
             isChecked = checked
             minimumHeight = context.dip(48f)

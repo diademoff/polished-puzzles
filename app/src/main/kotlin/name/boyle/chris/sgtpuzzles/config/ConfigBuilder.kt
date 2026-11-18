@@ -3,7 +3,7 @@ package name.boyle.chris.sgtpuzzles.config
 import android.content.Context
 import android.widget.EditText
 import android.widget.TableRow
-import android.widget.TextView
+import com.google.android.material.textfield.TextInputLayout
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.backend.BackendName
 import name.boyle.chris.sgtpuzzles.backend.UsedByJNI
@@ -17,7 +17,7 @@ interface ConfigBuilder {
         }
     }
 
-    data class TextRowParts(val row: TableRow, val label: TextView, val editText: EditText)
+    data class TextRowParts(val row: TableRow, val label: TextInputLayout, val editText: EditText)
 
     @UsedByJNI
     fun setTitle(title: String)

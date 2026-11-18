@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.widget.AppCompatTextView
+import com.google.android.material.textfield.TextInputLayout
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch.Companion.fromSeed
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch.Companion.ofGameID
@@ -97,7 +98,7 @@ class CustomDialogBuilder private constructor(
 
     @UsedByJNI
     override fun addString(whichEvent: Int, kw: String, name: String, value: String) {
-        super.addStringView(whichEvent, name, value).apply {
+        super.addStringView(name, value).apply {
             if (dialogEvent == CFG_SEED && value.indexOf('#') == value.length - 1) {
                 table.addView(AppCompatTextView(table.context).apply { setText(R.string.seedWarning) })
             }
@@ -141,7 +142,8 @@ class CustomDialogBuilder private constructor(
                 colTV.intValue = cols * rows
                 rowTV.intValue = 1
                 rowTV.isEnabled = false
-                table.findViewWithTag<TextView>(COLS_LABEL_TAG).setText(R.string.Size_of_sub_blocks)
+                table.findViewWithTag<TextInputLayout>(COLS_LABEL_TAG)
+                    .setHint(R.string.Size_of_sub_blocks)
                 table.findViewWithTag<View>(ROWS_ROW_TAG).visibility = View.INVISIBLE
             } else {
                 if (rows == 1) {
@@ -150,7 +152,8 @@ class CustomDialogBuilder private constructor(
                     rowTV.intValue = size
                 }
                 rowTV.isEnabled = true
-                table.findViewWithTag<TextView>(COLS_LABEL_TAG).setText(R.string.Columns_of_sub_blocks)
+                table.findViewWithTag<TextInputLayout>(COLS_LABEL_TAG)
+                    .setHint(R.string.Columns_of_sub_blocks)
                 table.findViewWithTag<View>(ROWS_ROW_TAG).visibility = View.VISIBLE
             }
         }
