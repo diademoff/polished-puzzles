@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.BiasAbsoluteAlignment
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -254,10 +255,17 @@ private fun Buttons(
         val totalWidth = if (isLandscape) largerWidth + spaceAfterKeys else maxWidth
         val totalHeight = if (isLandscape) maxHeight else largerHeight + spaceAfterKeys
 
+        // Every key is placed with an absolute offset from the left edge
+        // of this box, so the box itself must start at the absolute left.
+        // A direction-aware alignment puts the keys at the right edge in
+        // a right-to-left layout and then adds the same positive offsets,
+        // so every key lands outside the window. The keyboard geometry is
+        // physical; the shell still mirrors around it.
         Box(modifier = Modifier
             .background(colorResource(id = R.color.keyboard_background))
             .width(totalWidth)
-            .height(totalHeight)) {
+            .height(totalHeight),
+            contentAlignment = BiasAbsoluteAlignment(-1f, -1f)) {
 
             if (majors > 0) {
                 val minorStartDp: Dp =
