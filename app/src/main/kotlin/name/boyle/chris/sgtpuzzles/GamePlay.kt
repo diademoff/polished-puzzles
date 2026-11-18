@@ -392,6 +392,19 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
             gameViewResized()
             WindowInsetsCompat.CONSUMED
         }
+        // In landscape the status line is the bottom-most control of the
+        // shell, so it must clear the navigation bar itself; the key
+        // column beside it handles its own inset. Portrait keeps the
+        // status line above the key bar, which already reserves it.
+        val statusBarTextPadding = statusBar.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(statusBar) { v, windowInsets ->
+            val inset = if (resources.configuration.orientation == ORIENTATION_LANDSCAPE) {
+                windowInsets.getInsets(systemBars() or displayCutout()).bottom
+            } else 0
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, statusBarTextPadding + inset)
+            windowInsets
+        }
+        statusBar.requestApplyInsets()
         buttons = _binding.buttons.apply {
             onKeyListener.value = { c: Int, isRepeat: Boolean ->
                 val ch = c.toChar()
