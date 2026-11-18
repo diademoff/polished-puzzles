@@ -97,8 +97,18 @@ object Map : Game {
     /**
      * The largest region count the port builds. A larger count would
      * allocate more than 2^24 graph entries. C accepts up to `w*h`.
+     * This is the load-path limit: a hand-written save above it is
+     * refused because the allocation cannot be built.
      */
     internal const val MAX_REGIONS = 4096
+
+    /**
+     * D-014: the generation region cap from the measurement. 60x60 with
+     * 100 regions is 0.18 s on the measured phone; at 200 regions the
+     * same seed did not finish in 30 s. The cap is generation-only, so
+     * a save above it still loads while it is below [MAX_REGIONS].
+     */
+    internal const val MAX_GENERATION_REGIONS = 100
 
     internal const val AREA_TOO_LARGE = "Width times height is too large for this build"
     internal const val REGIONS_TOO_LARGE = "Too many regions for this build"
@@ -366,11 +376,18 @@ object Map : Game {
     /**
      * The generation guard, called before any RNG draw or allocation.
      * It is internal so a test can pin both sides of each boundary
-     * without building a board that large.
+     * without building a board that large. The region cap is tighter
+     * than the load-path [MAX_REGIONS]: D-014 makes the 100-region
+     * limit generation-only, so a save above it still loads.
      */
     internal fun requirePortableBoard(w: Int, h: Int, n: Int) {
         require(w.toLong() * h <= MAX_AREA) { AREA_TOO_LARGE }
         require(n <= MAX_REGIONS) { REGIONS_TOO_LARGE }
+    }
+
+    /** The generation-only region guard of D-014. */
+    internal fun requireGeneratableRegions(n: Int) {
+        require(n <= MAX_GENERATION_REGIONS) { REGIONS_TOO_LARGE }
     }
 
     /** `game_configure` (`map.c:218-249`). */
@@ -452,6 +469,7 @@ object Map : Game {
         val n = p.n
         val wh = w * h
         requirePortableBoard(w, h, n)
+        requireGeneratableRegions(n)
 
         val stats = GenerationStats()
         val map = IntArray(wh)

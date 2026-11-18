@@ -29,8 +29,9 @@ import kotlin.math.atan2
  *
  * D-008: upstream `validate_params` accepts an area up to `INT_MAX`
  * cells, and generation of `46340x46340` allocates over 100 GB and
- * never finishes. [newDesc] refuses an area above [MAX_AREA] cells with
- * a fixed message before the first RNG draw. No preset is near the
+ * never finishes. [newDesc] refuses an area above [MAX_AREA] cells
+ * (200x200, where the measured phone generation is about 6.7 s) with a
+ * fixed message before the first RNG draw. No preset is near the
  * limit, so every real description is unchanged.
  */
 object Inertia : Game {
@@ -48,8 +49,8 @@ object Inertia : Game {
     internal const val DIRECTIONS = 8
     internal const val DP1 = DIRECTIONS + 1
 
-    /** The generation guard of D-008; upstream has no such limit. */
-    internal const val MAX_AREA = 1 shl 20
+    /** The generation guard of D-008: 200x200, the measured cap. */
+    internal const val MAX_AREA = 40_000
 
     private const val COL_BACKGROUND = 0
     private const val COL_OUTLINE = 1
@@ -1072,9 +1073,7 @@ object Inertia : Game {
      * board of that size.
      */
     internal fun requireGeneratableArea(w: Int, h: Int) {
-        require(w.toLong() * h <= MAX_AREA) {
-            "Width times height is too large for this build"
-        }
+        require(w.toLong() * h <= MAX_AREA) { Game.AREA_TOO_LARGE }
     }
 
     /**

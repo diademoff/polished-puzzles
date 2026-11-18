@@ -28,11 +28,18 @@ import kotlin.math.pow
  * an assertion (`net.c:1862`); the port returns [SolveAttempt.move]
  * null with an error (D-011). A short `AUXINFO` is read past its end;
  * the port treats a missing character as zero.
+ *
+ * D-028: [newDesc] refuses an area above [MAX_AREA] (100x100) before
+ * the first draw. Host generation at 100x100 is 0.87 s and the measured
+ * phone extrapolation is 3.5 s; 125x125 is 10.1 s on the phone.
  */
 object Net : Game {
 
     private const val PREFERRED_TILE_SIZE = 32
     private const val WINDOW_OFFSET = 4
+
+    /** D-028: the measured generation cap, 100x100. */
+    internal const val MAX_AREA = 10_000
 
     // Direction and other bitfields.
     private const val R = 0x01
@@ -326,6 +333,9 @@ object Net : Game {
      */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
+        require(p.width.toLong() * p.height <= MAX_AREA) {
+            Game.AREA_TOO_LARGE
+        }
         val w = p.width
         val h = p.height
         val cx = w / 2

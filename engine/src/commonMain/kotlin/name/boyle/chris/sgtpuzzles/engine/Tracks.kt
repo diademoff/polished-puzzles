@@ -25,6 +25,10 @@ import kotlin.math.sin
  * keys, and no blitter. `solve_game` reads the first state of the
  * history, which the seam does not pass, so the decoded initial board is
  * captured in [Shared] and used for the second solve attempt.
+ *
+ * D-029: [newDesc] refuses an area above [MAX_AREA] (22x22) before the
+ * first draw. 22x22 Hard is 2.7 s on the measured phone; 23x23 Hard is
+ * 10 s on the host already.
  */
 object Tracks : Game {
 
@@ -37,6 +41,9 @@ object Tracks : Game {
     private const val DIFF_CHARS = "eth"
 
     private const val PREFERRED_TILE_SIZE = 33
+
+    /** D-029: the measured generation cap, 22x22. */
+    internal const val MAX_AREA = 484
 
     // Direction bits and their neighbours, `tracks.c:213-241`.
     private const val R = 1
@@ -618,6 +625,9 @@ object Tracks : Game {
         random: RandomState,
     ): Generated {
         val requested = params as Params
+        require(requested.w.toLong() * requested.h <= MAX_AREA) {
+            Game.AREA_TOO_LARGE
+        }
         val stats = GenerationStats()
 
         // `tracks.c:735-739`: 4x4 Tricky cannot be generated.

@@ -30,14 +30,17 @@ import kotlin.math.min
  *
  * Generation cost is the C cost: `remove_clues` runs the full solver
  * once per face and the retry loops are unbounded. [validateParams]
- * keeps the C bounds, so the app must generate off the UI thread; a size
- * guard is an owner decision, not a game rule.
+ * keeps the C bounds, so the app must generate off the UI thread. D-033
+ * refuses an area above [MAX_AREA] (20x20) before the first draw.
  */
 object Loopy : Game {
 
     // ------------------------------------------------------------------
     // Constants, `loopy.c:103-355`.
     // ------------------------------------------------------------------
+
+    /** D-033: the measured generation cap, 20x20, for every grid type. */
+    internal const val MAX_AREA = 400
 
     // Palette, `loopy.c:103-113`.
     private const val COL_BACKGROUND = 0
@@ -580,6 +583,9 @@ object Loopy : Game {
 
     /** [newDesc] with the retry counts exposed for fixtures. */
     internal fun generate(p: Params, random: RandomState): Generated {
+        require(p.w.toLong() * p.h <= MAX_AREA) {
+            Game.AREA_TOO_LARGE
+        }
         val kind = kinds[p.type]
         val gridDesc = Grid.newDesc(kind.type, p.w, p.h, random)
         val grid = Grid.new(kind.type, p.w, p.h, gridDesc)

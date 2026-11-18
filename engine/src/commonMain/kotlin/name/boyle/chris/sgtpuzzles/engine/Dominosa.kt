@@ -22,6 +22,11 @@ import kotlin.math.abs
  * a solver, a text form, and a params-dependent text bound: C offers no
  * text when `n >= 1000`, and [textFormat] returns the empty string in
  * that case because the seam has no params-aware text hook.
+ *
+ * D-030: [newDesc] refuses a maximum number above [MAX_N] (9) before
+ * the first draw. Extreme at 9 is 6.0 s on the measured phone and 10 is
+ * 12.5 s; Basic stays fast above 9, but a single cap is the measured
+ * rule.
  */
 object Dominosa : Game {
 
@@ -36,6 +41,9 @@ object Dominosa : Game {
     private const val DIFF_CHARS = "tbhea"
 
     private const val PREFERRED_TILE_SIZE = 32
+
+    /** D-030: the measured generation cap on the maximum number. */
+    internal const val MAX_N = 9
 
     // Edge bits, `dominosa.c:111-114`.
     private const val EDGE_L = 0x100
@@ -331,6 +339,7 @@ object Dominosa : Game {
     /** [newDesc] with the retry counters, for the engine tests. */
     internal fun newDescWithStats(params: Game.Params, random: RandomState): Generated {
         val p = params as Params
+        require(p.n <= MAX_N) { "Maximum number is too large for this build" }
         val n = p.n
         val w = n + 2
         val h = n + 1

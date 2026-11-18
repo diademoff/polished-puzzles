@@ -35,8 +35,8 @@ import kotlin.math.min
  *
  * Generation has the C cost: a `13x13` board takes seconds and `14x14`
  * or larger does not finish in the measured budget. `validateParams`
- * keeps the C bound, so the app must generate off the UI thread; a size
- * limit is an owner decision (see D-019).
+ * keeps the C bound, so the app must generate off the UI thread. D-032
+ * refuses an area above [MAX_AREA] (12x12) before the first draw.
  */
 object Pearl : Game {
 
@@ -47,6 +47,9 @@ object Pearl : Game {
     private const val NOCLUE = 0
     private const val CORNER = 1
     private const val STRAIGHT = 2
+
+    /** D-032: the measured generation cap, 12x12. */
+    internal const val MAX_AREA = 144
 
     private const val R = 1
     private const val U = 2
@@ -404,6 +407,9 @@ object Pearl : Game {
      * answer is the loop, so the auxiliary text is the loop either way.
      */
     internal fun generateClues(params: Params, random: RandomState): GeneratedClues {
+        require(params.w.toLong() * params.h <= MAX_AREA) {
+            Game.AREA_TOO_LARGE
+        }
         val w = params.w
         val h = params.h
         var diff = params.difficulty

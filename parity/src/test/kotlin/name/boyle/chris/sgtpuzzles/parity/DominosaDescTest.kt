@@ -163,7 +163,6 @@ class DominosaDescTest {
             "06",
             "6x",
             "6junk",
-            "12",
             "1dt",
             "1db",
             "1de",
@@ -182,6 +181,15 @@ class DominosaDescTest {
                 midend.serialise().serialise(),
             )
         }
+
+        // D-030 caps generation at 9; validation still decodes and
+        // accepts 12, as C does, and only the generator refuses it.
+        assertNull(Dominosa.validateParams(Dominosa.decodeParams("12"), true))
+        assertEquals(
+            "Maximum number is too large for this build",
+            runCatching { Midend.newGame(Dominosa, "12", SEED) }
+                .exceptionOrNull()?.message,
+        )
 
         val rejected = listOf("6d", "6dx", "6d0", "6d?", "6ad", "0", "-1", "46340")
         for (params in rejected) {

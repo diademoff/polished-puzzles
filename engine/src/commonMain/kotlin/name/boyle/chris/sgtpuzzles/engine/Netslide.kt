@@ -23,16 +23,24 @@ import kotlin.math.round
  * move. The slide and flash times cannot be observed through the
  * oracle, so they are not ported.
  *
- * One intentional deviation from C: a NaN barrier probability is
+ * Two intentional deviations from C. A NaN barrier probability is
  * rejected by [validateParams]. The C `validate_params` accepts it and
  * then aborts at `netslide.c:629` on the `(int)(NaN * count)` cast. The
  * app compiles with assertions on, so the C build would crash on a
- * config dialog value of `nan`. This needs an entry in
- * `docs/DEVIATIONS.md`.
+ * config dialog value of `nan`. D-005 records that. A board above
+ * [MAX_AREA] cells is refused at generation, before any RNG draw,
+ * with a fixed message. D-026 records that.
  */
 object Netslide : Game {
 
     private const val PREFERRED_TILE_SIZE = 48
+
+    /**
+     * D-026: the measured generation cap, 300x300. Generation is linear
+     * in the area and has no cliff, so this is a policy cap that keeps
+     * a phone generation under five seconds.
+     */
+    internal const val MAX_AREA = 90_000
 
     // Direction and other bitfields.
     private const val R = 0x01
@@ -316,10 +324,11 @@ object Netslide : Game {
      * `validate_params`, in the C order. The overflow test stays
      * `w > INT_MAX / h`, so `46340x46340` is accepted. That board has
      * 2,147,395,600 cells: about 4.3 GiB of arrays in C and about 17 GB
-     * with the two `IntArray`s the port uses. Do not generate it. A NaN
+     * with the two `IntArray`s the port uses, so [newDesc] refuses an
+     * area above [MAX_AREA] (D-026). A NaN
      * rate passes the
      * two range tests in C and then aborts, so the port rejects it here
-     * with this clear message. That rejection is the one deviation.
+     * with this clear message (D-005).
      */
     override fun validateParams(params: Game.Params, full: Boolean): String? {
         val p = params as Params
@@ -373,9 +382,14 @@ object Netslide : Game {
      * before the shuffle. Phase 3 shuffles with two draws per attempt,
      * including the attempts the retry rule rejects. Phase 4 draws the
      * barriers from the sorted list after the shuffle.
+     *
+     * D-026 rejects an area above [MAX_AREA] before the first draw.
      */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
+        require(p.width.toLong() * p.height <= MAX_AREA) {
+            Game.AREA_TOO_LARGE
+        }
         val w = p.width
         val h = p.height
         val n = w * h

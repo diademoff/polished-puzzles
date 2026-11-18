@@ -34,11 +34,20 @@ object Palisade : Game {
     private const val EMPTY = -1
 
     /**
-     * The generation guard from `docs/DEVIATIONS.md` D-007. Upstream
-     * accepts an area up to `Int.MAX_VALUE`, and generation then tries
-     * to allocate tens of gigabytes. No preset is near this limit.
+     * The generation area guard from `docs/DEVIATIONS.md` D-007.
+     * Upstream accepts an area up to `Int.MAX_VALUE`, and generation
+     * then tries to allocate tens of gigabytes. No preset is near this
+     * limit.
      */
     internal const val MAX_AREA = 1 shl 20
+
+    /**
+     * The generation region guard from D-007: cost follows the region
+     * count `w*h/k`, not the area. 25x20n10 is 50 regions and finishes
+     * in 7.2 s on the measured phone; 30x20n10 is 60 regions and takes
+     * 27 s.
+     */
+    internal const val MAX_REGIONS = 50
 
     private const val BORDER_U = 1
     private const val BORDER_R = 2
@@ -248,8 +257,9 @@ object Palisade : Game {
 
     /**
      * `validate_params` from `palisade.c:164-185`, in C order. The size
-     * guard in [MAX_AREA] is deliberately not here: upstream accepts a
-     * huge area, and D-007 rejects only at generation.
+     * and region guards in [MAX_AREA] and [MAX_REGIONS] are deliberately
+     * not here: upstream accepts a huge area and a huge region count,
+     * and D-007 rejects them only at generation.
      */
     override fun validateParams(params: Game.Params, full: Boolean): String? {
         val p = params as Params
@@ -331,6 +341,9 @@ object Palisade : Game {
      * contract: one shuffle of the winnow order, then one
      * `Divvy.rectangle` per solver-gate attempt. A retry does not
      * reshuffle the winnow order. The winnow loop draws nothing.
+     *
+     * D-007 rejects an area above [MAX_AREA] and a region count above
+     * [MAX_REGIONS] before the shuffle.
      */
     private fun generate(params: Game.Params, random: RandomState): Generation {
         val p = params as Params
@@ -338,8 +351,10 @@ object Palisade : Game {
         val h = p.h
         val k = p.k
 
-        require(w.toLong() * h <= MAX_AREA) {
-            "Width times height is too large for this build"
+        require(w.toLong() * h <= MAX_AREA) { Game.AREA_TOO_LARGE }
+        require(k > 0) { "Region size must be at least one" }
+        require(w.toLong() * h / k <= MAX_REGIONS) {
+            "Too many regions to generate in this build"
         }
         val wh = w * h
 

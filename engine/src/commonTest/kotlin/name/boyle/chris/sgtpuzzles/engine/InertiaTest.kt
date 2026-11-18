@@ -145,13 +145,13 @@ class InertiaTest {
         }
         assertEquals("Width times height is too large for this build", error.message)
 
-        // The exact 2^20 boundary is accepted by the guard.
+        // The exact 40,000-cell boundary is accepted by the guard.
         assertEquals(
             null,
-            Inertia.validateParams(Inertia.Params(1024, 1024), true),
+            Inertia.validateParams(Inertia.Params(200, 200), true),
         )
         val over = assertFailsWith<IllegalArgumentException> {
-            Inertia.newDesc(Inertia.Params(1025, 1024), RandomState.fromSeed("1"))
+            Inertia.newDesc(Inertia.Params(201, 200), RandomState.fromSeed("1"))
         }
         assertEquals("Width times height is too large for this build", over.message)
     }
@@ -172,27 +172,27 @@ class InertiaTest {
         val near = RandomState.fromSeed("guard")
         val nearBefore = near.encodeState()
         assertFailsWith<IllegalArgumentException> {
-            Inertia.newDesc(Inertia.Params(1025, 1024), near)
+            Inertia.newDesc(Inertia.Params(201, 200), near)
         }
         assertEquals(nearBefore, near.encodeState())
     }
 
     @Test
-    fun `the generation boundary is exactly 2^20 cells`() {
-        assertEquals(1 shl 20, Inertia.MAX_AREA)
+    fun `the generation boundary is exactly 40,000 cells`() {
+        assertEquals(40_000, Inertia.MAX_AREA)
 
-        // The guard itself is pinned at the boundary: a full 1024x1024
-        // generation would allocate and shuffle about 51 MB per attempt,
-        // so the test calls the guard directly instead of newDesc.
-        Inertia.requireGeneratableArea(1024, 1024)
+        // The guard itself is pinned at the boundary: a full 200x200
+        // generation is 1.9 s on the host and is covered by the parity
+        // suite; this test calls the guard directly.
+        Inertia.requireGeneratableArea(200, 200)
         assertEquals(
             "Width times height is too large for this build",
             assertFailsWith<IllegalArgumentException> {
-                Inertia.requireGeneratableArea(1025, 1024)
+                Inertia.requireGeneratableArea(201, 200)
             }.message,
         )
         assertFailsWith<IllegalArgumentException> {
-            Inertia.requireGeneratableArea(1024, 1025)
+            Inertia.requireGeneratableArea(200, 201)
         }
     }
 

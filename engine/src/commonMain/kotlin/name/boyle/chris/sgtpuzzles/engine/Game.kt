@@ -68,6 +68,15 @@ interface Game {
         const val SLOW_GENERATION_WARNING =
             "This board may take a long time to generate."
 
+        /**
+         * The generation guard text for a board whose area is above the
+         * game's measured cap. One text keeps the area family in
+         * agreement, and a game names its own cap in a comment at the
+         * guard.
+         */
+        const val AREA_TOO_LARGE =
+            "Width times height is too large for this build"
+
         /** `SOLVE_ANIMATES`: the shell animates a solve. */
         const val SOLVE_ANIMATES = 1 shl 9
 

@@ -34,6 +34,10 @@ import kotlin.math.min
  * difficulty or symmetry outside the decoded range can loop, and a
  * killer description with an unclued cage aborts the C solver and
  * drawing. The port defines those results; see D-024.
+ *
+ * Generation cost follows the difficulty. D-034 refuses a symbol count
+ * above the measured band before the first draw: 25 symbols for Block,
+ * Simple, and Intersect, 16 for Set and Extreme, and 9 for Recursive.
  */
 object Solo : Game {
 
@@ -78,6 +82,37 @@ object Solo : Game {
 
     /** `ORDER_MAX`, `solo.c:93`. */
     private const val ORDER_MAX = 255
+
+    /** D-034: the generation guard text and the three measured bands. */
+    internal const val SYMBOLS_TOO_LARGE =
+        "Board size and difficulty are too large to generate in this build"
+    internal const val MAX_SYMBOLS_SIMPLE = 25
+    internal const val MAX_SYMBOLS_SET = 16
+    internal const val MAX_SYMBOLS_RECURSIVE = 9
+
+    /**
+     * The symbol cap for [difficulty]. Recursive is 9 symbols (3x3 is
+     * 0.45 s on the host and 4x4 does not finish); Set and Extreme are
+     * 16 (4x4 is 0.73 s and 5x5 does not finish); the rest are 25
+     * (5x5 is 0.54 s on the host and 1.24 s on the phone, 6x5 does not
+     * finish).
+     */
+    internal fun maxSymbols(difficulty: Int): Int = when (difficulty) {
+        DIFF_RECURSIVE -> MAX_SYMBOLS_RECURSIVE
+        DIFF_SET, DIFF_EXTREME -> MAX_SYMBOLS_SET
+        else -> MAX_SYMBOLS_SIMPLE
+    }
+
+    /**
+     * The generation guard of D-034, before any allocation or draw.
+     * It is internal so a test can pin every band at its boundary
+     * without generating a board of that size.
+     */
+    internal fun requireGeneratableSize(c: Int, r: Int, difficulty: Int) {
+        require(c.toLong() * r <= maxSymbols(difficulty)) {
+            SYMBOLS_TOO_LARGE
+        }
+    }
 
     /** `PREFERRED_TILE_SIZE`, `solo.c:95`. */
     private const val PREFERRED_TILE_SIZE = 48
@@ -2736,7 +2771,8 @@ object Solo : Game {
      * solver grades the puzzle at exactly the requested difficulty.
      * Killer puzzles merge cages greedily and keep the last grid that
      * reached the requested difficulty; the RNG order is therefore
-     * observable in every description.
+     * observable in every description. D-034 refuses a symbol count
+     * above the measured band for the difficulty before the first draw.
      */
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
@@ -2754,6 +2790,7 @@ object Solo : Game {
         if (p.symm !in SYMM_NONE..SYMM_REF8) {
             throw IllegalArgumentException("solo: unknown symmetry")
         }
+        requireGeneratableSize(c, r, p.diff)
 
         val dlev = Difficulty(p.diff, p.kdiff)
         if ((c == 2 && r == 2) || (r == 1 && c < 4)) dlev.maxdiff = DIFF_BLOCK

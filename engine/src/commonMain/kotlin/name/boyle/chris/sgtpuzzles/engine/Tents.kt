@@ -33,9 +33,11 @@ package name.boyle.chris.sgtpuzzles.engine
  *
  * Enablement debt: upstream validation accepts `46340x46340`, and
  * generation allocates over 100 GB. Easy on a large board is also
- * slow: 20x20 takes about 0.6 s and 25x25 about 39 s in C. A later
- * slice must generate off the UI thread and decide whether to bound
- * the size.
+ * slow: 20x20 takes about 0.6 s and 25x25 about 39 s in C.
+ *
+ * D-027: [newDesc] refuses an area above [MAX_AREA] (22x22) before the
+ * first draw. 22x22 Easy takes 6.9 s on the measured phone and 23x23
+ * Easy does not finish in 12 s on the host.
  */
 object Tents : Game {
 
@@ -60,6 +62,9 @@ object Tents : Game {
     internal const val DIFFCOUNT = 2
     private val DIFF_CHARS = charArrayOf('e', 't')
     private val DIFF_NAMES = arrayOf("Easy", "Tricky")
+
+    /** D-027: the measured generation cap, 22x22. */
+    internal const val MAX_AREA = 484
 
     /** The palette of `tents.c:259-270`. */
     private const val COL_BACKGROUND = 0
@@ -1247,6 +1252,7 @@ object Tents : Game {
     internal fun generate(params: Params, random: RandomState): Generation {
         val w = params.w
         val h = params.h
+        require(w.toLong() * h <= MAX_AREA) { Game.AREA_TOO_LARGE }
         val ntrees = w * h / 5
         val diff = if (params.diff > DIFF_EASY && w <= 4 && h <= 4) {
             DIFF_EASY

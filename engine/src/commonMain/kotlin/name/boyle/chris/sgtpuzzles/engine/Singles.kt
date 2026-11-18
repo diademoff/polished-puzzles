@@ -26,8 +26,9 @@ import kotlin.math.max
  *   that result in the engine test.
  *
  * Generation cost is not bounded by upstream. The retry loop can run
- * for a long time on some accepted sizes, so the app must generate off
- * the UI thread. The tests stay on the presets.
+ * for a long time on some accepted sizes, so D-031 refuses an area
+ * above [MAX_AREA] (a side of 20) before the first draw, and the app
+ * must still generate off the UI thread.
  */
 object Singles : Game {
 
@@ -42,6 +43,9 @@ object Singles : Game {
 
     /** `PREFERRED_TILE_SIZE`, `singles.c:74`. */
     private const val PREFERRED_TILE_SIZE = 32
+
+    /** D-031: the measured generation cap, an area of 20x20 cells. */
+    internal const val MAX_AREA = 400
 
     // Palette, `singles.c:88-93`.
     private const val COL_BACKGROUND = 0
@@ -1220,10 +1224,14 @@ object Singles : Game {
      * A side of 62 is rejected before the first draw. The C generator
      * writes a description that contains the digit 62, its own decoder
      * rejects that `[`, and `new_game` aborts. This is D-017; every valid
-     * size keeps the C stream and description.
+     * size keeps the C stream and description. D-031 then rejects an
+     * area above [MAX_AREA] before the first draw.
      */
     internal fun generateWithStats(params: Params, random: RandomState): Generated {
         require(params.w != 62 && params.h != 62) { "Puzzle is too large" }
+        require(params.w.toLong() * params.h <= MAX_AREA) {
+            Game.AREA_TOO_LARGE
+        }
 
         val w = params.w
         val h = params.h
