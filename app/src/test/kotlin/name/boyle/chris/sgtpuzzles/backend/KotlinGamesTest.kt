@@ -68,6 +68,8 @@ class KotlinGamesTest {
         SLANT, RANGE, TOWERS, UNEQUAL,
         MAGNETS, PATTERN, MOSAIC, SIGNPOST, UNTANGLE,
         GALAXIES, BRIDGES, UNRULY, FILLING, MINES,
+        NETSLIDE, PALISADE, INERTIA, TENTS, NET, TRACKS,
+        DOMINOSA, MAP, KEEN, SINGLES, PEARL, LOOPY,
     )
 
     @Test
@@ -79,7 +81,7 @@ class KotlinGamesTest {
             )
         }
         assertFalse(KotlinGames.handles(CUBE))
-        assertFalse(KotlinGames.handles(NET))
+        assertFalse(KotlinGames.handles(SOLO))
     }
 
     @Test
@@ -173,18 +175,6 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `netslide is registered but the app still uses C`() {
-        assertEquals(Netslide, KotlinGames.gameFor(NETSLIDE))
-        assertFalse(KotlinGames.handles(NETSLIDE))
-    }
-
-    @Test
-    fun `net is registered but the app still uses C`() {
-        assertEquals(Net, KotlinGames.gameFor(NET))
-        assertFalse(KotlinGames.handles(NET))
-    }
-
-    @Test
     fun `unruly is registered and handled`() {
         assertEquals(Unruly, KotlinGames.gameFor(UNRULY))
         assertTrue(KotlinGames.handles(UNRULY))
@@ -200,24 +190,6 @@ class KotlinGamesTest {
     fun `mosaic is registered and handled`() {
         assertEquals(Mosaic, KotlinGames.gameFor(MOSAIC))
         assertTrue(KotlinGames.handles(MOSAIC))
-    }
-
-    @Test
-    fun `palisade is registered but the app still uses C`() {
-        assertEquals(Palisade, KotlinGames.gameFor(PALISADE))
-        assertFalse(KotlinGames.handles(PALISADE))
-    }
-
-    @Test
-    fun `inertia is registered but the app still uses C`() {
-        assertEquals(Inertia, KotlinGames.gameFor(INERTIA))
-        assertFalse(KotlinGames.handles(INERTIA))
-    }
-
-    @Test
-    fun `tents is registered but the app still uses C`() {
-        assertEquals(Tents, KotlinGames.gameFor(TENTS))
-        assertFalse(KotlinGames.handles(TENTS))
     }
 
     @Test
@@ -251,30 +223,6 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `tracks is registered but the app still uses C`() {
-        assertEquals(Tracks, KotlinGames.gameFor(TRACKS))
-        assertFalse(KotlinGames.handles(TRACKS))
-    }
-
-    @Test
-    fun `dominosa is registered but the app still uses C`() {
-        assertEquals(Dominosa, KotlinGames.gameFor(DOMINOSA))
-        assertFalse(KotlinGames.handles(DOMINOSA))
-    }
-
-    @Test
-    fun `map is registered but the app still uses C`() {
-        assertEquals(Map, KotlinGames.gameFor(MAP))
-        assertFalse(KotlinGames.handles(MAP))
-    }
-
-    @Test
-    fun `keen is registered but the app still uses C`() {
-        assertEquals(Keen, KotlinGames.gameFor(KEEN))
-        assertFalse(KotlinGames.handles(KEEN))
-    }
-
-    @Test
     fun `towers is registered and handled`() {
         assertEquals(Towers, KotlinGames.gameFor(TOWERS))
         assertTrue(KotlinGames.handles(TOWERS))
@@ -284,12 +232,6 @@ class KotlinGamesTest {
     fun `unequal is registered and handled`() {
         assertEquals(Unequal, KotlinGames.gameFor(UNEQUAL))
         assertTrue(KotlinGames.handles(UNEQUAL))
-    }
-
-    @Test
-    fun `singles is registered but the app still uses C`() {
-        assertEquals(Singles, KotlinGames.gameFor(SINGLES))
-        assertFalse(KotlinGames.handles(SINGLES))
     }
 
     @Test
@@ -310,12 +252,6 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `pearl is registered but the app still uses C`() {
-        assertEquals(Pearl, KotlinGames.gameFor(PEARL))
-        assertFalse(KotlinGames.handles(PEARL))
-    }
-
-    @Test
     fun `the rect generator matches the frozen save`() {
         val expected = File(testdata, "saves/initial/rect/7x7.sgtp").readText()
         val actual = KotlinGames.generate(RECT, "7x7", "12345")
@@ -330,12 +266,6 @@ class KotlinGamesTest {
         assertTrue(actual.contains("GAME    :8:Galaxies"))
         assertTrue(actual.contains("DESC    :13:cjrbhizuisfvf"))
         assertTrue(actual.contains("AUXINFO :"))
-    }
-
-    @Test
-    fun `loopy is registered but the app still uses C`() {
-        assertEquals(Loopy, KotlinGames.gameFor(LOOPY))
-        assertFalse(KotlinGames.handles(LOOPY))
     }
 
     @Test
@@ -375,13 +305,37 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `the enabled set is exactly the six waves`() {
+    fun `the seventh wave is registered and handled`() {
+        val seventh = listOf(
+            NETSLIDE to Netslide,
+            PALISADE to Palisade,
+            INERTIA to Inertia,
+            TENTS to Tents,
+            NET to Net,
+            TRACKS to Tracks,
+            DOMINOSA to Dominosa,
+            MAP to Map,
+            KEEN to Keen,
+            SINGLES to Singles,
+            PEARL to Pearl,
+            LOOPY to Loopy,
+        )
+        for ((backend, game) in seventh) {
+            assertEquals("$backend engine", game, KotlinGames.gameFor(backend))
+            assertTrue("$backend must run on the Kotlin backend", KotlinGames.handles(backend))
+        }
+    }
+
+    @Test
+    fun `the enabled set is exactly the seven waves`() {
         val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
         assertEquals(
-            "the six waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
+            "the seven waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
                 "twiddle, guess, blackbox, lightup, undead, rect, slant, range, " +
                 "towers, unequal, magnets, pattern, mosaic, signpost, untangle, " +
-                "galaxies, bridges, unruly, filling, and mines",
+                "galaxies, bridges, unruly, filling, mines, netslide, palisade, " +
+                "inertia, tents, net, tracks, dominosa, map, keen, singles, " +
+                "pearl, and loopy",
             enabledGames,
             enabled,
         )
@@ -423,6 +377,18 @@ class KotlinGamesTest {
             Triple(UNRULY, "8x8dt", "unruly/8x8dt.sgtp"),
             Triple(FILLING, "9x7", "filling/9x7.sgtp"),
             Triple(MINES, "9x9n10", "mines/9x9n10.sgtp"),
+            Triple(NETSLIDE, "3x3", "netslide/3x3.sgtp"),
+            Triple(PALISADE, "5x5n5", "palisade/5x5n5.sgtp"),
+            Triple(INERTIA, "10x8", "inertia/10x8.sgtp"),
+            Triple(TENTS, "8x8de", "tents/8x8de.sgtp"),
+            Triple(NET, "5x5", "net/5x5.sgtp"),
+            Triple(TRACKS, "8x8dt", "tracks/8x8dt.sgtp"),
+            Triple(DOMINOSA, "6db", "dominosa/6db.sgtp"),
+            Triple(MAP, "20x15n30dn", "map/20x15n30dn.sgtp"),
+            Triple(KEEN, "6dn", "keen/6dn.sgtp"),
+            Triple(SINGLES, "5x5de", "singles/5x5de.sgtp"),
+            Triple(PEARL, "8x8de", "pearl/8x8de.sgtp"),
+            Triple(LOOPY, "7x7t0de", "loopy/7x7t0de.sgtp"),
         )
         for ((backend, params, path) in cases) {
             val text = KotlinGames.generate(backend, params, "12345")

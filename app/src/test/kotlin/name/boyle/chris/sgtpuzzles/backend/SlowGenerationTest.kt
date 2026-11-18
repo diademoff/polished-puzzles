@@ -1,7 +1,7 @@
 package name.boyle.chris.sgtpuzzles.backend
 
+import name.boyle.chris.sgtpuzzles.engine.Cube
 import name.boyle.chris.sgtpuzzles.engine.Game
-import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -45,24 +45,24 @@ class SlowGenerationTest {
      */
     @Test
     fun `a C backend never warns`() {
-        val slowNet = object : Game by Net {
+        val slowCube = object : Game by Cube {
             override fun generationWarning(params: Game.Params): String? =
                 Game.SLOW_GENERATION_WARNING
         }
-        val params = "5x5"
+        val params = "4x4"
         assertEquals(
             "the stub must declare a threshold, so the gate is what silences it",
             Game.SLOW_GENERATION_WARNING,
-            slowNet.generationWarning(Net.decodeParams(params)),
+            slowCube.generationWarning(Cube.decodeParams(params)),
         )
-        assertFalse("net must still run on C", KotlinGames.handles(NET))
+        assertFalse("cube must still run on C", KotlinGames.handles(CUBE))
         val launch = GameLaunch.toGenerate(
-            NET,
+            CUBE,
             params,
             GameLaunch.Origin.GENERATING_FROM_CHOOSER,
         )
         assertNull(KotlinGames.generationWarning(launch, params))
-        assertNull(KotlinGames.generationWarning(launch, params, slowNet))
+        assertNull(KotlinGames.generationWarning(launch, params, slowCube))
     }
 
     /** A slow board of the sixth enablement wave warns like the rest. */
