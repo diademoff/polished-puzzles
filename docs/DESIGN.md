@@ -45,8 +45,13 @@ concrete instruction, without installing a tool.
 - No hex values in components. Theme tokens only.
 - Light and dark themes are required. Dark is not an inversion; it is
   its own palette.
-- Dynamic color (API 31+) is optional and controlled by the user. It
-  does not apply to the game board palette.
+- Dynamic color (API 31+) is the **Use system colors** setting: on by
+  default on Android 12 and later, absent below it. The shell roles then
+  come from the wallpaper palette; the game board and the key bar do
+  not, because their palette is part of parity and of the game's input
+  contract. The setting is a theme, so a screen reads it when it is
+  built; the settings screen rebuilds itself so the change shows at once,
+  and a running game is never restarted.
 - One accent color. Everything else is a neutral surface.
 - Contrast: text ≥ 4.5:1, large text and UI ≥ 3:1.
 - Information is never conveyed by color alone. Where game rules allow,
@@ -86,7 +91,11 @@ concrete instruction, without installing a tool.
 - Shadows are minimal. Hierarchy comes from surface tone and borders,
   not from stacked cards.
 - Do not nest cards without a reason.
-- Dividers are thin and use `outlineVariant`.
+- Dividers are thin. A divider that marks a section boundary uses
+  `outline`, the lightest neutral role that reaches the 3:1 UI minimum
+  (4.3:1 light, 5.8:1 dark on the surface). `outlineVariant` is only
+  1.6:1 and 2.0:1 there, so it marks decoration inside a section, not a
+  boundary.
 
 ## 7. Motion
 
@@ -130,12 +139,19 @@ concrete instruction, without installing a tool.
 - The board gets maximum area, status is one line, controls are at the
   bottom.
 - No floating buttons over the board.
+- The key bar is one Material 3 surface with tonal keys: a 48dp cell, a
+  visible container, a ripple, and a dimmer container and glyph for a
+  disabled key. The cell grid is the game's input contract, so its size
+  and its arrangement do not follow the 8dp spacing step.
 - Menus and settings do not cover the board without a reason.
 - Gestures do not conflict with scrolling or system back.
 
 ### Dialogs
 
 - M3 basic dialog, one primary action.
+- Configuration fields are M3 text fields and booleans are M3
+  checkboxes; the field's own floating label is its name, so a screen
+  reader reads the name with the value.
 - Title says what happens; body says why; buttons are verbs.
 - Destructive actions need confirmation.
 - An error explains what to do next, not just "Error".
@@ -146,6 +162,11 @@ concrete instruction, without installing a tool.
 - Group by meaning; apply immediately.
 - The default value is visible.
 - Dangerous settings (reset) are separate and confirmed.
+- A row is a Material 3 list item: a body-large title, a body-medium
+  summary in `onSurfaceVariant`, 16dp side padding, and a switch from the
+  Material 3 compound button. A section label is a title-small label in
+  the accent color. Rows grow with the text scale; they never ellipsize
+  a title.
 
 ### Help
 

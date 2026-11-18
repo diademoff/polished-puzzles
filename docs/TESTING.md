@@ -412,7 +412,9 @@ cannot reach:
 - `FifteenSettingsDialogTest` opens the type menu and Custom, checks the
   `Width` and `Height` fields against the engine schema, starts a 3x3
   game, and checks that an invalid width shows the C validation message
-  and keeps the old engine for a bounded settle window.
+  and keeps the old engine for a bounded settle window. A field is found
+  by the floating label of its `TextInputLayout`, not by a sibling text
+  view, because the label is now part of the field (`TestUtils.hasFieldLabel`).
 - `FifteenGameIdDialogTest` checks that the game-ID dialog is prefilled
   with the current ID and that a valid ID becomes the new game with
   `Moves: 0`.
@@ -420,7 +422,31 @@ cannot reach:
   same fixed seed produces the same game ID on two launches.
 - `PrefsActivityTest` runs the real `PrefsActivity`: the global rows, a
   switch that writes its key, and the `fifteen` page, which must be
-  exactly `Fifteen.prefs` plus the shell's arrow-key switch.
+  exactly `Fifteen.prefs` plus the shell's arrow-key switch. It also
+  checks that the `Use system colors` row is offered exactly where the
+  platform has a wallpaper palette, that its widget is a
+  `MaterialSwitch`, and that the switch writes `systemColors`.
+- `ConfigDialogControlsTest` opens two configuration dialogs through the
+  real type menu. `theCustomSizeFieldIsAMaterialTextField` requires the
+  `Width` and `Height` views to be `TextInputEditText` inside the
+  `TextInputLayout` whose floating label is the field name.
+  `theCustomCheckboxIsAMaterialCheckboxThatReachesTheEngine` opens the
+  `signpost` dialog, ticks `Start and end in corners` in a
+  `MaterialCheckBox`, and requires the new game's params to change from
+  `4x4` to `4x4c`, so the control value still reaches the C engine.
+- `ShellThemeTest` covers the Material 3 shell. `theKeyBarKeepsTheUndoAndRedoContract`
+  opens a solved fifteen game and checks the Compose states of the keys:
+  Undo and Redo are disabled, a tap enables Undo, its click returns the
+  status to `Moves: 0`, and Redo becomes enabled; the bar and the key
+  containers must not be the same token. The two
+  `theSystemColorsSetting…` cases read the resolved `colorPrimary` and
+  `colorSurface` of a freshly built settings screen: with the setting off
+  they are `shell_primary` and `shell_surface`, with it on they are the
+  Material 3 dynamic scheme's roles for the same configuration (light and
+  night). The first case also captures the engine's colours and its
+  recorded `BoardFrame` for the same solved board with the setting on and
+  off, and requires both to be identical: the shell palette never reaches
+  the board. The cases are skipped below Android 12.
 - `FifteenChooserLaunchTest` clicks the `fifteen` row in the real
   chooser and checks that `GamePlay` opens with the Kotlin engine and
   `Moves: 0`.

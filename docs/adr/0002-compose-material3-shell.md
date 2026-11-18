@@ -1,6 +1,8 @@
 # ADR 0002: Compose and Material 3 for the shell
 
-- **Status:** accepted
+- **Status:** accepted. Amended 2026-11-19: dynamic color is now a user
+  setting (`docs/DESIGN.md` §3), so decision 3 is superseded by the
+  "Use system colors" switch. It still applies to the shell only.
 - **Date:** 2026-11-14
 
 ## Context
