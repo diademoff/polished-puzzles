@@ -67,6 +67,7 @@ class KotlinGamesTest {
         BLACKBOX, LIGHTUP, UNDEAD, RECT,
         SLANT, RANGE, TOWERS, UNEQUAL,
         MAGNETS, PATTERN, MOSAIC, SIGNPOST, UNTANGLE,
+        GALAXIES, BRIDGES, UNRULY, FILLING, MINES,
     )
 
     @Test
@@ -77,8 +78,8 @@ class KotlinGamesTest {
                 KotlinGames.handles(backend),
             )
         }
-        assertFalse(KotlinGames.handles(MINES))
         assertFalse(KotlinGames.handles(CUBE))
+        assertFalse(KotlinGames.handles(NET))
     }
 
     @Test
@@ -154,9 +155,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `bridges is registered but the app still uses C`() {
+    fun `bridges is registered and handled`() {
         assertEquals(Bridges, KotlinGames.gameFor(BRIDGES))
-        assertFalse(KotlinGames.handles(BRIDGES))
+        assertTrue(KotlinGames.handles(BRIDGES))
     }
 
     @Test
@@ -166,9 +167,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `filling is registered but the app still uses C`() {
+    fun `filling is registered and handled`() {
         assertEquals(Filling, KotlinGames.gameFor(FILLING))
-        assertFalse(KotlinGames.handles(FILLING))
+        assertTrue(KotlinGames.handles(FILLING))
     }
 
     @Test
@@ -184,9 +185,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `unruly is registered but the app still uses C`() {
+    fun `unruly is registered and handled`() {
         assertEquals(Unruly, KotlinGames.gameFor(UNRULY))
-        assertFalse(KotlinGames.handles(UNRULY))
+        assertTrue(KotlinGames.handles(UNRULY))
     }
 
     @Test
@@ -244,9 +245,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `mines is registered but the app still uses C`() {
+    fun `mines is registered and handled`() {
         assertEquals(Mines, KotlinGames.gameFor(MINES))
-        assertFalse(KotlinGames.handles(MINES))
+        assertTrue(KotlinGames.handles(MINES))
     }
 
     @Test
@@ -322,9 +323,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `galaxies is registered but the app still uses C`() {
+    fun `galaxies is registered and handled`() {
         assertEquals(Galaxies, KotlinGames.gameFor(GALAXIES))
-        assertFalse(KotlinGames.handles(GALAXIES))
+        assertTrue(KotlinGames.handles(GALAXIES))
         val actual = KotlinGames.generate(GALAXIES, "7x7dn", "12345")
         assertTrue(actual.contains("GAME    :8:Galaxies"))
         assertTrue(actual.contains("DESC    :13:cjrbhizuisfvf"))
@@ -374,12 +375,13 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `the enabled set is exactly the five waves`() {
+    fun `the enabled set is exactly the six waves`() {
         val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
         assertEquals(
-            "the five waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
+            "the six waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
                 "twiddle, guess, blackbox, lightup, undead, rect, slant, range, " +
-                "towers, unequal, magnets, pattern, mosaic, signpost, and untangle",
+                "towers, unequal, magnets, pattern, mosaic, signpost, untangle, " +
+                "galaxies, bridges, unruly, filling, and mines",
             enabledGames,
             enabled,
         )
@@ -416,6 +418,11 @@ class KotlinGamesTest {
             Triple(MOSAIC, "10x10", "mosaic/10x10.sgtp"),
             Triple(SIGNPOST, "4x4c", "signpost/4x4c.sgtp"),
             Triple(UNTANGLE, "10", "untangle/10.sgtp"),
+            Triple(GALAXIES, "7x7dn", "galaxies/7x7dn.sgtp"),
+            Triple(BRIDGES, "7x7i30e10m2d1", "bridges/7x7i30e10m2d1.sgtp"),
+            Triple(UNRULY, "8x8dt", "unruly/8x8dt.sgtp"),
+            Triple(FILLING, "9x7", "filling/9x7.sgtp"),
+            Triple(MINES, "9x9n10", "mines/9x9n10.sgtp"),
         )
         for ((backend, params, path) in cases) {
             val text = KotlinGames.generate(backend, params, "12345")

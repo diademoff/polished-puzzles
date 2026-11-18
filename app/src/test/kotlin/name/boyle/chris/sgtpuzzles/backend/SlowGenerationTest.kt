@@ -40,15 +40,27 @@ class SlowGenerationTest {
     @Test
     fun `a C backend never warns`() {
         val launch = GameLaunch.toGenerate(
-            MINES,
-            "20x20n10",
+            NET,
+            "5x5",
             GameLaunch.Origin.GENERATING_FROM_CHOOSER,
         )
-        assertNull(KotlinGames.generationWarning(launch, "20x20n10"))
-        // The engine half still names the set, for the day mines is enabled.
+        assertNull(KotlinGames.generationWarning(launch, "5x5"))
+        // The engine half names only this game's own slow sets; `net`
+        // declares none, so its Kotlin gate stays quiet.
+        assertNull(KotlinGames.generationWarning(NET, "5x5"))
+    }
+
+    /** A slow board of the sixth enablement wave warns like the rest. */
+    @Test
+    fun `a slow sixth-wave board warns`() {
+        val launch = GameLaunch.toGenerate(
+            GALAXIES,
+            "16x16dn",
+            GameLaunch.Origin.CUSTOM_DIALOG,
+        )
         assertEquals(
             Game.SLOW_GENERATION_WARNING,
-            KotlinGames.generationWarning(MINES, "20x20n10"),
+            KotlinGames.generationWarning(launch, "16x16dn"),
         )
     }
 
