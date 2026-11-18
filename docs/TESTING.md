@@ -3826,7 +3826,7 @@ Seventh enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android
   cases and none skipped, so each game used two non-preferred tile
   sizes. `GamePlayParameterizedTest` now covers all 38 enabled backends
   and the 2 that still run on C.
-- `:engine:jvmTest` -> 1151 tests, 0 failures; `:parity:test` -> 1907
+- `:engine:jvmTest` -> 1151 tests, 0 failures; `:parity:test` -> 1915
   tests, 0 failures; `:app:testDebugUnitTest` -> 105 tests, 0 failures;
   `:app:lintDebug` -> 0 errors, 547 warnings;
   `tools/check-upstream-diff.sh --strict` and
