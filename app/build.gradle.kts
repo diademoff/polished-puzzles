@@ -1,3 +1,4 @@
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.TimeZone
@@ -15,10 +16,27 @@ fun timestamp(time: Boolean): String {
     return dateFormat.format(Date())
 }
 
+/*
+ * The git executable on PATH, or null when the machine has none.
+ *
+ * The lookup is a file test, not a process: Gradle reports an external
+ * process started at configuration time as a configuration cache
+ * problem, and that includes a process that cannot start at all.
+ */
+fun gitExecutable(): File? {
+    val path = providers.environmentVariable("PATH").orNull ?: return null
+    return path.split(File.pathSeparatorChar)
+        .asSequence()
+        .flatMap { dir -> listOf("git", "git.exe").asSequence().map { File(dir, it) } }
+        .firstOrNull { it.isFile && it.canExecute() }
+}
+
+/** The standard output of `git [args]`, or "" when git is missing or fails. */
 fun gitCommand(vararg args: String): String {
+    val git = gitExecutable() ?: return ""
     return try {
         providers.exec {
-            commandLine("git", *args)
+            commandLine(git.absolutePath, *args)
             // A missing ref or remote must not fail the build or the configuration cache.
             isIgnoreExitValue = true
         }.standardOutput.asText.get().trim()
