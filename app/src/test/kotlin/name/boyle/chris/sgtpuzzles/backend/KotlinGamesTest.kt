@@ -59,10 +59,13 @@ class KotlinGamesTest {
     )
 
     /**
-     * The games enabled by the two 2026-11-18 waves, in wave order.
+     * The games enabled by the three 2026-11-18 waves, in wave order.
      */
-    private val enabledGames =
-        setOf(FIFTEEN, SAMEGAME, FLOOD, PEGS, SIXTEEN, FLIP, TWIDDLE, GUESS)
+    private val enabledGames = setOf(
+        FIFTEEN, SAMEGAME, FLOOD, PEGS,
+        SIXTEEN, FLIP, TWIDDLE, GUESS,
+        BLACKBOX, LIGHTUP, UNDEAD, RECT,
+    )
 
     @Test
     fun `the enabled waves use the Kotlin backend`() {
@@ -125,9 +128,27 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `blackbox is registered but the app still uses C`() {
+    fun `blackbox is registered and handled`() {
         assertEquals(BlackBox, KotlinGames.gameFor(BLACKBOX))
-        assertFalse(KotlinGames.handles(BLACKBOX))
+        assertTrue(KotlinGames.handles(BLACKBOX))
+    }
+
+    @Test
+    fun `lightup is registered and handled`() {
+        assertEquals(Lightup, KotlinGames.gameFor(LIGHTUP))
+        assertTrue(KotlinGames.handles(LIGHTUP))
+    }
+
+    @Test
+    fun `undead is registered and handled`() {
+        assertEquals(Undead, KotlinGames.gameFor(UNDEAD))
+        assertTrue(KotlinGames.handles(UNDEAD))
+    }
+
+    @Test
+    fun `rect is registered and handled`() {
+        assertEquals(Rect, KotlinGames.gameFor(RECT))
+        assertTrue(KotlinGames.handles(RECT))
     }
 
     @Test
@@ -173,12 +194,6 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `lightup is registered but the app still uses C`() {
-        assertEquals(Lightup, KotlinGames.gameFor(LIGHTUP))
-        assertFalse(KotlinGames.handles(LIGHTUP))
-    }
-
-    @Test
     fun `mosaic is registered but the app still uses C`() {
         assertEquals(Mosaic, KotlinGames.gameFor(MOSAIC))
         assertFalse(KotlinGames.handles(MOSAIC))
@@ -218,12 +233,6 @@ class KotlinGamesTest {
     fun `signpost is registered but the app still uses C`() {
         assertEquals(Signpost, KotlinGames.gameFor(SIGNPOST))
         assertFalse(KotlinGames.handles(SIGNPOST))
-    }
-
-    @Test
-    fun `undead is registered but the app still uses C`() {
-        assertEquals(Undead, KotlinGames.gameFor(UNDEAD))
-        assertFalse(KotlinGames.handles(UNDEAD))
     }
 
     @Test
@@ -304,12 +313,6 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `rect is registered but the app still uses C`() {
-        assertEquals(Rect, KotlinGames.gameFor(RECT))
-        assertFalse(KotlinGames.handles(RECT))
-    }
-
-    @Test
     fun `the rect generator matches the frozen save`() {
         val expected = File(testdata, "saves/initial/rect/7x7.sgtp").readText()
         val actual = KotlinGames.generate(RECT, "7x7", "12345")
@@ -369,10 +372,11 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `the enabled set is exactly the two waves`() {
+    fun `the enabled set is exactly the three waves`() {
         val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
         assertEquals(
-            "the two waves are fifteen, samegame, flood, pegs, sixteen, flip, twiddle, and guess",
+            "the three waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
+                "twiddle, guess, blackbox, lightup, undead, and rect",
             enabledGames,
             enabled,
         )
@@ -396,6 +400,10 @@ class KotlinGamesTest {
             Triple(FLIP, "5x5c", "flip/default.sgtp"),
             Triple(TWIDDLE, "3x3n2", "twiddle/default.sgtp"),
             Triple(GUESS, "c6p4g10Bm", "guess/default.sgtp"),
+            Triple(BLACKBOX, "w5h5m3M3", "blackbox/w5h5m3M3.sgtp"),
+            Triple(LIGHTUP, "7x7b20s3d0", "lightup/7x7b20s3d0.sgtp"),
+            Triple(UNDEAD, "4x4dn", "undead/4x4dn.sgtp"),
+            Triple(RECT, "7x7", "rect/7x7.sgtp"),
         )
         for ((backend, params, path) in cases) {
             val text = KotlinGames.generate(backend, params, "12345")
