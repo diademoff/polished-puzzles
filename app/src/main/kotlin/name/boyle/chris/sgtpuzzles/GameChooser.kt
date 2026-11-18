@@ -29,6 +29,7 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.SAVED_BACKEND
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.STATE_PREFS_NAME
 import name.boyle.chris.sgtpuzzles.launch.GameGenerator.Companion.executableIsMissing
 import name.boyle.chris.sgtpuzzles.ui.SgTPuzzlesTheme
+import name.boyle.chris.sgtpuzzles.ui.SystemColors
 
 /**
  * The game chooser.
@@ -42,6 +43,7 @@ class GameChooser : ActivityWithLoadButton(), OnSharedPreferenceChangeListener {
 
     private var compact by mutableStateOf(false)
     private var isNight by mutableStateOf(false)
+    private var systemColors by mutableStateOf(false)
     private var starred by mutableStateOf<Set<BackendName>>(emptySet())
     private var current by mutableStateOf<BackendName?>(null)
     private var scrollToken by mutableIntStateOf(0)
@@ -60,9 +62,10 @@ class GameChooser : ActivityWithLoadButton(), OnSharedPreferenceChangeListener {
         migrateChooserStyle()
         compact = isCompact()
         isNight = NightModeHelper.isNight(resources.configuration)
+        systemColors = SystemColors.isEnabled(this)
         starred = readStarred()
         setContent {
-            SgTPuzzlesTheme(darkTheme = isNight) {
+            SgTPuzzlesTheme(darkTheme = isNight, dynamicColor = systemColors) {
                 ChooserScreen(
                     games = BackendName.all.toList(),
                     starred = starred,
@@ -96,6 +99,9 @@ class GameChooser : ActivityWithLoadButton(), OnSharedPreferenceChangeListener {
             ?.let { byLowerCase(it) }
         starred = readStarred()
         compact = isCompact()
+        // The setting can change on the settings screen, so read it again
+        // instead of remembering the value this screen started with.
+        systemColors = SystemColors.isEnabled(this)
         scrollToken++
     }
 

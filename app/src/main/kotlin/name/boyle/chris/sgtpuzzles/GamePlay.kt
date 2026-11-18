@@ -47,7 +47,6 @@ import androidx.annotation.VisibleForTesting
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.NavUtils
 import androidx.core.app.ShareCompat.IntentBuilder
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
@@ -61,6 +60,7 @@ import androidx.core.view.MenuItemCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.preference.PreferenceManager
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -161,6 +161,7 @@ import kotlin.math.roundToInt
 import name.boyle.chris.sgtpuzzles.render.BOARD_CANVAS_TAG
 import name.boyle.chris.sgtpuzzles.render.BoardCanvas
 import name.boyle.chris.sgtpuzzles.ui.SgTPuzzlesTheme
+import name.boyle.chris.sgtpuzzles.ui.SystemColors
 
 class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, GameGenerator.Callback,
     ConfigBuilder.ActivityCallbacks, GameEngine.ActivityCallbacks {
@@ -389,7 +390,11 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         statusBar = _binding.statusBar
         gameView = _binding.gameView
         _binding.gameCanvas?.setContent {
-            SgTPuzzlesTheme {
+            // The board draws its own palette, so the shell scheme here
+            // never changes a board colour; it keeps the Compose default
+            // (for example the background behind the canvas) in the same
+            // world as the rest of the screen.
+            SgTPuzzlesTheme(dynamicColor = SystemColors.isEnabled(this@GamePlay)) {
                 BoardCanvas(
                     frame = gameView.renderFrame.value,
                     colours = gameView.renderColours.value,
@@ -640,13 +645,15 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     }
 
     /**
-     * The action icons are white PNGs, which only worked on the old dark
-     * toolbar. Tint them to the current on-surface color so they stay
-     * readable in the light theme too. Alpha differences still show the
-     * disabled state.
+     * Tints the action icons with the on-surface role of the current
+     * theme, so they follow the light and dark palettes and the wallpaper
+     * palette.
      */
     private fun tintMenuIcons(menu: Menu) {
-        val tint = ContextCompat.getColorStateList(this, R.color.shell_on_surface) ?: return
+        val tint = MaterialColors.getColorStateListOrNull(
+            this,
+            com.google.android.material.R.attr.colorOnSurface,
+        ) ?: return
         for (i in 0 until menu.size()) {
             val item = menu.getItem(i) ?: continue
             MenuItemCompat.setIconTintList(item, tint)

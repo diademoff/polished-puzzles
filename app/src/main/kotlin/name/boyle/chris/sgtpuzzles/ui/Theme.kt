@@ -1,10 +1,14 @@
 package name.boyle.chris.sgtpuzzles.ui
 
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import name.boyle.chris.sgtpuzzles.R
 
@@ -15,10 +19,11 @@ import name.boyle.chris.sgtpuzzles.R
  * `values/colors_shell.xml` for light and `values-night/colors_shell.xml`
  * for dark. There is one source of truth for both worlds.
  *
- * Dynamic color is not enabled today. The accent is part of the app
- * identity, and a wallpaper-driven palette would put the shell and the
- * game board in different color worlds. If it is added later, it stays a
- * user setting and applies to the shell only, as DESIGN.md requires.
+ * [dynamicColor] is the user's "Use system colors" setting. On Android 12
+ * and later the wallpaper decides the roles; the game board palette does
+ * not change, because the board draws its own colours (see
+ * `docs/DESIGN.md` section 3). The setting is read by the caller, so a
+ * change reaches the screen without a restart.
  *
  * The caller passes [darkTheme] instead of letting Compose read the
  * platform configuration. This app handles uiMode changes itself, and
@@ -27,9 +32,17 @@ import name.boyle.chris.sgtpuzzles.R
 @Composable
 fun SgTPuzzlesTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val scheme = if (darkTheme) darkShellColors() else lightShellColors()
+    val scheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> darkShellColors()
+        else -> lightShellColors()
+    }
     MaterialTheme(colorScheme = scheme, content = content)
 }
 

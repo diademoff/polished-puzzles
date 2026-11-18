@@ -26,6 +26,7 @@ import androidx.core.content.edit
 import androidx.preference.PreferenceManager
 import name.boyle.chris.sgtpuzzles.Utils.toastFirstFewTimes
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants
+import name.boyle.chris.sgtpuzzles.ui.SystemColors
 
 /** Switches the app in and out of night mode according to settings/sensors. To use, just extend ActivityWithNightMode. */
 class NightModeHelper : Service(), SensorEventListener, OnSharedPreferenceChangeListener {
@@ -39,6 +40,9 @@ class NightModeHelper : Service(), SensorEventListener, OnSharedPreferenceChange
 
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
+            // The wallpaper palette, if the user chose it, must reach the
+            // theme before any view is inflated.
+            SystemColors.applyTo(this)
             // Edge-to-edge on every shell screen. Each screen applies the
             // insets it needs; the game board is laid out between them.
             enableEdgeToEdge()

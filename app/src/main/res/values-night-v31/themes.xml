@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The dark half of ThemeOverlay.SgTPuzzles.SystemColors: the same dynamic
+  roles, from the Material 3 dark scheme. Dark is its own palette, not an
+  inversion of the light one.
+-->
+<resources>
+    <style name="ThemeOverlay.SgTPuzzles.SystemColors"
+        parent="ThemeOverlay.Material3.DynamicColors.Dark" />
+</resources>

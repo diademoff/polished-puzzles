@@ -1,5 +1,6 @@
 package name.boyle.chris.sgtpuzzles
 
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
@@ -11,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceManager
 import androidx.preference.SeekBarPreference
 import androidx.preference.SwitchPreferenceCompat
 import androidx.preference.isEmpty
@@ -39,10 +41,22 @@ import name.boyle.chris.sgtpuzzles.config.PrefsConstants.LONG_PRESS_TIMEOUT
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.MOUSE_BACK_KEY
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.PLACEHOLDER_SEND_FEEDBACK
 import name.boyle.chris.sgtpuzzles.config.PrefsConstants.UNEQUAL_SHOW_H_KEY
+import name.boyle.chris.sgtpuzzles.ui.SystemColors
 import name.boyle.chris.sgtpuzzles.ui.applyToolbarSideInsets
 
 class PrefsActivity : ActivityWithNightMode(),
     PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
+
+    /**
+     * The XML screens get the shell palette from their theme, which the
+     * activity reads when it is created. A change of that setting
+     * therefore rebuilds this screen; the game in the background is not
+     * touched.
+     */
+    private val systemColorsListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == SystemColors.KEY) recreate()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +73,14 @@ class PrefsActivity : ActivityWithNightMode(),
             }
         }
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .registerOnSharedPreferenceChangeListener(systemColorsListener)
+    }
+
+    override fun onDestroy() {
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .unregisterOnSharedPreferenceChangeListener(systemColorsListener)
+        super.onDestroy()
     }
 
     public override fun onSaveInstanceState(outState: Bundle) {
@@ -168,6 +190,7 @@ class PrefsActivity : ActivityWithNightMode(),
                 sendFeedbackDialog(requireContext())
                 true
             }
+            requirePref(SystemColors.KEY).isVisible = SystemColors.isAvailable()
         }
 
         private fun addGameSpecificAndroidPreferences(

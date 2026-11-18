@@ -92,6 +92,15 @@
 			app:iconSpaceReserved="false"
 			app:useSimpleSummaryProvider="true" />
 
+		<!-- The shell palette from the wallpaper. Hidden before Android
+		     12, where the platform has no palette to give. -->
+		<SwitchPreferenceCompat
+			android:defaultValue="true"
+			android:key="systemColors"
+			android:summary="@string/systemColorsSummary"
+			android:title="@string/systemColors"
+			app:iconSpaceReserved="false" />
+
 		<PreferenceScreen
 			android:fragment="name.boyle.chris.sgtpuzzles.PrefsActivity$PrefsDisplayAndInputFragment"
 			android:key="advancedSettings"

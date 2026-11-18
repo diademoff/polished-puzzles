@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The shell palette from the wallpaper. Material You provides the system
+  palette on Android 12 and later; this overlay is the Material 3 dynamic
+  scheme, so every semantic role, including the error roles, comes from
+  the platform. A screen applies it after Theme.SgTPuzzles when the user
+  enables "Use system colors".
+
+  The night variant lives in values-night-v31, because a theme overlay
+  cannot switch between day and night on its own.
+-->
+<resources>
+    <style name="ThemeOverlay.SgTPuzzles.SystemColors"
+        parent="ThemeOverlay.Material3.DynamicColors.Light" />
+</resources>

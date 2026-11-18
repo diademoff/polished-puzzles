@@ -140,6 +140,8 @@ Version %s"</string>
     <string name="nightModeSystem">Follow system dark theme</string>
     <string name="nightModeOff">Off</string>
     <string name="night_mode_hint">Night mode can be disabled in Settings</string>
+    <string name="systemColors">Use system colors</string>
+    <string name="systemColorsSummary">Take the app colors from your wallpaper</string>
     <string name="limitDpi">Thicker lines for readability</string>
     <string name="limitDpiModeOff">Never (1 pixel = 1 pixel)</string>
     <string name="limitDpiModeAuto">Thinner as puzzle size increases (recommended)</string>
