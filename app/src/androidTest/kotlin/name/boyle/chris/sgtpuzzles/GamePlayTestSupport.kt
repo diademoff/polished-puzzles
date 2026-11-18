@@ -74,6 +74,15 @@ object GamePlayTestSupport {
         saveText(engine).lineSequence().count { it.startsWith("MOVE") }
 
     /**
+     * The save text without the `TIME` record, which changes while a
+     * timed game idles. Every other record is the game and its history.
+     */
+    fun stableSave(engine: KotlinGameEngine): String =
+        saveText(engine).lineSequence()
+            .filterNot { it.startsWith("TIME") }
+            .joinToString("\n")
+
+    /**
      * Waits until the live engine is a [KotlinGameEngine] that satisfies
      * [predicate]. A save, a game ID, and a generated game all reach the
      * engine through different paths, so the test cannot assume that the
@@ -108,14 +117,16 @@ object GamePlayTestSupport {
      * An invalid dialog can still hand a configuration to the generator
      * worker after the click returns. There is no new state to wait for,
      * so this polls a bounded window and fails on any new engine, game
-     * ID, or parameter string. A new game always replaces the engine
-     * instance in `startGameConfirmed`.
+     * ID, parameter string, or save text. A new game always replaces the
+     * engine instance in `startGameConfirmed`; a delayed move or undo
+     * changes the history of the live one.
      */
     fun awaitEngineUnchanged(
         scenario: ActivityScenario<GamePlay>,
         expected: KotlinGameEngine,
         windowMs: Long = 1_000,
     ) {
+        val save = stableSave(expected)
         val deadline = SystemClock.uptimeMillis() + windowMs
         var checks = 0
         while (SystemClock.uptimeMillis() < deadline) {
@@ -132,10 +143,34 @@ object GamePlayTestSupport {
                 expected.currentParams,
                 engine.currentParams,
             )
+            assertEquals("the saved game changed", save, stableSave(engine))
             checks++
             SystemClock.sleep(50)
         }
         assertTrue("the settle window did not run", checks > 0)
+    }
+
+    /**
+     * Checks that a gesture that must change nothing stays changed for
+     * the whole [windowMs].
+     *
+     * An inert tap returns at once, so a move count that equals the old
+     * one proves nothing: a delayed move or undo would arrive after the
+     * count was read. This polls the same window as a reused engine.
+     */
+    fun awaitInertGesture(
+        scenario: ActivityScenario<GamePlay>,
+        windowMs: Long = 500,
+    ) {
+        var engine: KotlinGameEngine? = null
+        scenario.onActivity { activity ->
+            engine = activity.gameEngine as? KotlinGameEngine
+        }
+        awaitEngineUnchanged(
+            scenario,
+            checkNotNull(engine) { "the inert gesture left no Kotlin engine" },
+            windowMs,
+        )
     }
 
     /**

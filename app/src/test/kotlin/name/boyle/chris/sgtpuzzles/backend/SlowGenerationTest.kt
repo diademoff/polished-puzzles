@@ -1,8 +1,10 @@
 package name.boyle.chris.sgtpuzzles.backend
 
 import name.boyle.chris.sgtpuzzles.engine.Game
+import name.boyle.chris.sgtpuzzles.engine.Net
 import name.boyle.chris.sgtpuzzles.launch.GameLaunch
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -36,18 +38,31 @@ class SlowGenerationTest {
         assertNull(KotlinGames.generationWarning(launch, "6xu"))
     }
 
-    /** A slow parameter set on a C backend has no engine hook to ask. */
+    /**
+     * The app gate, not the absence of a threshold, keeps a C backend
+     * quiet: a game that does declare a slow set warns only when
+     * `handles` enables it.
+     */
     @Test
     fun `a C backend never warns`() {
+        val slowNet = object : Game by Net {
+            override fun generationWarning(params: Game.Params): String? =
+                Game.SLOW_GENERATION_WARNING
+        }
+        val params = "5x5"
+        assertEquals(
+            "the stub must declare a threshold, so the gate is what silences it",
+            Game.SLOW_GENERATION_WARNING,
+            slowNet.generationWarning(Net.decodeParams(params)),
+        )
+        assertFalse("net must still run on C", KotlinGames.handles(NET))
         val launch = GameLaunch.toGenerate(
             NET,
-            "5x5",
+            params,
             GameLaunch.Origin.GENERATING_FROM_CHOOSER,
         )
-        assertNull(KotlinGames.generationWarning(launch, "5x5"))
-        // The engine half names only this game's own slow sets; `net`
-        // declares none, so its Kotlin gate stays quiet.
-        assertNull(KotlinGames.generationWarning(NET, "5x5"))
+        assertNull(KotlinGames.generationWarning(launch, params))
+        assertNull(KotlinGames.generationWarning(launch, params, slowNet))
     }
 
     /** A slow board of the sixth enablement wave warns like the rest. */

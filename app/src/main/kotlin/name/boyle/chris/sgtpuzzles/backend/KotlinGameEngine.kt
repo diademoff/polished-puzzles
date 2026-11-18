@@ -216,25 +216,23 @@ object KotlinGames {
     fun newSeed(): String = java.util.UUID.randomUUID().toString()
 
     /**
-     * The slow-generation warning for [backend] and the encoded [params],
-     * or null. The engine hook asks a decoded-parameter question, so the
-     * shell decodes the string it already holds and lets the game decide.
-     */
-    fun generationWarning(backend: BackendName, params: String): String? {
-        val game = gameFor(backend) ?: return null
-        return game.generationWarning(game.decodeParams(params))
-    }
-
-    /**
      * The warning to show before [launch] with the resolved [params], or
      * null. Only a fresh generation warns: a save, a game ID, and a
      * restored local state load an existing board and generate nothing.
      */
     fun generationWarning(launch: GameLaunch, params: String): String? =
+        generationWarning(launch, params, gameFor(launch.whichBackend))
+
+    /**
+     * [game] is the engine that would generate for [launch]. The
+     * parameter is a seam, so a test can ask the gate with a game that
+     * is not in [APP_GAMES] and does declare a slow set.
+     */
+    internal fun generationWarning(launch: GameLaunch, params: String, game: Game?): String? =
         if (!launch.needsGenerating || !handles(launch.whichBackend)) {
             null
         } else {
-            generationWarning(launch.whichBackend, params)
+            game?.generationWarning(game.decodeParams(params))
         }
 }
 
