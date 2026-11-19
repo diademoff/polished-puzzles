@@ -177,6 +177,21 @@ import name.boyle.chris.sgtpuzzles.render.utteranceFor
 import name.boyle.chris.sgtpuzzles.ui.SgTPuzzlesTheme
 import name.boyle.chris.sgtpuzzles.ui.SystemColors
 
+/**
+ * The live region of the status line (D-01 section 6).
+ *
+ * The board speaks a change itself while it has units, so a polite
+ * status line would say the same thing twice. An empty status is not a
+ * message either. Only a game whose board cannot speak keeps the polite
+ * line of A-04.
+ */
+internal fun statusLiveRegion(status: String, boardHasUnits: Boolean): Int =
+    if (status.isEmpty() || boardHasUnits) {
+        View.ACCESSIBILITY_LIVE_REGION_NONE
+    } else {
+        View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+
 class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, GameGenerator.Callback,
     ConfigBuilder.ActivityCallbacks, GameEngine.ActivityCallbacks {
     private lateinit var _binding: MainBinding
@@ -861,6 +876,11 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         val cursor = if (described) cursorUnitOf(speech) else null
         gameView.boardSpeech.value = speech
         boardHasUnits = speech.units().isNotEmpty()
+        // The engine can write the status text before the first drawing
+        // pass, so align the live region now that the board is known.
+        if (boardHasUnits) {
+            statusBar.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_NONE
+        }
         lastBoardSpeech = speech
         lastCursorUnit = cursor
         // A new board and a completion have nothing to diff; the
@@ -1601,11 +1621,7 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
         if (statusBar.text.toString() == shown) return
         statusBar.apply {
             text = shown
-            // D-01 section 6: while the board has units it speaks the
-            // change, so a polite status line here would say it twice.
-            accessibilityLiveRegion =
-                if (status.isEmpty() || boardHasUnits) View.ACCESSIBILITY_LIVE_REGION_NONE
-                else View.ACCESSIBILITY_LIVE_REGION_POLITE
+            accessibilityLiveRegion = statusLiveRegion(status, boardHasUnits)
             importantForAccessibility =
                 if (status.isEmpty()) View.IMPORTANT_FOR_ACCESSIBILITY_NO else View.IMPORTANT_FOR_ACCESSIBILITY_YES
         }
