@@ -102,3 +102,45 @@ fun assertUnitsLandOnTheDrawing(composeRule: ComposeTestRule, frame: SpeechFrame
 }
 
 private const val TOLERANCE = 1.5f
+
+/**
+ * Every unit node must land on the pixels its own rectangle maps to.
+ *
+ * This is the same guard as [assertUnitsLandOnTheDrawing] without the
+ * assumption that a unit is a cell: the edge of `loopy`, the point of
+ * `untangle`, and the palette of `guess` are not in a cell grid and
+ * have no game cursor rectangle, so each one is compared with its own
+ * mapped rectangle instead.
+ */
+fun assertEveryUnitLandsOnTheDrawing(
+    composeRule: ComposeTestRule,
+    frame: SpeechFrame,
+    where: String,
+) {
+    assertTrue("$where: the board was never drawn", frame.hasFrame)
+    assertTrue("$where: the board exposed no units", frame.units.isNotEmpty())
+    val matrix = Matrix(frame.matrix)
+    val canvas = composeRule.onNodeWithTag(BOARD_CANVAS_TAG).getUnclippedBoundsInRoot()
+    for ((index, unit) in frame.units.withIndex()) {
+        val mapped = matrix.map(
+            Rect(
+                left = unit.left.toFloat(),
+                top = unit.top.toFloat(),
+                right = (unit.left + unit.width).toFloat(),
+                bottom = (unit.top + unit.height).toFloat(),
+            ),
+        )
+        val expected = DpRect(
+            left = canvas.left + Dp(mapped.left / frame.density),
+            top = canvas.top + Dp(mapped.top / frame.density),
+            right = canvas.left + Dp(mapped.right / frame.density),
+            bottom = canvas.top + Dp(mapped.bottom / frame.density),
+        )
+        val actual = composeRule.onNodeWithTag(boardUnitTag(index)).getUnclippedBoundsInRoot()
+        val name = "'${frame.labels[index]}'"
+        assertEquals("$where: unit $index $name left", expected.left.value, actual.left.value, TOLERANCE)
+        assertEquals("$where: unit $index $name top", expected.top.value, actual.top.value, TOLERANCE)
+        assertEquals("$where: unit $index $name right", expected.right.value, actual.right.value, TOLERANCE)
+        assertEquals("$where: unit $index $name bottom", expected.bottom.value, actual.bottom.value, TOLERANCE)
+    }
+}

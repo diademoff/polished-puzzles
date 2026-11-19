@@ -28,10 +28,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.CoordinatesProvider
-import androidx.test.espresso.action.GeneralClickAction
-import androidx.test.espresso.action.Press
-import androidx.test.espresso.action.Tap
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
@@ -41,14 +37,13 @@ import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import name.boyle.chris.sgtpuzzles.backend.BackendName
+import name.boyle.chris.sgtpuzzles.backend.CUBE
 import name.boyle.chris.sgtpuzzles.backend.FIFTEEN
-import name.boyle.chris.sgtpuzzles.backend.NETSLIDE
 import name.boyle.chris.sgtpuzzles.backend.GUESS
 import name.boyle.chris.sgtpuzzles.backend.KEEN
-import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
 import name.boyle.chris.sgtpuzzles.backend.TENTS
 import name.boyle.chris.sgtpuzzles.buttons.KEY_LABEL_TAG
-import name.boyle.chris.sgtpuzzles.engine.BoardGeometry
+import name.boyle.chris.sgtpuzzles.engine.Buttons
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -101,12 +96,15 @@ class ShellAccessibilityTest {
 
     @Test
     fun theStatusLineIsAPoliteLiveRegion() {
-        // Netslide has no spoken board yet, so it keeps the status line as
-        // the polite live region of A-04; the fixture moves to a C game
-        // when the last Kotlin game speaks. A game with board units speaks
-        // its changes itself, and `BoardSemanticsTest` pins that side.
-        val game = launch(NETSLIDE, NETSLIDE_ID)
-        GamePlayTestSupport.awaitEngine(game)
+        // Every Kotlin game has a spoken board after D-01 wave 4, so the
+        // status line as the polite live region of A-04 is checked on a
+        // game that still runs on the C engine: `cube` has a status bar
+        // and no units. A game with board units speaks its changes
+        // itself, and `BoardSemanticsTest` pins that side.
+        val game = launch(CUBE, CUBE_ID)
+        // A C engine has no Kotlin engine to await, and its status line
+        // appears on the first draw, so the status line is the ready
+        // signal.
         val before = awaitStatusStartingWith(game, "Moves: 0")
         assertEquals(
             "the status line '$before' is not a polite live region",
@@ -114,7 +112,8 @@ class ShellAccessibilityTest {
             statusNode(game)?.liveRegion,
         )
 
-        tapNetslideTopBand(game)
+        // An arrow key turns the cube and writes one real move.
+        game.onActivity { it.sendKey(0, 0, Buttons.CURSOR_UP) }
         val after = awaitStatusChange(game, before)
         assertTrue(
             "the move did not reach the status line: '$after'",
@@ -129,8 +128,7 @@ class ShellAccessibilityTest {
 
     @Test
     fun anUnchangedStatusIsNotWrittenToTheViewAgain() {
-        val game = launch(NETSLIDE, NETSLIDE_ID)
-        GamePlayTestSupport.awaitEngine(game)
+        val game = launch(CUBE, CUBE_ID)
         val status = awaitStatusStartingWith(game, "Moves: 0")
         var writes = 0
         game.onActivity { activity ->
@@ -343,55 +341,6 @@ class ShellAccessibilityTest {
         throw AssertionError("the status line is '$text', not '$prefix...'")
     }
 
-    /**
-     * A tap in the top margin band of the frozen netslide game, which
-     * slides that column and changes the move count. C uses
-     * `BORDER = TILE_SIZE`, so the band is the first tile row.
-     */
-    private fun tapNetslideTopBand(game: ActivityScenario<GamePlay>) {
-        val board = awaitBoard(game)
-        onView(withId(R.id.game_view)).perform(
-            GeneralClickAction(
-                Tap.SINGLE,
-                CoordinatesProvider { view ->
-                    val location = IntArray(2)
-                    view.getLocationOnScreen(location)
-                    val density = view.width.toFloat() / (view as GameView).wDip
-                    val t = board.tileSize
-                    floatArrayOf(
-                        location[0] + density * (board.originX + t + 1 + t / 2f),
-                        location[1] + density * (board.originY + t / 2f),
-                    )
-                },
-                Press.FINGER,
-                0,
-                0,
-            ),
-        )
-    }
-
-    /**
-     * Waits for the resize that follows the launch. Until it lands, the
-     * engine still reports the preferred geometry, which is not the
-     * geometry the view uses.
-     */
-    private fun awaitBoard(game: ActivityScenario<GamePlay>): BoardGeometry {
-        val deadline = SystemClock.uptimeMillis() + 10_000
-        while (SystemClock.uptimeMillis() < deadline) {
-            var board: BoardGeometry? = null
-            game.onActivity { activity ->
-                val view = activity.findViewById<View>(R.id.game_view)
-                val engine = activity.gameEngine as? KotlinGameEngine
-                if (view.width > 0 && view.height > 0 && engine != null) {
-                    board = engine.boardGeometry
-                }
-            }
-            board?.let { return it }
-            SystemClock.sleep(50)
-        }
-        throw AssertionError("the board did not reach a laid-out geometry")
-    }
-
     private fun openCustomConfiguration(title: String) {
         onView(withId(R.id.type_menu)).perform(click())
         onView(withText(R.string.Custom_)).perform(click())
@@ -489,8 +438,8 @@ class ShellAccessibilityTest {
         /** A frozen Guess game: two colours, two pegs, an empty board. */
         const val GUESS_ID = "c2p2g2Bm:c2ab"
 
-        /** The frozen 3x3 netslide game of seed 12345. */
-        const val NETSLIDE_ID = "3x3:21c4d5963"
+        /** The frozen 4x4 cube game of seed 12345, a C game. */
+        const val CUBE_ID = "c4x4:205E,4"
 
         /** A frozen Keen game with a key bar of digits. */
         const val KEEN_ID = "3:_baa_3a,m6s1m3a3"

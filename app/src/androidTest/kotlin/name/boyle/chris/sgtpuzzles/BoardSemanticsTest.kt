@@ -18,7 +18,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import name.boyle.chris.sgtpuzzles.backend.BackendName
-import name.boyle.chris.sgtpuzzles.backend.GUESS
+import name.boyle.chris.sgtpuzzles.backend.CUBE
 import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
 import name.boyle.chris.sgtpuzzles.backend.TENTS
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
@@ -140,12 +140,12 @@ class BoardSemanticsTest {
 
     @Test
     fun theStatusLineIsSilentWhileTheBoardSpeaks() {
-        // The control: guess has no board units yet, so its status line
+        // The control: a C game has no board units, so its status line
         // stays the polite live region of A-04.
-        launchGuess()
+        launchCube()
         setStatus("Moves: 1")
         assertEquals(
-            "guess has no board units, so its status line must stay polite",
+            "a C game has no board units, so its status line must stay polite",
             View.ACCESSIBILITY_LIVE_REGION_POLITE,
             statusLiveRegion(),
         )
@@ -221,9 +221,17 @@ class BoardSemanticsTest {
         return launch(TENTS, gameId)
     }
 
-    private fun launchGuess(): KotlinGameEngine {
-        GamePlayTestSupport.clearBackendState(context, GUESS)
-        return launch(GUESS, GUESS_ID)
+    /**
+     * The C engine fallback: a board with no units. There is no Kotlin
+     * engine to await, so the board node is the ready signal.
+     */
+    private fun launchCube() {
+        GamePlayTestSupport.clearBackendState(context, CUBE)
+        val launched = ActivityScenario.launch<GamePlay>(
+            GamePlayTestSupport.intent(context, CUBE, CUBE_ID),
+        )
+        scenario = launched
+        awaitBoardNode()
     }
 
     private fun launch(backend: BackendName, gameId: String): KotlinGameEngine {
@@ -350,8 +358,8 @@ class BoardSemanticsTest {
         /** The frozen 8x8de tents game of seed 12345. */
         const val TENTS_ID = "8x8de:ae__ijcecgbcd,3,1,2,1,1,1,2,1,2,1,2,1,1,1,1,3"
 
-        /** A frozen guess game, on the Kotlin engine without the seam. */
-        const val GUESS_ID = "c2p2g2Bm:c2ab"
+        /** The frozen 4x4 cube game of seed 12345, on the C engine. */
+        const val CUBE_ID = "c4x4:205E,4"
 
         /**
          * A 21x21 board of blank cells with zero clues, above the cap.
