@@ -321,7 +321,8 @@ cap is added.
 
 Sixth wave, 2026-11-18: `galaxies`, `bridges`, `unruly`, `filling`,
 and `mines` are enabled. All five were the candidate list, so no
-reserve game was needed and `cube` stays on C. Each device test is
+reserve game was needed and `cube` waited for the eighth wave. Each
+device test is
 green at two tile sizes on the same phone and none of the five skipped.
 None has a `Review:` deviation in `docs/DEVIATIONS.md`: `bridges` and
 `unruly` have no entry at all, `filling` is D-004, `mines` is D-002
@@ -385,8 +386,9 @@ tile sizes with frozen game ids, and `SpokenBoardWaveFiveTest`,
 `BoardSemanticsGoldenTest`, and `SpokenBoardBoundsTest` pin their
 spoken boards.
 
-The other ported games stay `dual-run` on
-C. The policy is `docs/adr/0011-enable-games-in-waves.md`.
+The eighth wave closed the list, so no ported game is left
+`dual-run` on C. The policy is
+`docs/adr/0011-enable-games-in-waves.md`.
 
 Exit criteria per game:
 

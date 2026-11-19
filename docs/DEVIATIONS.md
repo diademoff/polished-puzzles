@@ -1113,8 +1113,11 @@ Anything not listed here is a bug.
   corruption and the following `gridgen`, including a write past the
   allocation on the last row. The retry is deterministic for a seed,
   produces a valid and reloadable puzzle, and keeps the `.sgtp` format
-  unchanged. The app still uses C, so no user receives the different
-  description through the Kotlin backend.
+  unchanged. On 2026-11-19 the owner reviewed this entry and kept it
+  as it stands, and the app runs the Kotlin engine, so a player who
+  generates one of the listed seeds sees the port's description. The
+  save format and the reload path keep their claim, and every other
+  seed is compared with C.
 - **Test:**
   `parity/src/test/kotlin/.../SoloDescTest.kt::a killer singleton merge that overflows the C row is retried`
   pins the C save reload, the different port description for `3jka`
