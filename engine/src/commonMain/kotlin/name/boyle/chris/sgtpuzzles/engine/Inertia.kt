@@ -52,6 +52,18 @@ object Inertia : Game {
     /** The generation guard of D-008: 200x200, the measured cap. */
     internal const val MAX_AREA = 40_000
 
+    /** The spoken names of the directions, in the order of `dx` and `dy`. */
+    private val DIRECTION_NAMES = arrayOf(
+        "up",
+        "up and right",
+        "right",
+        "down and right",
+        "down",
+        "down and left",
+        "left",
+        "up and left",
+    )
+
     private const val COL_BACKGROUND = 0
     private const val COL_OUTLINE = 1
     private const val COL_HIGHLIGHT = 2
@@ -747,16 +759,7 @@ object Inertia : Game {
         if (button == Buttons.LEFT_BUTTON) {
             val tx = fromCoord(x, tileSize)
             val ty = fromCoord(y, tileSize)
-            if (tx != s.px || ty != s.py) {
-                val ddx = tx - s.px
-                val ddy = ty - s.py
-                // `atan2` takes the exact double conversion of the int
-                // deltas; the result and the sector arithmetic are
-                // float, as in C.
-                var angle = atan2(ddx.toDouble(), (-ddy).toDouble()).toFloat()
-                angle = (angle + (PI / 8).toFloat()) / (PI / 4).toFloat()
-                dir = (angle + 16.0f).toInt() and 7
-            }
+            dir = directionTo(s, tx, ty)
         } else if (button == Buttons.CURSOR_UP ||
             button == (Buttons.MOD_NUM_KEYPAD or '8'.code)
         ) {
@@ -797,6 +800,79 @@ object Inertia : Game {
 
         u.justMadeMove = true
         return MoveResult.Move(dir.toString())
+    }
+
+    /**
+     * The eight-way direction of a click at cell (`x`, `y`), the sector
+     * arithmetic of `interpret_move`, or -1 when the click is on the
+     * player's own cell.
+     */
+    private fun directionTo(s: State, x: Int, y: Int): Int {
+        if (x == s.px && y == s.py) return -1
+        val ddx = x - s.px
+        val ddy = y - s.py
+        // `atan2` takes the exact double conversion of the int deltas;
+        // the result and the sector arithmetic are float, as in C.
+        var angle = atan2(ddx.toDouble(), (-ddy).toDouble()).toFloat()
+        angle = (angle + (PI / 8).toFloat()) / (PI / 4).toFloat()
+        return (angle + 16.0f).toInt() and 7
+    }
+
+    /**
+     * The name of one direction, in the order `dx` and `dy` give it:
+     * a click above the player is `up`, and so on clockwise.
+     */
+    private fun directionName(dir: Int): String = DIRECTION_NAMES[dir]
+
+    /**
+     * One unit per cell, drawn where `COORD` puts it. A click on a cell
+     * is a real move: it is the nearest of the eight directions from the
+     * player, so a cell that is not a wall ahead carries that direction
+     * as its action and a wall or the player's own cell carries none.
+     * The player is the game's cursor, so its cell says `player`.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val t = tileSize
+        val border = t / 4
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = border,
+            top = border,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val content = if (x == s.px && y == s.py) {
+                    "player"
+                } else {
+                    when (s.grid[y * s.width + x]) {
+                        WALL -> "wall"
+                        GEM -> "gem"
+                        MINE -> "mine"
+                        STOP -> "stop"
+                        START -> "start"
+                        else -> "empty"
+                    }
+                }
+                if (x == s.px && y == s.py) "$content, cursor" else content
+            },
+            actions = { x, y ->
+                val dir = directionTo(s, x, y)
+                if (dir < 0 || s.dead ||
+                    at(s.width, s.height, s.grid, s.px + dx(dir), s.py + dy(dir)) == WALL
+                ) {
+                    emptyList()
+                } else {
+                    listOf(SpokenAction(directionName(dir), Buttons.LEFT_BUTTON))
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(s.py * s.width + s.px))
     }
 
     /**

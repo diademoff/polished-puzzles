@@ -2018,6 +2018,76 @@ object Map : Game {
         )
     }
 
+    /**
+     * One unit per cell, as `coord` draws it. The map divides a cell
+     * into up to four regions, so the label names each region and its
+     * colour in the game's own letters (`A` to `D`, the `c` label) and
+     * the pencil marks in the lower-case letters of the same toggle.
+     *
+     * A colour is only ever dropped, never clicked: `interpret_move`
+     * reads a colour on the press and writes it on the release, so one
+     * point cannot set anything on its own and no cell offers an action.
+     * The colouring stays on the pointer drag and on the cursor:
+     * `Enter` picks a region up, the arrows move, `Enter` drops it.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.params.w
+        val h = s.params.h
+        val wh = w * h
+        val shared = s.shared
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = tileSize,
+            left = tileSize,
+            top = tileSize,
+            summary = "",
+            text = { x, y ->
+                val regions = intArrayOf(
+                    shared.map[TE * wh + y * w + x],
+                    shared.map[BE * wh + y * w + x],
+                    shared.map[LE * wh + y * w + x],
+                    shared.map[RE * wh + y * w + x],
+                ).distinct().sorted()
+                val names = if (regions.size == 1) {
+                    "region ${regions[0]}"
+                } else {
+                    regions.joinToString(" and ") { "region $it" }
+                }
+                val colours = regions.joinToString(" and ") { colourName(s.colouring[it]) }
+                val pencil = regions
+                    .flatMap { region ->
+                        (0 until FOUR).filter { s.pencil[region] and (1 shl it) != 0 }
+                    }
+                    .distinct()
+                    .sorted()
+                val marks = if (pencil.isEmpty()) {
+                    ""
+                } else {
+                    ", pencil " + pencil.joinToString(" ") { ('a' + it).toString() }
+                }
+                val given = if (regions.any { shared.immutable[it] }) ", given" else ""
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                "$names, $colours$marks$given$cursor"
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * w + u.curX))
+    }
+
+    /** The game's own colour letter, or `blank`. */
+    private fun colourName(colour: Int): String =
+        if (colour < 0) "blank" else ('A' + colour).toString()
+
     // ------------------------------------------------------------------
     // Palette and drawing, `map.c:2760-3216`.
     // ------------------------------------------------------------------

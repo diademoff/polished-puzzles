@@ -1387,6 +1387,67 @@ object Pattern : Game {
         return Size(size(p.w, tileSize), size(p.h, tileSize))
     }
 
+    /**
+     * One cell per unit, as `gridSquare` draws it. The three states are
+     * the game's own words (`currentKeyLabel`: Black, White, Grey), and
+     * the two buttons are the cycles of `interpret_move`: left goes
+     * unknown to full to empty, right goes unknown to empty to full. A
+     * clue cell ignores both buttons, so it offers none.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val h = s.height
+        val left = toCoord(w, 0, tileSize)
+        val top = toCoord(h, 0, tileSize)
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = tileSize,
+            left = left,
+            top = top,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * w + x
+                val value = when (s.grid[index]) {
+                    GRID_FULL -> "Black"
+                    GRID_EMPTY -> "White"
+                    else -> "Grey"
+                }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                value + cursor
+            },
+            actions = { x, y ->
+                if (s.common.immutable[y * w + x]) {
+                    emptyList()
+                } else {
+                    val current = s.grid[y * w + x]
+                    listOf(
+                        SpokenAction(stateName((current + 2) % 3), Buttons.LEFT_BUTTON),
+                        SpokenAction(stateName((current + 1) % 3), Buttons.RIGHT_BUTTON),
+                    )
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * w + u.curX))
+    }
+
+    /** The spoken name of one cell state, the words `currentKeyLabel` uses. */
+    private fun stateName(state: Int): String = when (state) {
+        GRID_FULL -> "Black"
+        GRID_EMPTY -> "White"
+        else -> "Grey"
+    }
+
     // ------------------------------------------------------------------
     // Palette and drawing.
     // ------------------------------------------------------------------

@@ -747,6 +747,190 @@ object BlackBox : Game {
         return Size((p.w + 3) * tileSize, (p.h + 3) * tileSize)
     }
 
+    /**
+     * The arena cells, the reveal button, and the laser sites of the
+     * ring, all placed where `toDraw` and `draw_laser_tile` draw them.
+     *
+     * The two arena buttons are the game's own words from
+     * `currentKeyLabel`: `Ball` or `Clear` for the left one and `Lock`
+     * or `Unlock` for the right one, and a lock blocks the ball button
+     * exactly as `interpret_move` does. A laser site fires with the left
+     * button while it is unfired and locks its row or column with the
+     * right one. The reveal button is a laser site of the corner in C,
+     * so it is a unit with the `Reveal` action.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val w = s.w
+        val h = s.h
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = t,
+            left = t + t / 2,
+            top = t + t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                arenaSpeech(s, x + 1, y + 1) +
+                    if (u.curVisible && u.curX == x + 1 && u.curY == y + 1) {
+                        ", cursor"
+                    } else {
+                        ""
+                    }
+            },
+            actions = { x, y -> arenaButtons(s, x + 1, y + 1) },
+        )
+
+        val extras = buildList {
+            add(
+                SpokenUnit(
+                    row = 0,
+                    column = 0,
+                    left = t / 2,
+                    top = t / 2,
+                    width = t,
+                    height = t,
+                    text = "Reveal" +
+                        if (u.curVisible && u.curX == 0 && u.curY == 0) ", cursor" else "",
+                    actions = if (canReveal(s)) {
+                        listOf(SpokenAction("Reveal", Buttons.LEFT_BUTTON))
+                    } else {
+                        emptyList()
+                    },
+                ),
+            )
+            for (lno in 0 until s.nLasers) {
+                val cell = range2Grid(s, lno) ?: continue
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = t * cell.x + t / 2,
+                        top = t * cell.y + t / 2,
+                        width = t,
+                        height = t,
+                        text = rangeName(s, cell.x, cell.y) + ", " + rangeSpeech(s, lno) +
+                            if (u.curVisible && u.curX == cell.x && u.curY == cell.y) {
+                                ", cursor"
+                            } else {
+                                ""
+                            },
+                        actions = rangeButtons(s, cell.x, cell.y, lno),
+                    ),
+                )
+            }
+        }
+
+        val board = cells.copy(units = cells.units + extras)
+        val cursor = cursorLocation(ui, state, t)?.let {
+            board.units.unitAt(it.left + it.width / 2, it.top + it.height / 2)
+        }
+        return board.cappedUnits(cursor)
+    }
+
+    /** One arena cell: empty or a ball, locked or revealed. */
+    private fun arenaSpeech(s: State, gx: Int, gy: Int): String {
+        val cell = s.gridAt(gx, gy)
+        val ball = cell and BALL_GUESS != 0
+        val correct = cell and BALL_CORRECT != 0
+        val content = when {
+            !s.reveal && ball -> "ball"
+            !s.reveal -> "empty"
+            ball && correct -> "ball, correct"
+            ball -> "ball, wrong"
+            correct -> "ball, missed"
+            else -> "empty"
+        }
+        return content + if (cell and BALL_LOCK != 0) ", locked" else ""
+    }
+
+    /** `Ball`/`Clear` and `Lock`/`Unlock`, the words of `currentKeyLabel`. */
+    private fun arenaButtons(s: State, gx: Int, gy: Int): List<SpokenAction> {
+        if (s.reveal) return emptyList()
+        val cell = s.gridAt(gx, gy)
+        val actions = buildList {
+            if (cell and BALL_LOCK == 0) {
+                add(
+                    SpokenAction(
+                        if (cell and BALL_GUESS != 0) "Clear" else "Ball",
+                        Buttons.LEFT_BUTTON,
+                    ),
+                )
+            }
+            add(
+                SpokenAction(
+                    if (cell and BALL_LOCK != 0) "Unlock" else "Lock",
+                    Buttons.RIGHT_BUTTON,
+                ),
+            )
+        }
+        return actions
+    }
+
+    /** Where a laser site sits, in the words of the spec's example. */
+    private fun rangeName(s: State, gx: Int, gy: Int): String = when {
+        gy == 0 -> "Top edge, column $gx"
+        gy == s.h + 1 -> "Bottom edge, column $gx"
+        gx == 0 -> "Left edge, row $gy"
+        else -> "Right edge, row $gy"
+    }
+
+    /** What a laser site shows: the number of the pair, or H, R, or none. */
+    private fun rangeSpeech(s: State, lno: Int): String {
+        val exit = s.exits[lno]
+        if (exit == LASER_EMPTY) return "not fired"
+        val wrong = if (exit and LASER_WRONG != 0) SPOKEN_WRONG else ""
+        val omitted = if (exit and LASER_OMITTED != 0) ", left out" else ""
+        val value = exit and LASER_FLAGMASK.inv()
+        val cell = range2Grid(s, lno) ?: return "not fired"
+        val drawn = s.grid[cell.y * (s.w + 2) + cell.x]
+        val shown = when {
+            drawn and LASER_REFLECT != 0 -> "reflected"
+            drawn and LASER_HIT != 0 -> "hit"
+            else -> "laser ${drawn and LASER_FLAGMASK.inv()}"
+        }
+        return shown + omitted + wrong
+    }
+
+    /** `Fire` on an unfired site, and the lock of its row or column. */
+    private fun rangeButtons(s: State, gx: Int, gy: Int, lno: Int): List<SpokenAction> {
+        val actions = buildList {
+            if (s.exits[lno] == LASER_EMPTY) {
+                add(SpokenAction("Fire", Buttons.LEFT_BUTTON))
+            }
+            if (s.reveal) return@buildList
+            var locks = 0
+            if (gy == 0 || gy > s.h) {
+                for (y in 1..s.h) {
+                    if (s.gridAt(gx, y) and BALL_LOCK != 0) locks++
+                }
+                add(
+                    SpokenAction(
+                        if (locks > s.h / 2) "Unlock" else "Lock",
+                        Buttons.RIGHT_BUTTON,
+                    ),
+                )
+            } else {
+                for (x in 1..s.w) {
+                    if (s.gridAt(x, gy) and BALL_LOCK != 0) locks++
+                }
+                add(
+                    SpokenAction(
+                        if (locks > s.w / 2) "Unlock" else "Lock",
+                        Buttons.RIGHT_BUTTON,
+                    ),
+                )
+            }
+        }
+        return actions
+    }
+
     /** `game_colours` with the oracle's default background. */
     override fun colours(): FloatArray = colours(floatArrayOf(0.8f, 0.8f, 0.8f))
 

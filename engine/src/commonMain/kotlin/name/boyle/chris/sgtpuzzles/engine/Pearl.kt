@@ -1818,6 +1818,70 @@ object Pearl : Game {
         return Size(p.w * tile + 2 * border, p.h * tile + 2 * border)
     }
 
+    /**
+     * One unit per cell, as `coord` and the loop appearance draw it: the
+     * clue, the lines of the loop, and the no-line marks.
+     *
+     * No button at the centre of a cell moves anything: `interpret_move`
+     * returns without a move when the release is within a quarter tile
+     * of the centre, and marks the line of the nearest edge otherwise.
+     * The four line directions are a click near one of the cell's edges
+     * and the arrows with `Enter` on the cursor, so they stay on the
+     * pointer and the key path and no unit invents a direction action.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val half = halfsz(tileSize)
+        val tile = half * 2 + 1
+        val border = borderFor(u, tile)
+        val cells = gridSpeech(
+            width = w,
+            height = s.height,
+            tileSize = tile,
+            left = border,
+            top = border,
+            summary = "",
+            text = { x, y ->
+                val index = y * w + x
+                val words = buildList {
+                    when (s.shared.clues[index]) {
+                        CORNER -> add("black clue")
+                        STRAIGHT -> add("white clue")
+                    }
+                    if (s.lines[index] != BLANK) {
+                        add("line " + sideSpeech(sides(s.lines[index])))
+                    }
+                    if (s.marks[index] != BLANK) {
+                        add("no line " + sideSpeech(sides(s.marks[index])))
+                    }
+                    if (isEmpty()) add("empty")
+                }
+                val cursor = if (u.cursorActive && u.curx == x && u.cury == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                val wrong = if (s.errors[index] != 0) SPOKEN_WRONG else ""
+                words.joinToString(", ") + cursor + wrong
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.cury * w + u.curx))
+    }
+
+    /** The four sides of a direction mask, in the order they are drawn. */
+    private fun sides(mask: Int): List<String> = buildList {
+        if (mask and U != 0) add("up")
+        if (mask and R != 0) add("right")
+        if (mask and D != 0) add("down")
+        if (mask and L != 0) add("left")
+    }
+
     /** `game_get_cursor_location`, `pearl.c:2711-2722`. */
     override fun cursorLocation(
         ui: Game.Ui,

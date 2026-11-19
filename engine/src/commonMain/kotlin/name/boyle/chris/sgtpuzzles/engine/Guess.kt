@@ -876,6 +876,158 @@ object Guess : Game {
         return ""
     }
 
+    /**
+     * The palette, one unit per peg of every guess row, one feedback
+     * unit per row, and the solution when it is shown. Every rectangle
+     * comes from [Geometry], so a unit lands on the peg the drawing
+     * puts there.
+     *
+     * The palette is a drag source, not a button: `interpret_move`
+     * reads a colour on the press and writes it on the release, so one
+     * point sets nothing and the swatch is read only. A peg of the row
+     * being built offers `Hold` or `Unhold` (the right button, the word
+     * `currentKeyLabel` uses), and the feedback unit of that row offers
+     * `Submit` when the draft is complete, because a release there is
+     * the game's submit.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val p = s.params
+        val g = Geometry(p, tileSize)
+        val units = buildList {
+            for (i in 0 until p.ncolours) {
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = g.colx,
+                        top = g.colY(i),
+                        width = g.pegsz,
+                        height = g.pegsz,
+                        text = colourName(i + 1) +
+                            if (u.displayCur && u.colourCur == i) ", cursor" else "",
+                    ),
+                )
+            }
+            for (guess in 0 until p.nguesses) {
+                val row = s.guesses[guess]
+                val current = guess == s.nextGo && s.solved == 0
+                for (peg in 0 until p.npegs) {
+                    val held = current && u.holds[peg]
+                    val text = when {
+                        current && peg < u.currPegs.size && u.currPegs[peg] != 0 ->
+                            colourName(u.currPegs[peg])
+
+                        else -> colourName(row.pegs[peg])
+                    }
+                    val cursor = if (current && u.displayCur && u.pegCur == peg) {
+                        ", cursor"
+                    } else {
+                        ""
+                    }
+                    add(
+                        SpokenUnit(
+                            row = 0,
+                            column = 0,
+                            left = g.guessX(guess, peg),
+                            top = g.guessY(guess, 0),
+                            width = g.pegsz,
+                            height = g.pegsz,
+                            text = text + (if (held) ", held" else "") + cursor,
+                            actions = if (current) {
+                                listOf(
+                                    SpokenAction(
+                                        if (held) "Unhold" else "Hold",
+                                        Buttons.RIGHT_BUTTON,
+                                    ),
+                                )
+                            } else {
+                                emptyList()
+                            },
+                        ),
+                    )
+                }
+            }
+            for (guess in 0 until p.nguesses) {
+                val row = s.guesses[guess]
+                val current = guess == s.nextGo && s.solved == 0
+                val answer = when {
+                    current -> "current row"
+                    guess < s.nextGo || s.solved != 0 -> feedbackSpeech(row)
+                    else -> "empty"
+                }
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = g.hintOx,
+                        top = g.hintY(guess),
+                        width = g.hintW,
+                        height = g.pegsz,
+                        text = answer,
+                        actions = if (current && u.markable) {
+                            listOf(SpokenAction("Submit", Buttons.LEFT_BUTTON))
+                        } else {
+                            emptyList()
+                        },
+                    ),
+                )
+            }
+            if (s.solved != 0) {
+                val colours = (0 until p.npegs).joinToString(", ") {
+                    colourName(s.solution[it])
+                }
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = g.solnx,
+                        top = g.solny,
+                        width = g.solnW,
+                        height = g.solnH,
+                        text = "solution, $colours",
+                    ),
+                )
+            }
+        }
+
+        val board = SpokenBoard(0, 0, statusText(state, ui), units)
+        val cursor = when {
+            u.displayCur && u.pegCur < p.npegs ->
+                board.units.getOrNull(p.ncolours + s.nextGo * p.npegs + u.pegCur)
+
+            u.displayCur -> board.units.getOrNull(u.colourCur)
+            else -> null
+        }
+        return board.cappedUnits(cursor)
+    }
+
+    /** The shared colour name of one peg value, `0` being no peg. */
+    private fun colourName(colour: Int): String =
+        if (colour in 1..BoardColour.entries.size) {
+            BoardColour.entries[colour - 1].spokenName
+        } else {
+            "empty"
+        }
+
+    /** One row's answer: how many exact and how many wrong place. */
+    private fun feedbackSpeech(row: PegRow): String {
+        var exact = 0
+        var colour = 0
+        for (value in row.feedback) {
+            when (value) {
+                FEEDBACK_CORRECTPLACE -> exact++
+                FEEDBACK_CORRECTCOLOUR -> colour++
+            }
+        }
+        return "$exact exact, $colour wrong place"
+    }
+
     /** `game_new_drawstate` and `game_set_size`: allocate the one blitter. */
     override fun newDrawState(
         state: Game.State,

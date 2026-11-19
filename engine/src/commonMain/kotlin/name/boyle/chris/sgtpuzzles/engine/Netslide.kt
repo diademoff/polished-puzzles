@@ -879,6 +879,136 @@ object Netslide : Game {
     }
 
     /**
+     * One unit per cell, as `draw_tile` places it, and one unit per
+     * clickable band of the moving ring: the top and bottom band of each
+     * column and the left and right band of each row.
+     *
+     * A band is a real move: `interpret_move` slides the line that the
+     * clicked band belongs to, toward the board with the left button and
+     * away from it with the right one, so the band offers `Slide down`
+     * and `Slide up` (or `right` and `left`). The cells themselves are
+     * read only: a click on a cell is not a move.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val h = s.height
+        val t = tileSize
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = t,
+            left = t,
+            top = t,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * w + x
+                val words = buildList {
+                    val dirs = s.tiles[index] and 0x0F
+                    if (dirs != 0) add("wires " + sideSpeech(sides(dirs)))
+                    if (s.tiles[index] and ACTIVE != 0) add("powered")
+                    val barriers = s.barrierAt(x, y) and 0x0F
+                    if (barriers != 0) add("barrier " + sideSpeech(sides(barriers)))
+                }
+                val cursor = if (u.cursorVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                (if (words.isEmpty()) "empty" else words.joinToString(", ")) + cursor
+            },
+        )
+
+        val bands = buildList {
+            fun onCursor(x: Int, y: Int): String =
+                if (u.cursorVisible && u.curX == x && u.curY == y) ", cursor" else ""
+
+            // The clickable part of a band is one pixel inside the tile,
+            // because `interpret_move` divides the click before it
+            // subtracts the two tiles of margin.
+            for (x in 0 until w) {
+                add(
+                    band(
+                        x * t + t, 1, t, t,
+                        "Column ${x + 1}, top band" + onCursor(x, -1),
+                        "Slide down", "Slide up",
+                    ),
+                )
+                add(
+                    band(
+                        x * t + t, (h + 1) * t + 1, t, t,
+                        "Column ${x + 1}, bottom band" + onCursor(x, h),
+                        "Slide up", "Slide down",
+                    ),
+                )
+            }
+            for (y in 0 until h) {
+                add(
+                    band(
+                        1, y * t + t, t, t,
+                        "Row ${y + 1}, left band" + onCursor(-1, y),
+                        "Slide right", "Slide left",
+                    ),
+                )
+                add(
+                    band(
+                        (w + 1) * t + 1, y * t + t, t, t,
+                        "Row ${y + 1}, right band" + onCursor(w, y),
+                        "Slide left", "Slide right",
+                    ),
+                )
+            }
+        }
+        val cursor = cells.units.getOrNull(u.curY * w + u.curX)
+            ?: bands.getOrNull(cursorBand(u, w, h))
+        return cells.copy(units = cells.units + bands).cappedUnits(cursor)
+    }
+
+    /** The band index of the ring cursor, the order `spokenBoard` builds. */
+    private fun cursorBand(u: Ui, w: Int, h: Int): Int = when {
+        u.curY == -1 -> u.curX
+        u.curY == h -> w + u.curX
+        u.curX == -1 -> 2 * w + u.curY
+        else -> 2 * w + h + u.curY
+    }
+
+    /** One clickable band of the moving ring and its two slides. */
+    private fun band(
+        left: Int,
+        top: Int,
+        width: Int,
+        height: Int,
+        text: String,
+        forwards: String,
+        backwards: String,
+    ): SpokenUnit = SpokenUnit(
+        row = 0,
+        column = 0,
+        left = left,
+        top = top,
+        width = width,
+        height = height,
+        text = text,
+        actions = listOf(
+            SpokenAction(forwards, Buttons.LEFT_BUTTON),
+            SpokenAction(backwards, Buttons.RIGHT_BUTTON),
+        ),
+    )
+
+    /** The four sides of a direction mask, in the order they are drawn. */
+    private fun sides(mask: Int): List<String> = buildList {
+        if (mask and U != 0) add("up")
+        if (mask and R != 0) add("right")
+        if (mask and D != 0) add("down")
+        if (mask and L != 0) add("left")
+    }
+
+    /**
      * `compute_active`: a BFS from the centre over connected,
      * unbarriered edges. A cell in the moving row or column is never
      * marked, because [movingRow] and [movingCol] are the animated line.

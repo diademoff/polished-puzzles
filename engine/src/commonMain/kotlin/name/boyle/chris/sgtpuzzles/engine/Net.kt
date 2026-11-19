@@ -63,6 +63,9 @@ object Net : Game {
     // The packed draw word of `net.c:2682-2694`.
     private const val TILE_BARRIER_SHIFT = 0
     private const val TILE_BARRIER_CORNER_SHIFT = 4
+
+    /** The four error bits of a tile, `err(dir)` in `net.c`. */
+    private const val ERR_BITS = 0x3C0
     private const val TILE_KEYBOARD_CURSOR = 1 shl 8
     private const val TILE_WIRE_SHIFT = 9
     private const val TILE_ENDPOINT_SHIFT = 17
@@ -1980,6 +1983,10 @@ object Net : Game {
     // Geometry and palette.
     // ------------------------------------------------------------------
 
+    /**
+     * `game_compute_size`. The tile grid is `WINDOW_OFFSET` from the
+     * board edge, and one line thickness is the spare pixel.
+     */
     override fun computeSize(params: Game.Params, tileSize: Int): Size {
         val p = params as Params
         val lt = lineThick(tileSize)
@@ -1988,6 +1995,75 @@ object Net : Game {
             WINDOW_OFFSET * 2 + tileSize * p.height + lt,
         )
     }
+
+    /**
+     * One unit per tile, as `WINDOW_OFFSET` and `game_redraw` place it.
+     * A tile names its wires, its barriers, and its lock, and the two
+     * pointer buttons of `interpret_move` are its actions: a left click
+     * turns the tile anticlockwise and the right or middle button
+     * toggles the lock. `current_key_label` calls those `Rotate` and
+     * `Lock` or `Unlock`.
+     *
+     * The pointer also offers a drag that turns a tile one way or half a
+     * turn; a unit action cannot express a drag and the keys already
+     * carry it (`D` clockwise, `F` flip), so it stays on the key path.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val locked = { x: Int, y: Int -> s.tileAt(x, y) and LOCKED != 0 }
+        val cells = gridSpeech(
+            width = w,
+            height = s.height,
+            tileSize = tileSize,
+            left = WINDOW_OFFSET,
+            top = WINDOW_OFFSET,
+            summary = "",
+            text = { x, y ->
+                val index = y * w + x
+                val words = buildList {
+                    val dirs = s.tiles[index] and 0x0F
+                    if (dirs != 0) add("wires " + sideSpeech(sides(dirs)))
+                    if (s.tiles[index] and ACTIVE != 0) add("powered")
+                    if (s.tiles[index] and ERR_BITS != 0) add("wrong")
+                    val barriers = s.barrierAt(x, y) and 0x0F
+                    if (barriers != 0) add("barrier " + sideSpeech(sides(barriers)))
+                    if (s.tiles[index] and LOCKED != 0) add("locked")
+                }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                (if (words.isEmpty()) "empty" else words.joinToString(", ")) + cursor
+            },
+            actions = { x, y ->
+                if (locked(x, y)) {
+                    listOf(SpokenAction("Unlock", Buttons.RIGHT_BUTTON))
+                } else {
+                    listOf(
+                        SpokenAction("Rotate", Buttons.LEFT_BUTTON),
+                        SpokenAction("Lock", Buttons.RIGHT_BUTTON),
+                    )
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * w + u.curX))
+    }
+
+    /** The four sides of a direction mask, in the order they are drawn. */
+    private fun sides(mask: Int): List<String> = buildList {
+        if (mask and U != 0) add("up")
+        if (mask and R != 0) add("right")
+        if (mask and D != 0) add("down")
+        if (mask and L != 0) add("left")
+    }
+
 
     override fun colours(): FloatArray = colours(floatArrayOf(0.8f, 0.8f, 0.8f))
 

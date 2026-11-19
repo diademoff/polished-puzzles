@@ -59,6 +59,11 @@ object Galaxies : Game {
     private const val S_EDGE = 1
     private const val S_VERTEX = 2
 
+    /** The four edge spaces of a tile, in the order the walls are read. */
+    private val EDGE_DX = intArrayOf(-1, 1, 0, 0)
+    private val EDGE_DY = intArrayOf(0, 0, -1, 1)
+    private val EDGE_NAMES = arrayOf("left", "right", "up", "down")
+
     /** `PREFERRED_TILE_SIZE`, `galaxies.c:2718`. */
     private const val PREFERRED_TILE_SIZE = 32
 
@@ -2339,6 +2344,93 @@ object Galaxies : Game {
     override fun computeSize(params: Game.Params, tileSize: Int): Size {
         val p = params as Params
         return Size((p.w + 2) * tileSize, (p.h + 2) * tileSize)
+    }
+
+    /**
+     * One unit per cell, as `coord` draws it: the clue dot, the colour
+     * of the galaxy it belongs to, the arrow toward its dot, and the
+     * walls it draws.
+     *
+     * No unit offers an action. A left click only sets the edge of the
+     * nearest grid line, which belongs to two cells and not to the one
+     * under the click, and a dot is picked up with the right button and
+     * dropped by a drag. Edges and dot associations stay on the pointer
+     * and on the cursor: the arrows move over the edges and the dots,
+     * and `Enter` sets the edge or drops the dot.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.w
+        val h = s.h
+        val b = s.board
+        val colours = IntArray(w * h)
+        checkComplete(s, null, colours)
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = tileSize,
+            left = tileSize,
+            top = tileSize,
+            summary = "",
+            text = { x, y ->
+                val sp = b.index(2 * x + 1, 2 * y + 1)
+                val words = buildList {
+                    if (b.flags[sp] and F_DOT != 0) {
+                        add(
+                            if (b.flags[sp] and F_DOT_BLACK != 0) {
+                                "black dot"
+                            } else {
+                                "white dot"
+                            },
+                        )
+                    }
+                    when (colours[y * w + x]) {
+                        1 -> add("white")
+                        2 -> add("black")
+                        else -> if (isEmpty()) add("unset")
+                    }
+                    if (b.flags[sp] and F_TILE_ASSOC != 0) {
+                        val dx = b.dotX[sp] - (2 * x + 1)
+                        val dy = b.dotY[sp] - (2 * y + 1)
+                        if (dx != 0 || dy != 0) add("points " + directionName(dx, dy))
+                    }
+                    for (dir in 0 until 4) {
+                        val ex = 2 * x + 1 + EDGE_DX[dir]
+                        val ey = 2 * y + 1 + EDGE_DY[dir]
+                        if (ex >= 0 && ex < s.sx && ey >= 0 && ey < s.sy &&
+                            b.flags[b.index(ex, ey)] and F_EDGE_SET != 0
+                        ) {
+                            add("wall " + EDGE_NAMES[dir])
+                        }
+                    }
+                }
+                val cursor = if (u.curVisible && u.curX == 2 * x + 1 && u.curY == 2 * y + 1) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                words.joinToString(", ") + cursor
+            },
+        )
+        return cells.capped(cells.units.getOrNull((u.curY / 2) * w + u.curX / 2))
+    }
+
+    /** The compass name of a dot offset in half cells. */
+    private fun directionName(dx: Int, dy: Int): String = when {
+        dy < 0 && dx == 0 -> "up"
+        dy > 0 && dx == 0 -> "down"
+        dx < 0 && dy == 0 -> "left"
+        dx > 0 && dy == 0 -> "right"
+        dy < 0 && dx < 0 -> "up and left"
+        dy < 0 && dx > 0 -> "up and right"
+        dy > 0 && dx < 0 -> "down and left"
+        dy > 0 && dx > 0 -> "down and right"
+        else -> "here"
     }
 
     override fun colours(): FloatArray = colours(floatArrayOf(0.8f, 0.8f, 0.8f))
