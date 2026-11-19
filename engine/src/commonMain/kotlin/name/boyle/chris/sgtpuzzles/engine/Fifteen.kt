@@ -531,6 +531,48 @@ object Fifteen : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell. The gap is `empty`, and its position is the
+     * game cursor, so no cell needs a cursor suffix: a move slides a
+     * whole row or column into the gap and changes several cells at
+     * once. A tile in the gap's row or column offers the pointer move
+     * the game gives it, `Slide`; every other tile ignores a click.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val tile = s.tiles[y * s.width + x]
+                if (tile == 0) "empty" else "tile $tile"
+            },
+            actions = { x, y ->
+                val gx = s.gapPos % s.width
+                val gy = s.gapPos / s.width
+                // `fifteen.c` moves a clicked tile only when the click
+                // shares the gap's row or column.
+                if ((x == gx) xor (y == gy)) {
+                    listOf(SpokenAction("Slide", Buttons.LEFT_BUTTON))
+                } else {
+                    emptyList()
+                }
+            },
+        )
+        return cells.capped(cells.units[s.gapPos])
+    }
+
+    /**
      * The next move of the greedy solver, as `(x, y)` of the gap
      * destination. Null when the state is already solved.
      */

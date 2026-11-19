@@ -1002,6 +1002,94 @@ object Mines : Game {
         return ""
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell. A covered cell offers `Uncover` on the left
+     * button and `Mark` on the right; a marked cell offers `Unmark`. A
+     * revealed number offers `Clear` around it only when the flags
+     * already match, which is the one case where the game's own
+     * `current_key_label` names it, and a revealed zero offers nothing.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = BORDER,
+            top = BORDER,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val v = s.grid[y * s.width + x]
+                val content = when (v) {
+                    UNKNOWN -> "unopened"
+                    MARKED -> "marked"
+                    QUESTION -> "question"
+                    REVEALED_MINE, TRODDEN_MINE -> "mine"
+                    WRONG_MARK -> "marked$SPOKEN_WRONG"
+                    0 -> "no mines nearby"
+                    else -> "$v mines nearby"
+                }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) ", cursor" else ""
+                content + cursor
+            },
+            actions = { x, y -> actionsAt(s, x, y) },
+        )
+        val cursor = cells.units.getOrNull(u.curY * s.width + u.curX)
+        return cells.capped(cursor)
+    }
+
+    /**
+     * The pointer buttons of one cell, in the words of
+     * `current_key_label`. The game refuses every button after a death
+     * or a win.
+     */
+    private fun actionsAt(s: State, x: Int, y: Int): List<SpokenAction> {
+        if (s.dead || s.won) return emptyList()
+        return when (val v = s.grid[y * s.width + x]) {
+            UNKNOWN -> listOf(
+                SpokenAction("Uncover", Buttons.LEFT_BUTTON),
+                SpokenAction("Mark", Buttons.RIGHT_BUTTON),
+            )
+
+            QUESTION -> listOf(SpokenAction("Uncover", Buttons.LEFT_BUTTON))
+            MARKED -> listOf(SpokenAction("Unmark", Buttons.RIGHT_BUTTON))
+            in 1..8 -> {
+                if (surroundingMarks(s, x, y) == v) {
+                    listOf(SpokenAction("Clear", Buttons.LEFT_BUTTON))
+                } else {
+                    emptyList()
+                }
+            }
+
+            else -> emptyList()
+        }
+    }
+
+    /** The marked neighbours of a revealed cell, the chord test of `uncover`. */
+    private fun surroundingMarks(s: State, x: Int, y: Int): Int {
+        var n = 0
+        for (dy in -1..1) {
+            for (dx in -1..1) {
+                val nx = x + dx
+                val ny = y + dy
+                if (nx in 0 until s.width && ny in 0 until s.height &&
+                    s.grid[ny * s.width + nx] == MARKED
+                ) {
+                    n++
+                }
+            }
+        }
+        return n
+    }
+
     /** `game_changed_state`: the sticky completion flag and the event. */
     override fun changedState(
         ui: Game.Ui,

@@ -18,7 +18,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import name.boyle.chris.sgtpuzzles.backend.BackendName
-import name.boyle.chris.sgtpuzzles.backend.FIFTEEN
+import name.boyle.chris.sgtpuzzles.backend.GUESS
 import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
 import name.boyle.chris.sgtpuzzles.backend.TENTS
 import name.boyle.chris.sgtpuzzles.engine.SgtpSave
@@ -140,12 +140,12 @@ class BoardSemanticsTest {
 
     @Test
     fun theStatusLineIsSilentWhileTheBoardSpeaks() {
-        // The control: fifteen has no board units yet, so its status line
+        // The control: guess has no board units yet, so its status line
         // stays the polite live region of A-04.
-        launchFifteen()
+        launchGuess()
         setStatus("Moves: 1")
         assertEquals(
-            "fifteen has no board units, so its status line must stay polite",
+            "guess has no board units, so its status line must stay polite",
             View.ACCESSIBILITY_LIVE_REGION_POLITE,
             statusLiveRegion(),
         )
@@ -221,9 +221,9 @@ class BoardSemanticsTest {
         return launch(TENTS, gameId)
     }
 
-    private fun launchFifteen(): KotlinGameEngine {
-        GamePlayTestSupport.clearBackendState(context, FIFTEEN)
-        return launch(FIFTEEN, GamePlayTestSupport.SOLVED_4X4)
+    private fun launchGuess(): KotlinGameEngine {
+        GamePlayTestSupport.clearBackendState(context, GUESS)
+        return launch(GUESS, GUESS_ID)
     }
 
     private fun launch(backend: BackendName, gameId: String): KotlinGameEngine {
@@ -349,6 +349,9 @@ class BoardSemanticsTest {
 
         /** The frozen 8x8de tents game of seed 12345. */
         const val TENTS_ID = "8x8de:ae__ijcecgbcd,3,1,2,1,1,1,2,1,2,1,2,1,1,1,1,3"
+
+        /** A frozen guess game, on the Kotlin engine without the seam. */
+        const val GUESS_ID = "c2p2g2Bm:c2ab"
 
         /**
          * A 21x21 board of blank cells with zero clues, above the cap.

@@ -1616,6 +1616,59 @@ object Singles : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: the given digit, then the player's mark,
+     * `black` or `circle`. The pointer path toggles those two marks and
+     * cannot type a digit or a pencil note; entry stays on the key path.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.w,
+            height = s.h,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * s.w + x
+                val flags = s.flags[index]
+                val mark = when {
+                    flags and F_BLACK != 0 -> ", black"
+                    flags and F_CIRCLE != 0 -> ", circle"
+                    else -> ""
+                }
+                val cursor = if (u.cshow && u.cx == x && u.cy == y) ", cursor" else ""
+                val wrong = if (flags and F_ERROR != 0) SPOKEN_WRONG else ""
+                "${s.nums[index]}$mark$cursor$wrong"
+            },
+            actions = { x, y ->
+                when {
+                    s.flags[y * s.w + x] and F_BLACK != 0 ->
+                        listOf(SpokenAction("Restore", Buttons.LEFT_BUTTON))
+
+                    s.flags[y * s.w + x] and F_CIRCLE != 0 ->
+                        listOf(SpokenAction("Remove", Buttons.LEFT_BUTTON))
+
+                    else -> listOf(
+                        SpokenAction("Black", Buttons.LEFT_BUTTON),
+                        SpokenAction("Circle", Buttons.RIGHT_BUTTON),
+                    )
+                }
+            },
+        )
+        val cursor = cells.units.getOrNull(u.cy * s.w + u.cx)
+        return cells.capped(cursor)
+    }
+
+    /**
      * `game_request_keys` is NULL, so the midend leaves the arrow mode
      * at the preset Left/Right and returns no labels. The Android
      * full-cursor hint forces `ANDROID_ARROWS_ONLY` before the C midend

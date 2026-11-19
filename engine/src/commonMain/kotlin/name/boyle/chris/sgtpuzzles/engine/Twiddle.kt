@@ -843,6 +843,77 @@ object Twiddle : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell. A twiddle click turns the `n` by `n` block
+     * around that cell, so a cell offers `Turn left` and `Turn right`
+     * only when that block lies inside the board; the cells of the
+     * selected block carry `, cursor`.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val facing = arrayOf("up", "left", "down", "right")
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val value = s.grid[y * s.width + x]
+                val number = "tile ${value / 4}"
+                val orientation = if (s.orientable) ", facing ${facing[value and 3]}" else ""
+                val cursor = if (u.cursorVisible &&
+                    x >= u.curX && x < u.curX + s.n &&
+                    y >= u.curY && y < u.curY + s.n
+                ) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                number + orientation + cursor
+            },
+            actions = { x, y ->
+                if (regionOrigin(s, x, y, t) != null) {
+                    listOf(
+                        SpokenAction("Turn left", Buttons.LEFT_BUTTON),
+                        SpokenAction("Turn right", Buttons.RIGHT_BUTTON),
+                    )
+                } else {
+                    emptyList()
+                }
+            },
+        )
+        val cursor = cells.units.getOrNull(u.curY * s.width + u.curX)
+        return cells.capped(cursor)
+    }
+
+    /**
+     * The top-left cell of the `n` by `n` block a click on cell
+     * `(x, y)` turns, or null when the block would leave the board.
+     * This mirrors the `fromCoord` arithmetic of `interpret_move`.
+     */
+    private fun regionOrigin(s: State, x: Int, y: Int, tileSize: Int): Pair<Int, Int>? {
+        // The shell clicks the unit centre, `left + tileSize / 2`.
+        val clickX = tileSize / 2 + x * tileSize + tileSize / 2
+        val clickY = tileSize / 2 + y * tileSize + tileSize / 2
+        val cx = fromCoord(clickX - (s.n - 1) * tileSize / 2, tileSize)
+        val cy = fromCoord(clickY - (s.n - 1) * tileSize / 2, tileSize)
+        return if (cx in 0..(s.width - s.n) && cy in 0..(s.height - s.n)) {
+            cx to cy
+        } else {
+            null
+        }
+    }
+
+    /**
      * `move_cursor` with `wrap = false`. A clamped move is a UI update
      * when the cursor moved or became visible, and a no-effect key when
      * it was already visible and at the edge.

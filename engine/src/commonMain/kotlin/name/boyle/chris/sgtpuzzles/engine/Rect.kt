@@ -1654,6 +1654,50 @@ object Rect : Game {
         return Size(p.w * tileSize + 2 * BORDER + 1, p.h * tileSize + 2 * BORDER + 1)
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: the clue number, then the interior lines drawn
+     * on the cell's four sides. The pointer move of this game is an
+     * edge toggle at an edge midpoint, not at a cell centre, so a cell
+     * offers no action; the edge toggles stay on the key path, and the
+     * own-model edge units are a later wave.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.w,
+            height = s.h,
+            tileSize = t,
+            left = BORDER,
+            top = BORDER,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val clue = s.grid[y * s.w + x]
+                val lines = buildList {
+                    if (y > 0 && s.hedge[y * s.w + x] != 0) add("top")
+                    if (y < s.h - 1 && s.hedge[(y + 1) * s.w + x] != 0) add("bottom")
+                    if (x > 0 && s.vedge[y * s.w + x] != 0) add("left")
+                    if (x < s.w - 1 && s.vedge[y * s.w + x + 1] != 0) add("right")
+                }
+                val content = buildList {
+                    if (clue > 0) add("clue $clue")
+                    if (lines.isNotEmpty()) add("lines ${lines.joinToString(", ")}")
+                }.joinToString(", ").ifEmpty { "empty" }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) ", cursor" else ""
+                content + cursor
+            },
+        )
+        val cursor = cells.units.getOrNull(u.curY * s.w + u.curX)
+        return cells.capped(cursor)
+    }
+
     override fun colours(): FloatArray = colours(floatArrayOf(0.8f, 0.8f, 0.8f))
 
     override fun colours(background: FloatArray): FloatArray {

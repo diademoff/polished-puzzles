@@ -839,6 +839,48 @@ object Flip : Game {
     private fun fromCoord(value: Int, tileSize: Int): Int =
         (value - tileSize / 2 + tileSize) / tileSize - 1
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell, `light` or `dark` as the manual words it, with
+     * `, hint` on a square the solver marked. Every square that has a
+     * matrix row offers the game's `Flip` button; a row with no effect
+     * would ignore a click, so it offers none.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val i = y * s.width + x
+                val value = s.grid[i].toInt()
+                val light = if (value and 1 != 0) "dark" else "light"
+                val hint = if (s.hintsActive && value and 2 != 0) ", hint" else ""
+                val cursor = if (u.cdraw && u.cx == x && u.cy == y) ", cursor" else ""
+                light + hint + cursor
+            },
+            actions = { x, y ->
+                if (s.rowHasEffect(x, y)) {
+                    listOf(SpokenAction("Flip", Buttons.LEFT_BUTTON))
+                } else {
+                    emptyList()
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.cy * s.width + u.cx))
+    }
+
     /** `strspn(desc + start, hex)` without building a substring. */
     private fun hexRun(desc: String, start: Int): Int {
         var i = start

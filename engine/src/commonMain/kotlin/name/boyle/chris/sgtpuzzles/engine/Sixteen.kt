@@ -966,6 +966,49 @@ object Sixteen : Game {
         }
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell, with the tile number and the cursor suffix. A
+     * cell click is a UI update in `interpret_move`, never a move: the
+     * pointer path turns the frame arrows around the grid, so a cell
+     * offers no action and a move stays on the key path (arrows with
+     * the cursor select). `board-a11y-spec.md` section 4 asks for a
+     * cell, and the frame ring is a later own-model unit list.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            // `game_compute_size` puts one tile of frame on each side.
+            left = t,
+            top = t,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val cursor = if (u.cursorVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                "tile ${s.tiles[y * s.width + x]}$cursor"
+            },
+        )
+        val cursor = if (u.curX in 0 until s.width && u.curY in 0 until s.height) {
+            cells.units[u.curY * s.width + u.curX]
+        } else {
+            null
+        }
+        return cells.capped(cursor)
+    }
+
     /** `move_cursor`: a cursor key moves clamped or wrapped; anything else stays. */
     private fun moveCursor(
         button: Int,

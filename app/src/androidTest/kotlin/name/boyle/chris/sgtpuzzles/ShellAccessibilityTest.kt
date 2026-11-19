@@ -42,6 +42,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import name.boyle.chris.sgtpuzzles.backend.BackendName
 import name.boyle.chris.sgtpuzzles.backend.FIFTEEN
+import name.boyle.chris.sgtpuzzles.backend.FLOOD
 import name.boyle.chris.sgtpuzzles.backend.GUESS
 import name.boyle.chris.sgtpuzzles.backend.KEEN
 import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
@@ -100,19 +101,22 @@ class ShellAccessibilityTest {
 
     @Test
     fun theStatusLineIsAPoliteLiveRegion() {
-        val game = launch(FIFTEEN, GamePlayTestSupport.SOLVED_4X4)
+        // Flood has no spoken board, so it keeps the status line as the
+        // polite live region of A-04. A game with board units speaks its
+        // changes itself; `BoardSemanticsTest` pins that side.
+        val game = launch(FLOOD, FLOOD_ID)
         GamePlayTestSupport.awaitEngine(game)
         val before = statusOf(game)
-        assertEquals("the game does not start with a status line", "Moves: 0", before)
+        assertEquals("the game does not start with a status line", "0 / 6 moves", before)
         assertEquals(
             "the status line '$before' is not a polite live region",
             View.ACCESSIBILITY_LIVE_REGION_POLITE,
             statusNode(game)?.liveRegion,
         )
 
-        tapTileRow3Column2(game)
+        tapFloodTopRight(game)
         val after = awaitStatusChange(game, before)
-        assertEquals("the move did not reach the status line", "Moves: 1", after)
+        assertEquals("the move did not reach the status line", "1 / 6 moves", after)
         assertEquals(
             "the live region was lost after a move to '$after'",
             View.ACCESSIBILITY_LIVE_REGION_POLITE,
@@ -122,9 +126,9 @@ class ShellAccessibilityTest {
 
     @Test
     fun anUnchangedStatusIsNotWrittenToTheViewAgain() {
-        val game = launch(FIFTEEN, GamePlayTestSupport.SOLVED_4X4)
+        val game = launch(FLOOD, FLOOD_ID)
         GamePlayTestSupport.awaitEngine(game)
-        val status = awaitStatus(game, "Moves: 0")
+        val status = awaitStatus(game, "0 / 6 moves")
         var writes = 0
         game.onActivity { activity ->
             activity.findViewById<TextView>(R.id.status_bar).addTextChangedListener(
@@ -337,10 +341,10 @@ class ShellAccessibilityTest {
     }
 
     /**
-     * A tap in the cell at row 3, column 2 of the solved 4x4 board, the
-     * tile on the left of the gap. It is one move for fifteen.
+     * A tap in the top-right cell of the frozen flood game, which is the
+     * other colour, so the fill and the move count change.
      */
-    private fun tapTileRow3Column2(game: ActivityScenario<GamePlay>) {
+    private fun tapFloodTopRight(game: ActivityScenario<GamePlay>) {
         val board = awaitBoard(game)
         onView(withId(R.id.game_view)).perform(
             GeneralClickAction(
@@ -350,8 +354,8 @@ class ShellAccessibilityTest {
                     view.getLocationOnScreen(location)
                     val density = view.width.toFloat() / (view as GameView).wDip
                     floatArrayOf(
-                        location[0] + density * (board.originX + 2.5f * board.tileSize),
-                        location[1] + density * (board.originY + 3.5f * board.tileSize),
+                        location[0] + density * (board.originX + 1.5f * board.tileSize),
+                        location[1] + density * (board.originY + 0.5f * board.tileSize),
                     )
                 },
                 Press.FINGER,
@@ -479,6 +483,9 @@ class ShellAccessibilityTest {
 
         /** A frozen Guess game: two colours, two pegs, an empty board. */
         const val GUESS_ID = "c2p2g2Bm:c2ab"
+
+        /** A frozen 3x3 flood game with a six-move limit. */
+        const val FLOOD_ID = "3x3:121212121,6"
 
         /** A frozen Keen game with a key bar of digits. */
         const val KEEN_ID = "3:_baa_3a,m6s1m3a3"

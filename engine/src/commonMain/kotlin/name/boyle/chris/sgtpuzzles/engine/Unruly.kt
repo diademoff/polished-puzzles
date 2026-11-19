@@ -636,6 +636,68 @@ object Unruly : Game {
         return ""
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: `empty`, `black`, or `white`, and `, given`
+     * on a clue the player cannot change. The pointer buttons cycle the
+     * cell the way `current_key_label` words it; a given cell takes no
+     * pointer input.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * s.width + x
+                val colour = when (s.grid[index]) {
+                    N_ONE -> "black"
+                    N_ZERO -> "white"
+                    else -> "empty"
+                }
+                val given = if (s.shared.immutable[index]) ", given" else ""
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) ", cursor" else ""
+                colour + given + cursor
+            },
+            actions = { x, y ->
+                val index = y * s.width + x
+                if (s.shared.immutable[index]) {
+                    emptyList()
+                } else {
+                    when (s.grid[index]) {
+                        N_ONE -> listOf(
+                            SpokenAction("White", Buttons.LEFT_BUTTON),
+                            SpokenAction("Empty", Buttons.RIGHT_BUTTON),
+                        )
+
+                        N_ZERO -> listOf(
+                            SpokenAction("Empty", Buttons.LEFT_BUTTON),
+                            SpokenAction("Black", Buttons.RIGHT_BUTTON),
+                        )
+
+                        else -> listOf(
+                            SpokenAction("Black", Buttons.LEFT_BUTTON),
+                            SpokenAction("White", Buttons.RIGHT_BUTTON),
+                        )
+                    }
+                }
+            },
+        )
+        val cursor = cells.units.getOrNull(u.curY * s.width + u.curX)
+        return cells.capped(cursor)
+    }
+
     override fun colours(): FloatArray = colours(floatArrayOf(0.8f, 0.8f, 0.8f))
 
     /**

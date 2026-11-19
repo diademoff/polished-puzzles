@@ -1355,6 +1355,57 @@ object Signpost : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: the fixed arrow, then the number or the
+     * algebraic label the cell shows. The only pointer move is a drag
+     * from one cell to another, which a single unit cannot name, so a
+     * cell offers no action; a link stays on the key path (move the
+     * cursor, then select twice). This is reported as a wave 2 limit
+     * rather than a made-up move.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val directions = arrayOf(
+            "north", "north-east", "east", "south-east",
+            "south", "south-west", "west", "north-west",
+        )
+        val cells = gridSpeech(
+            width = s.w,
+            height = s.h,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * s.w + x
+                val number = s.nums[index]
+                val value = when {
+                    number == 0 -> ""
+                    number <= s.n -> ", number $number"
+                    else -> {
+                        val set = number / (s.n + 1)
+                        val offset = number % (s.n + 1)
+                        val label = prefixFor(set) + if (offset != 0) "+$offset" else ""
+                        ", label $label"
+                    }
+                }
+                val cursor = if (u.cshow && u.cx == x && u.cy == y) ", cursor" else ""
+                val wrong = if (s.isError(x, y)) SPOKEN_WRONG else ""
+                "arrow ${directions[s.dirs[index]]}$value$cursor$wrong"
+            },
+        )
+        val cursor = cells.units.getOrNull(u.cy * s.w + u.cx)
+        return cells.capped(cursor)
+    }
+
+    /**
      * `game_changed_state`. C dereferences `oldstate` in its first test;
      * every midend call site passes two states. The seam allows null, so
      * the port treats null as "not completed", as the return expression
