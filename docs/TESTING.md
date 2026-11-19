@@ -390,6 +390,14 @@ cannot reach:
   `pearl` taps a cell centre (inert), taps near an edge to draw a line,
   and holds a press on an unlined edge to mark a circle; `loopy` taps
   the board corner (inert) and near edges, which cycle yes and no.
+- `EighthWaveTileSizeInputTest` is the shared device test for the
+  eighth enablement wave, `solo` and `cube`, with the same structure and
+  the same assertions. Every case loads a frozen game id, so the suite
+  generates no board and cannot exceed the D-036 cap. `solo` taps a
+  given cell (inert), taps a free cell and sends a keypad digit; `cube`
+  taps half a cell left of the die on the left edge, where no square
+  lies beyond it (inert), and taps a point to roll the die one step in
+  the bearing of the tap.
 - `SlowGenerationDialogTest` opens the real type menu and the real
   settings dialog and checks the slow-generation warning. The Towers
   case sets `9du`, cancels the warning (the engine must not change), and
@@ -495,13 +503,14 @@ cannot reach:
 - `ShellAccessibilityTest` covers the shell accessibility findings that
   a device can check without a screen reader. Each case fails on the
   code before its fix.
-  `theStatusLineIsAPoliteLiveRegion` opens a frozen `cube` game,
-  reads the accessibility node of `status_bar` (polite live region),
-  sends one arrow key, and checks that the node is still polite when
-  the text reaches `Moves: 1`. `cube` is the fixture because every
-  Kotlin game has a spoken board after D-01 wave 4 and speaks its own
-  changes, while a C game keeps the status line as the polite live
-  region of A-04.
+  `theStatusLineIsSilentForAUnitBoard` opens a frozen `cube` game,
+  reads the accessibility node of `status_bar` (no live region),
+  sends one arrow key, and checks that the node is still silent when
+  the text reaches `Moves: 1`. Every ported backend has a spoken board
+  after D-01 wave 5, so the board speaks its own changes and the
+  status line must not repeat them; `StatusLiveRegionTest` pins the
+  polite fallback for a board without units, which no launchable game
+  has any more.
   `anUnchangedStatusIsNotWrittenToTheViewAgain`
   counts text changes of the status view: three repeats of the same
   text must not touch the view, and one changed text must, so the
@@ -755,6 +764,15 @@ Engine tests:
   action and why (`untangle`, `pearl`, `map`, `galaxies`), the cap by
   unit count, and the three helpers `sideSpeech`, `unitAt`, and
   `cappedUnits`.
+- `SpokenBoardWaveFiveTest` pins the last two backends. `solo` speaks
+  the given, the digit, the pencil marks, the killer cage sum, and the
+  cursor with its pencil mode, and offers `Select`, `Pencil`, `Ink`,
+  `Mark`, and `Clear` only where `interpret_move` really performs them.
+  `cube` speaks each square and the roll its own rectangle makes, checks
+  that a triangle board names a row and a triangle and that its unit
+  centre really rolls the die, numbers the six rows of the icosahedron
+  preset, and pins the capped board: 21x20 cube cells and 486 triangle
+  cells each return the cursor unit alone.
 - `SpokenBoardBoundsTest` runs every preset of every ported backend
   from the frozen golden IDs: a game without the hook returns the empty
   default, every unit rectangle is inside `computeSize`, the grid is
@@ -765,7 +783,10 @@ Engine tests:
   keeps its unit count inside the cap, and only the six games whose
   units are not one per cell (`loopy`, `guess`, `untangle`, `palisade`,
   `blackbox`, `netslide`) may return the cursor unit alone while the
-  cell grid is still under the cap.
+  cell grid is still under the cap. Wave 5 adds `cube`, whose cube
+  solid is a rectangle and whose three triangle solids are not, so a
+  preset may report no grid; the test still requires that at least one
+  cube preset reports its rectangle.
 - `BoardSemanticsGoldenTest` compares the live spoken board of every
   covered backend with `testdata/spoken/<game>.txt`. A changed word or
   a lost action is a review diff, not a silent drift.
@@ -4049,6 +4070,31 @@ Seventh enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android
   same edge at the live tile size; they are now one tile apart, on the
   midpoint of each edge, and the expected moves are `3y`, `1y`, `5y`,
   and `8y`.
+
+Eighth enablement wave, Pixel 4a 5G (physical), 2026-11-19, Android
+16 / API 36:
+
+- `:app:connectedDebugAndroidTest` ran 145 cases: 139 passed, 0 failed,
+  6 skipped. The six skips are the same three fastlane producers and
+  three chooser goldens. `EighthWaveTileSizeInputTest` ran both cases
+  and neither skipped, so `solo` and `cube` each used two non-preferred
+  tile sizes; every case loads a frozen game id, so the suite generated
+  no board and cannot exceed the D-036 cap.
+  `GamePlayParameterizedTest` covers all 40 enabled backends, so both
+  new games complete through the shell on the Kotlin engine.
+- `:engine:jvmTest` -> 1223 tests, 0 failures; `:parity:test` -> 1921
+  tests, 0 failures; `:app:testDebugUnitTest` -> 117 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings;
+  `tools/check-upstream-diff.sh --strict` and
+  `tools/check-upstream-lock.sh` both pass.
+- Two shell tests used `cube` as the "C game with no board units"
+  fixture, which the eighth wave removed. `ShellAccessibilityTest` now
+  asserts the silent status line of a unit board, and
+  `BoardSemanticsTest` checks the same rule on `tents` and `cube`; the
+  polite fallback is pinned without a device by `StatusLiveRegionTest`,
+  which also drove a small fix: the engine can write the status text
+  before the first drawing pass, so `onBoardRedrawn` now clears the
+  polite flag as soon as the board has units.
 
 Shell P0 wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 / API
 36, after the shell accessibility and guideline audits:

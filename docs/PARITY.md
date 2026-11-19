@@ -177,7 +177,7 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); `galaxies`, `bridges`, `unruly`, `filling`, and `mines` are `kotlin` (sixth enablement wave, 2026-11-18); `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, and `loopy` are `kotlin` (seventh enablement wave, 2026-11-18); then `cube` and `solo` are `dual-run`, the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); `galaxies`, `bridges`, `unruly`, `filling`, and `mines` are `kotlin` (sixth enablement wave, 2026-11-18); `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, and `loopy` are `kotlin` (seventh enablement wave, 2026-11-18); `solo` and `cube` are `kotlin` (eighth enablement wave, 2026-11-19), so every ported game is `kotlin` and the other games are `C` | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
@@ -221,14 +221,18 @@ added the fifteen games whose units are not all cells: the edges of
 `loopy` and `palisade`, the points of `untangle`, the palette and pegs
 of `guess`, the laser ring of `blackbox`, the moving bands of
 `netslide`, and the cells of `slant`, `pearl`, `tracks`, `bridges`,
-`map`, `net`, `inertia`, `galaxies`, and `pattern`. Every ported game
-now has the operation except `cube`, which has no two-dimensional unit
-model and keeps the C fallback. A game name is spoken from its own
-state, never from a pixel, and a move that a single unit cannot name (a
-drag, an edge midpoint, a keypad digit) is left on the input path
-instead of being invented. The unit models, the gesture limits, and the
-per-game cap are in `docs/DESIGN.md` section 11; the tests are in
-`docs/TESTING.md`; the deviation is D-035.
+`map`, `net`, `inertia`, `galaxies`, and `pattern`. Wave 5 added the
+last two: `solo` speaks the digit and pencil grammar, the killer cage
+sums, and the cursor with its pencil mode with the two pointer actions
+the game has; `cube` speaks its squares and the roll each square's own
+rectangle makes, and a triangle board names its row and triangle
+instead of a rectangular position, because the other three solids have
+no rectangle. Every ported backend now has the operation. A game name
+is spoken from its own state, never from a pixel, and a move that a
+single unit cannot name (a drag, an edge midpoint, a keypad digit) is
+left on the input path instead of being invented. The unit models, the
+gesture limits, and the per-game cap are in `docs/DESIGN.md` section 11;
+the tests are in `docs/TESTING.md`; the deviation is D-035.
 
 ### Game inventory
 
@@ -241,7 +245,7 @@ submenu entries when a game groups its presets.
 |---|---|---|---:|---|---|---|---|---|
 | `blackbox` | Black Box | 8x8, 5 balls | 5 | yes | no | no | no | `kotlin` |
 | `bridges` | Bridges | 7x7, Easy | 9 | yes | yes | no | no | `kotlin` |
-| `cube` | Cube | 4x4 | 4 | no | no | no | no | `dual-run` |
+| `cube` | Cube | 4x4 | 4 | no | no | no | no | `kotlin` (D-036) |
 | `dominosa` | Dominosa | order 6, Basic | 12 | yes | yes | no | no | `kotlin` |
 | `fifteen` | Fifteen | 4x4 | 3 | yes | yes | no | no | `kotlin` |
 | `filling` | Filling | 13x9 | 3 | yes | yes | no | no | `kotlin` |
@@ -270,7 +274,7 @@ submenu entries when a game groups its presets.
 | `singles` | Singles | 5x5 Easy | 10 | yes | yes | no | no | `kotlin` |
 | `sixteen` | Sixteen | 4x4 | 5 | yes | yes | no | no | `kotlin` |
 | `slant` | Slant | 8x8 Easy | 6 | yes | yes | no | no | `kotlin` |
-| `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `dual-run` (D-025, no parity) |
+| `solo` | Solo | 3x3, Block | 16 | yes | yes | no | no | `kotlin` (D-025, no parity) |
 | `tents` | Tents | 8x8 Easy | 6 | yes | yes | no | no | `kotlin` |
 | `towers` | Towers | 5x5 Easy | 7 | yes | yes | no | no | `kotlin` |
 | `tracks` | Train Tracks | 8x8 Tricky | 12 | yes | yes | no | no | `kotlin` |
@@ -513,10 +517,11 @@ Notes:
   `Balls marked: 0 / 1`.
   The seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
-- `cube` is `dual-run`. Its parameters, generator, state, roll, face
-  permutation, loose move grammar, completion, status text, save file,
-  palette, drawing, layout, input, and `requestKeys` pass the matrix in
-  `CubeDescTest`, `CubeGameTest`, `CubeSaveTest`, `CubeTraceTest`, and
+- `cube` is `kotlin` (eighth enablement wave, 2026-11-19). Its
+  parameters, generator, state, roll, face permutation, loose move
+  grammar, completion, status text, save file, palette, drawing, layout,
+  input, and `requestKeys` pass the matrix in `CubeDescTest`,
+  `CubeGameTest`, `CubeSaveTest`, `CubeTraceTest`, and
   `CubeInputParityTest`. The save test pins the ignored `full` argument
   and the clamp of an out-of-range description index. The trace test
   covers the four frozen traces, a moved, a completed, and a post-win
@@ -529,11 +534,16 @@ Notes:
   `requestKeys` after every step. A letterbox click is a move, because
   C has no board-bounds test. The animation is not ported, which section
   1 allows, so strict traces come from `traceNew` or a loaded save.
-  `validate_params` accepts a huge area and then enumerates every grid
-  square, as C does; that guard is enablement debt, not a deviation (see
-  `TESTING.md`). `KotlinGames.gameFor` knows the Kotlin game, but the
-  app still uses C: the huge-area guard and the two-release wait are open. The
-  seam is
+  `validate_params` keeps the C enumeration of every grid square, and
+  D-036 refuses an area above 250,000 cells in `newDesc` before the
+  first allocation or draw. The cap is a memory bound: the port holds
+  one Kotlin object per square, and the phone process runs out of its
+  256 MB heap at 1,960,000 cells, where C still generates. A larger
+  save or game id still loads and plays. `EighthWaveTileSizeInputTest`
+  taps at two tile sizes on the Pixel 4a 5G: a tap rolls the die one
+  step in the bearing of the tap and adds one move, and a tap half a
+  cell left of the die on the left edge is inert. `KotlinGames.gameFor`
+  knows the Kotlin game, and the app selects it. The seam is
   `docs/adr/0007-kotlin-game-seam.md`.
 - `filling` is `kotlin` (sixth enablement wave, 2026-11-18). Its
   parameters, description generator,
@@ -2301,8 +2311,9 @@ Notes:
   4a 5G. The seam is `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `solo` is `dual-run` in the engine, with **no parity claim** for the
-  killer overflow (D-025, owner decision 2026-11-17). Its parameters
+- `solo` is `kotlin` (eighth enablement wave, 2026-11-19) with **no
+  parity claim** for the killer overflow (D-025, owner decision
+  2026-11-17). Its parameters
   and sixteen presets, the `c x r`/`jigsaw`/`X`/killer grammar, the
   decode and validation order, the generator chain, the deduction
   solver, the `P`/`R`/`M`/`S` moves, the text form, the cursor and
@@ -2405,9 +2416,16 @@ Notes:
   cause explains why `GenerationLimitTest` warms `solo` up once before
   it compares the 25-symbol band. No engine change is involved; a JVM
   bug report is the follow-up.
-  `KotlinGames.gameFor` knows the Kotlin game, but the app still uses
-  C: D-025 waives its parity, so enabling it needs a separate owner
-  decision. `currentKeyLabel`
+  D-025 waives parity for the killer seeds above; every other seed and
+  description is compared with the oracle, and the app runs the Kotlin
+  engine on the owner decision of 2026-11-19. The two guarantees that
+  remain are the save format and reload: a Kotlin `solo` save loads in
+  the C build and every corpus save round-trips, which is what lets a
+  player move a game between the two engines. A seed listed in D-025
+  produces a different but valid and reloadable `DESC` than C for the
+  same seed, and no test claims otherwise. `EighthWaveTileSizeInputTest`
+  taps a cell and presses a keypad digit at two tile sizes on the Pixel
+  4a 5G, and a tap on a given is inert. `currentKeyLabel`
   is a tested helper with no Android call site. The seam is
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.

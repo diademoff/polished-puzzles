@@ -194,3 +194,26 @@ its `Review:` line now records the owner direction and the cap.
 device suite generates no board above a cap. `solo` stays on C: D-025
 waives its parity, so it needs a separate owner decision. `cube` stays
 on C with its note unchanged.
+
+Eighth wave (2026-11-19): `solo` and `cube` were enabled, and every
+ported game now runs on the Kotlin engine. This is the owner decision
+of 2026-11-19 to finish the roadmap as the documents describe, so no
+game is left `dual-run`. `solo` needed the separate owner decision that
+the seventh wave recorded: the owner reviewed D-025 and kept it as it
+stands, so the app runs the Kotlin engine with no parity claim for the
+killer seeds that entry lists, and D-024, D-034, and the load path are
+unchanged. `cube` needed the guard its `docs/PARITY.md` note demanded.
+The measurement in `work/generation-limits.md` showed that its
+generation is not slow — the phone generates 250,000 cells in 0.059 s —
+but that the per-square Kotlin objects exhaust the 256 MB Android heap
+at 1,960,000 cells, where C still generates. D-036 therefore refuses an
+area above 250,000 cells in `newDesc` before the first allocation or
+draw, which needs 48 MB of heap; the cap is a deviation for this build,
+and it is generation-only, so a larger save or game id still loads and
+plays. Neither game needs a slow warning: both have a hard maximum.
+`KotlinGamesTest` now pins the 40 enabled games and a frozen save for
+each, `EighthWaveTileSizeInputTest` covers the two new ones on the
+Pixel 4a 5G at two tile sizes with frozen game ids, and
+`GamePlayParameterizedTest` completes both through the shell on the
+Kotlin engine. The spoken board wave 5 (`SpokenBoardWaveFiveTest` and
+the two new tables) closes D-01 for every backend.

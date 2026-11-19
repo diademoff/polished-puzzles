@@ -178,7 +178,9 @@ fifth enablement wave), `galaxies`, `bridges`, `unruly`, `filling`, and
 `mines` are `kotlin` since 2026-11-18 (the sixth enablement wave), and
 `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`,
 `map`, `keen`, `singles`, `pearl`, and `loopy` are `kotlin` since
-2026-11-18 (the seventh enablement wave). `cube` and `solo` stay on C.
+2026-11-18 (the seventh enablement wave), and `solo` and `cube` are
+`kotlin` since 2026-11-19 (the eighth enablement wave). Every ported
+game now runs on the Kotlin engine in the app.
 The configuration dialog comes
 from the schema declared in `Game.configure`, and the cursor is drawn
 (`Slant.kt` uses `COL_CURSOR`; `SlantTraceTest` pins the cursor frame
@@ -200,7 +202,8 @@ The app selects `KotlinGameEngine` for `fifteen`, `samegame`, `flood`,
 `pattern`, `mosaic`, `signpost`, `untangle`, `galaxies`, `bridges`,
 `unruly`, `filling`, `mines`, `netslide`, `palisade`, `inertia`,
 `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`,
-and `loopy`, and bypasses the C generator for them. `KotlinGamesTest` pins the enabled set and the
+`loopy`, `solo`, and `cube`, and bypasses the C generator for them.
+`KotlinGamesTest` pins the enabled set and the
 generated saves; `GamePlayParameterizedTest` asserts that the running
 engine is `KotlinGameEngine` for every enabled game,
 `FirstWaveTileSizeInputTest` covers the first wave,
@@ -208,8 +211,9 @@ engine is `KotlinGameEngine` for every enabled game,
 `ThirdWaveTileSizeInputTest` covers the third wave,
 `FourthWaveTileSizeInputTest` covers the fourth,
 `FifthWaveTileSizeInputTest` covers the fifth,
-`SixthWaveTileSizeInputTest` covers the sixth, and
-`SeventhWaveTileSizeInputTest` covers the seventh, each with real
+`SixthWaveTileSizeInputTest` covers the sixth,
+`SeventhWaveTileSizeInputTest` covers the seventh, and
+`EighthWaveTileSizeInputTest` covers the eighth, each with real
 gestures at two tile sizes. The C games stay
 in the vendored tree as
 the oracle and for chooser metadata, but they are not reachable as
@@ -247,7 +251,9 @@ Rules for a wave:
   maxima for the thirteen blocked games. The maxima are in `newDesc`
   (D-026..D-034, D-007, D-008, and D-014 tightened), the measurement is
   `work/generation-limits.md`, and each cap has a parity test at and
-  above it. A wave does not add or raise a cap on its own.
+  above it. A wave does not add or raise a cap on its own. The eighth
+  wave added one cap, D-036 for `cube`, from its own measurement,
+  because that game was the last one with an open enablement debt.
 
 First wave, 2026-11-18: `samegame`, `flood`, and `pegs` are enabled
 with `fifteen`. Each device test is green at two tile sizes on the
@@ -354,9 +360,30 @@ owner direction of 2026-11-18 for the seventh wave in ADR 0011, which
 is what cleared the review. `SeventhWaveTileSizeInputTest`
 covers the twelve on the Pixel 4a 5G at two tile sizes, and every case
 loads a frozen game id, so the device suite generates no board above a
-cap. `solo` is not enabled: D-025 waives its parity and the app stays
-on C until a separate owner decision. `cube` stays on C with its note
-unchanged.
+cap.
+
+Eighth wave, 2026-11-19: `solo` and `cube` are enabled, and every
+ported game now runs on the Kotlin engine. The owner decided on
+2026-11-19 to finish the roadmap as the documents describe.
+`solo` joins with D-025 kept as it stands: the app runs the Kotlin
+engine with no parity claim for the killer seeds that entry lists, and
+D-024, D-034, and the load path stay as recorded. `cube` joins after
+its enablement debt was closed with a measured cap: D-036 refuses an
+area above 250,000 cells in `newDesc` before the first allocation or
+draw. The cap is a memory bound, not a time bound: the phone generates
+250,000 cells in 0.059 s but needs 48 MB of heap, 1,000,000 cells needs
+160 MB, and 1,960,000 cells runs out of the 256 MB Android growth
+limit. C generates a much larger area because its per-square structures
+are smaller, so the cap is a deviation for this build. Like the other
+caps it is generation-only, so a larger save or game id still loads and
+plays. Each game declares its `Game.configure` and its C preference
+schema (`cube` has a NULL `get_prefs` and no schema, `solo` declares the
+one-item `pencil-keep-highlight` schema), and neither needs a slow
+warning because both now have a hard maximum.
+`EighthWaveTileSizeInputTest` covers the two on the Pixel 4a 5G at two
+tile sizes with frozen game ids, and `SpokenBoardWaveFiveTest`,
+`BoardSemanticsGoldenTest`, and `SpokenBoardBoundsTest` pin their
+spoken boards.
 
 The other ported games stay `dual-run` on
 C. The policy is `docs/adr/0011-enable-games-in-waves.md`.
@@ -419,7 +446,7 @@ the work is started.
 
 | ID | Area | What is missing | Why it is deferred | Closes when |
 |---|---|---|---|---|
-| D-01 | Accessibility, P0 | The game board has no screen-reader semantics. `GameView` draws the board and exposes no virtual nodes, so TalkBack cannot read a cell or make a move. The shell is labeled; the board is not. Wave 1 landed on 2026-11-19: the `Game.spokenBoard` seam with `gridSpeech` and the 400-unit cap, the board and unit semantics in the Compose host, the live-region diff, and `tents` as the pilot (`docs/adr/0013-spoken-board.md`, D-035). Wave 2 landed on 2026-11-19 with the ten plain cell games (`fifteen`, `sixteen`, `flip`, `twiddle`, `mines`, `mosaic`, `signpost`, `rect`, `singles`, `unruly`), content-only unit labels composed by the shell, the committed spoken tables under `testdata/spoken/`, and the cross-game bounds, geometry parity, landscape, and keyboard tests. Wave 3 landed on 2026-11-19 with the colour, digit, and pencil vocabulary in the engine (`BoardColour`, `digitSpeech`, `pencilDigits`, `SPOKEN_SELECTED`) and twelve more games (`samegame`, `flood`, `filling`, `pegs`, `lightup`, `magnets`, `range`, `towers`, `unequal`, `keen`, `undead`, `dominosa`), including their off-grid clue strips. Wave 4 landed on 2026-11-19 with the fifteen games whose units are not all cells: the edges of `loopy` and `palisade`, the points of `untangle`, the palette and pegs of `guess`, the laser ring of `blackbox`, the moving bands of `netslide`, and the cells of `slant`, `pearl`, `tracks`, `bridges`, `map`, `net`, `inertia`, `galaxies`, and `pattern`. Every Kotlin game now returns a spoken board except `cube`, which has no two-dimensional unit model. The unit models, the gesture limits, and the per-game cap are in `docs/DESIGN.md` section 11, and the tests are in `docs/TESTING.md`. Wave 5 owes the full device table, the large-board decision, the C fallback record, and the D-03 listening pass. | The seam needs game state, which only the Kotlin layer has; each wave is a per-game description reviewed against the spec's grammar rather than guessed from pixels. | Every Kotlin game returns a spoken board (cells, edges, off-grid units, and the cursor), the C fallback is recorded, and a spoken audit on a device passes (D-03). |
+| D-01 | Accessibility, P0 | The game board has no screen-reader semantics. `GameView` draws the board and exposes no virtual nodes, so TalkBack cannot read a cell or make a move. The shell is labeled; the board is not. Wave 1 landed on 2026-11-19: the `Game.spokenBoard` seam with `gridSpeech` and the 400-unit cap, the board and unit semantics in the Compose host, the live-region diff, and `tents` as the pilot (`docs/adr/0013-spoken-board.md`, D-035). Wave 2 landed on 2026-11-19 with the ten plain cell games (`fifteen`, `sixteen`, `flip`, `twiddle`, `mines`, `mosaic`, `signpost`, `rect`, `singles`, `unruly`), content-only unit labels composed by the shell, the committed spoken tables under `testdata/spoken/`, and the cross-game bounds, geometry parity, landscape, and keyboard tests. Wave 3 landed on 2026-11-19 with the colour, digit, and pencil vocabulary in the engine (`BoardColour`, `digitSpeech`, `pencilDigits`, `SPOKEN_SELECTED`) and twelve more games (`samegame`, `flood`, `filling`, `pegs`, `lightup`, `magnets`, `range`, `towers`, `unequal`, `keen`, `undead`, `dominosa`), including their off-grid clue strips. Wave 4 landed on 2026-11-19 with the fifteen games whose units are not all cells: the edges of `loopy` and `palisade`, the points of `untangle`, the palette and pegs of `guess`, the laser ring of `blackbox`, the moving bands of `netslide`, and the cells of `slant`, `pearl`, `tracks`, `bridges`, `map`, `net`, `inertia`, `galaxies`, and `pattern`. Wave 5 landed on 2026-11-19 with the last two backends: `solo` speaks digits, givens, pencil marks, killer cage sums, and the cursor with its pencil mode, and `cube` speaks each square with the roll its own rectangle makes. Every ported backend now returns a spoken board. The unit models, the gesture limits, and the per-game cap are in `docs/DESIGN.md` section 11, and the tests are in `docs/TESTING.md`. The remaining debt is the full device table, the large-board decision, the C fallback record, and the D-03 listening pass. | The seam needs game state, which only the Kotlin layer has; each wave is a per-game description reviewed against the spec's grammar rather than guessed from pixels. | Every Kotlin game returns a spoken board (cells, edges, off-grid units, and the cursor), the C fallback is recorded, and a spoken audit on a device passes (D-03). |
 | D-02 | Performance | Tier A is recorded on a Pixel 4a 5G at 60 Hz. Tier B and the tablet are missing. | Only one physical phone exists: no 90 Hz tier A phone, no tier B phone, and no tablet. | Tier B and tablet numbers are in `tools/perf/baseline.md` and `docs/PERFORMANCE.md` has their verdicts. |
 | D-03 | Accessibility | No spoken TalkBack pass. Labels, 48dp targets, headings, contrast, RTL, and 200% are checked automatically; pronunciation, traversal order, and announcements are not. | TalkBack needs a person listening to the device. | A written audit of every shell screen with no P0/P1, attached to the phase report. |
 | D-04 | Testing | Screenshot goldens are local and git-ignored by decision, so CI cannot gate pixels and a fresh checkout skips the comparison. | The owner asked not to commit binary screenshots. | Either the goldens are committed, or a host renderer (for example Paparazzi or Roborazzi) is adopted by an ADR. |

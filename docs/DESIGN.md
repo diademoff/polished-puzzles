@@ -262,6 +262,15 @@ their own vocabulary:
 - **A ring** is one unit per site outside the board, named by where it
   sits: `blackbox` says `top edge, column 1, laser 3, hit`, and its
   reveal button is a unit of its own.
+- **A shaped cell** is one unit per cell of a board that is not a
+  rectangle. `cube` lays the cube solid out as a rectangle, so those
+  cells carry `collectionItemInfo`, and it lays the tetrahedron,
+  octahedron, and icosahedron out as rows of triangles. A triangle unit
+  says `row 2, triangle 3, blue` and its rectangle is the triangle's
+  bounding box, so the rectangles overlap by construction and the board
+  reports no cell grid; the ordered list is the unambiguous part, and
+  the cursor is the triangle the die stands on. `solo` is a plain cell
+  grid whose cells offer the two pointer buttons the game has.
 
 Two limits keep the actions honest, and both are pinned by a test:
 
