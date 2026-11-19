@@ -1076,8 +1076,11 @@ Anything not listed here is a bug.
   not ask the C oracle to generate the empty grid or solve or draw the
   unclued killer save, because that kills the oracle process; the
   one-off oracle runs above are the abort evidence.
-- **Review:** the owner should decide the final empty-grid and
-  hand-made-range behavior before `solo` is enabled in the app.
+- **Review:** owner direction 2026-11-19: `solo` is enabled in the app
+  and runs on the Kotlin engine. The direction accepts the empty-grid
+  guard (`r <= 0`), the hand-made range guards, and the unclued-cage
+  result as recorded; D-034 bounds generation and D-025 keeps its own
+  waiver. No entry here needs a further owner decision.
 - **Scope:** `solo`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -1121,8 +1124,13 @@ Anything not listed here is a bug.
   pins the valid description, determinism for the same seed, and the
   engine reload. The tests do not reproduce the C write; they ask the
   oracle only for the output it returns.
-- **Review:** owner decision 2026-11-17: accepted as a deviation; no
-  parity is claimed for `solo`, and the app stays on C.
+- **Review:** owner decision 2026-11-19: accepted as a deviation, and
+  `solo` runs on the Kotlin engine in the app with no parity claim for
+  the seeds above. The waiver covers only the generation of those killer
+  seeds; every other seed, the `DESC` goldens, the solver, the save
+  format, and the load path are compared with C. A Kotlin `solo` save
+  still loads in the C build, and every corpus save round-trips, so a
+  player can move a game between the two engines.
 - **Scope:** `solo`
 - **Upstream:** none known
 - **Date:** 2026-11-17
@@ -1439,8 +1447,9 @@ Anything not listed here is a bug.
   `collectionInfo`/`collectionItemInfo`, the four board actions, and one
   unit node per cell and per off-grid unit. `tents` is the pilot, so its
   cells and its row and column clues are readable and clickable without
-  sight. The C engine has no such operation, so `solo` and `cube` keep
-  one board node labelled with the game name and the status text.
+  sight. The C engine has no such operation, so a C game keeps one board
+  node labelled with the game name and the status text. Every ported
+  backend now returns a spoken board, `solo` and `cube` last.
 - **Why:** D-01 is the last P0 of the accessibility audit. Without board
   state a screen reader cannot read a cell or make a move. The rejected
   alternatives (the drawing sink, `text_format`, one generic grid) are
@@ -1452,8 +1461,13 @@ Anything not listed here is a bug.
   default, the exact `tents` unit text and actions for the frozen
   seed-12345 board, and the 400-unit cap;
   `SpokenBoardGamesTest` and `SpokenBoardWaveThreeTest` pin the twenty
-  two cell games that follow, and `SpokenColourTest` pins the shared
-  colour vocabulary;
+  two cell games that follow, `SpokenBoardWaveFourTest` pins the games
+  whose units are not all cells, `SpokenBoardWaveFiveTest` pins the
+  cells, digits, pencil marks, and cage sums of `solo` and the squares,
+  the die, and the pointer rolls of `cube` (including its one
+  non-rectangular solid, whose units name a row and a triangle because
+  their rectangles are bounding boxes that overlap), and
+  `SpokenColourTest` pins the shared colour vocabulary;
   `app/src/test/kotlin/.../BoardSpeechTest.kt` pins the cap fallback
   and the announcement rule for one, two, many, and no changes;
   `app/src/androidTest/kotlin/.../BoardSemanticsTest.kt` pins the board
@@ -1464,9 +1478,65 @@ Anything not listed here is a bug.
   `BoardSemanticsGoldenTest` compares every covered backend with the
   committed table under `testdata/spoken/`.
 - **Scope:** all Kotlin games (wave D-01/W1: `tents`; W2: the ten plain
-  cell games; W3: the twelve colour, digit, and clue-strip games), and
-  the C fallback for `solo` and `cube`
+  cell games; W3: the twelve colour, digit, and clue-strip games; W4:
+  the fifteen games whose units are not all cells; W5: `solo` and
+  `cube`), and the C fallback for a game with no Kotlin backend
 - **Upstream:** none; upstream has no accessibility model for the board
+- **Date:** 2026-11-19
+
+### D-036: Cube refuses an area above 250,000 cells at generation
+
+- **Area:** behavior
+- **Status:** active
+- **What differs:** C accepts every area up to its overflow bound and
+  enumerates every grid square in `validate_params` and in
+  `new_game_desc`: `c4000x4000` (16,000,000 cells) generates in 1.02 s
+  with the committed oracle on the host. The Kotlin port enumerates the
+  same squares, but it holds one Kotlin object per square, about 150
+  bytes per cell, so the Android heap is the bound, not the time. On the
+  Pixel 4a 5G, one cold ART process per measurement with `newGame`:
+  `c500x500` (250,000 cells) takes 0.059 s, `c1000x1000` (1,000,000)
+  0.70-0.95 s, `c1200x1200` (1,440,000) 0.73 s, and `c1400x1400`
+  (1,960,000), `c1600x1600`, `c2000x2000`, and `c3000x3000` throw
+  `OutOfMemoryError` against the 256 MB growth limit. Under `-Xmx256m`
+  on the host the same cliff reproduces: `c1300x1300` generates,
+  `c1400x1400` fails. The smallest heap that completes a generation is
+  24 MB at 90,000 cells, 48 MB at 250,000 cells, and 160 MB at
+  1,000,000 cells. The Kotlin `newDesc` rejects an area above 250,000
+  cells (`500x500`) with `Grid area is too large for this build` before
+  the first allocation or draw. The guard counts cells, so a triangle
+  solid is bounded by `d1^2 + d2^2 + 4*d1*d2`: `i224x224` is 301,056
+  cells and is refused. `validateParams`, `validateDesc`, and `newState`
+  stay the C functions, so a larger save or game id still loads and
+  plays.
+- **Why:** this is a memory bound, not a time bound. Generation time is
+  nowhere near the 10 s target in the measured range, and the largest
+  measured success (1,440,000 cells, 0.73 s) still needs well over
+  200 MB of heap. A cold measurement process starts with an almost empty
+  heap, so a warm app process with the same 256 MB limit has less room
+  than the number suggests. 250,000 cells needs 48 MB, which is under a
+  fifth of the growth limit, and it is the largest measured point with
+  that margin. No preset and no `testdata` save is near the cap: the
+  largest preset is `i3x3` at 54 cells, so every seed, `DESC`,
+  `AUXINFO`, and `.sgtp` text of an accepted parameter set is unchanged.
+  The cap is generation-only: it depends only on the parameters, draws
+  no random number, and leaves the RNG, `DESC`, `AUXINFO`, and `.sgtp`
+  text alone.
+- **Test:**
+  `engine/src/commonTest/kotlin/.../GenerationLimitTest.kt::cube refuses an area above 250,000 before any draw`
+  pins the `c501x500` and `i224x224` rejections, the fixed message, the
+  untouched random state, and the unchanged C validation;
+  `...::the caps are the measured numbers` pins `MAX_AREA == 250_000`
+  and the cube and triangle area arithmetic;
+  `parity/.../GenerationLimitTest.kt::cube generates at 500x500`
+  compares the cap with the oracle, save included;
+  `...::cube generates at the largest preset` compares `i3x3`;
+  `...::a cube save above 250,000 cells loads and plays` loads a
+  hand-written `c501x500` save in both engines and replays one move.
+  `EighthWaveTileSizeInputTest` loads a frozen game id, so the device
+  suite generates no board at all.
+- **Scope:** `cube`
+- **Upstream:** none known
 - **Date:** 2026-11-19
 
 ## Examples
