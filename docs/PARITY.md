@@ -2399,6 +2399,14 @@ Notes:
 - The save corpus is `testdata/saves/`: the initial state of every
   readable preset plus `fifteen` cases for `MOVE`, undo with redo
   history, and `SOLVE`. It is generated with `tools/gen-saves.sh`.
+- Spoken tables are `testdata/spoken/<game>.txt`: one small deterministic
+  preset per game with a spoken board, listing the board shape, the
+  summary, and every unit label and pointer action in board order.
+  `BoardSemanticsGoldenTest` compares the live text with the table, and
+  the label is `SpokenUnit.spokenLabel`, the function the shell uses.
+  The tables describe our accessibility words, not oracle output, so a
+  change is reviewed like a string resource and not regenerated from a
+  run.
 - Never update a golden to "fix" a red test. Find the cause first,
   then add a `DEVIATIONS.md` entry or fix the code.
 

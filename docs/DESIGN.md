@@ -211,6 +211,10 @@ Required for every screen:
   game's pointer buttons. Above the cap the cursor unit alone is
   exposed and the arrow keys move it. Labels carry no coordinate that
   `collectionItemInfo` already reports. (`docs/adr/0013-spoken-board.md`)
+- A unit action exists only when the button pair at that unit's centre
+  is a real move. A drag between two units, an edge midpoint, a frame
+  arrow, or a tile cast cannot be named by one unit, so those moves
+  stay on the key path and no unit invents them.
 - One hidden polite live region per game screen announces the diff of a
   board change: one or two units are read in board order, three or more
   are summarised from the cursor. The status line is not a live region

@@ -521,6 +521,26 @@ cannot reach:
   game name, exposes no star state while unstarred, offers a custom
   action spoken as `Add to starred`, and reports the `Starred` state
   after that action.
+- `BoardSemanticsTest` reads the D-01 node tree on the pilot: the board
+  shape, the four actions, cell labels with their collection position,
+  a click that makes the real move with one announcement, the status
+  line staying out of the way while the board has units, and a 21x21
+  board that exposes the cursor unit only.
+- `BoardGeometryParityTest` is the 2.6x guard: for `fifteen`, `mines`,
+  and `unruly`, the unit on the drawing cursor rectangle lands on the
+  pixels that the render matrix gives it, within 1.5dp. With the matrix
+  removed the `mines` case fails with `unit left expected:<55.4> but
+  was:<21.0>` on the Pixel 4a 5G.
+- `BoardLandscapeSemanticsTest` rotates `fifteen` to landscape and
+  requires the same 16 units, the same labels, the 4 by 4 collection
+  shape, and the same pixel geometry. It fails with `expected:<16> but
+  was:<0>` when the game does not speak.
+- `BoardKeyNavigationTest` plays `unruly` with the hardware keys: the
+  game view holds the focus, the arrow keys move the game cursor and
+  the live region reads the one or two changed units, Enter writes a
+  real move, and the unit nodes are still there afterwards. It fails
+  with `the board did not expose its units expected:<64> but was:<0>`
+  without the game's spoken board.
 
 ## 4. Corpus
 
@@ -533,6 +553,7 @@ testdata/
 ├─ corpus/<game>/            # fuzz corpus, minimized
 ├─ golden/<game>/            # params + seed -> DESC, presets
 ├─ trace/<game>/             # strict draw traces, one per preset
+├─ spoken/<game>.txt         # spoken board labels and actions, one preset
 └─ manifest.json             # sha256, provenance, upstream commit for DESC
 ```
 
@@ -667,6 +688,24 @@ Engine tests:
   game ID validates with `full = false` because it has a description,
   so a short id is accepted, while `newGame`, which has no description,
   validates the full form and rejects it.
+- `SpokenBoardTest` pins the D-01 seam on the pilot: the default of a
+  game without the hook is an empty board, `tents` speaks its cells and
+  clues in board order with the game's pointer buttons, the cursor and
+  error suffixes, and the 400-cell cap. Cell texts are content only;
+  `BoardSpeechTest` pins `spokenLabel` as the coordinate the shell adds.
+- `SpokenBoardGamesTest` pins the ten wave 2 cell games from frozen
+  seed-12345 IDs: the content words, the cursor suffix, and the pointer
+  buttons each state offers, including `mines` mark and unmark,
+  `mosaic` and `unruly` colour cycles, and the `twiddle` block bounds.
+- `SpokenBoardBoundsTest` runs every preset of every ported backend
+  from the frozen golden IDs: a game without the hook returns the empty
+  default, every unit rectangle is inside `computeSize`, the grid is
+  complete and row-major, grid units do not overlap, a cell label does
+  not repeat its coordinate, and a board above 400 cells exposes at
+  most one unit.
+- `BoardSemanticsGoldenTest` compares the live spoken board of every
+  covered backend with `testdata/spoken/<game>.txt`. A changed word or
+  a lost action is a review diff, not a silent drift.
 - `DrawStateTest` pins the drawstate lifecycle with a test-only game
   that allocates one blitter. The first draw allocates it before
   `start_draw`; a move, undo, redo, solve, and restart keep the same
