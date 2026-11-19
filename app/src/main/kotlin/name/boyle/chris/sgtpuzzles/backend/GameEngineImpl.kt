@@ -110,6 +110,27 @@ class GameEngineImpl @UsedByJNI private constructor(
             }
         }
 
+        /**
+         * The C engine for one game ID, for the D-01 fallback test.
+         *
+         * `fromLaunch` is the only game entry point in the app, and every
+         * ported backend takes the Kotlin branch there, so no screen
+         * reaches the C engine any more. The fallback contract still
+         * applies to a save that the C engine restores, so this builds
+         * that engine directly. The name is not the external one: an
+         * internal or renamed external function would no longer match the
+         * registered JNI method.
+         */
+        @JvmStatic
+        @VisibleForTesting
+        internal fun cEngineForTest(
+            gameID: String,
+            backend: BackendName,
+            activityCallbacks: GameEngine.ActivityCallbacks,
+            viewCallbacks: ViewCallbacks,
+            initialPrefs: String?,
+        ): GameEngine = fromGameID(gameID, backend, activityCallbacks, viewCallbacks, initialPrefs)
+
         @JvmStatic
         private external fun fromSavedGame(
             savedGame: String?,

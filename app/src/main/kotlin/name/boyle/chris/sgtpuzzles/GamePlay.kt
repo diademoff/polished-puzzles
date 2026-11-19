@@ -239,10 +239,12 @@ class GamePlay : ActivityWithLoadButton(), OnSharedPreferenceChangeListener, Gam
     /** The announcement that waits for the flood window to close. */
     private var pendingAnnouncement: String? = null
 
-    // specifically the screenshots test
+    // specifically the screenshots test, and the C fallback test of D-01,
+    // which installs a C engine because no backend uses one today
     @get:VisibleForTesting
     var gameEngine = GameEngine.NOT_LOADED_YET
-        private set
+        @VisibleForTesting
+        internal set
     var currentBackend: BackendName? = null
     private var startingBackend: BackendName? = null
     private var lastKeys = ""

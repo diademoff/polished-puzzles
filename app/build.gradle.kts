@@ -159,6 +159,12 @@ android {
             useLegacyPackaging = true
         }
     }
+
+    // The device spoken-board table reads the same committed tables as
+    // BoardSemanticsGoldenTest, so one file is the source of truth.
+    sourceSets.getByName("androidTest").assets.srcDir(
+        rootProject.layout.projectDirectory.dir("testdata/spoken").asFile
+    )
 }
 
 androidComponents {
