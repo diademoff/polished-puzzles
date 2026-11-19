@@ -900,7 +900,8 @@ object Tents : Game {
                 }
                 val cursor = if (u.cdisp && u.cx == x && u.cy == y) ", cursor" else ""
                 val wrong = if (errors[y * w + x] != 0) SPOKEN_WRONG else ""
-                "Row ${y + 1}, column ${x + 1}, $content$cursor$wrong"
+                // Content only: the shell adds `Row R, column C, `.
+                "$content$cursor$wrong"
             },
             actions = { x, y -> cycle(s.grid[y * w + x]) },
         )

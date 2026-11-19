@@ -2,6 +2,7 @@ package name.boyle.chris.sgtpuzzles.render
 
 import name.boyle.chris.sgtpuzzles.engine.SpokenBoard
 import name.boyle.chris.sgtpuzzles.engine.SpokenUnit
+import name.boyle.chris.sgtpuzzles.engine.spokenLabel
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -16,7 +17,7 @@ import org.junit.Test
  */
 class BoardSpeechTest {
 
-    private fun unit(index: Int, text: String = "Row 1, column ${index + 1}, empty") =
+    private fun unit(index: Int, text: String = "empty") =
         SpokenUnit(
             row = 1,
             column = index + 1,
@@ -40,13 +41,28 @@ class BoardSpeechTest {
     private fun board(vararg texts: String) = grid(texts.mapIndexed { i, t -> unit(i, t) }, 8, 8)
 
     @Test
+    fun `a cell label adds its position and an off-grid label does not`() {
+        // ADR 0013 point 4: the engine text is content only, and the
+        // shell composes the coordinate that collectionItemInfo also
+        // carries.
+        assertEquals(
+            "Row 2, column 3, clue 4",
+            SpokenUnit(2, 3, 0, 0, 32, 32, "clue 4").spokenLabel(),
+        )
+        assertEquals(
+            "Row 3, 2 tents",
+            SpokenUnit(0, 0, 0, 0, 32, 32, "Row 3, 2 tents").spokenLabel(),
+        )
+    }
+
+    @Test
     fun `the cursor fallback keeps every unit at the cap and one above it`() {
         val atCap = grid(List(400) { unit(it) }, 20, 20)
         assertEquals(400, atCap.units().size)
 
         val above = grid(List(441) { unit(it) }, 21, 21)
         assertEquals(1, above.units().size)
-        assertEquals("Row 1, column 1, empty", above.units()[0].text)
+        assertEquals("empty", above.units()[0].text)
         assertEquals(above.units()[0], above.cursorUnit(16, 16))
 
         // A C engine has no board at all, so the shell exposes no unit.
@@ -57,8 +73,8 @@ class BoardSpeechTest {
 
     @Test
     fun `an unchanged board says nothing`() {
-        val before = board("Row 1, column 1, empty", "Row 1, column 2, tree")
-        val after = board("Row 1, column 1, empty", "Row 1, column 2, tree")
+        val before = board("empty", "tree")
+        val after = board("empty", "tree")
         assertEquals(
             BoardUtterance.None,
             utteranceFor(before, before.units()[0], after, after.units()[0]),
@@ -67,8 +83,8 @@ class BoardSpeechTest {
 
     @Test
     fun `one changed unit is read on its own`() {
-        val before = board("Row 1, column 1, empty", "Row 1, column 2, tree")
-        val after = board("Row 1, column 1, tent", "Row 1, column 2, tree")
+        val before = board("empty", "tree")
+        val after = board("tent", "tree")
         assertEquals(
             BoardUtterance.Changed(listOf("Row 1, column 1, tent"), false),
             utteranceFor(before, null, after, null),
@@ -77,8 +93,8 @@ class BoardSpeechTest {
 
     @Test
     fun `two changed units are read in board order`() {
-        val before = board("Row 1, column 1, empty", "Row 1, column 2, empty", "Row 1, column 3, tree")
-        val after = board("Row 1, column 1, tent", "Row 1, column 2, empty", "Row 1, column 3, tent")
+        val before = board("empty", "empty", "tree")
+        val after = board("tent", "empty", "tent")
         assertEquals(
             BoardUtterance.Changed(
                 listOf("Row 1, column 1, tent", "Row 1, column 3, tent"),
@@ -90,8 +106,8 @@ class BoardSpeechTest {
 
     @Test
     fun `many changed units read the cursor and count the rest`() {
-        val before = board("Row 1, column 1, empty", "Row 1, column 2, empty", "Row 1, column 3, empty")
-        val after = board("Row 1, column 1, tent", "Row 1, column 2, wall", "Row 1, column 3, tent")
+        val before = board("empty", "empty", "empty")
+        val after = board("tent", "wall", "tent")
         assertEquals(
             BoardUtterance.Many("Row 1, column 2, wall", 2),
             utteranceFor(before, null, after, after.units()[1]),
@@ -105,15 +121,15 @@ class BoardSpeechTest {
 
     @Test
     fun `a wrong unit gets the wrong prefix and a cursor move speaks the cursor`() {
-        val before = board("Row 1, column 1, empty", "Row 1, column 2, empty")
-        val after = board("Row 1, column 1, tent, wrong", "Row 1, column 2, empty")
+        val before = board("empty", "empty")
+        val after = board("tent, wrong", "empty")
         assertEquals(
             BoardUtterance.Changed(listOf("Row 1, column 1, tent, wrong"), true),
             utteranceFor(before, null, after, null),
         )
 
         // A cursor move changes no unit text, so the cursor alone speaks.
-        val still = board("Row 1, column 1, empty", "Row 1, column 2, tree")
+        val still = board("empty", "tree")
         assertEquals(
             BoardUtterance.Cursor("Row 1, column 2, tree"),
             utteranceFor(still, still.units()[0], still, still.units()[1]),
@@ -122,7 +138,7 @@ class BoardSpeechTest {
 
     @Test
     fun `a board of another shape is a new game and says nothing`() {
-        val before = board("Row 1, column 1, empty")
+        val before = board("empty")
         val after = grid(List(4) { unit(it) }, 2, 2)
         assertEquals(
             BoardUtterance.None,

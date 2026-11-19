@@ -54,6 +54,7 @@ import kotlin.math.roundToInt
 import name.boyle.chris.sgtpuzzles.R
 import name.boyle.chris.sgtpuzzles.engine.Buttons
 import name.boyle.chris.sgtpuzzles.engine.SpokenUnit
+import name.boyle.chris.sgtpuzzles.engine.spokenLabel
 
 /** Test tag for the one composable that paints the board. */
 const val BOARD_CANVAS_TAG = "board-canvas"
@@ -425,7 +426,7 @@ fun BoardSemantics(
                         .size(width, height)
                         .testTag(boardUnitTag(index))
                         .semantics {
-                            contentDescription = unit.text
+                            contentDescription = unit.spokenLabel()
                             if (unit.row > 0 && unit.column > 0) {
                                 collectionItemInfo = CollectionItemInfo(
                                     rowIndex = unit.row - 1,

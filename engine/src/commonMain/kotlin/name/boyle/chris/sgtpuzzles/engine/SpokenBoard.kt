@@ -53,6 +53,17 @@ data class SpokenBoard(
 )
 
 /**
+ * The utterance of one unit: the grid position, then the content.
+ *
+ * TalkBack reads `collectionItemInfo` itself, so a unit text never
+ * repeats a coordinate (ADR 0013 point 4); the shell and the spoken
+ * tables both build the full sentence here, so a label cannot drift
+ * between them. A unit outside the grid is its content alone.
+ */
+fun SpokenUnit.spokenLabel(): String =
+    if (row > 0 && column > 0) "Row $row, column $column, $text" else text
+
+/**
  * The largest grid the shell exposes one node per unit for (D-01 S2).
  *
  * It is the area bound Loopy already uses (D-033). A larger grid returns

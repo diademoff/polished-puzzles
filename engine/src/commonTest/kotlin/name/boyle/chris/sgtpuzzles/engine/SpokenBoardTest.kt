@@ -23,9 +23,6 @@ class SpokenBoardTest {
         const val GOLDEN_DESC =
             "ae__ijcecgbcd,3,1,2,1,1,1,2,1,2,1,2,1,1,1,1,3"
 
-        /** The 4x4 solved board of the fifteen tests and the shell. */
-        const val FIFTEEN_SOLVED = "4x4:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0"
-
         /** 21x21 of trees, above the cap; the clues are all zero. */
         val CAP_DESC_441 = "z".repeat(17) + "p" + ",0".repeat(42)
 
@@ -36,13 +33,10 @@ class SpokenBoardTest {
     private fun tentsState(desc: String = GOLDEN_DESC): Tents.State =
         Tents.newState(Tents.Params(8, 8, Tents.DIFF_EASY), desc) as Tents.State
 
-    private fun fifteenState(): Fifteen.State =
-        Fifteen.newState(Fifteen.decodeParams("4x4"), FIFTEEN_SOLVED) as Fifteen.State
-
     @Test
     fun `a game without the seam returns an empty board`() {
-        val state = fifteenState()
-        val board = Fifteen.spokenBoard(state, Fifteen.newUi(state), TILE)
+        val state = Guess.newState(Guess.decodeParams("c2p2g2Bm"), "c2ab")
+        val board = Guess.spokenBoard(state, Guess.newUi(state), TILE)
         assertEquals(SpokenBoard(0, 0, "", emptyList()), board)
         assertTrue(board.units.isEmpty())
     }
@@ -67,11 +61,11 @@ class SpokenBoardTest {
         assertEquals(80, tree.top)
         assertEquals(TILE, tree.width)
         assertEquals(TILE, tree.height)
-        assertEquals("Row 3, column 4, tree", tree.text)
+        assertEquals("tree", tree.text)
         assertTrue(tree.actions.isEmpty())
 
         // Grass offers the game's two pointer buttons.
-        assertEquals("Row 1, column 1, empty", board.units[0].text)
+        assertEquals("empty", board.units[0].text)
         assertEquals(
             listOf(
                 SpokenAction("Tent", Buttons.LEFT_BUTTON),
@@ -113,12 +107,12 @@ class SpokenBoardTest {
 
         val board = Tents.spokenBoard(moved, ui, TILE)
 
-        assertEquals("Row 3, column 3, tent", board.units[2 * 8 + 2].text)
+        assertEquals("tent", board.units[2 * 8 + 2].text)
         assertEquals(
             listOf(SpokenAction("Clear", Buttons.LEFT_BUTTON)),
             board.units[2 * 8 + 2].actions,
         )
-        assertEquals("Row 3, column 4, tree, cursor", board.units[2 * 8 + 3].text)
+        assertEquals("tree, cursor", board.units[2 * 8 + 3].text)
         // A marked cell goes back to empty with the left button and on
         // to a tent with the right one.
         val marked = Tents.executeMove(moved, "N1,2") as Tents.State
@@ -153,7 +147,7 @@ class SpokenBoardTest {
         assertEquals(21, aboveBoard.rows)
         assertEquals(21, aboveBoard.columns)
         assertEquals(1, aboveBoard.units.size)
-        assertEquals("Row 6, column 5, empty, cursor", aboveBoard.units[0].text)
+        assertEquals("empty, cursor", aboveBoard.units[0].text)
         // The cursor unit still carries the real cell rectangle, so a
         // double tap reaches the cell.
         assertEquals(16 + 4 * TILE, aboveBoard.units[0].left)

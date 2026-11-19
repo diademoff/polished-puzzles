@@ -4,6 +4,7 @@ import name.boyle.chris.sgtpuzzles.engine.BOARD_UNIT_CAP
 import name.boyle.chris.sgtpuzzles.engine.SPOKEN_WRONG
 import name.boyle.chris.sgtpuzzles.engine.SpokenBoard
 import name.boyle.chris.sgtpuzzles.engine.SpokenUnit
+import name.boyle.chris.sgtpuzzles.engine.spokenLabel
 
 /**
  * One snapshot of what the shell says about the game board for a
@@ -83,14 +84,14 @@ fun utteranceFor(
         if (afterCursor == null || afterCursor.text == beforeCursor?.text) {
             return BoardUtterance.None
         }
-        return BoardUtterance.Cursor(afterCursor.text)
+        return BoardUtterance.Cursor(afterCursor.spokenLabel())
     }
     if (changed.size <= 2) {
         val wrong = changed.any {
             new.units[it].text.endsWith(SPOKEN_WRONG) &&
                 !old.units[it].text.endsWith(SPOKEN_WRONG)
         }
-        return BoardUtterance.Changed(changed.map { new.units[it].text }, wrong)
+        return BoardUtterance.Changed(changed.map { new.units[it].spokenLabel() }, wrong)
     }
     // The cursor unit is read once, whether or not it is one of the
     // changed units, and the rest are counted.
@@ -98,5 +99,5 @@ fun utteranceFor(
         new.units.indexOfFirst { it === cursor }
     } ?: -1
     val others = if (cursorIndex in changed) changed.size - 1 else changed.size
-    return BoardUtterance.Many(afterCursor?.text, others)
+    return BoardUtterance.Many(afterCursor?.spokenLabel(), others)
 }
