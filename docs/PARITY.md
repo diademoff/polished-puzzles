@@ -45,7 +45,7 @@ Compared:
 - draw primitives: geometry, order, colors as roles, text;
 - clip/unclip and blitter operations.
 
-Used for the renderer and for games marked as `dual-run`.
+Used for the renderer and for every Kotlin game.
 
 ### `semantic`
 
@@ -166,7 +166,7 @@ C wins.
 
 | Component | Status | Authority |
 |---|---|---|
-| `midend` | dual-run: semantic subset in `engine/Midend.kt`; the C shell serves C backends, and `KotlinGameEngine` builds the dialogs, the preferences page, and the generation path for a Kotlin backend | C |
+| `midend` | kotlin for every ported game: `engine/Midend.kt` owns the history and the save; `KotlinGameEngine` builds the dialogs, the preferences page, and the generation path. The C midend serves only the fallback path | C |
 | `random` | parity: `engine/RandomState.kt`, strict differential | oracle streams |
 | `SAVEFILE` container | parity: `engine/SgtpSave.kt`, both directions | C save corpus |
 | `sort`, `combi` | parity: `engine/Sort.kt`, `engine/Combinations.kt` | C order |
@@ -177,13 +177,15 @@ C wins.
 | `loopgen` | parity: `engine/Loopgen.kt`, `LoopgenParityTest` (`none` and `count`); `pearl` is the first consumer and its bias is pinned by `PearlBiasTest` (incremental versus from-scratch on every call) and by the `DESC`/`AUXINFO` goldens | C behavior |
 | `latin` | parity: `engine/Latin.kt`, strict differential test; keen uses the full callback path | C behavior |
 | `renderer` | new: Compose display-list renderer; C geometry | C traces |
-| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); `galaxies`, `bridges`, `unruly`, `filling`, and `mines` are `kotlin` (sixth enablement wave, 2026-11-18); `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, and `loopy` are `kotlin` (seventh enablement wave, 2026-11-18); `solo` and `cube` are `kotlin` (eighth enablement wave, 2026-11-19), so every ported game is `kotlin` and the other games are `C` | the game inventory below |
+| games (see the table below) | mixed: `fifteen`, `samegame`, `flood`, and `pegs` are `kotlin` (first enablement wave, 2026-11-18); `sixteen`, `flip`, `twiddle`, and `guess` are `kotlin` (second enablement wave, 2026-11-18); `blackbox`, `lightup`, `undead`, and `rect` are `kotlin` (third enablement wave, 2026-11-18); `slant`, `range`, `towers`, and `unequal` are `kotlin` (fourth enablement wave, 2026-11-18); `magnets`, `pattern`, `mosaic`, `signpost`, and `untangle` are `kotlin` (fifth enablement wave, 2026-11-18); `galaxies`, `bridges`, `unruly`, `filling`, and `mines` are `kotlin` (sixth enablement wave, 2026-11-18); `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`, `dominosa`, `map`, `keen`, `singles`, `pearl`, and `loopy` are `kotlin` (seventh enablement wave, 2026-11-18); `solo` and `cube` are `kotlin` (eighth enablement wave, 2026-11-19), so every playable backend is `kotlin`; `nullgame` is built but not playable | the game inventory below |
 
 Statuses: `C` — C only; `dual-run` — both implementations, C decides;
 `parity` — the Kotlin implementation passes the matrix; `kotlin` — the
-app has no runtime C path for the game. The vendored C may remain as
-the oracle, chooser metadata, and saved-game identification. Removing
-the C source is not required for `kotlin`; see ADR 0008.
+app has no runtime C path for the game. No game uses `C` or `dual-run`
+today; the words stay because older entries refer to them. The vendored
+C may remain as the oracle, chooser metadata, and saved-game
+identification. Removing the C source is not required for `kotlin`; see
+ADR 0008.
 
 The owner waived the two-release wait for the ported games on
 2026-11-18 (decision 1a). A ported game still becomes `kotlin` only in
@@ -499,7 +501,7 @@ Notes:
   seam is `docs/adr/0007-kotlin-game-seam.md`, the wave policy is
   `docs/adr/0011-enable-games-in-waves.md`, and the auxiliary rules are
   `docs/adr/0009-game-ui-and-auxinfo.md`.
-- `blackbox` is `dual-run`. Its parameters, generator, loose move and
+- `blackbox` is `kotlin`. Its parameters, generator, loose move and
   `UI` grammars, state, laser rules, grid-seeded reveal check, status
   text, solver, save file, palette, drawing, layout, and input pass the
   matrix in `BlackBoxDescTest`, `BlackBoxGameTest`, `BlackBoxSaveTest`,
@@ -825,7 +827,7 @@ Notes:
   `docs/adr/0007-kotlin-game-seam.md` and
   `docs/adr/0009-game-ui-and-auxinfo.md`.
 
-- `lightup` is `dual-run`. Its parameters and nine presets, the
+- `lightup` is `kotlin`. Its parameters and nine presets, the
   decode quirks and validation order, the run-length description, the
   solver-gated generator, the black-percentage ramp, state, the `L`/`I`
   move grammar, the sticky completion, the solve diff with its
@@ -1376,7 +1378,7 @@ Notes:
   wave, 2026-11-18), and `FifthWaveTileSizeInputTest` drags a link and
   presses the final number at two tile sizes on the Pixel 4a 5G.
 
-- `undead` is `dual-run`. Its parameters and eight presets, the decode
+- `undead` is `kotlin`. Its parameters and eight presets, the decode
   and validation quirks, the generator and its RNG order, the
   description grammar, the state and the fixed cells, the move
   grammar, the solve and its two error strings, the text format, the
@@ -2200,7 +2202,7 @@ Notes:
   parameter bound, so a larger save still loads. The app generates off
   the UI thread. S9 is not needed because `current_key_label` is NULL.
 
-- `rect` is `dual-run`. Its five presets, the `%dx%d` parameter
+- `rect` is `kotlin`. Its five presets, the `%dx%d` parameter
   grammar with the `%g` expansion and the `a` unique flag, the
   validation order, the description grammar, the random tiling with
   the singleton repairs and the two expansion passes, the solver with
