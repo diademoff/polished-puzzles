@@ -492,6 +492,46 @@ object Pegs : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell of the cross or the octagon: a peg, a hole, or an
+     * obstacle. A jump is a drag from one peg to a hole two cells away,
+     * and one unit cannot name a drag (DESIGN section 11), so no unit
+     * offers an action and the move stays on the pointer or the key path.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val content = when (s.value(x, y)) {
+                    GRID_PEG -> "peg"
+                    GRID_HOLE -> "hole"
+                    else -> "blocked"
+                }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                content + cursor
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * s.width + u.curX))
+    }
+
+    /**
      * `current_key_label`. The seam has no hook and the Android shell
      * has no call site, so this is a public helper with a unit test. A
      * modified select has no label because the test is exact equality.

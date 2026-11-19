@@ -875,6 +875,100 @@ object Filling : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: the value with its origin (`given 4`, `3`,
+     * `empty`), the region state the drawing shades (`correct` or
+     * `wrong`), the selection, and the cursor. The region is in the text
+     * because the shade is the only other cue and a colour-blind player
+     * must get the same hint.
+     *
+     * A click selects one cell and nothing else, so the value itself
+     * stays on the keypad: the game has no pointer digit entry (D-01
+     * section 4). A clue cannot be selected, so it offers no action.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val h = s.height
+        val t = tileSize
+        val regions = regionStates(s)
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * w + x
+                val selected = if (u.sel?.get(index) == true) SPOKEN_SELECTED else ""
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                digitSpeech(s.board[index], s.shared.clues[index] != 0, emptyList()) +
+                    regions[index] + selected + cursor
+            },
+            actions = { x, y ->
+                if (s.shared.clues[y * w + x] == 0) {
+                    listOf(SpokenAction("Select", Buttons.LEFT_BUTTON))
+                } else {
+                    emptyList()
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * w + u.curX))
+    }
+
+    /**
+     * The shade of every cell, as words: `, correct` when the region is
+     * exactly its value, and `, wrong` when it is larger, or smaller and
+     * sealed (no cell of it touches an empty cell). An empty cell and a
+     * region that can still grow say nothing.
+     *
+     * This is `draw_grid`'s shading computed from the state, so the hint
+     * a sighted player sees and the text a screen reader hears agree.
+     */
+    private fun regionStates(s: State): Array<String> {
+        val w = s.width
+        val h = s.height
+        val board = s.board
+        val out = Array(w * h) { "" }
+        val dsf = FillingSolver.makeDsf(null, board, w, h)
+        // A region is open while one of its cells touches an empty cell.
+        val open = HashSet<Int>()
+        for (i in 0 until w * h) {
+            if (board[i] != EMPTY) continue
+            for (j in 0..3) {
+                val x = (i % w) + DX[j]
+                val y = (i / w) + DY[j]
+                if (x < 0 || x >= w || y < 0 || y >= h) continue
+                val k = y * w + x
+                if (board[k] != EMPTY) open.add(dsf.canonify(k))
+            }
+        }
+        for (i in 0 until w * h) {
+            val value = board[i]
+            if (value == EMPTY) continue
+            val size = dsf.size(i)
+            out[i] = when {
+                size == value -> ", correct"
+                size > value -> SPOKEN_WRONG
+                dsf.canonify(i) in open -> ""
+                else -> SPOKEN_WRONG
+            }
+        }
+        return out
+    }
+
+    /**
      * `current_key_label`. There is no seam hook yet, so this is a
      * public helper, as in `flood`. C reads `ui->sel` without a NULL
      * test; the port treats a null selection as "not selected", and an

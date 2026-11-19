@@ -824,6 +824,88 @@ object Range : Game {
     private const val ACTION_BACKWARDS = 2
     private const val ACTION_HINT = 3
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell. A clue cell speaks its number; a play cell
+     * speaks `black`, `white`, or `empty` and offers both pointer
+     * buttons, which are the game's own two cycles: the left button
+     * cycles backwards, the right button forwards, and the `Mouse button
+     * order` preference swaps them. A clue ignores both buttons.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val t = tileSize
+        val errors = BooleanArray(w * s.height)
+        findErrors(s, errors)
+        val cells = gridSpeech(
+            width = w,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * w + x
+                val clue = s.shared.clues[index]
+                val content = when {
+                    clue > 0 -> "clue $clue"
+                    s.grid[index] == BLACK -> "black"
+                    s.grid[index] == WHITE -> "white"
+                    else -> "empty"
+                }
+                val cursor = if (u.cursorShow && u.c == x && u.r == y) ", cursor" else ""
+                val wrong = if (errors[index]) SPOKEN_WRONG else ""
+                content + cursor + wrong
+            },
+            actions = { x, y -> pointer(s, u, x, y) },
+        )
+        return cells.capped(cells.units.getOrNull(u.r * w + u.c))
+    }
+
+    /**
+     * The two pointer buttons of one play cell, in the words of the
+     * direction each one cycles. `swapButtons` is the game's own
+     * preference, so the labels follow it.
+     */
+    private fun pointer(s: State, u: Ui, x: Int, y: Int): List<SpokenAction> {
+        val index = y * s.width + x
+        if (s.shared.clues[index] > 0) return emptyList()
+        val back = backwards(s.grid[index])
+        val forward = forwards(s.grid[index])
+        return if (u.swapButtons) {
+            listOf(
+                SpokenAction(forward, Buttons.LEFT_BUTTON),
+                SpokenAction(back, Buttons.RIGHT_BUTTON),
+            )
+        } else {
+            listOf(
+                SpokenAction(back, Buttons.LEFT_BUTTON),
+                SpokenAction(forward, Buttons.RIGHT_BUTTON),
+            )
+        }
+    }
+
+    /** The word of the cell a backwards click produces. */
+    private fun backwards(value: Int): String = when (value) {
+        BLACK -> "White"
+        WHITE -> "Empty"
+        else -> "Black"
+    }
+
+    /** The word of the cell a forwards click produces. */
+    private fun forwards(value: Int): String = when (value) {
+        BLACK -> "Empty"
+        WHITE -> "Black"
+        else -> "White"
+    }
+
     private val DR = intArrayOf(1, 0, -1, 0)
     private val DC = intArrayOf(0, 1, 0, -1)
 

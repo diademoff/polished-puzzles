@@ -1557,8 +1557,153 @@ object Undead : Game {
     // Moves.
     // ------------------------------------------------------------------
 
-    /** `is_clue`: a border cell that is not a corner. */
-    private fun isClue(w: Int, h: Int, x: Int, y: Int): Boolean =
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per play cell, then one unit per sighting clue on the four
+     * border bands, then the three count markers above the board. A cell
+     * speaks its monster or `empty`, with the pencil marks and `given` on
+     * a fixed monster; a clue speaks its number and offers the `Done`
+     * toggle, which is the real pointer move on a clue.
+     *
+     * A play cell offers no action: a click only moves the highlight and
+     * the ghost, vampire, and zombie keys mark the highlighted cell, so
+     * marking stays on the key path (DESIGN section 11).
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val common = s.common
+        val w = common.params.w
+        val h = common.params.h
+        val t = tileSize
+        val border = t / 4
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = t,
+            left = border + t,
+            top = border + 2 * t,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val at = (x + 1) + (y + 1) * (w + 2)
+                val content = when (common.grid[at]) {
+                    CELL_MIRROR_L -> "mirror left"
+                    CELL_MIRROR_R -> "mirror right"
+                    else -> monsterSpeech(s, common.xinfo[at])
+                }
+                val cursor = if (u.hshow && u.hx == x + 1 && u.hy == y + 1) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                val wrong = if (s.cellErrors[at]) SPOKEN_WRONG else ""
+                content + cursor + wrong
+            },
+        )
+
+        val clues = buildList {
+            for (x in 1..w) add(borderClue(s, x, 0, border, t, w, h))
+            for (x in 1..w) add(borderClue(s, x, h + 1, border, t, w, h))
+            for (y in 1..h) add(borderClue(s, 0, y, border, t, w, h))
+            for (y in 1..h) add(borderClue(s, w + 1, y, border, t, w, h))
+            addAll(countMarkers(s, t))
+        }
+        return cells.copy(units = cells.units + clues).capped(
+            cells.units.getOrNull((u.hy - 1) * w + (u.hx - 1)),
+        )
+    }
+
+    /** The monster in one play cell, or `empty`, in the game's words. */
+    private fun monsterSpeech(s: State, monster: Int): String {
+        if (monster < 0) return "empty"
+        val content = when (s.guess[monster]) {
+            1 -> "ghost"
+            2 -> "vampire"
+            4 -> "zombie"
+            else -> "empty"
+        }
+        val given = if (s.common.fixed[monster]) ", given" else ""
+        val marks = buildString {
+            if (s.pencils[monster] and 1 != 0) append(" ghost")
+            if (s.pencils[monster] and 2 != 0) append(" vampire")
+            if (s.pencils[monster] and 4 != 0) append(" zombie")
+        }
+        val pencil = if (marks.isEmpty()) "" else ", pencil$marks"
+        return content + given + pencil
+    }
+
+    /** One sighting clue on a border band, with the `Done` toggle. */
+    private fun borderClue(
+        s: State,
+        x: Int,
+        y: Int,
+        border: Int,
+        t: Int,
+        w: Int,
+        h: Int,
+    ): SpokenUnit {
+        val index = clueIndex(w, h, x, y)
+        val done = s.hintsDone[index]
+        val wrong = if (s.hintErrors[index]) SPOKEN_WRONG else ""
+        val text = "clue ${s.common.grid[x + y * (w + 2)]}" +
+            (if (done) ", done" else "") + wrong
+        return SpokenUnit(
+            row = 0,
+            column = 0,
+            left = border + x * t,
+            top = border + (y + 1) * t,
+            width = t,
+            height = t,
+            text = text,
+            actions = listOf(
+                SpokenAction(if (done) "Not done" else "Done", Buttons.LEFT_BUTTON),
+            ),
+        )
+    }
+
+    /**
+     * The three count markers above the board: how many of each monster
+     * the board has, and how many the player has placed.
+     */
+    private fun countMarkers(s: State, t: Int): List<SpokenUnit> {
+        val geometry = countsGeometry(t, s.common.params.w)
+        var ghosts = 0
+        var vampires = 0
+        var zombies = 0
+        for (i in 0 until s.common.numTotal) {
+            if (s.guess[i] == 1) ghosts++
+            if (s.guess[i] == 2) vampires++
+            if (s.guess[i] == 4) zombies++
+        }
+        val height = geometry.y2 - geometry.y1
+        return listOf(
+            SpokenUnit(
+                0, 0,
+                geometry.ghostX1, geometry.y1,
+                geometry.ghostX2 - geometry.ghostX1, height,
+                "ghosts, $ghosts of ${s.common.numGhosts}",
+            ),
+            SpokenUnit(
+                0, 0,
+                geometry.vampireX1, geometry.y1,
+                geometry.vampireX2 - geometry.vampireX1, height,
+                "vampires, $vampires of ${s.common.numVampires}",
+            ),
+            SpokenUnit(
+                0, 0,
+                geometry.zombieX1, geometry.y1,
+                geometry.zombieX2 - geometry.zombieX1, height,
+                "zombies, $zombies of ${s.common.numZombies}",
+            ),
+        )
+    }
+
+    /** `is_clue`: a border cell that is not a corner. */    private fun isClue(w: Int, h: Int, x: Int, y: Int): Boolean =
         ((x == 0 || x == w + 1) && y > 0 && y <= h) ||
             ((y == 0 || y == h + 1) && x > 0 && x <= w)
 

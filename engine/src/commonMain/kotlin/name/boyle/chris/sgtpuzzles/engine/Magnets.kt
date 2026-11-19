@@ -897,6 +897,192 @@ object Magnets : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per domino cell, then one unit per count clue in the four
+     * side bands, which are outside the grid and so carry no position.
+     * A cell speaks its value (`plus`, `minus`, `neutral`, `empty`) and
+     * the player's mark, and its pointer buttons are the game's own two
+     * cycles: the left button cycles a domino, the right button marks a
+     * neutral domino as not neutral. A clue speaks its count and offers
+     * the `Done` toggle.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val h = s.height
+        val t = tileSize
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = t,
+            left = t + t / 8,
+            top = t + t / 8,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * w + x
+                val flags = s.flags[index]
+                val content = when {
+                    s.common.dominoes[index] == index -> "no domino"
+                    flags and GS_SET == 0 -> "empty" + mark(flags)
+                    s.grid[index] == POSITIVE -> "plus"
+                    s.grid[index] == NEGATIVE -> "minus"
+                    else -> "neutral"
+                }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                val wrong = if (flags and GS_ERROR != 0) SPOKEN_WRONG else ""
+                "$content$cursor$wrong"
+            },
+            actions = { x, y -> buttons(s, y * w + x) },
+        )
+
+        val clues = buildList {
+            val border = t / 8
+            // The positive count sits above its column, the negative
+            // count below it.
+            for (x in 0 until w) {
+                add(
+                    clue(
+                        s = s,
+                        left = border + (x + 1) * t,
+                        top = border,
+                        t = t,
+                        name = "Column ${x + 1}",
+                        pole = "plus",
+                        count = s.common.colcount[x * 3 + POSITIVE],
+                        index = x,
+                    ),
+                )
+            }
+            for (x in 0 until w) {
+                add(
+                    clue(
+                        s = s,
+                        left = border + (x + 1) * t,
+                        top = border + (h + 1) * t,
+                        t = t,
+                        name = "Column ${x + 1}",
+                        pole = "minus",
+                        count = s.common.colcount[x * 3 + NEGATIVE],
+                        index = 2 * w + h - x - 1,
+                    ),
+                )
+            }
+            // The positive count sits left of its row, the negative count
+            // right of it.
+            for (y in 0 until h) {
+                add(
+                    clue(
+                        s = s,
+                        left = border,
+                        top = border + (y + 1) * t,
+                        t = t,
+                        name = "Row ${y + 1}",
+                        pole = "plus",
+                        count = s.common.rowcount[y * 3 + POSITIVE],
+                        index = 2 * (w + h) - y - 1,
+                    ),
+                )
+            }
+            for (y in 0 until h) {
+                add(
+                    clue(
+                        s = s,
+                        left = border + (w + 1) * t,
+                        top = border + (y + 1) * t,
+                        t = t,
+                        name = "Row ${y + 1}",
+                        pole = "minus",
+                        count = s.common.rowcount[y * 3 + NEGATIVE],
+                        index = w + y,
+                    ),
+                )
+            }
+        }
+        return cells.copy(units = cells.units + clues).capped(
+            cells.units.getOrNull(u.curY * w + u.curX),
+        )
+    }
+
+    /** One count clue in a side band, with the game's `Done` toggle. */
+    private fun clue(
+        s: State,
+        left: Int,
+        top: Int,
+        t: Int,
+        name: String,
+        pole: String,
+        count: Int,
+        index: Int,
+    ): SpokenUnit {
+        // A stripped clue is not drawn, so it is not a play unit.
+        if (count < 0) {
+            return SpokenUnit(
+                row = 0,
+                column = 0,
+                left = left,
+                top = top,
+                width = t,
+                height = t,
+                text = "$name, no clue",
+            )
+        }
+        val done = s.countsDone[index]
+        return SpokenUnit(
+            row = 0,
+            column = 0,
+            left = left,
+            top = top,
+            width = t,
+            height = t,
+            text = "$name, $count $pole ${if (count == 1) "pole" else "poles"}" +
+                if (done) ", done" else "",
+            actions = listOf(
+                SpokenAction(if (done) "Not done" else "Done", Buttons.LEFT_BUTTON),
+            ),
+        )
+    }
+
+    /**
+     * The pointer buttons of one domino cell. The left button cycles a
+     * placed domino (`plus`, `minus`, empty); the right button places a
+     * neutral domino, marks a neutral domino as not neutral, or clears
+     * that mark.
+     */
+    private fun buttons(s: State, index: Int): List<SpokenAction> {
+        if (s.common.dominoes[index] == index) return emptyList()
+        val flags = s.flags[index]
+        val set = flags and GS_SET != 0
+        val marked = flags and GS_NOTNEUTRAL != 0
+        val value = s.grid[index]
+        val out = ArrayList<SpokenAction>(2)
+        when {
+            !set && value == NEUTRAL -> out += SpokenAction("Plus", Buttons.LEFT_BUTTON)
+            set && value == POSITIVE -> out += SpokenAction("Minus", Buttons.LEFT_BUTTON)
+            set && value == NEGATIVE -> out += SpokenAction("Empty", Buttons.LEFT_BUTTON)
+        }
+        when {
+            set && value == NEUTRAL -> out += SpokenAction("Not neutral", Buttons.RIGHT_BUTTON)
+            marked -> out += SpokenAction("Clear mark", Buttons.RIGHT_BUTTON)
+            value == NEUTRAL -> out += SpokenAction("Neutral", Buttons.RIGHT_BUTTON)
+        }
+        return out
+    }
+
+    /** The spoken mark of an unplaced domino, or an empty string. */
+    private fun mark(flags: Int): String =
+        if (flags and GS_NOTNEUTRAL != 0) ", not neutral" else ""
+
+    /**
      * `move_cursor` with `wrap = false`: the first call reveals a hidden
      * cursor, a later call reports whether the cursor moved.
      */

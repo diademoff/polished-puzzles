@@ -1568,6 +1568,66 @@ object Keen : Game {
     }
 
     /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: the digit or the pencil marks, the block clue
+     * where the block starts, then the cursor. `keen` has no givens,
+     * so a value is always the player's.
+     *
+     * A cell click only moves the highlight and a digit comes from the
+     * keypad, so no cell offers an action: digit and pencil entry stay on
+     * the key path, as `singles` does in wave 2.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.w
+        val t = tileSize
+        val cells = gridSpeech(
+            width = w,
+            height = w,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val cell = y * w + x
+                val digit = digitSpeech(
+                    value = s.grid[cell],
+                    given = false,
+                    pencil = pencilDigits(s.pencil[cell], w),
+                )
+                val clue = if (s.shared.dsf.minimal(cell) == cell) {
+                    ", " + clueSpeech(s, cell)
+                } else {
+                    ""
+                }
+                val cursor = if (u.hshow && u.hx == x && u.hy == y) ", cursor" else ""
+                digit + clue + cursor
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.hy * w + u.hx))
+    }
+
+    /** The clue of one block, in the words the board draws: `clue 12 times`. */
+    private fun clueSpeech(s: State, cell: Int): String {
+        val clue = s.shared.clues[cell]
+        val value = clue and CMASK.inv()
+        val op = when {
+            s.shared.dsf.size(cell) == 1 || s.params.multiplicationOnly -> ""
+            clue and CMASK == C_ADD -> " plus"
+            clue and CMASK == C_SUB -> " minus"
+            clue and CMASK == C_MUL -> " times"
+            else -> " divided by"
+        }
+        return "clue $value$op"
+    }
+
+    /**
      * `execute_move`, `keen.c:1894-1949`. Completion is sticky: a later
      * move that breaks the board does not clear it.
      *

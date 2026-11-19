@@ -1647,8 +1647,91 @@ object Towers : Game {
         return ret
     }
 
-    /** `game_compute_size`: `SIZE(w) = w*T + 2*(T*9/8)`. */
-    override fun computeSize(params: Game.Params, tileSize: Int): Size {
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell, then one unit per clue on the four bands, which
+     * are outside the grid and so carry no position. A cell speaks the
+     * digit, `given`, or its pencil marks, with the cursor; a clue speaks
+     * its sight count and offers the `Done` toggle.
+     *
+     * A cell click only moves the highlight and a digit comes from the
+     * keypad, so no cell offers an action: the digit and pencil entry
+     * stay on the key path, as `singles` does in wave 2.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.w
+        val t = tileSize
+        val border = t * 9 / 8
+        val cells = gridSpeech(
+            width = w,
+            height = w,
+            tileSize = t,
+            left = border,
+            top = border,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val cell = y * w + x
+                val cursor = if (u.hshow && u.hx == x && u.hy == y) ", cursor" else ""
+                digitSpeech(
+                    value = s.grid[cell],
+                    given = s.shared.immutable[cell] != 0,
+                    pencil = pencilDigits(s.pencil[cell], w),
+                ) + cursor
+            },
+        )
+
+        val clues = buildList {
+            for (i in 0 until 4 * w) {
+                val n = s.shared.clues[i]
+                // A clue that was not generated is not drawn.
+                if (n <= 0) continue
+                val x = clueX(i, w)
+                val y = clueY(i, w)
+                val name = when {
+                    i < w -> "Column ${x + 1}"
+                    i < 2 * w -> "Column ${x + 1}"
+                    i < 3 * w -> "Row ${y + 1}"
+                    else -> "Row ${y + 1}"
+                }
+                val from = when {
+                    i < w -> "from the top"
+                    i < 2 * w -> "from the bottom"
+                    i < 3 * w -> "from the left"
+                    else -> "from the right"
+                }
+                val done = s.cluesDone[i]
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = border + x * t,
+                        top = border + y * t,
+                        width = t,
+                        height = t,
+                        text = "$name, $n $from" + if (done) ", done" else "",
+                        actions = listOf(
+                            SpokenAction(
+                                if (done) "Not done" else "Done",
+                                Buttons.LEFT_BUTTON,
+                            ),
+                        ),
+                    ),
+                )
+            }
+        }
+        return cells.copy(units = cells.units + clues).capped(
+            cells.units.getOrNull(u.hy * w + u.hx),
+        )
+    }
+
+    /** `game_compute_size`: `SIZE(w) = w*T + 2*(T*9/8)`. */    override fun computeSize(params: Game.Params, tileSize: Int): Size {
         val p = params as Params
         val border = tileSize * 9 / 8
         val side = p.w * tileSize + 2 * border

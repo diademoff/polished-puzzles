@@ -2003,6 +2003,58 @@ object Dominosa : Game {
         return MoveResult.Unused
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per square: its number, and the partner it is covered
+     * with. The pointer path places a domino by clicking the half of a
+     * square nearest one edge, so a single unit cannot name which of the
+     * four edges a tap means (DESIGN section 11); the placement and the
+     * removal stay on the pointer and key path.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.w
+        val t = tileSize
+        val cells = gridSpeech(
+            width = w,
+            height = s.h,
+            tileSize = t,
+            left = t * 3 / 4,
+            top = t * 3 / 4,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * w + x
+                val number = s.numbers.values[index]
+                val partner = s.grid[index]
+                val paired = if (partner == index) {
+                    ""
+                } else {
+                    ", with ${s.numbers.values[partner]}"
+                }
+                val selected = if (u.highlight1 == number || u.highlight2 == number) {
+                    SPOKEN_SELECTED
+                } else {
+                    ""
+                }
+                val cursor = if (u.curVisible && u.curX == 2 * x && u.curY == 2 * y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                "$number$paired$selected$cursor"
+            },
+        )
+        return cells.capped(
+            cells.units.getOrNull((u.curY / 2) * w + u.curX / 2),
+        )
+    }
+
     /** `move_cursor` with `wrap = false`, `misc.c:366-396`. */
     private fun moveCursor(button: Int, ui: Ui, maxw: Int, maxh: Int): MoveResult {
         var dx = 0

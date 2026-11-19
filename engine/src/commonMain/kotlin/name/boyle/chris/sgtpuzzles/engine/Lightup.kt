@@ -1680,6 +1680,62 @@ object Lightup : Game {
         return ""
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: `clue 2` on a numbered wall, `wall`, `light`,
+     * `no light`, or `empty`. Both pointer buttons are real moves, so
+     * each open cell offers `Light` and `No light`; a wall ignores both.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val t = tileSize
+        val cells = gridSpeech(
+            width = w,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * w + x
+                val flags = s.flags[index]
+                val content = when {
+                    flags and F_BLACK != 0 && flags and F_NUMBERED != 0 ->
+                        "clue ${s.lights[index]}"
+
+                    flags and F_BLACK != 0 -> "wall"
+                    flags and F_LIGHT != 0 -> "light"
+                    flags and F_IMPOSSIBLE != 0 -> "no light"
+                    else -> "empty"
+                }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                content + cursor
+            },
+            actions = { x, y ->
+                if (s.flags[y * w + x] and F_BLACK != 0) {
+                    emptyList()
+                } else {
+                    listOf(
+                        SpokenAction("Light", Buttons.LEFT_BUTTON),
+                        SpokenAction("No light", Buttons.RIGHT_BUTTON),
+                    )
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * w + u.curX))
+    }
+
     // ------------------------------------------------------------------
     // Drawing
     // ------------------------------------------------------------------

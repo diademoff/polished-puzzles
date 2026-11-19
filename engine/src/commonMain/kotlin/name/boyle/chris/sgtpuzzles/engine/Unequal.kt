@@ -104,6 +104,14 @@ object Unequal : Game {
         Adjacent(F_ADJ_LEFT, F_ADJ_RIGHT, F_ERROR_LEFT, -1, 0),
     )
 
+    /** The four clue bits with the word of their direction, for speech. */
+    private val ADJ_DIRECTIONS = listOf(
+        F_ADJ_UP to "up",
+        F_ADJ_RIGHT to "right",
+        F_ADJ_DOWN to "down",
+        F_ADJ_LEFT to "left",
+    )
+
     private const val MAXTRIES = 50
 
     /** `struct game_params`, `unequal.c:72-76`. */
@@ -1266,6 +1274,9 @@ object Unequal : Game {
      * a real `F` toggle, while a middle press on a cell is unused. The
      * bottom-right `GAP x GAP` corner is inert. A modified cursor move
      * toggles a clue without moving the cursor.
+     *
+     * The clue toggles in the gaps are the pointer moves; a cell click
+     * only moves the highlight, and the value comes from the keypad.
      */
     override fun interpretMove(
         state: Game.State,
@@ -1437,6 +1448,70 @@ object Unequal : Game {
         if (key == 'm'.code) return MoveResult.Move("M")
 
         return MoveResult.Unused
+    }
+
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: the digit or pencil marks with `given` as the
+     * origin, the clues drawn in the gaps around it, the cursor, and
+     * `wrong` on a duplicate. The clue words follow the drawing: the
+     * arrow points at the smaller value, so a cell that owns a right clue
+     * is greater than the cell on its right.
+     *
+     * A cell click only moves the highlight and the value comes from the
+     * keypad, so no cell offers an action. The unit rectangle covers the
+     * cell and its right and bottom gaps, which keeps the touch target a
+     * whole cell; the spent marker of a clue is a cosmetic toggle in the
+     * gap and stays on the pointer path.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val o = s.order
+        val t = tileSize
+        val gap = t / 2
+        val square = t + gap
+        val cells = gridSpeech(
+            width = o,
+            height = o,
+            tileSize = square,
+            left = gap,
+            top = gap,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val index = y * o + x
+                val cursor = if (u.hshow && u.hx == x && u.hy == y) ", cursor" else ""
+                val wrong = if (s.flags[index] and F_ERROR != 0) SPOKEN_WRONG else ""
+                digitSpeech(
+                    value = s.nums[index],
+                    given = s.flags[index] and F_IMMUTABLE != 0,
+                    pencil = (1..o).filter { s.hint(x, y, it - 1) },
+                ) + clueWords(s, index) + cursor + wrong
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.hy * o + u.hx))
+    }
+
+    /** The greater-than or adjacency clues drawn around one cell. */
+    private fun clueWords(s: State, index: Int): String {
+        val flags = s.flags[index]
+        val out = StringBuilder()
+        if (s.mode == MODE_ADJACENT) {
+            for ((flag, direction) in ADJ_DIRECTIONS) {
+                if (flags and flag != 0) out.append(", adjacent $direction")
+            }
+        } else {
+            if (flags and F_ADJ_UP != 0) out.append(", greater than up")
+            if (flags and F_ADJ_RIGHT != 0) out.append(", greater than right")
+            if (flags and F_ADJ_DOWN != 0) out.append(", greater than down")
+            if (flags and F_ADJ_LEFT != 0) out.append(", less than left")
+        }
+        return out.toString()
     }
 
     /**
