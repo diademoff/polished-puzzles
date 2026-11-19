@@ -125,10 +125,19 @@ Rules:
 
 ### 5.4 Engine and generation
 
-- Generate in a separate process (`libpuzzlesgen.so`), not in the UI.
+- A Kotlin game generates in-process on the generator worker
+  (`GameGenerator.submit`), never on the UI thread. The work creates
+  its own `Midend`, returns the save text, and touches no activity, no
+  view, and no shared engine state.
+- Cancel is a `Cancellation` token that the generator checks between
+  attempts. A cancelled run publishes nothing.
+- The requirement "generate in a separate process" was written for the
+  C generator. Every shipped backend is Kotlin now, so the process has
+  nothing to isolate. The `libpuzzlesgen.so` process path remains for a
+  backend that has no Kotlin port; no shipped backend takes it, and
+  cancel there still destroys the process.
 - Serialize and deserialize large state in the background.
 - Do not copy large arrays without a reason.
-- Cancel must really kill the generation process.
 - Timers run only while the screen is active. No wake locks.
 
 ### 5.5 Storage

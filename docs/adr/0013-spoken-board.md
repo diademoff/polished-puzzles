@@ -2,6 +2,12 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-19
+- **Status note (2026-11-19):** Decision 6 describes the state before
+  the eighth enablement wave. `solo` and `cube` are `kotlin` now:
+  `solo` gets the full unit model, and `cube` speaks each square with
+  the roll its own rectangle makes. The C fallback remains for a
+  backend with no Kotlin port, and no shipped backend takes it. The
+  rest of the ADR is unchanged.
 
 ## Context
 

@@ -10,19 +10,20 @@ in the same commit.
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │ Android UI (Kotlin, Compose)                                   │
-│ chooser, toolbar, dialogs, settings, help, buttons             │
+│ chooser, toolbar, dialogs, settings, help, buttons, board      │
 ├────────────────────────────────────────────────────────────────┤
 │ GameEngine (Kotlin interface)                                  │
-│ contract between UI and engine                                 │
+│ contract between the UI and one backend                        │
+├───────────────────────────────┬────────────────────────────────┤
+│ KotlinGameEngine              │ GameEngineImpl (JNI)           │
+│ owns Midend, draws through    │ C engine and android.c; no     │
+│ DrawSink -> ViewCallbacks     │ shipped backend selects it     │
+├───────────────────────────────┴────────────────────────────────┤
+│ :engine Kotlin Multiplatform core                              │
+│ 40 games, midend, RNG, save container, grid, solver helpers    │
 ├────────────────────────────────────────────────────────────────┤
-│ JNI bridge                                                     │
-│ GameEngineImpl <-> android.c                                   │
-├────────────────────────────────────────────────────────────────┤
-│ Android frontend (C)                                           │
-│ android.c: drawing_api, keys, config, serialise, timer         │
-├────────────────────────────────────────────────────────────────┤
-│ Upstream core (C, vendored)                                    │
-│ midend, games, grid, loopgen, solvers, random, save format     │
+│ Vendored C (app/src/main/jni)                                  │
+│ oracle, chooser metadata, backend identification, prefs text   │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -31,11 +32,19 @@ and Android does not know about game rules. Everything that crosses
 the border is described by a contract: `GameEngine`, `ViewCallbacks`,
 `SAVEFILE`, and the oracle protocol.
 
-`engine/` is the portable Kotlin core under construction. It is a
-Kotlin Multiplatform module with `commonMain` code and a JVM target for
-the parity tests. The app does not depend on it yet: C still owns the
-runtime. The first ported pieces are `RandomState` and `SgtpSave`; see
-`docs/adr/0005-engine-infrastructure-port.md`.
+`engine/` is a Kotlin Multiplatform module with `commonMain` code and a
+JVM target for the parity tests. The app depends on it
+(`implementation(project(":engine"))` in `app/build.gradle.kts`), and
+`KotlinGames.handles` is true for all 40 ported games, so every shipped
+backend runs on the Kotlin engine. The C engine is no longer a gameplay
+backend. The C tree stays because the oracle is built from it, the
+chooser metadata is generated from `CMakeLists.txt`, a saved game is
+identified through `GameEngineImpl.identifyBackend`, and the preference
+text is stored and read through the same JNI calls. The C engine is
+reachable in production only if `KotlinGames.handles` returns false for
+a backend, and no backend does. See
+`docs/adr/0005-engine-infrastructure-port.md` and
+`docs/adr/0011-enable-games-in-waves.md`.
 
 ## 2. Current layout
 
@@ -43,14 +52,14 @@ runtime. The first ported pieces are `RandomState` and `SgtpSave`; see
 app/src/main/
 ├─ kotlin/name/boyle/chris/sgtpuzzles/  # UI and Android logic
 │  ├─ GameChooser.kt                    # chooser activity and preferences
-│  ├─ backend/KotlinGameEngine.kt       # Kotlin backend selection and adapter
+│  ├─ backend/KotlinGameEngine.kt       # Kotlin backend, KotlinGames registry
+│  ├─ backend/GameEngineImpl.kt         # JNI implementation and C fallback
 │  ├─ chooser/ChooserScreen.kt          # Compose chooser screen
 │  ├─ ui/Theme.kt                       # Compose theme over the shell palette
 │  ├─ GamePlay.kt                       # game screen
-│  ├─ GameView.kt                       # Canvas + gestures + renderer
+│  ├─ GameView.kt                       # input, gestures, board view
 │  ├─ buttons/Buttons.kt                # Compose button bar
 │  ├─ backend/GameEngine.kt             # engine contract
-│  ├─ backend/GameEngineImpl.kt         # JNI implementation
 │  ├─ config/                           # settings dialogs
 │  └─ launch/                           # launch and game generation
 ├─ jni/
@@ -67,83 +76,85 @@ app/src/main/
 ```
 engine/src/
 ├─ commonMain/kotlin/name/boyle/chris/sgtpuzzles/engine/
-│  ├─ RandomState.kt                    # bit-exact random.c
-│  ├─ SgtpSave.kt                       # SAVEFILE container
-│  ├─ Sort.kt                           # bit-exact arraysort
-│  ├─ Combinations.kt                   # bit-exact combi order
-│  ├─ Dsf.kt                            # disjoint-set forest
-│  ├─ Tdq.kt                            # de-duplicating to-do queue
-│  ├─ FindLoop.kt                       # Tarjan bridge finding
-│  ├─ Matching.kt                       # Hopcroft-Karp matching
-│  ├─ Tree234.kt                        # tree234 public behavior
-│  ├─ Divvy.kt                          # random k-omino rectangle divider
 │  ├─ Game.kt                           # game seam and drawing sink
 │  ├─ Midend.kt                         # history and save semantics
-│  └─ Fifteen.kt                        # first ported game
+│  ├─ RandomState.kt                    # bit-exact random.c
+│  ├─ SgtpSave.kt                       # SAVEFILE container
+│  ├─ Sort.kt, Combinations.kt, Dsf.kt  # deterministic helpers
+│  ├─ Tdq.kt, FindLoop.kt, Matching.kt, Tree234.kt, Divvy.kt
+│  ├─ Grid.kt, Penrose.kt, Hat.kt, Spectre.kt
+│  ├─ Loopgen.kt, Latin.kt              # generator and solver helpers
+│  ├─ PortedGames.kt                    # the one list of ported games
+│  ├─ 40 game files                     # BlackBox.kt ... Untangle.kt
+│  ├─ SpokenBoard.kt, Cancellation.kt   # accessibility seam and cancel token
+│  └─ Prefs.kt, ConfigItem.kt           # preference schema and dialogs
 └─ commonTest/kotlin/.../engine/        # fixed vectors and format tests
 ```
 
 `buildSrc/` generates `BackendNames.kt` from `CMakeLists.txt` and the
 resources. `fastlane/` holds the store metadata.
 
-## 3. Target layout
+## 3. Repository layout
 
 ```
-app/            # Android UI only; will depend on :engine
-engine/         # Kotlin Multiplatform core (RNG, save container)
+app/            # Android UI; depends on :engine
+engine/         # Kotlin Multiplatform core: 40 games and the helpers
 parity/         # JVM tests and the oracle client
 tools/oracle/   # host build of the C oracle
-testdata/       # saves, regressions, corpus, goldens
+testdata/       # saves, goldens, traces, spoken tables
 docs/           # contracts and decisions
 ```
 
 Why this shape:
 
 - **`app/` vs `engine/`** separates the shipped UI from the portable
-  logic. `app/` depends on `:engine`; `KotlinGames` selects the Kotlin
-  backend for `fifteen`, and the rest of the games still reach C
-  through the same `GameEngine` seam.
+  logic. `app/` depends on `:engine`, and `KotlinGames` selects the
+  Kotlin backend for all 40 ported games. The C implementation stays
+  behind the same `GameEngine` seam only for a backend that has no
+  Kotlin port and for the D-01 fallback test; no shipped backend takes
+  that path, and the C tree itself is the oracle.
 - **`parity/` as a separate JVM module** means the tests need no
-  Android and no emulator. They run in seconds and are reused by the
-  future `engine/`.
+  Android and no emulator. They run in seconds and exercise the same
+  `:engine` module the app ships.
 - **`tools/oracle/`** is a development tool. It does not ship in the APK.
 - **`testdata/`** outlives the tests, is reviewed separately, and may
   be large.
 - **`docs/`** holds contracts, not code. `AGENTS.md` stays short and
   links here.
 
-Moving `app/src/main/jni` into `jni/upstream/` + `jni/android/` is a
-separate mechanical commit after Phase 0. It touches
-`GenerateBackendsTask` (it reads `jniDir/CMakeLists.txt` and
-`jniDir/<game>.c`) and the paths in `app/build.gradle.kts`.
+`app/src/main/jni` keeps the upstream tree layout. `GenerateBackendsTask`
+reads `jni/CMakeLists.txt` and `jni/<game>.c` there, so the tree is not
+moved.
 
 ## 4. Key seams
 
 ### GameEngine
 
 `app/src/main/kotlin/.../backend/GameEngine.kt` is the only contract
-the UI sees. Behind it can be a C implementation, a Kotlin
-implementation, or a test stub. This is the dual-run point: a game is
-ported only when both implementations pass the parity matrix.
+the UI sees. Behind it are `KotlinGameEngine` for every shipped
+backend and `GameEngineImpl` for the C engine, which no shipped backend
+selects. A game is ported when both implementations pass the parity
+matrix; the app selects it only in an enablement wave.
 
 ### Kotlin backend
 
 `KotlinGames` maps a `BackendName` to a Kotlin `Game` and is the single
 selection point. `GameEngineImpl.fromLaunch` returns
 `KotlinGameEngine` for a selected game; `GamePlay.startGameGeneration`
-uses `KotlinGames.generate` instead of the generator process.
-`KotlinGameEngine` implements `GameEngine`, owns a `Midend`, and
-forwards drawing to the same `ViewCallbacks` seam as C. The design and
-the `kotlin` status definition are in
-`docs/adr/0008-run-fifteen-on-kotlin.md`.
+uses `KotlinGames.generate` on the generator worker instead of the
+generator process. `KotlinGameEngine` implements `GameEngine`, owns a
+`Midend`, and forwards drawing to the same `ViewCallbacks` seam as C.
+The design and the `kotlin` status definition are in
+`docs/adr/0008-run-fifteen-on-kotlin.md` and
+`docs/adr/0011-enable-games-in-waves.md`.
 
 ### Kotlin game and midend
 
 `engine/Game.kt` is the Kotlin counterpart of the upstream `struct
 game`. A game owns its parameters, description generator, state, moves,
 solver, text, status, keys, and drawing. `engine/Midend.kt` owns the
-history and the `.sgtp` records. `engine/Fifteen.kt` is the first
-implementation.
+history and the `.sgtp` records. Forty game objects implement the seam;
+`PortedGames` is the list the app and the parity suite share.
 
 `Midend.newGame` and `Midend.fromGameId` build state 0 from the decoded
 short (long-term) parameters, as `midend_new_game` does
@@ -152,11 +163,11 @@ may keep a play-time parameter out of the short encoding, which is why
 Keen's new game draws its operator and a loaded save does not. The
 rule is shared, so every game's tests and frozen traces cover it.
 
-`DrawSink` is the Kotlin drawing seam. `Fifteen` records the same
-primitives as the C game, and `FifteenTraceTest` compares the result
-with the frozen traces through `TraceNormalizer`. The app still draws
-through `ViewCallbacks` and `BoardRecorder`; the two seams are adapted
-when the app selects a Kotlin game.
+`DrawSink` is the Kotlin drawing seam. A game records the same
+primitives as the C game, and a game's trace test compares the result
+with the frozen traces through `TraceNormalizer`. In the app the sink
+of `KotlinGameEngine` writes to `ViewCallbacks`, so the Kotlin game and
+the C engine feed the same renderer.
 
 ### ViewCallbacks
 
@@ -207,10 +218,10 @@ generator keeps the C
 cost and the C parameter bound: `13x13de` takes seconds and `14x14` or
 larger does not finish in the measured budget, so the app must generate
 off the UI thread; a size limit is an owner decision (D-019).
-`Game`, `Midend`, and `Fifteen` are the first Phase 4 slice; see
-`docs/adr/0007-kotlin-game-seam.md`. The semantic midend is in Kotlin;
-the shell parts of the C midend stay in C until the app uses a Kotlin
-game.
+`Game`, `Midend`, and `Fifteen` were the first Phase 4 slice; every
+ported game now uses them. See `docs/adr/0007-kotlin-game-seam.md`.
+The semantic midend is in Kotlin and serves every shipped backend; the
+shell parts of the C midend stay in C only for the fallback path.
 
 `engine/SgtpSave.kt` is a lossless container for the same text. It
 keeps repeated moves and unknown records in order and writes canonical
@@ -226,21 +237,29 @@ encoded-state transfer in both directions.
 
 ### puzzlesgen
 
-`GameGenerator` starts `libpuzzlesgen.so` as a separate process so
-generation does not block the UI. In Phase 0 the same binary becomes
-the base of the host oracle.
+`GameGenerator` still starts `libpuzzlesgen.so` as a separate process
+for a backend that `KotlinGames.handles` returns false. No shipped
+backend takes that path. A Kotlin game generates in-process on the same
+worker (`GameGenerator.submit`), and cancel is a `Cancellation` token
+that the generator checks between attempts. In Phase 0 the same C tree
+became the base of the host oracle.
 
 ## 5. Game launch flow
 
 ```
 GameChooser
   -> GameLaunch (game, params, seed, saved state)
-  -> GameGenerator (process: libpuzzlesgen.so)
-  -> startPlayingIntGameID (JNI)
-  -> midend_new / midend_game_id / midend_new_game
-  -> GameView receives ViewCallbacks
-  -> user input -> GameEngine.keyEvent -> midend_process_key
-  -> draw -> android_draw_* -> ViewCallbacks -> BoardRecorder
+  -> GamePlay.startGameGeneration
+       KotlinGames.handles(backend) == true
+         -> GameGenerator.submit (worker thread)
+         -> KotlinGames.generate -> Midend.newGame(...).serialise()
+       else (no shipped backend)
+         -> GameGenerator.generate -> libpuzzlesgen.so process
+  -> startGameConfirmed
+  -> GameEngineImpl.fromLaunch
+  -> KotlinGameEngine (owns Midend)
+  -> user input -> KotlinGameEngine.keyEvent -> Midend.processKey
+  -> DrawSink -> ViewCallbacks -> BoardRecorder
   -> BoardCanvas -> Compose Canvas
 ```
 
@@ -281,6 +300,8 @@ the tests run on the JVM without an emulator and isolates crashes.
 | `jni/UPSTREAM-FILES.txt`, `jni/UPSTREAM-PATCHES.txt` | generator | no; change the source only |
 | `app/src/main/kotlin` | project | yes |
 | `app/src/main/res` | project | yes |
+| `engine/src` | project | yes |
+| `parity/src` | project | yes |
 | `BackendNames.kt` | generator | no; change the source only |
 | `app/src/main/assets` | upstream docs | generated from `assets-sources` |
 

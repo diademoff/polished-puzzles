@@ -2,6 +2,11 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-14
+- **Superseded in part by:** `docs/adr/0011-enable-games-in-waves.md`.
+  The sentences that say `slant` is still on C describe the state at
+  the decision date. `slant` is `kotlin` since the fourth enablement
+  wave on 2026-11-18, so its cursor and fade now reach the Android
+  shell. The seam and the `AUXINFO` rule are unchanged.
 
 ## Context
 

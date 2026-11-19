@@ -2,6 +2,11 @@
 
 - **Status:** accepted
 - **Date:** 2026-11-14
+- **Superseded in part by:** `docs/adr/0008-run-fifteen-on-kotlin.md`
+  and `docs/adr/0011-enable-games-in-waves.md`. Decision 4 says
+  `fifteen` is `dual-run`; `fifteen` is `kotlin` since 2026-11-14 and
+  every ported game is `kotlin` since the eighth wave, with C as the
+  oracle only. The seam itself is unchanged.
 
 ## Context
 
