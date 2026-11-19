@@ -1451,15 +1451,21 @@ Anything not listed here is a bug.
   `engine/src/commonTest/kotlin/.../SpokenBoardTest.kt` pins the empty
   default, the exact `tents` unit text and actions for the frozen
   seed-12345 board, and the 400-unit cap;
+  `SpokenBoardGamesTest` and `SpokenBoardWaveThreeTest` pin the twenty
+  two cell games that follow, and `SpokenColourTest` pins the shared
+  colour vocabulary;
   `app/src/test/kotlin/.../BoardSpeechTest.kt` pins the cap fallback
   and the announcement rule for one, two, many, and no changes;
   `app/src/androidTest/kotlin/.../BoardSemanticsTest.kt` pins the board
   node with `collectionInfo` and the four actions, a cell label and its
   collection position, a spoken click that makes the real move with one
   live-region announcement, the silent status line, and a 21x21 board
-  that exposes the cursor unit only.
-- **Scope:** all Kotlin games (wave D-01/W1: `tents`), and the C
-  fallback for `solo` and `cube`
+  that exposes the cursor unit only;
+  `BoardSemanticsGoldenTest` compares every covered backend with the
+  committed table under `testdata/spoken/`.
+- **Scope:** all Kotlin games (wave D-01/W1: `tents`; W2: the ten plain
+  cell games; W3: the twelve colour, digit, and clue-strip games), and
+  the C fallback for `solo` and `cube`
 - **Upstream:** none; upstream has no accessibility model for the board
 - **Date:** 2026-11-19
 

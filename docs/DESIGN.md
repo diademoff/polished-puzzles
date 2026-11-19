@@ -214,7 +214,27 @@ Required for every screen:
 - A unit action exists only when the button pair at that unit's centre
   is a real move. A drag between two units, an edge midpoint, a frame
   arrow, or a tile cast cannot be named by one unit, so those moves
-  stay on the key path and no unit invents them.
+  stay on the key path and no unit invents them. A button that only
+  moves the cursor or the game highlight is not an action either: the
+  cursor is already spoken.
+- Colour is never the only cue for a unit, and a colour-blind player
+  hears the same information as a sighted one. The engine names a
+  colour from one shared vocabulary (`BoardColour` in
+  `engine/SpokenColour.kt`), each game maps its own colour index to one
+  entry, and the name is part of the label, never a raw value or a hex
+  code. A game whose colour also carries a shape or a value speaks that
+  too: `filling` says `given 4` and `correct` or `wrong` for the shade
+  it draws, `mosaic` says `black`, `light up` says `wall` and `clue 2`,
+  and only `samegame` and `flood`, whose whole state is a colour, rely
+  on the name alone.
+- The digit, pencil, given, and wrong grammar is one composer in the
+  engine (`digitSpeech`, `pencilDigits`, `SPOKEN_WRONG`,
+  `SPOKEN_SELECTED`): `given 5`, `5`, `pencil 1 4 7`, `empty`. A game
+  that types digits keeps that entry on the keypad, because a cell
+  click only moves the highlight.
+- A unit outside the grid (a row or column clue, a count marker) has no
+  collection position and is spoken as its own sentence, for example
+  `Row 3, 2 tents` or `Column 1, 1 from the top`.
 - One hidden polite live region per game screen announces the diff of a
   board change: one or two units are read in board order, three or more
   are summarised from the cursor. The status line is not a live region

@@ -202,6 +202,26 @@ keys are the static `key_label.name` values that
 stays because another frontend or a future on-screen hint may use it.
 The per-game S9 sentences below name this decision.
 
+### Seam item D-01: the spoken board
+
+`Game.spokenBoard` is an accessibility operation that upstream does not
+have, recorded as D-035. It is outside the parity matrix: it reads the
+state and the UI and writes neither, so no rule, seed, `DESC`,
+`AUXINFO`, `UI`, `TIME`, or `.sgtp` value depends on it, and the palette,
+the geometry, and the draw primitives are untouched. The operation is a
+pure function of one state, one UI, and the tile size, so a spoken table
+under `testdata/spoken/` is reviewed like a golden while the game's
+`DESC` and trace goldens stay independent of it.
+
+Wave 3 added the shared colour, digit, and pencil vocabulary
+(`engine/SpokenColour.kt`, `digitSpeech`, `pencilDigits`) and the twelve
+games `samegame`, `flood`, `filling`, `pegs`, `lightup`, `magnets`,
+`range`, `towers`, `unequal`, `keen`, `undead`, and `dominosa`. A game
+name is spoken from its own state, never from a pixel, and a move that a
+single unit cannot name (a drag, an edge midpoint, a keypad digit) is
+left on the input path instead of being invented. The coverage and the
+tests are in `docs/TESTING.md`; the deviation is D-035.
+
 ### Game inventory
 
 Measured from the code at the vendored revision. Presets are counted

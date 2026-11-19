@@ -495,10 +495,13 @@ cannot reach:
 - `ShellAccessibilityTest` covers the shell accessibility findings that
   a device can check without a screen reader. Each case fails on the
   code before its fix.
-  `theStatusLineIsAPoliteLiveRegion` opens a solved fifteen game, reads
-  the accessibility node of `status_bar` (polite live region), taps the
-  tile left of the gap, and checks that the node is still polite when
-  the text reaches `Moves: 1`. `anUnchangedStatusIsNotWrittenToTheViewAgain`
+  `theStatusLineIsAPoliteLiveRegion` opens a frozen netslide game,
+  reads the accessibility node of `status_bar` (polite live region),
+  taps the top margin band of a column, and checks that the node is
+  still polite when the text reaches `Moves: 1`. `netslide` is the
+  fixture because it has a status bar and no spoken board yet; the case
+  moves to a C game when the last Kotlin game speaks.
+  `anUnchangedStatusIsNotWrittenToTheViewAgain`
   counts text changes of the status view: three repeats of the same
   text must not touch the view, and one changed text must, so the
   polite live region cannot announce a redraw or a timer tick again.
@@ -526,6 +529,14 @@ cannot reach:
   a click that makes the real move with one announcement, the status
   line staying out of the way while the board has units, and a 21x21
   board that exposes the cursor unit only.
+- `BoardWaveThreeSemanticsTest` reads the same tree on the two shapes
+  that wave 3 added: a `towers` clue unit carries its sight count and
+  the game's `Done` toggle, the toggle makes the real `D0,-1` move and
+  the live region reads `Column 1, 1 from the top, done.`; and a frozen
+  three by three `flood` cell is labelled with its colour name, offers
+  `Fill`, and one double tap floods the top-left cell, which the live
+  region reads as `Row 1, column 1, yellow.` Both boards are frozen, so
+  the case generates nothing.
 - `BoardGeometryParityTest` is the 2.6x guard: for `fifteen`, `mines`,
   and `unruly`, the unit on the drawing cursor rectangle lands on the
   pixels that the render matrix gives it, within 1.5dp. With the matrix
@@ -697,6 +708,22 @@ Engine tests:
   seed-12345 IDs: the content words, the cursor suffix, and the pointer
   buttons each state offers, including `mines` mark and unmark,
   `mosaic` and `unruly` colour cycles, and the `twiddle` block bounds.
+- `SpokenBoardWaveThreeTest` pins the twelve wave 3 games the same way:
+  the colour names of `samegame` and its two-stage tap, `flood` fill,
+  the `keen` block clue and its pencil marks, the `towers` sight clue
+  and `Done` toggle, the `unequal` sign words and `given`, `filling`'s
+  value origin and its `correct` and `wrong` region state, `light up`,
+  `magnets` dominoes and count clues, the `range` colour cycle,
+  `undead` mirrors, clues, and count markers, and `dominosa` numbers.
+  It also pins the digit grammar itself (`given 5`, `5`,
+  `pencil 1 4 7`, `empty`, and the `pencilDigits` bitmask) and the
+  `wrong` suffix on a duplicate `unequal` digit.
+- `SpokenColourTest` is the colour check: the shared vocabulary has one
+  name per colour and no value or hex code, one game colour index always
+  gives the same name, the two colour games spell the colours they share
+  with the same word, and a colour name is in the label itself, from a
+  hand-built one-row board, so the colour-blind path does not depend on
+  the palette.
 - `SpokenBoardBoundsTest` runs every preset of every ported backend
   from the frozen golden IDs: a game without the hook returns the empty
   default, every unit rectangle is inside `computeSize`, the grid is
