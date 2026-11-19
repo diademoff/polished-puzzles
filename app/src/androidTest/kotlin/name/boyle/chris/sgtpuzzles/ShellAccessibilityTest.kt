@@ -42,7 +42,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import name.boyle.chris.sgtpuzzles.backend.BackendName
 import name.boyle.chris.sgtpuzzles.backend.FIFTEEN
-import name.boyle.chris.sgtpuzzles.backend.FLOOD
+import name.boyle.chris.sgtpuzzles.backend.NETSLIDE
 import name.boyle.chris.sgtpuzzles.backend.GUESS
 import name.boyle.chris.sgtpuzzles.backend.KEEN
 import name.boyle.chris.sgtpuzzles.backend.KotlinGameEngine
@@ -101,22 +101,25 @@ class ShellAccessibilityTest {
 
     @Test
     fun theStatusLineIsAPoliteLiveRegion() {
-        // Flood has no spoken board, so it keeps the status line as the
-        // polite live region of A-04. A game with board units speaks its
-        // changes itself; `BoardSemanticsTest` pins that side.
-        val game = launch(FLOOD, FLOOD_ID)
+        // Netslide has no spoken board yet, so it keeps the status line as
+        // the polite live region of A-04; the fixture moves to a C game
+        // when the last Kotlin game speaks. A game with board units speaks
+        // its changes itself, and `BoardSemanticsTest` pins that side.
+        val game = launch(NETSLIDE, NETSLIDE_ID)
         GamePlayTestSupport.awaitEngine(game)
-        val before = statusOf(game)
-        assertEquals("the game does not start with a status line", "0 / 6 moves", before)
+        val before = awaitStatusStartingWith(game, "Moves: 0")
         assertEquals(
             "the status line '$before' is not a polite live region",
             View.ACCESSIBILITY_LIVE_REGION_POLITE,
             statusNode(game)?.liveRegion,
         )
 
-        tapFloodTopRight(game)
+        tapNetslideTopBand(game)
         val after = awaitStatusChange(game, before)
-        assertEquals("the move did not reach the status line", "1 / 6 moves", after)
+        assertTrue(
+            "the move did not reach the status line: '$after'",
+            after.startsWith("Moves: 1"),
+        )
         assertEquals(
             "the live region was lost after a move to '$after'",
             View.ACCESSIBILITY_LIVE_REGION_POLITE,
@@ -126,9 +129,9 @@ class ShellAccessibilityTest {
 
     @Test
     fun anUnchangedStatusIsNotWrittenToTheViewAgain() {
-        val game = launch(FLOOD, FLOOD_ID)
+        val game = launch(NETSLIDE, NETSLIDE_ID)
         GamePlayTestSupport.awaitEngine(game)
-        val status = awaitStatus(game, "0 / 6 moves")
+        val status = awaitStatusStartingWith(game, "Moves: 0")
         var writes = 0
         game.onActivity { activity ->
             activity.findViewById<TextView>(R.id.status_bar).addTextChangedListener(
@@ -324,27 +327,28 @@ class ShellAccessibilityTest {
         throw AssertionError("the status line is still '$before' after the move")
     }
 
-    /** Waits until the status line shows [expected]. */
-    private fun awaitStatus(
+    /** Waits until the status line starts with [prefix]. */
+    private fun awaitStatusStartingWith(
         game: ActivityScenario<GamePlay>,
-        expected: String,
+        prefix: String,
         deadlineMs: Long = 10_000,
     ): String {
         val deadline = SystemClock.uptimeMillis() + deadlineMs
         var text = ""
         while (SystemClock.uptimeMillis() < deadline) {
             text = statusOf(game)
-            if (text == expected) return text
+            if (text.startsWith(prefix)) return text
             SystemClock.sleep(50)
         }
-        throw AssertionError("the status line is '$text', not '$expected'")
+        throw AssertionError("the status line is '$text', not '$prefix...'")
     }
 
     /**
-     * A tap in the top-right cell of the frozen flood game, which is the
-     * other colour, so the fill and the move count change.
+     * A tap in the top margin band of the frozen netslide game, which
+     * slides that column and changes the move count. C uses
+     * `BORDER = TILE_SIZE`, so the band is the first tile row.
      */
-    private fun tapFloodTopRight(game: ActivityScenario<GamePlay>) {
+    private fun tapNetslideTopBand(game: ActivityScenario<GamePlay>) {
         val board = awaitBoard(game)
         onView(withId(R.id.game_view)).perform(
             GeneralClickAction(
@@ -353,9 +357,10 @@ class ShellAccessibilityTest {
                     val location = IntArray(2)
                     view.getLocationOnScreen(location)
                     val density = view.width.toFloat() / (view as GameView).wDip
+                    val t = board.tileSize
                     floatArrayOf(
-                        location[0] + density * (board.originX + 1.5f * board.tileSize),
-                        location[1] + density * (board.originY + 0.5f * board.tileSize),
+                        location[0] + density * (board.originX + t + 1 + t / 2f),
+                        location[1] + density * (board.originY + t / 2f),
                     )
                 },
                 Press.FINGER,
@@ -484,8 +489,8 @@ class ShellAccessibilityTest {
         /** A frozen Guess game: two colours, two pegs, an empty board. */
         const val GUESS_ID = "c2p2g2Bm:c2ab"
 
-        /** A frozen 3x3 flood game with a six-move limit. */
-        const val FLOOD_ID = "3x3:121212121,6"
+        /** The frozen 3x3 netslide game of seed 12345. */
+        const val NETSLIDE_ID = "3x3:21c4d5963"
 
         /** A frozen Keen game with a key bar of digits. */
         const val KEEN_ID = "3:_baa_3a,m6s1m3a3"
