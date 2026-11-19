@@ -4,6 +4,15 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+# A newer push to the same branch makes the older run
+# useless, and the run holds a runner for minutes.
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
