@@ -1448,11 +1448,13 @@ Anything not listed here is a bug.
   shape, a summary, and one `SpokenUnit` per place the player can act;
   the shell turns it into Compose semantics nodes with
   `collectionInfo`/`collectionItemInfo`, the four board actions, and one
-  unit node per cell and per off-grid unit. `tents` is the pilot, so its
-  cells and its row and column clues are readable and clickable without
-  sight. The C engine has no such operation, so a C game keeps one board
-  node labelled with the game name and the status text. Every ported
-  backend now returns a spoken board, `solo` and `cube` last.
+  unit node per cell and per off-grid unit. All 40 ported backends
+  return the operation, `solo` and `cube` last, so every game the app
+  can open has board units and no screen uses the C fallback. The C
+  engine still has no such operation, so a board restored into it keeps
+  one board node labelled with the game name and the status text and no
+  units; `BoardFallbackSemanticsTest` installs a real C engine in the
+  live screen to pin that, because no launch reaches it any more.
 - **Why:** D-01 is the last P0 of the accessibility audit. Without board
   state a screen reader cannot read a cell or make a move. The rejected
   alternatives (the drawing sink, `text_format`, one generic grid) are
@@ -1473,17 +1475,50 @@ Anything not listed here is a bug.
   `SpokenColourTest` pins the shared colour vocabulary;
   `app/src/test/kotlin/.../BoardSpeechTest.kt` pins the cap fallback
   and the announcement rule for one, two, many, and no changes;
+  `parity/.../BoardSemanticsGoldenTest.kt` compares every backend with
+  the committed table under `testdata/spoken/`, and
+  `SpokenBoardBoundsTest` checks every preset of every backend;
   `app/src/androidTest/kotlin/.../BoardSemanticsTest.kt` pins the board
   node with `collectionInfo` and the four actions, a cell label and its
   collection position, a spoken click that makes the real move with one
   live-region announcement, the silent status line, and a 21x21 board
   that exposes the cursor unit only;
-  `BoardSemanticsGoldenTest` compares every covered backend with the
-  committed table under `testdata/spoken/`.
-- **Scope:** all Kotlin games (wave D-01/W1: `tents`; W2: the ten plain
-  cell games; W3: the twelve colour, digit, and clue-strip games; W4:
-  the fifteen games whose units are not all cells; W5: `solo` and
-  `cube`), and the C fallback for a game with no Kotlin backend
+  `BoardSpokenTableTest` is the full device table: one case per backend,
+  40 in all, each opening the frozen board its table was written from
+  and comparing the live node tree with the same
+  `testdata/spoken/<game>.txt` that the parity test reads, unit by unit,
+  including the pointer buttons and the collection position;
+  `BoardCapSemanticsTest` is the cursor contract above the cap: one case
+  for each of the fourteen games whose cap `docs/DESIGN.md` section 11
+  documents, built from a hand-written description or a frozen save, so
+  no case generates a board, and each proves that the board reports the
+  cursor unit alone and the board node keeps its four actions;
+  `BoardFallbackSemanticsTest` installs a C engine in the live game
+  screen and pins the fallback.
+- **Scope:** all 40 ported backends (wave D-01/W1: the seam, the shell,
+  and the pilot `tents`; W2: the ten plain cell games; W3: the twelve
+  colour, digit, and clue-strip games and the shared vocabulary; W4: the
+  fifteen games whose units are not all cells; W5: `solo` and `cube`,
+  the cap cases, the C fallback, and the device table), and the C
+  fallback for a board restored into the C engine
+- **Deliberately not spoken:** four limits are decisions, not gaps in
+  the tables, and each is a separate item if a player asks for it.
+  `solo` draws a wrong digit in the error colour and its board never
+  says `wrong`, so a blind player hears the digit and not the mark.
+  A `cube` triangle unit is the triangle's bounding box, so the three
+  non-rectangular solids have rectangles that overlap by construction
+  and explore-by-touch can land on a neighbour; the ordered list and the
+  `row R, triangle N` label resolve it, and the board reports no cell
+  grid there. `map` keeps its own `A` to `D` region letters and its own
+  region numbers instead of a colour name, which is the owner decision
+  recorded in `docs/DESIGN.md` section 11. A move that one unit cannot
+  name stays on the key path: the colour drop of `map`, the bridge drag
+  of `bridges`, the point drag of `untangle`, the line direction of
+  `pearl`, the tile drag of `net`, the dot of `galaxies`, the single
+  edge of `tracks`, the frame ring of `sixteen`, the drag link of
+  `signpost`, the edge midpoint of `rect` (which has no edge unit), the
+  rim of `palisade`, and every digit or letter, which is a keypad entry
+  and not a cell action.
 - **Upstream:** none; upstream has no accessibility model for the board
 - **Date:** 2026-11-19
 

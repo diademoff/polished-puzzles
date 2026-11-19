@@ -234,6 +234,19 @@ left on the input path instead of being invented. The unit models, the
 gesture limits, and the per-game cap are in `docs/DESIGN.md` section 11;
 the tests are in `docs/TESTING.md`; the deviation is D-035.
 
+The closed set of spoken table files is every backend, 40 files of 2267
+lines in total, and it is the same artifact on both sides of the seam:
+`BoardSemanticsGoldenTest` compares the engine's board with each file,
+and `BoardSpokenTableTest` compares the live node tree of the same frozen
+board with that same file on a device, one case per backend. The file
+carries the board shape, the summary, and every unit label and pointer
+button; it is built with the game cursor hidden, so the one suffix the
+device pass allows is `, cursor` on the unit the shell's arrow preference
+makes visible. `BoardCapSemanticsTest` pins the cursor contract above the
+cap for the fourteen games whose cap `docs/DESIGN.md` documents, and
+`BoardFallbackSemanticsTest` pins the C fallback that no launch reaches
+while every backend is Kotlin.
+
 ### Game inventory
 
 Measured from the code at the vendored revision. Presets are counted
@@ -2446,13 +2459,14 @@ Notes:
   readable preset plus `fifteen` cases for `MOVE`, undo with redo
   history, and `SOLVE`. It is generated with `tools/gen-saves.sh`.
 - Spoken tables are `testdata/spoken/<game>.txt`: one small deterministic
-  preset per game with a spoken board, listing the board shape, the
-  summary, and every unit label and pointer action in board order.
-  `BoardSemanticsGoldenTest` compares the live text with the table, and
-  the label is `SpokenUnit.spokenLabel`, the function the shell uses.
-  The tables describe our accessibility words, not oracle output, so a
-  change is reviewed like a string resource and not regenerated from a
-  run.
+  preset per game, listing the board shape, the summary, and every unit
+  label and pointer action in board order. There is one per backend, 40
+  in all. `BoardSemanticsGoldenTest` compares the engine's board with the
+  table, and `BoardSpokenTableTest` compares the same table with the live
+  device tree, so the label is exactly what `SpokenUnit.spokenLabel`
+  gives and the phone cannot drift from the engine. The tables describe
+  our accessibility words, not oracle output, so a change is reviewed
+  like a string resource and not regenerated from a run.
 - Never update a golden to "fix" a red test. Find the cause first,
   then add a `DEVIATIONS.md` entry or fix the code.
 

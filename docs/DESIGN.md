@@ -209,7 +209,8 @@ Required for every screen:
   carrying Undo, Redo, Restart, and Solve, and one node per play unit
   below 400 units, each labelled from game state and each offering the
   game's pointer buttons. Above the cap the cursor unit alone is
-  exposed and the arrow keys move it. Labels carry no coordinate that
+  exposed (or none until the game places its cursor) and the arrow keys
+  move it. Labels carry no coordinate that
   `collectionItemInfo` already reports. (`docs/adr/0013-spoken-board.md`)
 - A unit action exists only when the button pair at that unit's centre
   is a real move. A drag between two units, an edge midpoint, a frame
@@ -294,7 +295,7 @@ The cap is per game, and it counts the units the game really has:
 | `untangle` | one per point | the `25` preset is 25; a hand-written board above 400 points returns the cursor point |
 | `guess` | 6 swatches, 4 pegs per row, one feedback per row | the standard board is 56; a save with more than about 80 guesses returns the cursor peg |
 | `palisade` | one per cell, one per interior border | `5x5` is 65; the `15x12` preset is 513, so it returns the cursor unit |
-| `blackbox` | one per arena cell, one per laser site, the reveal | `10x10` is 144; a 20x20 save is 480, so it returns the cursor unit |
+| `blackbox` | one per arena cell, one per laser site, the reveal | `10x10` is 141; a 20x20 save is 481, so it returns the cursor unit |
 | `netslide` | one per cell, one per clickable band | `5x5` is 45; a board above 400 cells returns the cursor unit |
 | the other nine | one per cell, plus the off-grid clues | the cell grid decides, as waves 2 and 3 do |
 
@@ -302,6 +303,28 @@ Above the cap the cursor unit alone is exposed and the arrow keys move
 it, which is the D-01 S2 contract. `loopy`, `guess`, and `untangle`
 report no cell grid, so the shell names their board without a shape and
 gives the units no collection position.
+
+The spoken table of a game is `testdata/spoken/<game>.txt`: the board
+shape, the summary, and every unit label and pointer button, built from
+one frozen seed-12345 board. It is the engine's board with the game
+cursor hidden, which is the state the golden builder reads. The shell
+shows the cursor of a game whose arrow keys are on, so at launch exactly
+one unit may carry the `, cursor` suffix the table does not have, and
+`BoardSpokenTableTest` allows that one suffix and nothing else. The
+engine half of the same table is `BoardSemanticsGoldenTest`, so one file
+is the source of truth for both halves, and the device half is the D-01
+evidence table: one case per backend, 40 in all.
+
+No screen reaches the C fallback today, because all 40 ported backends
+run on the Kotlin engine. The contract still holds for a board restored
+into the C engine: `GameEngine.spokenBoard` is null there, so the shell
+exposes one board node labelled with the game name and the status text,
+with the board actions and no units. `BoardFallbackSemanticsTest`
+installs a real C engine in the live screen, draws it, and pins that
+node, the empty unit list, and the fact that the drawing pass does not
+re-enter the engine. The status line keeps A-04's polite region on such
+a board, because a board without units does not silence it
+(`StatusLiveRegionTest`).
 
 Accessibility is an allowed area for deviations: upstream does not
 describe it. Every deviation is recorded in `DEVIATIONS.md`.

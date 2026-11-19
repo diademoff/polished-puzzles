@@ -581,6 +581,43 @@ cannot reach:
   real move, and the unit nodes are still there afterwards. It fails
   with `the board did not expose its units expected:<64> but was:<0>`
   without the game's spoken board.
+- `BoardSpokenTableTest` is the D-01 evidence table: one parameterized
+  case per backend, 40 in all, and each opens the frozen seed-12345
+  board its spoken table was written from. The test APK takes
+  `testdata/spoken/` as an asset directory, so the device reads the same
+  file that `BoardSemanticsGoldenTest` compares on the host and one file
+  stays the source of truth. A case asserts the board label and
+  `collectionInfo`, every unit node in board order against the table
+  line for line, each unit's actions against the game's own action list,
+  the collection position of a cell and the absence of one outside the
+  grid, and the board actions (`Restart` and `Show solution` on a fresh
+  board, where the shell enables the solution). The table is the engine
+  board with the game cursor hidden; the shell shows the cursor of a
+  game whose arrow keys are on, so the case allows exactly that one
+  unit to gain the `, cursor` suffix and nothing else. The class took
+  23.9 s in the full run and 27.4 s alone on the Pixel 4a 5G, so the
+  whole table costs about half a second per game.
+- `BoardCapSemanticsTest` is the D-01 S2 contract above the cap: one
+  case for each of the fourteen games whose cap
+  `docs/DESIGN.md` section 11 documents (`palisade`, `netslide`, `net`,
+  `loopy`, `tents`, `tracks`, `singles`, `inertia`, `cube`, `untangle`,
+  `blackbox`, `guess`, `map`, `mines`). Each case builds the board from
+  a hand-written description or from the frozen C description in the
+  case, so no case generates anything, and each proves four things: the
+  board is above 400 units, a fresh board that hides its cursor speaks
+  at most one unit, one arrow press gives exactly the cursor unit, and
+  the shell composable renders one unit node with that label and the
+  four board actions. It never opens a game screen, so a 90,000-cell
+  `netslide` costs a load and not a draw.
+- `BoardFallbackSemanticsTest` pins the C fallback that no launch
+  reaches: it installs `GameEngineImpl.cEngineForTest(...)`, a real C
+  engine built from a game ID, in the live fifteen screen and redraws
+  it through the view. The board node is then named only by the game
+  and its status text (`Fifteen. Moves: 0`), has no `collectionInfo`,
+  no unit node and no announcement, and still carries `Restart` and
+  `Show solution`; the drawing pass that produces it runs inside the C
+  engine's own callback, so a re-entrant engine call would fail the
+  case instead of the app.
 
 ## 4. Corpus
 
@@ -4231,6 +4268,40 @@ API 36:
   the run started with (420, 1.0, 1, 0). Screenshots of the shell at an
   expanded window are in `/tmp/opencode/adaptive/` and are not
   committed.
+
+D-01 spoken board close-out, Pixel 4a 5G (physical), 2026-11-19,
+Android 16 / API 36:
+
+- `:app:connectedDebugAndroidTest` ran 200 cases: 194 passed, 0 failed,
+  6 skipped, 4 min 53 s (292.5 s). The six skips are the same three
+  fastlane producers and three chooser goldens. The wave adds 55 cases:
+  `BoardSpokenTableTest` with 40, one per backend, in 27.4 s;
+  `BoardCapSemanticsTest` with 14, one per documented above-cap game;
+  and `BoardFallbackSemanticsTest` with one. Every case loads a frozen
+  game id or builds its state from a description, so the wave generates
+  no board at all.
+- `:engine:jvmTest` -> 1223 tests, 0 failures; `:parity:test` -> 1921
+  tests, 0 failures; `:app:testDebugUnitTest` -> 117 tests, 0 failures;
+  `:app:lintDebug` -> 0 errors, 547 warnings;
+  `tools/check-upstream-diff.sh --strict` and
+  `tools/check-upstream-lock.sh` both pass.
+- The device table reads `testdata/spoken/` from the test APK assets
+  (`app/build.gradle.kts` adds that directory to the `androidTest`
+  source set), so the phone compares against the committed table and
+  not against a second copy. Two mismatches were found by the first run
+  and neither is a product defect: the case predicted the board actions
+  from the C key constant `UI_SOLVE` instead of the shell's
+  `UIVisibility.SOLVE` bit, and the tables are built with the game
+  cursor hidden while the shell shows the cursor of a game whose arrow
+  keys are on, so the affected unit gains `, cursor`. The case now takes
+  the shell's bit and allows that one suffix, and the second mismatch is
+  a rule in `docs/PARITY.md` rather than an edit to the tables.
+- `BoardFallbackSemanticsTest` needed a way to build a C engine, since
+  `fromLaunch` sends every backend to the Kotlin engine and the external
+  `fromGameID` cannot be renamed without breaking its JNI registration.
+  `GameEngineImpl.cEngineForTest` is the small `@VisibleForTesting`
+  wrapper; `GamePlay.gameEngine` gained a `@VisibleForTesting` internal
+  setter so the live screen can hold that engine.
 
 ## 9. CI
 
