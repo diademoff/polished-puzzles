@@ -3904,6 +3904,76 @@ object Solo : Game {
         )
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell: the digit, the given, or the pencil marks, with
+     * the killer cage sum where the board draws it, and the cursor with
+     * its pencil mode. The numerals come from the keypad, so no unit
+     * types a digit; the pointer actions are the two the game has. A
+     * left click selects a free cell and switches the selected cell
+     * between ink and pencil, and a right click starts or clears a
+     * pencil selection. A given offers no action, because a click on it
+     * only clears the highlight.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val cr = s.cr
+        val t = tileSize
+        val cells = gridSpeech(
+            width = cr,
+            height = cr,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val cell = y * cr + x
+                val marks = (1..cr).filter { s.pencilAt(x, y, it) }
+                var text = digitSpeech(s.grid[cell], s.immutable[cell], marks)
+                val clue = s.killerClueAt(x, y)
+                if (clue != 0) text += ", cage $clue"
+                if (u.hshow && u.hx == x && u.hy == y) {
+                    text += if (u.hpencil) ", cursor, pencil" else ", cursor"
+                }
+                text
+            },
+            actions = { x, y -> cellActions(s, u, x, y) },
+        )
+        return cells.capped(cells.units.getOrNull(u.hy * cr + u.hx))
+    }
+
+    /** The pointer buttons of one cell, as `interpret_move` reads them. */
+    private fun cellActions(s: State, u: Ui, x: Int, y: Int): List<SpokenAction> {
+        val cell = y * s.cr + x
+        if (s.immutable[cell]) return emptyList()
+        val selected = u.hshow && u.hx == x && u.hy == y
+        val empty = s.grid[cell] == 0
+        val actions = ArrayList<SpokenAction>(2)
+        actions += SpokenAction(
+            when {
+                !selected -> "Select"
+                u.hpencil -> "Ink"
+                else -> "Pencil"
+            },
+            Buttons.LEFT_BUTTON,
+        )
+        // A right click marks an empty cell in pencil, and clears the
+        // highlight of the selected pencil cell or of a filled cell.
+        val right = when {
+            !empty -> if (u.hshow) "Clear" else null
+            selected && u.hpencil -> "Clear"
+            else -> "Mark"
+        }
+        if (right != null) actions += SpokenAction(right, Buttons.RIGHT_BUTTON)
+        return actions
+    }
+
     // ------------------------------------------------------------------
     // Small helpers.
     // ------------------------------------------------------------------

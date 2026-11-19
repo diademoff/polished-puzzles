@@ -60,6 +60,18 @@ object Cube : Game {
 
     private const val PREFERRED_GRID_SCALE = 48
 
+    /** The word of each direction, in the order of the C `enum`. */
+    private val DIRECTION_NAMES = listOf(
+        "left",
+        "right",
+        "up",
+        "down",
+        "up and left",
+        "up and right",
+        "down and left",
+        "down and right",
+    )
+
     /** `SQ(x)`: a float square, not a double one. */
     private fun sq(x: Float): Float = x * x
 
@@ -742,6 +754,172 @@ object Cube : Game {
         )
     }
 
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per grid square, in reading order. A square is `blue` or
+     * `empty`, and the square the die stands on adds `cursor`.
+     *
+     * The pointer rolls the die in the bearing of the click, so a square
+     * carries the roll its own centre produces when that roll is legal.
+     * The shell clicks the unit centre, and the label comes from the
+     * same direction check, so the action and the click cannot name
+     * different rolls. The current square is a no-op and carries no
+     * action. The four arrow keys and the eight keypad directions make
+     * the same rolls on the key path; they are not pointer targets, so
+     * they are not units.
+     *
+     * The cube solid is a rectangle, so its units carry grid positions.
+     * The other three solids are rows of triangles, which have no
+     * rectangular position: their text names the row and the triangle in
+     * it, and their rectangles are bounding boxes, which overlap by
+     * construction.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val t = tileSize
+        val geometry = Geometry(s.params, t)
+        val squares = s.grid.squares
+        val summary = statusText(state, ui)
+        val die = squares[s.current]
+        val cx = (die.x * geometry.gridScale).toInt() + geometry.ox
+        val cy = (die.y * geometry.gridScale).toInt() + geometry.oy
+
+        // The eight bearings resolved once, so one unit costs one
+        // comparison instead of a scan of every square.
+        val rolls = IntArray(DIRECTION_NAMES.size) { direction ->
+            (resolveDirection(s, direction) ?: -1) + 1
+        }
+
+        fun rollActions(x: Int, y: Int): List<SpokenAction> {
+            val bearing = bearingOf(s, cx, cy, x, y) ?: return emptyList()
+            val roll = rolls[bearing]
+            return if (roll == 0) {
+                emptyList()
+            } else {
+                listOf(SpokenAction(DIRECTION_NAMES[roll - 1], Buttons.LEFT_BUTTON))
+            }
+        }
+
+        fun squareUnit(
+            index: Int,
+            row: Int,
+            column: Int,
+            left: Int,
+            top: Int,
+            width: Int,
+            height: Int,
+        ) = SpokenUnit(
+            row = row,
+            column = column,
+            left = left,
+            top = top,
+            width = width,
+            height = height,
+            text = squareText(s, index),
+            actions = rollActions(left + width / 2, top + height / 2),
+        )
+
+        if (s.solid.order == 4) {
+            val p = s.params
+            // Cell (0,0) starts half a square left of and above the grid
+            // origin, exactly as `redraw` draws it.
+            val left = geometry.ox - t / 2
+            val top = geometry.oy - t / 2
+            // D-01 S2: above the cap the shell speaks the cursor alone,
+            // and building every unit of a huge saved board would spend
+            // the memory the cap protects.
+            if (p.d1.toLong() * p.d2 > BOARD_UNIT_CAP) {
+                val x = s.current % p.d1
+                val y = s.current / p.d1
+                return SpokenBoard(
+                    p.d2,
+                    p.d1,
+                    summary,
+                    listOf(
+                        squareUnit(
+                            s.current, y + 1, x + 1,
+                            left + x * t, top + y * t, t, t,
+                        ),
+                    ),
+                )
+            }
+            val cells = gridSpeech(
+                width = p.d1,
+                height = p.d2,
+                tileSize = t,
+                left = left,
+                top = top,
+                summary = summary,
+                text = { x, y -> squareText(s, y * p.d1 + x) },
+                actions = { x, y -> rollActions(left + x * t + t / 2, top + y * t + t / 2) },
+            )
+            return cells.capped(cells.units.getOrNull(s.current))
+        }
+
+        // The triangle solids: rows of cells that are not a rectangle.
+        val d1 = s.params.d1
+        val d2 = s.params.d2
+        val cellRows = IntArray(squares.size)
+        val cellPositions = IntArray(squares.size)
+        var first = 0
+        for (row in 0 until d1 + d2) {
+            val rowLength = if (row < d2) row + d1 else 2 * d2 + d1 - row
+            val upper = if (row < d2) 1 else -1
+            val rowIndexes = (first until first + 2 * rowLength + upper)
+                .sortedBy { squares[it].x }
+            for ((position, index) in rowIndexes.withIndex()) {
+                cellRows[index] = row
+                cellPositions[index] = position
+            }
+            first += 2 * rowLength + upper
+        }
+
+        fun triangleUnit(index: Int): SpokenUnit {
+            val square = squares[index]
+            var minX = Float.MAX_VALUE
+            var maxX = -Float.MAX_VALUE
+            var minY = Float.MAX_VALUE
+            var maxY = -Float.MAX_VALUE
+            for (i in 0 until square.npoints) {
+                minX = minOf(minX, square.points[i * 2])
+                maxX = maxOf(maxX, square.points[i * 2])
+                minY = minOf(minY, square.points[i * 2 + 1])
+                maxY = maxOf(maxY, square.points[i * 2 + 1])
+            }
+            val left = (minX * geometry.gridScale).toInt() + geometry.ox
+            val top = (minY * geometry.gridScale).toInt() + geometry.oy
+            val width = ((maxX - minX) * geometry.gridScale).toInt()
+            val height = ((maxY - minY) * geometry.gridScale).toInt()
+            val unit = squareUnit(index, 0, 0, left, top, width, height)
+            return unit.copy(
+                text = "row ${cellRows[index] + 1}, triangle ${cellPositions[index] + 1}, " +
+                    unit.text,
+            )
+        }
+
+        val units = if (squares.size > BOARD_UNIT_CAP) {
+            listOf(triangleUnit(s.current))
+        } else {
+            // Reading order: row by row, left to right.
+            val order = squares.indices.sortedWith(
+                compareBy({ cellRows[it] }, { cellPositions[it] }),
+            )
+            order.map { triangleUnit(it) }
+        }
+        return SpokenBoard(0, 0, summary, units)
+    }
+
+    /** The content of one square: `blue` or `empty`, and the die's square. */
+    private fun squareText(s: State, index: Int): String {
+        val colour = if (s.bluemask[index]) "blue" else "empty"
+        return if (index == s.current) "$colour, cursor" else colour
+    }
+
     /** `game_redraw`: the whole board, then the settled polyhedron. */
     override fun redraw(
         state: Game.State,
@@ -881,10 +1059,30 @@ object Cube : Game {
         val square = s.grid.squares[s.current]
         val cx = (square.x * geometry.gridScale).toInt() + geometry.ox
         val cy = (square.y * geometry.gridScale).toInt() + geometry.oy
-        if (x == cx && y == cy) return MoveResult.NoEffect
+        val bearing = bearingOf(s, cx, cy, x, y) ?: return MoveResult.NoEffect
+        return directionMove(s, bearing)
+    }
 
+    /**
+     * The direction a click at (`x`, `y`) bears from the current
+     * square's centre (`cx`, `cy`), or null on that centre.
+     *
+     * `interpret_move` and [spokenBoard] share this, so a spoken action
+     * and a finger click cannot name different directions. The caller
+     * passes the centre because [spokenBoard] computes it once for the
+     * whole board.
+     */
+    private fun bearingOf(
+        s: State,
+        cx: Int,
+        cy: Int,
+        x: Int,
+        y: Int,
+    ): Int? {
+        if (x == cx && y == cy) return null
+        val square = s.grid.squares[s.current]
         val angle = atan2((y - cy).toDouble(), (x - cx).toDouble())
-        val direction: Int = if (square.npoints == 4) {
+        return if (square.npoints == 4) {
             when {
                 abs(angle) > 3 * PI / 4 -> LEFT
                 abs(angle) < PI / 4 -> RIGHT
@@ -907,15 +1105,20 @@ object Cube : Game {
                 else -> RIGHT
             }
         }
-        return directionMove(s, direction)
     }
 
-    /** The shared direction mask, diagonal alias, and move string. */
-    private fun directionMove(s: State, initialDirection: Int): MoveResult {
+    /**
+     * The orthogonal direction a bearing resolves to, or null when the
+     * roll is inert: no edge that way, or no square beyond it.
+     *
+     * The mask check, the diagonal alias, and the destination check of
+     * C `interpret_move`.
+     */
+    private fun resolveDirection(s: State, initialDirection: Int): Int? {
         val directions = s.grid.squares[s.current].directions
         var direction = initialDirection
         val mask = directions[direction]
-        if (mask == 0) return MoveResult.NoEffect
+        if (mask == 0) return null
 
         // A diagonal is an alias of an orthogonal direction.
         if (direction > DOWN) {
@@ -928,8 +1131,13 @@ object Cube : Game {
             check(direction <= DOWN) { "diagonal $initialDirection has no alias" }
         }
 
-        if (findMoveDest(s, direction) == null) return MoveResult.NoEffect
+        if (findMoveDest(s, direction) == null) return null
+        return direction
+    }
 
+    /** The shared direction mask, diagonal alias, and move string. */
+    private fun directionMove(s: State, initialDirection: Int): MoveResult {
+        val direction = resolveDirection(s, initialDirection) ?: return MoveResult.NoEffect
         return MoveResult.Move(
             when (direction) {
                 LEFT -> "L"
