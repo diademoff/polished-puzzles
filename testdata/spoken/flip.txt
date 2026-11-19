@@ -1,0 +1,14 @@
+# D-01 spoken table. game=flip params=3x3c seed=12345
+# id=3x3:d074191345d1644c17058,c90
+rows=3
+columns=3
+summary=Moves: 0
+Row 1, column 1, dark | Flip (left)
+Row 1, column 2, dark | Flip (left)
+Row 1, column 3, light | Flip (left)
+Row 2, column 1, light | Flip (left)
+Row 2, column 2, dark | Flip (left)
+Row 2, column 3, light | Flip (left)
+Row 3, column 1, light | Flip (left)
+Row 3, column 2, dark | Flip (left)
+Row 3, column 3, light | Flip (left)

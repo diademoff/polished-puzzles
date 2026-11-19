@@ -1,0 +1,14 @@
+# D-01 spoken table. game=mosaic params=3x3 seed=12345
+# id=3x3:4b47d
+rows=3
+columns=3
+summary=Clues left: 3
+Row 1, column 1, clue 4, empty | Black (left), White (right)
+Row 1, column 2, empty | Black (left), White (right)
+Row 1, column 3, empty | Black (left), White (right)
+Row 2, column 1, clue 4, empty | Black (left), White (right)
+Row 2, column 2, clue 7, empty | Black (left), White (right)
+Row 2, column 3, empty | Black (left), White (right)
+Row 3, column 1, empty | Black (left), White (right)
+Row 3, column 2, empty | Black (left), White (right)
+Row 3, column 3, empty | Black (left), White (right)

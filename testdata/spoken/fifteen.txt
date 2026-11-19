@@ -1,0 +1,21 @@
+# D-01 spoken table. game=fifteen params=4x4 seed=12345
+# id=4x4:14,13,3,10,12,5,6,7,1,8,2,11,0,9,4,15
+rows=4
+columns=4
+summary=Moves: 0
+Row 1, column 1, tile 14 | Slide (left)
+Row 1, column 2, tile 13
+Row 1, column 3, tile 3
+Row 1, column 4, tile 10
+Row 2, column 1, tile 12 | Slide (left)
+Row 2, column 2, tile 5
+Row 2, column 3, tile 6
+Row 2, column 4, tile 7
+Row 3, column 1, tile 1 | Slide (left)
+Row 3, column 2, tile 8
+Row 3, column 3, tile 2
+Row 3, column 4, tile 11
+Row 4, column 1, empty
+Row 4, column 2, tile 9 | Slide (left)
+Row 4, column 3, tile 4 | Slide (left)
+Row 4, column 4, tile 15 | Slide (left)

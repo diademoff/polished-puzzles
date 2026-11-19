@@ -1,0 +1,21 @@
+# D-01 spoken table. game=signpost params=4x4 seed=12345
+# id=4x4:16ag1ffcddachhfcaga
+rows=4
+columns=4
+summary=
+Row 1, column 1, arrow north, number 16
+Row 1, column 2, arrow west
+Row 1, column 3, arrow south-west, number 1
+Row 1, column 4, arrow south-west
+Row 2, column 1, arrow east
+Row 2, column 2, arrow south-east
+Row 2, column 3, arrow south-east
+Row 2, column 4, arrow north
+Row 3, column 1, arrow east
+Row 3, column 2, arrow north-west
+Row 3, column 3, arrow north-west
+Row 3, column 4, arrow south-west
+Row 4, column 1, arrow east
+Row 4, column 2, arrow north
+Row 4, column 3, arrow west
+Row 4, column 4, arrow north

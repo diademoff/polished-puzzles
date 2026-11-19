@@ -1,0 +1,14 @@
+# D-01 spoken table. game=sixteen params=3x3 seed=12345
+# id=3x3:6,8,7,3,2,5,4,1,9
+rows=3
+columns=3
+summary=Moves: 0
+Row 1, column 1, tile 6
+Row 1, column 2, tile 8
+Row 1, column 3, tile 7
+Row 2, column 1, tile 3
+Row 2, column 2, tile 2
+Row 2, column 3, tile 5
+Row 3, column 1, tile 4
+Row 3, column 2, tile 1
+Row 3, column 3, tile 9

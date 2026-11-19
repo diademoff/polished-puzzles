@@ -1,0 +1,69 @@
+# D-01 spoken table. game=unruly params=8x8dt seed=12345
+# id=8x8:bEACHcBdBDEalcbAbbBa
+rows=8
+columns=8
+summary=
+Row 1, column 1, empty | Black (left), White (right)
+Row 1, column 2, white, given
+Row 1, column 3, empty | Black (left), White (right)
+Row 1, column 4, empty | Black (left), White (right)
+Row 1, column 5, empty | Black (left), White (right)
+Row 1, column 6, empty | Black (left), White (right)
+Row 1, column 7, black, given
+Row 1, column 8, black, given
+Row 2, column 1, empty | Black (left), White (right)
+Row 2, column 2, empty | Black (left), White (right)
+Row 2, column 3, black, given
+Row 2, column 4, empty | Black (left), White (right)
+Row 2, column 5, empty | Black (left), White (right)
+Row 2, column 6, empty | Black (left), White (right)
+Row 2, column 7, empty | Black (left), White (right)
+Row 2, column 8, empty | Black (left), White (right)
+Row 3, column 1, empty | Black (left), White (right)
+Row 3, column 2, empty | Black (left), White (right)
+Row 3, column 3, black, given
+Row 3, column 4, empty | Black (left), White (right)
+Row 3, column 5, empty | Black (left), White (right)
+Row 3, column 6, white, given
+Row 3, column 7, empty | Black (left), White (right)
+Row 3, column 8, black, given
+Row 4, column 1, empty | Black (left), White (right)
+Row 4, column 2, empty | Black (left), White (right)
+Row 4, column 3, empty | Black (left), White (right)
+Row 4, column 4, white, given
+Row 4, column 5, empty | Black (left), White (right)
+Row 4, column 6, black, given
+Row 4, column 7, empty | Black (left), White (right)
+Row 4, column 8, empty | Black (left), White (right)
+Row 5, column 1, empty | Black (left), White (right)
+Row 5, column 2, black, given
+Row 5, column 3, empty | Black (left), White (right)
+Row 5, column 4, empty | Black (left), White (right)
+Row 5, column 5, empty | Black (left), White (right)
+Row 5, column 6, empty | Black (left), White (right)
+Row 5, column 7, black, given
+Row 5, column 8, white, given
+Row 6, column 1, empty | Black (left), White (right)
+Row 6, column 2, empty | Black (left), White (right)
+Row 6, column 3, empty | Black (left), White (right)
+Row 6, column 4, empty | Black (left), White (right)
+Row 6, column 5, empty | Black (left), White (right)
+Row 6, column 6, empty | Black (left), White (right)
+Row 6, column 7, empty | Black (left), White (right)
+Row 6, column 8, empty | Black (left), White (right)
+Row 7, column 1, empty | Black (left), White (right)
+Row 7, column 2, empty | Black (left), White (right)
+Row 7, column 3, empty | Black (left), White (right)
+Row 7, column 4, white, given
+Row 7, column 5, empty | Black (left), White (right)
+Row 7, column 6, empty | Black (left), White (right)
+Row 7, column 7, white, given
+Row 7, column 8, empty | Black (left), White (right)
+Row 8, column 1, white, given
+Row 8, column 2, black, given
+Row 8, column 3, empty | Black (left), White (right)
+Row 8, column 4, white, given
+Row 8, column 5, empty | Black (left), White (right)
+Row 8, column 6, white, given
+Row 8, column 7, empty | Black (left), White (right)
+Row 8, column 8, black, given
