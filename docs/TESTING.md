@@ -11,7 +11,7 @@ The parity contract is in `PARITY.md`; commands are in `AGENTS.md`.
 | Parity (JVM + oracle process) | `parity/` | seconds to minutes | equivalence between C and our implementation |
 | Instrumentation | `app/src/androidTest` | minutes | JNI, lifecycle, real Android |
 | Screenshot | `app/src/androidTest` or JVM | minutes | layout, theme, UI regressions |
-| Fuzz | `tools/fuzz` | hours, scheduled | crashes, UB, deserialization |
+| Fuzz | `fuzzpuzz` and `.github/workflows/fuzz.yml` | minutes, scheduled | crashes in the C fuzz frontend |
 
 Rule: **fast tests must stay fast**. Anything that needs an emulator
 does not go into `testDebugUnitTest`.
@@ -225,17 +225,21 @@ The app adapter is covered on the JVM, without an Android runtime:
 - `GameGeneratorTest` checks the shared worker submission: success,
   a `RuntimeException` mapped to the failure callback, and a cancelled
   task that leaves no callback.
-- `KotlinGamesTest` checks that `handles` is true for exactly the
-  enabled set (`fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
+- `KotlinGamesTest` checks that `handles` is true for the whole enabled
+  set of 40 games (`fifteen`, `samegame`, `flood`, `pegs`, `sixteen`,
   `flip`, `twiddle`, `guess`, `blackbox`, `lightup`, `undead`, `rect`,
-  `slant`, `range`, `towers`, and `unequal`) and false for
-  every other backend, that the engine registry `PortedGames` covers
-  every `BackendName` and resolves through `gameFor`, that the prefs
-  gate rejects a game with C preferences but no schema (and a stray
-  schema), that `defaultParams` is the engine's full default for every
-  known game, that each enabled generator writes its frozen save and
-  reloads it through `Midend` with the same backend, and that the
-  `fifteen` generator is a pure function of its arguments.
+  `slant`, `range`, `towers`, `unequal`, `magnets`, `pattern`, `mosaic`,
+  `signpost`, `untangle`, `galaxies`, `bridges`, `unruly`, `filling`,
+  `mines`, `netslide`, `palisade`, `inertia`, `tents`, `net`, `tracks`,
+  `dominosa`, `map`, `keen`, `singles`, `pearl`, `loopy`, `solo`, and
+  `cube`) and false for every other backend, that the engine registry
+  `PortedGames` covers every `BackendName` and resolves through
+  `gameFor`, that the prefs gate rejects a game with C preferences but
+  no schema (and a stray schema), that `defaultParams` is the engine's
+  full default for every known game, that each enabled generator writes
+  its frozen save and reloads it through `Midend` with the same
+  backend, and that the `fifteen` generator is a pure function of its
+  arguments.
 - `ConfigNameIndexTest` checks that a duplicate display name in an open
   dialog resolves to the first item, as `configItemWithName`
   (`android.c:402-414`) does.
@@ -455,6 +459,11 @@ cannot reach:
   recorded `BoardFrame` for the same solved board with the setting on and
   off, and requires both to be identical: the shell palette never reaches
   the board. The cases are skipped below Android 12.
+- `ShellContrastTest` is the JVM half of the contrast rule: it reads
+  `values/colors_shell.xml` and `values-night/colors_shell.xml` and
+  computes the WCAG 2.1 ratio of every text pair and of `outline` on
+  `surface`. A token edit that breaks 4.5:1 for text or 3:1 for the
+  outline fails the unit suite.
 - `FifteenChooserLaunchTest` clicks the `fifteen` row in the real
   chooser and checks that `GamePlay` opens with the Kotlin engine and
   `Moves: 0`.
@@ -626,13 +635,15 @@ testdata/
 ├─ saves/
 │  ├─ initial/<game>/        # every readable preset, one .sgtp each
 │  └─ cases/                 # MOVE, undo with redo, SOLVE
-├─ regressions/<game>/       # issue-*.json: seed, params, moves, expected
-├─ corpus/<game>/            # fuzz corpus, minimized
 ├─ golden/<game>/            # params + seed -> DESC, presets
 ├─ trace/<game>/             # strict draw traces, one per preset
 ├─ spoken/<game>.txt         # spoken board labels and actions, one preset
 └─ manifest.json             # sha256, provenance, upstream commit for DESC
 ```
+
+There is no `testdata/regressions/` and no `testdata/corpus/` directory
+yet. A fixed bug is pinned by a named test in `parity/` or `engine/`
+(see section 5); a save that a case needs lives in `testdata/saves/`.
 
 Rules:
 
@@ -643,26 +654,15 @@ Rules:
 
 ## 5. Regressions from history
 
-Every fixed upstream bug has a seed, parameters, and a move sequence.
-Format:
+A fixed bug is pinned by a test whose name states the behavior, in
+`parity/` for a difference against the oracle and in `engine/` for a
+Kotlin-only rule. The test holds the seed, the parameters, and the
+move sequence in the test body, and compares the same fields the parity
+matrix compares. A case that needs a save file uses
+`testdata/saves/cases/`.
 
-```json
-{
-  "issue": "upstream/1234",
-  "game": "net",
-  "params": "5x5",
-  "seed": "12345",
-  "moves": ["C0,0", "L0,0"],
-  "expect": {
-    "state": "golden/net/issue-1234.state",
-    "completed": false
-  },
-  "level": "semantic"
-}
-```
-
-Rule: fix a bug, add a fixture. The fixture runs against both
-implementations until C is removed.
+Rule: fix a bug, add a regression test. While C remains the oracle, a
+parity regression runs against both implementations.
 
 ## 6. Fuzzing
 
@@ -671,14 +671,18 @@ null drawing API, and reserializes. It lives in `app/src/main/jni/`,
 next to `CMakeLists.txt`, and `tools/oracle/build.sh --with-fuzz`
 builds the stand-alone frontend as `build/oracle/fuzzpuzz`.
 
-Process:
+What exists: `.github/workflows/fuzz.yml` runs weekly on `main` and on
+request. It builds `fuzzpuzz` and feeds every
+`app/src/main/jni/icons/*.sav` (except `nullgame.sav`) to it; a crash
+or a rejection fails the job. It does not use ASan, UBSan, AFL++,
+libFuzzer, or a minimized corpus, and the job has never run on GitHub
+(D-06).
 
-1. Build with ASan/UBSan and AFL++/libFuzzer.
-2. Seed the corpus with `jni/icons/*.sav` and `testdata/saves/`.
-3. Minimize every finding and put it in `testdata/corpus/`.
-4. Add a regression fixture with the expected behavior.
-5. Our implementation must either behave the same or have a
-   `DEVIATIONS.md` entry.
+What is planned but not implemented: sanitizer builds, a seeded
+mutation loop, minimization, and a committed corpus. When one of those
+lands, a finding becomes a named parity test and, when it has a save, a
+file in `testdata/saves/cases/`. Our implementation must then behave
+the same or have a `DEVIATIONS.md` entry.
 
 ## 7. Determinism
 
@@ -3857,9 +3861,10 @@ Device run on the Pixel 4a 5G (physical), 2026-11-18, Android 16 / API 36:
   (`PrefsActivityTest`), and the chooser launch
   (`FifteenChooserLaunchTest`).
 - These rows stay manual: the pixel goldens on the reference AVD,
-  TalkBack, contrast, font scale 200%, and performance. A physical phone
-  cannot replace the reference AVD for the goldens, and a debug build is
-  not a performance baseline.
+  TalkBack, font scale 200%, and performance. Contrast was manual at
+  this run; `ShellContrastTest` now checks the shell tokens. A physical
+  phone cannot replace the reference AVD for the goldens, and a debug
+  build is not a performance baseline.
 
 First enablement wave, Pixel 4a 5G (physical), 2026-11-18, Android 16 /
 API 36, at the first-wave code commit `58c7b52e`:
