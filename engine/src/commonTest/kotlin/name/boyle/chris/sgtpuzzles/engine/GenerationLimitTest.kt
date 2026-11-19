@@ -47,6 +47,11 @@ class GenerationLimitTest {
         assertEquals(400, Singles.MAX_AREA)
         assertEquals(121, Pearl.MAX_AREA)
         assertEquals(400, Loopy.MAX_AREA)
+        // D-036: 500 by 500 cells, and a triangle board counts its cells.
+        assertEquals(250_000, Cube.MAX_AREA)
+        assertEquals(250_000L, Cube.areaOf(500, 500, 4))
+        assertEquals(250_500L, Cube.areaOf(501, 500, 4))
+        assertEquals(301_056L, Cube.areaOf(224, 224, 3))
 
         assertEquals(25, Solo.maxSymbols(soloDiff("5x5db")))
         assertEquals(25, Solo.maxSymbols(soloDiff("5x5di")))
@@ -166,6 +171,22 @@ class GenerationLimitTest {
             Loopy,
             "21x20t0dh",
             "Width times height is too large for this build",
+        )
+    }
+
+    @Test
+    fun `cube refuses an area above 250,000 before any draw`() {
+        // 501x500 is 250,500 cells, the first size above the cap. The
+        // guard runs before the enumeration, so this test does not
+        // allocate a board.
+        assertRefusedAbove(Cube, "c501x500", "Grid area is too large for this build")
+        // A triangle solid counts its cells too: 6 * 224^2 is 301,056.
+        assertRefusedAbove(Cube, "i224x224", "Grid area is too large for this build")
+        // D-036 is generation-only: the validator keeps the C answer,
+        // and a huge accepted area is never enumerated here.
+        assertEquals(
+            null,
+            Cube.validateParams(Cube.decodeParams("c501x500"), true),
         )
     }
 

@@ -1,6 +1,7 @@
 package name.boyle.chris.sgtpuzzles.parity
 
 import name.boyle.chris.sgtpuzzles.engine.Dominosa
+import name.boyle.chris.sgtpuzzles.engine.Cube
 import name.boyle.chris.sgtpuzzles.engine.Game
 import name.boyle.chris.sgtpuzzles.engine.Inertia
 import name.boyle.chris.sgtpuzzles.engine.Loopy
@@ -132,6 +133,14 @@ class GenerationLimitTest {
     @Test(timeout = 300_000)
     fun `loopy generates at 20x20`() =
         assertGenerates(Loopy, "loopy", "20x20t0dh", "12345")
+
+    @Test(timeout = 300_000)
+    fun `cube generates at 500x500`() =
+        assertGenerates(Cube, "cube", "c500x500", "12345")
+
+    @Test(timeout = 300_000)
+    fun `cube generates at the largest preset`() =
+        assertGenerates(Cube, "cube", "i3x3", "12345")
 
     /**
      * 25 symbols is the Simple, Block, and Intersect cap. Intersect is
@@ -268,6 +277,17 @@ class GenerationLimitTest {
         val save = handSave("Loopy", "21x20t0dh", desc, "0y")
         assertEquals(null, Loopy.validateDesc(Loopy.decodeParams("21x20t0dh"), desc))
         assertSaveLoads(Loopy, save)
+    }
+
+    @Test(timeout = 300_000)
+    fun `a cube save above 250,000 cells loads and plays`() {
+        // 501x500 is 250,500 cells, four squares per hex digit. No
+        // square is blue, which the description grammar accepts, and a
+        // right roll from the top-left square is a legal move.
+        val desc = "0".repeat((501 * 500 + 3) / 4) + ",0"
+        val save = handSave("Cube", "c501x500", desc, "R")
+        assertEquals(null, Cube.validateDesc(Cube.decodeParams("c501x500"), desc))
+        assertSaveLoads(Cube, save)
     }
 
     @Test(timeout = 300_000)

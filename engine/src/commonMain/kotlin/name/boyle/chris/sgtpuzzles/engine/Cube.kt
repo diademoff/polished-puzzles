@@ -33,6 +33,13 @@ import kotlin.math.sqrt
  * functions, cast back to float, as C promotes a float to double for
  * `cos`, `sin`, `acos`, and `atan2`. Grid coordinates truncate toward
  * zero. Face coordinates use `floor`.
+ *
+ * Generation cost is the C cost: `validate_params` and `new_game_desc`
+ * each enumerate every grid square, and [validateParams] keeps that
+ * behavior. The port holds one Kotlin object per square, so a phone
+ * process runs out of heap at an area that C still generates. D-036
+ * refuses an area above [MAX_AREA] (500 by 500 cells) before the first
+ * allocation or draw.
  */
 object Cube : Game {
 
@@ -59,6 +66,20 @@ object Cube : Game {
     const val ICOSAHEDRON = 3
 
     private const val PREFERRED_GRID_SCALE = 48
+
+    /**
+     * D-036: the measured generation cap, 500 by 500 cells.
+     *
+     * The phone generates 250,000 cells in 0.059 s and needs 48 MB of
+     * heap; 1,000,000 cells needs 160 MB and 1,960,000 cells runs out of
+     * the 256 MB Android growth limit. Time is not the constraint here,
+     * the heap is. The cap is the largest measured area that leaves a
+     * warm app most of its heap, and every preset is far below it.
+     */
+    internal const val MAX_AREA = 250_000
+
+    /** The D-036 message, in the style of the other generation guards. */
+    const val AREA_TOO_LARGE = "Grid area is too large for this build"
 
     /** The word of each direction, in the order of the C `enum`. */
     private val DIRECTION_NAMES = listOf(
@@ -510,6 +531,10 @@ object Cube : Game {
     override fun newDesc(params: Game.Params, random: RandomState): Description {
         val p = params as Params
         val solid = SOLIDS[p.solid]
+        // D-036 runs before the enumeration and before the first draw.
+        require(areaOf(p.d1, p.d2, solid.order) <= MAX_AREA) {
+            AREA_TOO_LARGE
+        }
         val area = gridArea(p.d1, p.d2, solid.order)
         val nclasses = when (p.solid) {
             TETRAHEDRON -> 4
@@ -1458,6 +1483,20 @@ object Cube : Game {
     /** `grid_area`: `d1*d2`, or `d1^2 + d2^2 + 4*d1*d2`. */
     internal fun gridArea(d1: Int, d2: Int, order: Int): Int =
         if (order == 4) d1 * d2 else d1 * d1 + d2 * d2 + 4 * d1 * d2
+
+    /**
+     * [gridArea] in [Long], for the D-036 guard.
+     *
+     * A guard must not overflow: the parameters reach `newDesc` without
+     * `validateParams` on a direct call, and an accepted area can be as
+     * large as `Int.MAX_VALUE`.
+     */
+    internal fun areaOf(d1: Int, d2: Int, order: Int): Long =
+        if (order == 4) {
+            d1.toLong() * d2
+        } else {
+            d1.toLong() * d1 + d2.toLong() * d2 + 4L * d1 * d2
+        }
 
     /** `struct bbox`, in grid units. */
     private class Bbox(params: Params) {
