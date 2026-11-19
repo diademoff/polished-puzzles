@@ -163,3 +163,39 @@ internal fun SpokenBoard.capped(cursor: SpokenUnit?): SpokenBoard =
     } else {
         SpokenBoard(rows, columns, summary, listOfNotNull(cursor))
     }
+
+/**
+ * The cap by unit count, for a board whose units are not one per cell:
+ * the edges of a `loopy` grid, the points of `untangle`, the palette and
+ * pegs of `guess`, or the borders of `palisade`. A cell grid plus its
+ * extras (`blackbox`, `netslide`) uses this too, so the shell never gets
+ * more than [BOARD_UNIT_CAP] nodes. [cursor] is the unit the arrow keys
+ * move; a game that does not pass one drops every unit, which speaks the
+ * board node only.
+ */
+internal fun SpokenBoard.cappedUnits(cursor: SpokenUnit?): SpokenBoard =
+    if (units.size <= BOARD_UNIT_CAP) {
+        this
+    } else {
+        SpokenBoard(rows, columns, summary, listOfNotNull(cursor))
+    }
+
+/**
+ * The sides in [sides] as one phrase: `up`, `up and left`, or
+ * `up, left and down`. The games name their four sides in this order,
+ * so one reader builds every edge phrase.
+ */
+internal fun sideSpeech(sides: List<String>): String = when (sides.size) {
+    0 -> ""
+    1 -> sides[0]
+    else -> sides.dropLast(1).joinToString(", ") + " and " + sides.last()
+}
+
+/**
+ * The unit whose rectangle holds the point (`x`, `y`) in game
+ * coordinates, or null outside every unit. A game resolves its cursor
+ * with this when the cursor is not a cell.
+ */
+internal fun List<SpokenUnit>.unitAt(x: Int, y: Int): SpokenUnit? = firstOrNull {
+    x >= it.left && x < it.left + it.width && y >= it.top && y < it.top + it.height
+}

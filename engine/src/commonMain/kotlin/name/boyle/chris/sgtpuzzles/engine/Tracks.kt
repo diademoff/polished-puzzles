@@ -2454,6 +2454,118 @@ object Tracks : Game {
         return Game.CursorRect(cx, cy, cw, ch)
     }
 
+    /**
+     * One unit per cell, as `coord` draws it: the tracks and no-track
+     * marks on its four edges. The row and column counts sit outside the
+     * grid where `drawClue` puts them, so they are units of their own,
+     * one per row and one per column.
+     *
+     * A click on the centre of a cell flips the whole square, so the
+     * square is the unit action: `Track` for the left button and
+     * `No track` for the right one, the two moves `square_flip_str`
+     * encodes. A single edge is flipped by a click near that edge, which
+     * one unit cannot express because the press must be off the centre,
+     * so the four edges stay on the cursor: the arrows move the cursor
+     * onto an edge and `Enter` flips it. A clue has no pointer move at
+     * all and is read only.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.params.w
+        val h = s.params.h
+        val geom = geometry(tileSize)
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = geom.tile,
+            left = geom.border + geom.tile,
+            top = geom.border + geom.tile,
+            summary = "",
+            text = { x, y ->
+                val index = y * w + x
+                val track = sEDirs(s, x, y, E_TRACK)
+                val notrack = sEDirs(s, x, y, E_NOTRACK)
+                val words = buildList {
+                    if (track != 0) add("track " + sideSpeech(sides(track)))
+                    if (notrack != 0) add("no track " + sideSpeech(sides(notrack)))
+                    if (s.sflags[index] and S_CLUE == 0) {
+                        if (s.sflags[index] and S_TRACK != 0) add("track square")
+                        if (s.sflags[index] and S_NOTRACK != 0) add("no track square")
+                    }
+                    if (isEmpty()) add("empty")
+                }
+                val cursor = if (u.cursorActive && u.curx == 2 * x && u.cury == 2 * y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                val wrong = if (s.sflags[index] and S_ERROR != 0) SPOKEN_WRONG else ""
+                words.joinToString(", ") + cursor + wrong
+            },
+            actions = { x, y ->
+                buildList {
+                    if (uiCanFlipSquare(s, x, y, false)) {
+                        add(SpokenAction("Track", Buttons.LEFT_BUTTON))
+                    }
+                    if (uiCanFlipSquare(s, x, y, true)) {
+                        add(SpokenAction("No track", Buttons.RIGHT_BUTTON))
+                    }
+                }
+            },
+        )
+
+        val clues = buildList {
+            val top = geom.border + geom.tile / 2
+            for (x in 0 until w) {
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = (x + 1) * geom.tile + geom.border,
+                        top = top,
+                        width = geom.tile,
+                        height = geom.tile,
+                        text = "Column ${x + 1}, ${s.numbers.values[x]}" +
+                            wrongClue(s.numErrors[x]),
+                    ),
+                )
+            }
+            for (y in 0 until h) {
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = (w + 1) * geom.tile + geom.border,
+                        top = (y + 1) * geom.tile + geom.border + geom.tile / 2,
+                        width = geom.tile,
+                        height = geom.tile,
+                        text = "Row ${y + 1}, ${s.numbers.values[w + y]}" +
+                            wrongClue(s.numErrors[w + y]),
+                    ),
+                )
+            }
+        }
+        return cells.copy(units = cells.units + clues).capped(
+            cells.units.getOrNull((u.cury / 2) * w + u.curx / 2),
+        )
+    }
+
+    /** The suffix of a clue whose count the game marks wrong. */
+    private fun wrongClue(errors: Int): String = if (errors != 0) SPOKEN_WRONG else ""
+
+    /** The four sides of a direction mask, in the order they are drawn. */
+    private fun sides(mask: Int): List<String> = buildList {
+        if (mask and U != 0) add("up")
+        if (mask and R != 0) add("right")
+        if (mask and D != 0) add("down")
+        if (mask and L != 0) add("left")
+    }
+
     // ------------------------------------------------------------------
     // Geometry and palette.
     // ------------------------------------------------------------------

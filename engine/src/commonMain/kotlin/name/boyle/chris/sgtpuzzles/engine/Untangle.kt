@@ -961,6 +961,75 @@ object Untangle : Game {
     }
 
     /**
+     * One unit per point, at the place `game_redraw` draws it, in a
+     * square big enough to touch. A point names the points it is joined
+     * to and whether one of its lines is crossed.
+     *
+     * A press on a point is not a move on its own: `interpret_move`
+     * takes the point on the press and commits wherever the release
+     * happens, so a press and release on the same point only writes the
+     * point back where it already is. No unit therefore offers an
+     * action: dragging a point, and the keyboard drag with `Enter` and
+     * the arrows, stay on the pointer and the cursor.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val n = s.params.n
+        val size = computeSize(s.params, tileSize)
+        val side = maxOf(2 * CIRCLE_RADIUS + 1, tileSize / 2)
+
+        val units = (0 until n).map { i ->
+            val pt = s.pts[i]
+            val px = (tileSize.toLong() * pt.x / pt.d).toInt()
+            val py = (tileSize.toLong() * pt.y / pt.d).toInt()
+            val joins = buildList {
+                for (e in s.graph.edges.indices) {
+                    val edge = s.graph.edges[e]
+                    val other = when (i) {
+                        edge.a -> edge.b
+                        edge.b -> edge.a
+                        else -> continue
+                    }
+                    add(other + 1)
+                }
+            }
+            val crossed = (s.graph.edges.indices).any { e ->
+                s.crosses[e] &&
+                    (s.graph.edges[e].a == i || s.graph.edges[e].b == i)
+            }
+            val words = buildList {
+                add("point ${i + 1}")
+                if (joins.isNotEmpty()) add("joined to " + sideSpeech(joins.map { "$it" }))
+                if (crossed) add("crossed line")
+                if (u.dragPoint == i) add("held")
+                if (u.cursorPoint == i) add("cursor")
+            }
+            SpokenUnit(
+                row = 0,
+                column = 0,
+                left = (px - side / 2).coerceIn(0, maxOf(size.width - side, 0)),
+                top = (py - side / 2).coerceIn(0, maxOf(size.height - side, 0)),
+                width = side,
+                height = side,
+                text = words.joinToString(", "),
+            )
+        }
+
+        val board = SpokenBoard(0, 0, "", units)
+        val cursor = when {
+            u.dragPoint >= 0 -> board.units.getOrNull(u.dragPoint)
+            u.cursorPoint >= 0 -> board.units.getOrNull(u.cursorPoint)
+            else -> null
+        }
+        return board.cappedUnits(cursor)
+    }
+
+    /**
      * `place_dragged_point`: the exact or the snapped rational for the
      * drag. The division truncates toward zero in both branches, so a
      * small negative pixel with snap on commits at grid 0.

@@ -2247,6 +2247,100 @@ object Bridges : Game {
         )
     }
 
+    /**
+     * One unit per cell, as `coord` draws it: an island cell names its
+     * count and the bridges already on it, and a cell between two
+     * islands names the bridge that crosses it.
+     *
+     * A click on an island is a real move: it toggles the island's mark
+     * (`M` in `execute_move`), so the island offers `Mark` or `Unmark`.
+     * A bridge is a drag from one island to another, which one unit
+     * cannot express, so that move stays on the cursor and the arrow
+     * keys: `Select` starts the drag and the next arrow finishes it.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val t = tileSize
+        val cells = gridSpeech(
+            width = w,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = "",
+            text = { x, y ->
+                val index = y * w + x
+                val island = s.islandAt(x, y)
+                val content = if (island != null) {
+                    islandSpeech(s, island)
+                } else {
+                    lineSpeech(s.grid[index], s.lines[index])
+                }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                content + cursor
+            },
+            actions = { x, y ->
+                val island = s.islandAt(x, y)
+                if (island == null) {
+                    emptyList()
+                } else {
+                    val marked = gridAt(s, x, y) and G_MARK != 0
+                    listOf(
+                        SpokenAction(
+                            if (marked) "Unmark" else "Mark",
+                            Buttons.LEFT_BUTTON,
+                        ),
+                    )
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * w + u.curX))
+    }
+
+    /** `island 3, 2 of 5 bridges` plus the directions that carry one. */
+    private fun islandSpeech(s: State, island: Island): String {
+        val count = islandCountBridges(s, island)
+        val directions = buildList {
+            for (point in island.points) {
+                val dir = if (point.dx != 0) {
+                    if (point.dx > 0) "right" else "left"
+                } else {
+                    if (point.dy > 0) "down" else "up"
+                }
+                val gline = if (point.dx != 0) G_LINEH else G_LINEV
+                val n = gridCount(s, point.x, point.y, gline)
+                if (n > 0) add("$n $dir")
+            }
+        }
+        val bridgeWords = if (directions.isEmpty()) {
+            ""
+        } else {
+            ", " + directions.joinToString(", ")
+        }
+        val mark = if (gridAt(s, island.x, island.y) and G_MARK != 0) ", marked" else ""
+        return "island ${island.count}, $count ${if (count == 1) "bridge" else "bridges"}" +
+            bridgeWords + mark
+    }
+
+    /** The bridge that crosses a cell, in the words `text_format` uses. */
+    private fun lineSpeech(grid: Int, lines: Int): String = when {
+        grid and G_LINEV != 0 && lines > 0 -> "vertical bridge $lines"
+        grid and G_LINEV != 0 -> "no vertical bridge"
+        grid and G_LINEH != 0 && lines > 0 -> "horizontal bridge $lines"
+        grid and G_LINEH != 0 -> "no horizontal bridge"
+        else -> "empty"
+    }
+
     // ------------------------------------------------------------------
     // Geometry and palette.
     // ------------------------------------------------------------------

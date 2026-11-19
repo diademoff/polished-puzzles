@@ -2109,6 +2109,148 @@ object Loopy : Game {
         )
     }
 
+    /**
+     * One unit per edge, the play unit of every Loopy grid, and one per
+     * face that carries a clue. The square grid names an edge by the row
+     * and column of its two endpoints, which is the grid the game draws
+     * with one cell per unit. The other seventeen grids have no row and
+     * column, so an edge names the one or two cells it separates and a
+     * clue names its cell; both are the face indices the game keeps, so
+     * a player can join a clue to the edges around it.
+     *
+     * The rectangle is the edge's bounding box with a quarter tile of
+     * slack, the place `edge_bbox` repaints, and a clue is a square
+     * around the incentre that `face_text_pos` uses.
+     *
+     * A left press turns an edge from no line to line to no line again,
+     * and a right press cycles no line, cross, no line, so the two
+     * buttons are the unit actions in the words of the three states.
+     * A clue face has no pointer move at all and is read only.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val g = s.grid
+        val t = tileSize
+        val margin = t / 4
+        val square = g.type == GridType.SQUARE
+
+        fun screenX(x: Int): Int = (x - g.lowestX) * t / g.tileSize + border(t)
+        fun screenY(y: Int): Int = (y - g.lowestY) * t / g.tileSize + border(t)
+
+        fun pointName(dot: GridDot): String =
+            "row ${(dot.y - g.lowestY) / g.tileSize + 1}, " +
+                "column ${(dot.x - g.lowestX) / g.tileSize + 1}"
+
+        fun edgeName(edge: GridEdge): String {
+            if (square) {
+                return "edge from ${pointName(edge.dot1)} to ${pointName(edge.dot2)}"
+            }
+            val first = edge.face1?.index
+            val second = edge.face2?.index
+            return when {
+                first != null && second != null ->
+                    "edge between cell ${first + 1} and cell ${second + 1}"
+
+                first != null -> "edge on cell ${first + 1}"
+                second != null -> "edge on cell ${second + 1}"
+                else -> "edge"
+            }
+        }
+
+        val cursorEdge = if (u.curVisible) Grid.nearestEdge(g, u.curX, u.curY) else null
+
+        val edges = g.edges.map { edge ->
+            val x1 = screenX(edge.dot1.x)
+            val y1 = screenY(edge.dot1.y)
+            val x2 = screenX(edge.dot2.x)
+            val y2 = screenY(edge.dot2.y)
+            val line = s.lines[edge.index]
+            val content = when (line) {
+                LINE_YES -> "line"
+                LINE_NO -> "crossed out"
+                else -> "no line"
+            }
+            val cursor = if (edge === cursorEdge) ", cursor" else ""
+            val wrong = if (s.lineErrors[edge.index]) SPOKEN_WRONG else ""
+            SpokenUnit(
+                row = 0,
+                column = 0,
+                left = minOf(x1, x2) - margin,
+                top = minOf(y1, y2) - margin,
+                width = kotlin.math.abs(x2 - x1) + 2 * margin,
+                height = kotlin.math.abs(y2 - y1) + 2 * margin,
+                text = edgeName(edge) + ", " + content + cursor + wrong,
+                actions = edgeButtons(line),
+            )
+        }
+
+        val clues = buildList {
+            for (face in g.faces) {
+                val clue = s.clues[face.index]
+                if (clue < 0) continue
+                Grid.findIncentre(face)
+                val centre = face.incentre!!
+                val cx = screenX(centre.x)
+                val cy = screenY(centre.y)
+                val yes = faceOrder(s, face.index, LINE_YES)
+                val no = if (s.exactlyOneLoop) {
+                    face.order - yes
+                } else {
+                    faceOrder(s, face.index, LINE_NO)
+                }
+                val wrong = if (yes > clue || no > face.order - clue) SPOKEN_WRONG else ""
+                val where = if (square) {
+                    "at row ${(centre.y - g.lowestY) / g.tileSize + 1}, " +
+                        "column ${(centre.x - g.lowestX) / g.tileSize + 1}"
+                } else {
+                    "at cell ${face.index + 1}"
+                }
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = cx - t / 3,
+                        top = cy - t / 3,
+                        width = 2 * t / 3 + 1,
+                        height = 2 * t / 3 + 1,
+                        text = "clue $clue $where$wrong",
+                    ),
+                )
+            }
+        }
+
+        val board = SpokenBoard(0, 0, "", edges + clues)
+        val cursor = cursorEdge?.let { edges.getOrNull(it.index) }
+        return board.cappedUnits(cursor)
+    }
+
+    /**
+     * The pointer buttons of an edge, the three-state cycle of
+     * `interpret_move`: the left button goes no line to line to crossed
+     * out, and the right button goes no line to crossed out to line.
+     */
+    private fun edgeButtons(line: Int): List<SpokenAction> = when (line) {
+        LINE_YES -> listOf(
+            SpokenAction("Cross", Buttons.LEFT_BUTTON),
+            SpokenAction("Clear", Buttons.RIGHT_BUTTON),
+        )
+
+        LINE_NO -> listOf(
+            SpokenAction("Clear", Buttons.LEFT_BUTTON),
+            SpokenAction("Line", Buttons.RIGHT_BUTTON),
+        )
+
+        else -> listOf(
+            SpokenAction("Line", Buttons.LEFT_BUTTON),
+            SpokenAction("Cross", Buttons.RIGHT_BUTTON),
+        )
+    }
+
     override fun colours(): FloatArray = colours(floatArrayOf(0.8f, 0.8f, 0.8f))
 
     /** `game_colours`, `loopy.c:1044-1090`. */

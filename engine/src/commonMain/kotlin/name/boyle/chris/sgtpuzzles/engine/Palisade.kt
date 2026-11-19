@@ -1508,6 +1508,150 @@ object Palisade : Game {
         )
     }
 
+    /**
+     * One unit per cell for the clue, and one per interior border for
+     * the fence. A border is where `interpret_move` puts it: the
+     * top-left third of the cell below or to the right of the line, the
+     * point whose press hits that line.
+     *
+     * A border is a real move: the left button draws a line or clears a
+     * crossed one, and the right button crosses out a border or clears
+     * a drawn one. The outer rim is not playable in C and gets no unit.
+     * The clue cell only reports its clue and its error mark.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.width
+        val h = s.height
+        val t = tileSize
+        val margin = t / 2
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = t,
+            left = margin,
+            top = margin,
+            summary = "",
+            text = { x, y ->
+                val index = y * w + x
+                val clue = s.shared.clues[index]
+                val words = if (clue == EMPTY) "empty" else "clue $clue"
+                val wrong = if (clueError(s, x, y)) SPOKEN_WRONG else ""
+                val cursor = if (u.show && u.x == 2 * x + 1 && u.y == 2 * y + 1) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                words + wrong + cursor
+            },
+        )
+
+        val borders = buildList {
+            fun border(
+                left: Int,
+                top: Int,
+                width: Int,
+                height: Int,
+                text: String,
+                cursorX: Int,
+                cursorY: Int,
+                dir: Int,
+                cell: Int,
+            ) {
+                val border = s.borders[cell].toInt() and 0xFF
+                val on = border and borderBit(dir) != 0
+                val off = border and (borderBit(dir) shl 4) != 0
+                val state = when {
+                    on -> "line"
+                    off -> "cross"
+                    else -> "empty"
+                }
+                val cursor = if (u.show && u.x == cursorX && u.y == cursorY) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                add(
+                    SpokenUnit(
+                        row = 0,
+                        column = 0,
+                        left = left,
+                        top = top,
+                        width = width,
+                        height = height,
+                        text = "$text, $state$cursor",
+                        actions = buildList {
+                            when {
+                                on -> add(SpokenAction("Clear", Buttons.LEFT_BUTTON))
+                                off -> add(SpokenAction("Clear", Buttons.RIGHT_BUTTON))
+                                else -> {
+                                    add(SpokenAction("Line", Buttons.LEFT_BUTTON))
+                                    add(SpokenAction("Cross", Buttons.RIGHT_BUTTON))
+                                }
+                            }
+                        },
+                    ),
+                )
+            }
+
+            // A horizontal border between rows y and y + 1 is the top
+            // third of the cell below it.
+            for (y in 1 until h) {
+                for (x in 0 until w) {
+                    border(
+                        left = margin + x * t,
+                        top = margin + y * t,
+                        width = t,
+                        height = max(t / 3, 1),
+                        text = "Border between row $y and row ${y + 1}, column ${x + 1}",
+                        cursorX = 2 * x + 1,
+                        cursorY = 2 * y,
+                        dir = 0,
+                        cell = y * w + x,
+                    )
+                }
+            }
+            // A vertical border between columns x and x + 1 is the left
+            // third of the cell to its right.
+            for (y in 0 until h) {
+                for (x in 1 until w) {
+                    border(
+                        left = margin + x * t,
+                        top = margin + y * t,
+                        width = max(t / 3, 1),
+                        height = t,
+                        text = "Border between column $x and column ${x + 1}, row ${y + 1}",
+                        cursorX = 2 * x,
+                        cursorY = 2 * y + 1,
+                        dir = 3,
+                        cell = y * w + x,
+                    )
+                }
+            }
+        }
+
+        val board = cells.copy(units = cells.units + borders)
+        val cursor = cursorLocation(ui, state, t)?.let {
+            board.units.unitAt(it.left + it.width / 2, it.top + it.height / 2)
+        }
+        return board.cappedUnits(cursor)
+    }
+
+    /** True when the game marks this cell's clue as impossible. */
+    private fun clueError(s: State, x: Int, y: Int): Boolean {
+        val clue = s.shared.clues[y * s.width + x]
+        if (clue == EMPTY) return false
+        val border = s.borderAt(x, y)
+        val on = BITCOUNT[border and BORDER_MASK]
+        val off = BITCOUNT[(border shr 4) and BORDER_MASK]
+        return on > clue || clue > 4 - off
+    }
+
     // --- Palette and drawing -----------------------------------------
 
     override fun colours(): FloatArray = colours(floatArrayOf(0.8f, 0.8f, 0.8f))

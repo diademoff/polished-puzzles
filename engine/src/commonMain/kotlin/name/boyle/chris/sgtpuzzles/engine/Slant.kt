@@ -416,6 +416,90 @@ object Slant : Game {
         )
     }
 
+    /**
+     * The play unit is the cell, as `game_colours` and `interpret_move`
+     * draw and read it: one slash per square. The four clues of the
+     * square's corners join the label, because a clue belongs to a
+     * vertex and four squares share it. A left click turns the slash
+     * clockwise and a right click turns it back, so those two buttons
+     * are the unit actions; the `left-button` preference swaps them, and
+     * the label follows the preference.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.params.width
+        val h = s.params.height
+        val bigW = w + 1
+
+        fun clue(x: Int, y: Int): String {
+            val value = s.clues[y * bigW + x]
+            if (value < 0) return ""
+            return "clue $value"
+        }
+
+        val cells = gridSpeech(
+            width = w,
+            height = h,
+            tileSize = tileSize,
+            left = tileSize,
+            top = tileSize,
+            summary = "",
+            text = { x, y ->
+                val slash = s.soln[y * w + x]
+                val shape = when {
+                    slash < 0 -> "backslash"
+                    slash > 0 -> "slash"
+                    else -> "blank"
+                }
+                // The clue circle sits on a vertex, so a square names the
+                // clues of its four corners in the order it draws them.
+                val corners = listOf(
+                    "up and left" to clue(x, y),
+                    "up and right" to clue(x + 1, y),
+                    "down and left" to clue(x, y + 1),
+                    "down and right" to clue(x + 1, y + 1),
+                ).filter { it.second.isNotEmpty() }
+                val clueWords = corners.joinToString("") { ", ${it.second} ${it.first}" }
+                val cursor = if (u.curVisible && u.curX == x && u.curY == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                val wrong = if (s.errors[y * bigW + x] and ERR_SQUARE != 0) {
+                    SPOKEN_WRONG
+                } else {
+                    ""
+                }
+                "$shape$clueWords$cursor$wrong"
+            },
+            actions = { _, _ -> slashButtons(u.swapButtons) },
+        )
+        return cells.capped(cells.units.getOrNull(u.curY * w + u.curX))
+    }
+
+    /**
+     * The two pointer buttons of a slash, in the game's words. The
+     * `left-button` preference swaps clockwise and anticlockwise, and a
+     * desk with the preference set hears the order it will get.
+     */
+    private fun slashButtons(swap: Boolean): List<SpokenAction> =
+        if (swap) {
+            listOf(
+                SpokenAction("Anticlockwise", Buttons.LEFT_BUTTON),
+                SpokenAction("Clockwise", Buttons.RIGHT_BUTTON),
+            )
+        } else {
+            listOf(
+                SpokenAction("Clockwise", Buttons.LEFT_BUTTON),
+                SpokenAction("Anticlockwise", Buttons.RIGHT_BUTTON),
+            )
+        }
+
     override fun interpretMove(
         state: Game.State,
         ui: Game.Ui,
