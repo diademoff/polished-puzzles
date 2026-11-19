@@ -495,12 +495,13 @@ cannot reach:
 - `ShellAccessibilityTest` covers the shell accessibility findings that
   a device can check without a screen reader. Each case fails on the
   code before its fix.
-  `theStatusLineIsAPoliteLiveRegion` opens a frozen netslide game,
+  `theStatusLineIsAPoliteLiveRegion` opens a frozen `cube` game,
   reads the accessibility node of `status_bar` (polite live region),
-  taps the top margin band of a column, and checks that the node is
-  still polite when the text reaches `Moves: 1`. `netslide` is the
-  fixture because it has a status bar and no spoken board yet; the case
-  moves to a C game when the last Kotlin game speaks.
+  sends one arrow key, and checks that the node is still polite when
+  the text reaches `Moves: 1`. `cube` is the fixture because every
+  Kotlin game has a spoken board after D-01 wave 4 and speaks its own
+  changes, while a C game keeps the status line as the polite live
+  region of A-04.
   `anUnchangedStatusIsNotWrittenToTheViewAgain`
   counts text changes of the status view: three repeats of the same
   text must not touch the view, and one changed text must, so the
@@ -529,6 +530,21 @@ cannot reach:
   a click that makes the real move with one announcement, the status
   line staying out of the way while the board has units, and a 21x21
   board that exposes the cursor unit only.
+- `BoardWaveFourSemanticsTest` reads the same tree on the three shapes
+  that are not a plain cell grid. A frozen `slant` cell is labelled
+  `Row 1, column 1, blank, clue 2 up and right, clue 1 down and left`,
+  offers `Clockwise` and `Anticlockwise`, and the clockwise action
+  writes the real `\0,0` move and the live region reads the turned
+  cell. A frozen `bridges` island is labelled `Row 1, column 1, island
+  3, 0 bridges` and offers `Mark`, which writes `M0,0` and reads
+  `marked`; a bridge cell offers no action at all, because a bridge is
+  a drag from one island to another. A frozen `guess` palette swatch
+  reads `red` and offers nothing, four digit keys fill the first row,
+  and the `current row` unit offers `Submit`, which writes `G1,2,1,2`.
+  The fourth case compares every unit node of `loopy`, `untangle`, and
+  `guess` with its own mapped rectangle through
+  `assertEveryUnitLandsOnTheDrawing`, so the 2.6x geometry guard covers
+  an edge, a point, and a palette and not only a cell.
 - `BoardWaveThreeSemanticsTest` reads the same tree on the two shapes
   that wave 3 added: a `towers` clue unit carries its sight count and
   the game's `Done` toggle, the toggle makes the real `D0,-1` move and
@@ -541,7 +557,11 @@ cannot reach:
   and `unruly`, the unit on the drawing cursor rectangle lands on the
   pixels that the render matrix gives it, within 1.5dp. With the matrix
   removed the `mines` case fails with `unit left expected:<55.4> but
-  was:<21.0>` on the Pixel 4a 5G.
+  was:<21.0>` on the Pixel 4a 5G. The wave 4 case of
+  `BoardWaveFourSemanticsTest` extends the same guard to a unit that is
+  not a cell: it compares every node of `loopy`, `untangle`, and
+  `guess` with its own mapped rectangle, because an edge, a point, and
+  a palette have no cursor rectangle and no collection position.
 - `BoardLandscapeSemanticsTest` rotates `fifteen` to landscape and
   requires the same 16 units, the same labels, the 4 by 4 collection
   shape, and the same pixel geometry. It fails with `expected:<16> but
@@ -724,12 +744,28 @@ Engine tests:
   with the same word, and a colour name is in the label itself, from a
   hand-built one-row board, so the colour-blind path does not depend on
   the palette.
+- `SpokenBoardWaveFourTest` pins the fifteen wave 4 games the same way,
+  and it pins the design promise that a unit action is real: it sends
+  the press and the release a finger makes at the unit centre, executes
+  the move the game returns, and reads the changed board back, for the
+  `loopy` edge, the `palisade` border, the `slant` slash, the `pattern`
+  cell, the `tracks` square, the `bridges` mark, the `guess` submit,
+  the `blackbox` laser and lock, the `net` turn, the `netslide` band,
+  and the `inertia` direction. It also pins the units that have no
+  action and why (`untangle`, `pearl`, `map`, `galaxies`), the cap by
+  unit count, and the three helpers `sideSpeech`, `unitAt`, and
+  `cappedUnits`.
 - `SpokenBoardBoundsTest` runs every preset of every ported backend
   from the frozen golden IDs: a game without the hook returns the empty
   default, every unit rectangle is inside `computeSize`, the grid is
   complete and row-major, grid units do not overlap, a cell label does
   not repeat its coordinate, and a board above 400 cells exposes at
-  most one unit.
+  most one unit. It also holds the wave 4 shapes: a board with no cell
+  grid (`loopy`, `guess`, `untangle`) reports no row and no column and
+  keeps its unit count inside the cap, and only the six games whose
+  units are not one per cell (`loopy`, `guess`, `untangle`, `palisade`,
+  `blackbox`, `netslide`) may return the cursor unit alone while the
+  cell grid is still under the cap.
 - `BoardSemanticsGoldenTest` compares the live spoken board of every
   covered backend with `testdata/spoken/<game>.txt`. A changed word or
   a lost action is a review diff, not a silent drift.

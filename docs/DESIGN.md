@@ -240,6 +240,60 @@ Required for every screen:
   are summarised from the cursor. The status line is not a live region
   while the board has units, so one event is one utterance.
 
+The unit model follows the game, not the pixels, and six shapes need
+their own vocabulary:
+
+- **A cell** is one unit per position, and the shell speaks `Row R,
+  column C` from `collectionItemInfo`. The label is content only.
+- **An edge** is one unit per playable edge, named by its two ends or by
+  the cells it joins: `loopy` says `edge from row 1, column 1 to row 1,
+  column 2, line` on the square grid and `edge between cell 4 and cell
+  8, no line` on the other seventeen grids, and `palisade` says
+  `border between row 1 and row 2, column 1, line`. Its rectangle is the
+  segment that `edge_bbox` repaints, not a cell.
+- **A point** is one unit, named by its neighbours: `untangle` says
+  `point 3, joined to 2 and 5, crossed line`.
+- **A region** is a cell whose colour is a letter: `map` says
+  `region 5, B, given` with the game's own `A` to `D` labels and its own
+  region numbers, and `galaxies` says `white dot, white, wall left`.
+- **A palette** is one unit per swatch, named from `BoardColour`, for
+  example `red`. Only `guess` has one; it is a drag source and not a
+  button.
+- **A ring** is one unit per site outside the board, named by where it
+  sits: `blackbox` says `top edge, column 1, laser 3, hit`, and its
+  reveal button is a unit of its own.
+
+Two limits keep the actions honest, and both are pinned by a test:
+
+- A unit action is the press and release at the unit centre. A move that
+  needs a drag, a click off the centre, or two units has no unit action,
+  and the label says what the unit is. The colour drop of `map`, the
+  bridge drag of `bridges`, the point drag of `untangle`, the line
+  direction of `pearl`, the tile drag of `net`, the dot of `galaxies`,
+  and the single edge of `tracks` stay on the pointer and on the keys.
+  `BoardWaveFourSemanticsTest` asserts that such a unit offers no
+  action, so the silence is a decision and not an omission.
+- A unit whose centre press is inert offers no action even when the game
+  has moves: `pearl`, `map`, `galaxies`, and `untangle` read a board
+  that the cursor and the keys steer.
+
+The cap is per game, and it counts the units the game really has:
+
+| Game | Units | Cap behaviour |
+|---|---|---|
+| `loopy` | one per edge, one per clue face | a 7x7 square board is 161; a 20x20 board has over 1200 edges, so it returns the cursor edge |
+| `untangle` | one per point | the `25` preset is 25; a hand-written board above 400 points returns the cursor point |
+| `guess` | 6 swatches, 4 pegs per row, one feedback per row | the standard board is 56; a save with more than about 80 guesses returns the cursor peg |
+| `palisade` | one per cell, one per interior border | `5x5` is 65; the `15x12` preset is 513, so it returns the cursor unit |
+| `blackbox` | one per arena cell, one per laser site, the reveal | `10x10` is 144; a 20x20 save is 480, so it returns the cursor unit |
+| `netslide` | one per cell, one per clickable band | `5x5` is 45; a board above 400 cells returns the cursor unit |
+| the other nine | one per cell, plus the off-grid clues | the cell grid decides, as waves 2 and 3 do |
+
+Above the cap the cursor unit alone is exposed and the arrow keys move
+it, which is the D-01 S2 contract. `loopy`, `guess`, and `untangle`
+report no cell grid, so the shell names their board without a shape and
+gives the units no collection position.
+
 Accessibility is an allowed area for deviations: upstream does not
 describe it. Every deviation is recorded in `DEVIATIONS.md`.
 

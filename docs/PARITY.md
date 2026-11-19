@@ -216,11 +216,19 @@ under `testdata/spoken/` is reviewed like a golden while the game's
 Wave 3 added the shared colour, digit, and pencil vocabulary
 (`engine/SpokenColour.kt`, `digitSpeech`, `pencilDigits`) and the twelve
 games `samegame`, `flood`, `filling`, `pegs`, `lightup`, `magnets`,
-`range`, `towers`, `unequal`, `keen`, `undead`, and `dominosa`. A game
-name is spoken from its own state, never from a pixel, and a move that a
-single unit cannot name (a drag, an edge midpoint, a keypad digit) is
-left on the input path instead of being invented. The coverage and the
-tests are in `docs/TESTING.md`; the deviation is D-035.
+`range`, `towers`, `unequal`, `keen`, `undead`, and `dominosa`. Wave 4
+added the fifteen games whose units are not all cells: the edges of
+`loopy` and `palisade`, the points of `untangle`, the palette and pegs
+of `guess`, the laser ring of `blackbox`, the moving bands of
+`netslide`, and the cells of `slant`, `pearl`, `tracks`, `bridges`,
+`map`, `net`, `inertia`, `galaxies`, and `pattern`. Every ported game
+now has the operation except `cube`, which has no two-dimensional unit
+model and keeps the C fallback. A game name is spoken from its own
+state, never from a pixel, and a move that a single unit cannot name (a
+drag, an edge midpoint, a keypad digit) is left on the input path
+instead of being invented. The unit models, the gesture limits, and the
+per-game cap are in `docs/DESIGN.md` section 11; the tests are in
+`docs/TESTING.md`; the deviation is D-035.
 
 ### Game inventory
 
