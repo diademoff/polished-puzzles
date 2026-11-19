@@ -1,0 +1,30 @@
+# D-01 spoken table. game=net params=5x5 seed=12345
+# id=5x5:1863151ea86e7e3c7abc21a32
+rows=5
+columns=5
+summary=
+Row 1, column 1, wires right, barrier up and left | Rotate (left), Lock (right)
+Row 1, column 2, wires down, barrier up | Rotate (left), Lock (right)
+Row 1, column 3, wires up and left, barrier up | Rotate (left), Lock (right)
+Row 1, column 4, wires up and right, barrier up | Rotate (left), Lock (right)
+Row 1, column 5, wires right, barrier up and right | Rotate (left), Lock (right)
+Row 2, column 1, wires right and left, barrier left | Rotate (left), Lock (right)
+Row 2, column 2, wires right | Rotate (left), Lock (right)
+Row 2, column 3, wires up, down and left | Rotate (left), Lock (right)
+Row 2, column 4, wires up and down | Rotate (left), Lock (right)
+Row 2, column 5, wires down, barrier right | Rotate (left), Lock (right)
+Row 3, column 1, wires up and left, barrier left | Rotate (left), Lock (right)
+Row 3, column 2, wires up, down and left | Rotate (left), Lock (right)
+Row 3, column 3, wires up, right and left | Rotate (left), Lock (right)
+Row 3, column 4, wires up, down and left | Rotate (left), Lock (right)
+Row 3, column 5, wires up and right, barrier right | Rotate (left), Lock (right)
+Row 4, column 1, wires down and left, barrier left | Rotate (left), Lock (right)
+Row 4, column 2, wires up, right and left | Rotate (left), Lock (right)
+Row 4, column 3, wires up and down | Rotate (left), Lock (right)
+Row 4, column 4, wires up, right and down | Rotate (left), Lock (right)
+Row 4, column 5, wires down and left, barrier right | Rotate (left), Lock (right)
+Row 5, column 1, wires up, barrier down and left | Rotate (left), Lock (right)
+Row 5, column 2, wires right, barrier down | Rotate (left), Lock (right)
+Row 5, column 3, wires up and down, barrier down | Rotate (left), Lock (right)
+Row 5, column 4, wires up and right, barrier down | Rotate (left), Lock (right)
+Row 5, column 5, wires up, barrier right and down | Rotate (left), Lock (right)

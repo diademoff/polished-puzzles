@@ -1,0 +1,54 @@
+# D-01 spoken table. game=galaxies params=7x7dn seed=12345
+# id=7x7:cjrbhizuisfvf
+rows=7
+columns=7
+summary=
+Row 1, column 1, unset, wall left, wall up
+Row 1, column 2, white dot, wall up
+Row 1, column 3, unset, wall up
+Row 1, column 4, unset, wall up
+Row 1, column 5, unset, wall up
+Row 1, column 6, unset, wall up
+Row 1, column 7, white dot, wall right, wall up
+Row 2, column 1, unset, wall left
+Row 2, column 2, unset
+Row 2, column 3, white dot
+Row 2, column 4, white dot
+Row 2, column 5, unset
+Row 2, column 6, unset
+Row 2, column 7, unset, wall right
+Row 3, column 1, unset, wall left
+Row 3, column 2, unset
+Row 3, column 3, unset
+Row 3, column 4, unset
+Row 3, column 5, unset
+Row 3, column 6, unset
+Row 3, column 7, unset, wall right
+Row 4, column 1, unset, wall left
+Row 4, column 2, unset
+Row 4, column 3, unset
+Row 4, column 4, unset
+Row 4, column 5, unset
+Row 4, column 6, unset
+Row 4, column 7, unset, wall right
+Row 5, column 1, white dot, wall left
+Row 5, column 2, unset
+Row 5, column 3, unset
+Row 5, column 4, unset
+Row 5, column 5, unset
+Row 5, column 6, unset
+Row 5, column 7, unset, wall right
+Row 6, column 1, unset, wall left
+Row 6, column 2, unset
+Row 6, column 3, unset
+Row 6, column 4, unset
+Row 6, column 5, unset
+Row 6, column 6, unset
+Row 6, column 7, unset, wall right
+Row 7, column 1, unset, wall left, wall down
+Row 7, column 2, unset, wall down
+Row 7, column 3, unset, wall down
+Row 7, column 4, unset, wall down
+Row 7, column 5, unset, wall down
+Row 7, column 6, unset, wall down
+Row 7, column 7, unset, wall right, wall down

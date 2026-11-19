@@ -35,8 +35,8 @@ class SpokenBoardTest {
 
     @Test
     fun `a game without the seam returns an empty board`() {
-        val state = Guess.newState(Guess.decodeParams("c2p2g2Bm"), "c2ab")
-        val board = Guess.spokenBoard(state, Guess.newUi(state), TILE)
+        val state = Cube.newState(Cube.defaultParams(), "")
+        val board = Cube.spokenBoard(state, Cube.newUi(state), TILE)
         assertEquals(SpokenBoard(0, 0, "", emptyList()), board)
         assertTrue(board.units.isEmpty())
     }

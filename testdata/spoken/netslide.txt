@@ -1,0 +1,26 @@
+# D-01 spoken table. game=netslide params=3x3 seed=12345
+# id=3x3:21c4d5963
+rows=3
+columns=3
+summary=Moves: 0 Active: 4/9
+Row 1, column 1, wires up, barrier up and left
+Row 1, column 2, wires right, barrier up
+Row 1, column 3, wires down and left, barrier up and right
+Row 2, column 1, wires left, barrier left
+Row 2, column 2, wires right, down and left
+Row 2, column 3, wires right and left, barrier right
+Row 3, column 1, wires right and down, barrier down and left
+Row 3, column 2, wires up and left, barrier down
+Row 3, column 3, wires up and right, barrier right and down
+Column 1, top band | Slide down (left), Slide up (right)
+Column 1, bottom band | Slide up (left), Slide down (right)
+Column 2, top band | Slide down (left), Slide up (right)
+Column 2, bottom band | Slide up (left), Slide down (right)
+Column 3, top band | Slide down (left), Slide up (right)
+Column 3, bottom band | Slide up (left), Slide down (right)
+Row 1, left band | Slide right (left), Slide left (right)
+Row 1, right band | Slide left (left), Slide right (right)
+Row 2, left band | Slide right (left), Slide left (right)
+Row 2, right band | Slide left (left), Slide right (right)
+Row 3, left band | Slide right (left), Slide left (right)
+Row 3, right band | Slide left (left), Slide right (right)

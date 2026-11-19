@@ -1,0 +1,85 @@
+# D-01 spoken table. game=inertia params=10x8 seed=12345
+# id=10x8:bswmsgmSbmbmgmgbwgbbmgmwgwwswswmbmssbgmswbsbggbsswgwggbgsmswwswmwssbgbmmwgsbgmwm
+rows=8
+columns=10
+summary=Gems: 16
+Row 1, column 1, empty | left (left)
+Row 1, column 2, stop | left (left)
+Row 1, column 3, wall | left (left)
+Row 1, column 4, mine | left (left)
+Row 1, column 5, stop | left (left)
+Row 1, column 6, gem | left (left)
+Row 1, column 7, mine | left (left)
+Row 1, column 8, player, cursor
+Row 1, column 9, empty | right (left)
+Row 1, column 10, mine | right (left)
+Row 2, column 1, empty | left (left)
+Row 2, column 2, mine | left (left)
+Row 2, column 3, gem | left (left)
+Row 2, column 4, mine | left (left)
+Row 2, column 5, gem | left (left)
+Row 2, column 6, empty
+Row 2, column 7, wall
+Row 2, column 8, gem | down (left)
+Row 2, column 9, empty | down and right (left)
+Row 2, column 10, empty | down and right (left)
+Row 3, column 1, mine | left (left)
+Row 3, column 2, gem | left (left)
+Row 3, column 3, mine | left (left)
+Row 3, column 4, wall
+Row 3, column 5, gem
+Row 3, column 6, wall
+Row 3, column 7, wall
+Row 3, column 8, stop | down (left)
+Row 3, column 9, wall | down and right (left)
+Row 3, column 10, stop | down and right (left)
+Row 4, column 1, wall
+Row 4, column 2, mine
+Row 4, column 3, empty
+Row 4, column 4, mine
+Row 4, column 5, stop
+Row 4, column 6, stop
+Row 4, column 7, empty | down (left)
+Row 4, column 8, gem | down (left)
+Row 4, column 9, mine | down (left)
+Row 4, column 10, stop | down and right (left)
+Row 5, column 1, wall
+Row 5, column 2, empty
+Row 5, column 3, stop
+Row 5, column 4, empty
+Row 5, column 5, gem
+Row 5, column 6, gem
+Row 5, column 7, empty | down (left)
+Row 5, column 8, stop | down (left)
+Row 5, column 9, stop | down (left)
+Row 5, column 10, wall | down and right (left)
+Row 6, column 1, gem
+Row 6, column 2, wall
+Row 6, column 3, gem
+Row 6, column 4, gem
+Row 6, column 5, empty
+Row 6, column 6, gem | down (left)
+Row 6, column 7, stop | down (left)
+Row 6, column 8, mine | down (left)
+Row 6, column 9, stop | down (left)
+Row 6, column 10, wall | down (left)
+Row 7, column 1, wall
+Row 7, column 2, stop
+Row 7, column 3, wall
+Row 7, column 4, mine
+Row 7, column 5, wall
+Row 7, column 6, stop | down (left)
+Row 7, column 7, stop | down (left)
+Row 7, column 8, empty | down (left)
+Row 7, column 9, gem | down (left)
+Row 7, column 10, empty | down (left)
+Row 8, column 1, mine
+Row 8, column 2, mine
+Row 8, column 3, wall
+Row 8, column 4, gem
+Row 8, column 5, stop
+Row 8, column 6, empty | down (left)
+Row 8, column 7, gem | down (left)
+Row 8, column 8, mine | down (left)
+Row 8, column 9, wall | down (left)
+Row 8, column 10, mine | down (left)

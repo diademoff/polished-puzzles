@@ -1,0 +1,41 @@
+# D-01 spoken table. game=pearl params=6x6de seed=12345
+# id=6x6:BaWnBBdBaWfWc
+rows=6
+columns=6
+summary=
+Row 1, column 1, black clue
+Row 1, column 2, empty
+Row 1, column 3, white clue
+Row 1, column 4, empty
+Row 1, column 5, empty
+Row 1, column 6, empty
+Row 2, column 1, empty
+Row 2, column 2, empty
+Row 2, column 3, empty
+Row 2, column 4, empty
+Row 2, column 5, empty
+Row 2, column 6, empty
+Row 3, column 1, empty
+Row 3, column 2, empty
+Row 3, column 3, empty
+Row 3, column 4, empty
+Row 3, column 5, empty
+Row 3, column 6, black clue
+Row 4, column 1, black clue
+Row 4, column 2, empty
+Row 4, column 3, empty
+Row 4, column 4, empty
+Row 4, column 5, empty
+Row 4, column 6, black clue
+Row 5, column 1, empty
+Row 5, column 2, white clue
+Row 5, column 3, empty
+Row 5, column 4, empty
+Row 5, column 5, empty
+Row 5, column 6, empty
+Row 6, column 1, empty
+Row 6, column 2, empty
+Row 6, column 3, white clue
+Row 6, column 4, empty
+Row 6, column 5, empty
+Row 6, column 6, empty

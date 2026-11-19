@@ -11,7 +11,7 @@ import java.io.File
 
 /**
  * Level: semantic. Games: the backends with a spoken board after D-01
- * wave 2.
+ * wave 4.
  *
  * Each table under `testdata/spoken/` is one small preset of one game:
  * the ordered unit labels and the pointer actions, both built from game
@@ -54,6 +54,22 @@ class BoardSemanticsGoldenTest {
         "keen" to "4de",
         "undead" to "4x4de",
         "dominosa" to "3dt",
+        // Wave 4: the own-model games and the grid games it completed.
+        "loopy" to "3x2t13dh",
+        "slant" to "5x5de",
+        "pearl" to "6x6de",
+        "tracks" to "",
+        "bridges" to "7x7i30e10m2d0",
+        "palisade" to "5x5n5",
+        "guess" to "c6p4g10Bm",
+        "map" to "20x15n30de",
+        "blackbox" to "w5h5m3M3",
+        "untangle" to "6",
+        "net" to "5x5",
+        "netslide" to "3x3",
+        "inertia" to "10x8",
+        "galaxies" to "7x7dn",
+        "pattern" to "10x10",
     )
 
     @Test

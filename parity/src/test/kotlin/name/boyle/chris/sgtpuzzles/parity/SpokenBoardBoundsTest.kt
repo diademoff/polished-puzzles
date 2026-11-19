@@ -30,7 +30,8 @@ class SpokenBoardBoundsTest {
     )
 
     /**
-     * The backends that return a spoken board after wave 3. A backend
+     * The backends that return a spoken board after wave 4: every ported
+     * game except the two that still run on the C engine. A backend
      * outside this set must return the empty default.
      */
     private val covered = setOf(
@@ -57,7 +58,45 @@ class SpokenBoardBoundsTest {
         "keen",
         "undead",
         "dominosa",
+        "loopy",
+        "slant",
+        "pearl",
+        "tracks",
+        "bridges",
+        "palisade",
+        "guess",
+        "map",
+        "blackbox",
+        "untangle",
+        "net",
+        "netslide",
+        "inertia",
+        "galaxies",
+        "pattern",
     )
+
+    /**
+     * The backends whose units are not one per cell, so their unit count
+     * can pass the cap while the cell grid is still under it: the edges
+     * of `loopy`, the points of `untangle`, the palette and pegs of
+     * `guess`, the borders of `palisade`, the laser ring of `blackbox`,
+     * and the moving bands of `netslide`. Such a preset returns the
+     * cursor unit alone, which is the cap contract.
+     */
+    private val cappedByUnits = setOf(
+        "loopy",
+        "guess",
+        "untangle",
+        "palisade",
+        "blackbox",
+        "netslide",
+    )
+
+    /**
+     * The backends with no cell grid at all. Their board has no row or
+     * column, so every unit is outside the grid.
+     */
+    private val noGrid = setOf("loopy", "guess", "untangle")
 
     @Test
     fun `every preset of every ported game reports a bounded board`() {
@@ -80,19 +119,44 @@ class SpokenBoardBoundsTest {
                 }
 
                 val size = game.computeSize(midend.params, midend.ui, TILE)
-                assertTrue("$where: the grid has no rows", board.rows > 0)
-                assertTrue("$where: the grid has no columns", board.columns > 0)
-
-                val cells = board.rows * board.columns
                 for (unit in board.units) {
                     assertInside(where, unit, size.width, size.height)
                 }
 
+                if (game.backendName in noGrid) {
+                    assertTrue("$where: a board without a cell grid has rows", board.rows == 0)
+                    assertTrue("$where: a board without a cell grid has columns", board.columns == 0)
+                    for (unit in board.units) {
+                        assertEquals("$where: a unit of a board without a grid has a row", 0, unit.row)
+                        assertEquals(
+                            "$where: a unit of a board without a grid has a column",
+                            0,
+                            unit.column,
+                        )
+                    }
+                    assertTrue(
+                        "$where: ${board.units.size} units is above the cap",
+                        board.units.size <= BOARD_UNIT_CAP,
+                    )
+                    checked++
+                    continue
+                }
+
+                assertTrue("$where: the grid has no rows", board.rows > 0)
+                assertTrue("$where: the grid has no columns", board.columns > 0)
+
+                val cells = board.rows * board.columns
                 if (cells > BOARD_UNIT_CAP) {
                     assertTrue(
                         "$where: a board above the cap exposes at most one unit, not " +
                             "${board.units.size}",
                         board.units.size <= 1,
+                    )
+                } else if (board.units.size <= 1 && cells > 1) {
+                    assertTrue(
+                        "$where: only a game whose units are not cells may return the " +
+                            "cursor unit alone under the cell cap",
+                        game.backendName in cappedByUnits,
                     )
                 } else {
                     assertGrid(where, board)

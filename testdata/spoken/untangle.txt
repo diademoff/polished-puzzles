@@ -1,0 +1,11 @@
+# D-01 spoken table. game=untangle params=6 seed=12345
+# id=6:0-1,0-2,0-3,0-5,1-3,1-4,1-5,2-3,2-4,2-5,3-4
+rows=0
+columns=0
+summary=
+point 1, joined to 2, 3, 4 and 6, crossed line
+point 2, joined to 1, 4, 5 and 6, crossed line
+point 3, joined to 1, 4, 5 and 6, crossed line
+point 4, joined to 1, 2, 3 and 5, crossed line
+point 5, joined to 2, 3 and 4, crossed line
+point 6, joined to 1, 2 and 3, crossed line

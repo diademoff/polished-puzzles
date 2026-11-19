@@ -1,0 +1,30 @@
+# D-01 spoken table. game=slant params=5x5de seed=12345
+# id=5x5:a2d1b2a2b3d3b2b21a1c1110
+rows=5
+columns=5
+summary=
+Row 1, column 1, blank, clue 2 up and right, clue 1 down and left | Clockwise (left), Anticlockwise (right)
+Row 1, column 2, blank, clue 2 up and left | Clockwise (left), Anticlockwise (right)
+Row 1, column 3, blank, clue 2 down and right | Clockwise (left), Anticlockwise (right)
+Row 1, column 4, blank, clue 2 down and left | Clockwise (left), Anticlockwise (right)
+Row 1, column 5, blank, clue 2 down and right | Clockwise (left), Anticlockwise (right)
+Row 2, column 1, blank, clue 1 up and left | Clockwise (left), Anticlockwise (right)
+Row 2, column 2, blank, clue 3 down and right | Clockwise (left), Anticlockwise (right)
+Row 2, column 3, blank, clue 2 up and right, clue 3 down and left | Clockwise (left), Anticlockwise (right)
+Row 2, column 4, blank, clue 2 up and left | Clockwise (left), Anticlockwise (right)
+Row 2, column 5, blank, clue 2 up and right | Clockwise (left), Anticlockwise (right)
+Row 3, column 1, blank, clue 3 down and right | Clockwise (left), Anticlockwise (right)
+Row 3, column 2, blank, clue 3 up and right, clue 3 down and left | Clockwise (left), Anticlockwise (right)
+Row 3, column 3, blank, clue 3 up and left | Clockwise (left), Anticlockwise (right)
+Row 3, column 4, blank, clue 2 down and right | Clockwise (left), Anticlockwise (right)
+Row 3, column 5, blank, clue 2 down and left | Clockwise (left), Anticlockwise (right)
+Row 4, column 1, blank, clue 3 up and right, clue 2 down and right | Clockwise (left), Anticlockwise (right)
+Row 4, column 2, blank, clue 3 up and left, clue 2 down and left, clue 1 down and right | Clockwise (left), Anticlockwise (right)
+Row 4, column 3, blank, clue 1 down and left | Clockwise (left), Anticlockwise (right)
+Row 4, column 4, blank, clue 2 up and right, clue 1 down and right | Clockwise (left), Anticlockwise (right)
+Row 4, column 5, blank, clue 2 up and left, clue 1 down and left | Clockwise (left), Anticlockwise (right)
+Row 5, column 1, blank, clue 2 up and right | Clockwise (left), Anticlockwise (right)
+Row 5, column 2, blank, clue 2 up and left, clue 1 up and right, clue 1 down and right | Clockwise (left), Anticlockwise (right)
+Row 5, column 3, blank, clue 1 up and left, clue 1 down and left, clue 1 down and right | Clockwise (left), Anticlockwise (right)
+Row 5, column 4, blank, clue 1 up and right, clue 1 down and left, clue 1 down and right | Clockwise (left), Anticlockwise (right)
+Row 5, column 5, blank, clue 1 up and left, clue 1 down and left, clue 0 down and right | Clockwise (left), Anticlockwise (right)

@@ -1,0 +1,61 @@
+# D-01 spoken table. game=guess params=c6p4g10Bm seed=12345
+# id=c6p4g10Bm:ac769e34
+rows=0
+columns=0
+summary=
+red
+yellow
+green
+blue
+orange
+purple
+empty | Hold (right)
+empty | Hold (right)
+empty | Hold (right)
+empty | Hold (right)
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+current row
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
+empty
