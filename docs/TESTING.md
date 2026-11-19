@@ -648,8 +648,10 @@ yet. A fixed bug is pinned by a named test in `parity/` or `engine/`
 Rules:
 
 - fixtures must be deterministic and minimal;
-- large corpora use Git LFS and are recorded in the manifest;
-- every file records its provenance: issue, seed, upstream commit;
+- corpora are plain files in the tree; Git LFS is not used;
+- `manifest.json` pins the sha256 of every `DESC` golden and the
+  upstream commit;
+- a fixture records its issue and seed where it has one;
 - do not add user data without permission and anonymization.
 
 ## 5. Regressions from history

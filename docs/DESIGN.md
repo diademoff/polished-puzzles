@@ -129,7 +129,8 @@ concrete instruction, without installing a tool.
 ### Toolbar
 
 - `MaterialToolbar`; the title is the game name, not a slogan.
-- Actions: undo, redo, menu. Everything else goes into overflow.
+- Actions: undo, redo, and the Game, Type, and Help menus. Everything
+  else goes into the Game menu.
 - Fullscreen hides the system bars and keeps the app toolbar and its
   actions in place (`GamePlay.applyFullscreen`).
 
