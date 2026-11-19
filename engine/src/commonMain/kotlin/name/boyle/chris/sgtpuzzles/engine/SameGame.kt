@@ -41,6 +41,22 @@ object SameGame : Game {
     private const val COL_LOWLIGHT = 13
     private const val NCOLOURS = 14
 
+    /**
+     * The spoken name of tile colour 1..9, in the palette order of
+     * `game_colours`. D-01 section 8: one vocabulary for every game.
+     */
+    private val SPOKEN_COLOURS = listOf(
+        BoardColour.BLUE,
+        BoardColour.GREEN,
+        BoardColour.RED,
+        BoardColour.YELLOW,
+        BoardColour.MAGENTA,
+        BoardColour.CYAN,
+        BoardColour.LIGHT_BLUE,
+        BoardColour.LIGHT_GREEN,
+        BoardColour.PINK,
+    )
+
     /*
      * The flags are unique across the state, the UI, and the drawstate
      * in C. Only the UI and drawstate bits are used here.
@@ -845,13 +861,84 @@ object SameGame : Game {
         state.impossible = impossible
     }
 
+    /** The spoken name of tile colour 1..9, in the shared colour order. */
+    internal fun colourName(colour: Int): String =
+        SPOKEN_COLOURS.getOrNull(colour - COL_1)?.spokenName ?: "unknown"
+
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per tile. The tile colour is the only content this game
+     * has, so the shared colour name is the cue (section 8), and the
+     * pointer path is the game's own two-stage tap: the first tap of a
+     * tile selects its 4-connected group, and a tap on a selected tile
+     * removes it.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val w = s.params.width
+        val t = tileSize
+        val cells = gridSpeech(
+            width = w,
+            height = s.params.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val colour = s.col(x, y)
+                val content = if (colour == 0) "empty" else colourName(colour)
+                val selected = if (u.selected[y * w + x]) SPOKEN_SELECTED else ""
+                val cursor = if (u.displaysel && u.xsel == x && u.ysel == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                "$content$selected$cursor"
+            },
+            actions = { x, y -> pointer(s, u, x, y) },
+        )
+        return cells.capped(cells.units.getOrNull(u.ysel * w + u.xsel))
+    }
+
+    /**
+     * The pointer buttons of one tile, in the words of the game's own
+     * cycle. A tap selects a group, a second tap removes it, and the
+     * right button clears a selection. A lone tile has no group, so a
+     * tap on it does nothing and it offers no action.
+     */
+    private fun pointer(s: State, u: Ui, x: Int, y: Int): List<SpokenAction> {
+        val colour = s.col(x, y)
+        if (colour == 0) return emptyList()
+        if (u.selected[y * s.params.width + x]) {
+            return listOf(
+                SpokenAction("Remove", Buttons.LEFT_BUTTON),
+                SpokenAction("Unselect", Buttons.RIGHT_BUTTON),
+            )
+        }
+        val hasNeighbour =
+            (x > 0 && s.col(x - 1, y) == colour) ||
+                (x + 1 < s.params.width && s.col(x + 1, y) == colour) ||
+                (y > 0 && s.col(x, y - 1) == colour) ||
+                (y + 1 < s.params.height && s.col(x, y + 1) == colour)
+        return if (hasNeighbour) {
+            listOf(SpokenAction("Select", Buttons.LEFT_BUTTON))
+        } else {
+            emptyList()
+        }
+    }
+
     /**
      * `current_key_label`. There is no hook for it in [Game] yet and no
      * Android call site, so this is a public helper rather than a seam
      * method. The strings are the upstream ones.
      */
-    fun currentKeyLabel(ui: Game.Ui, state: Game.State, button: Int): String {
-        val s = state as State
+    fun currentKeyLabel(ui: Game.Ui, state: Game.State, button: Int): String {        val s = state as State
         val u = ui as Ui
         if (button != Buttons.CURSOR_SELECT && button != Buttons.CURSOR_SELECT2) {
             return ""

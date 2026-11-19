@@ -38,6 +38,39 @@ data class SpokenAction(val label: String, val button: Int)
 const val SPOKEN_WRONG = ", wrong"
 
 /**
+ * The suffix a unit text gains when the unit is part of the selection
+ * the game will act on.
+ */
+const val SPOKEN_SELECTED = ", selected"
+
+/**
+ * One digit cell in the D-01 grammar (`board-a11y-spec.md` section 4):
+ * `given 5` for a clue the player cannot change, `5` for a typed value,
+ * `pencil 1 4 7` for the marks of an empty cell, and `empty` for a cell
+ * with neither.
+ *
+ * [pencil] is the ascending list of marked digits. A cell with marks and
+ * no value speaks the marks alone, so the player hears that it is empty
+ * without a second word. The games that own digits (`keen`, `towers`,
+ * `unequal`) all call this, so one digit is spelled once.
+ */
+internal fun digitSpeech(value: Int, given: Boolean, pencil: List<Int>): String = when {
+    value != 0 && given -> "given $value"
+    value != 0 -> "$value"
+    pencil.isNotEmpty() -> "pencil ${pencil.joinToString(" ")}"
+    else -> "empty"
+}
+
+/**
+ * The digits marked in a pencil bitmask, ascending, in `1..max`.
+ *
+ * `keen` and `towers` set bit `n` for the digit `n`, so one reader
+ * serves both.
+ */
+internal fun pencilDigits(mask: Int, max: Int): List<Int> =
+    (1..max).filter { mask and (1 shl it) != 0 }
+
+/**
  * The board as a screen reader reads it, built from game state and not
  * from pixels (D-01 section 4).
  *

@@ -34,6 +34,23 @@ object Flood : Game {
     private const val COL_LOWLIGHT = 13
     private const val NCOLOURS = 14
 
+    /**
+     * The spoken name of tile colour 0..9, in the palette order of
+     * `game_colours`. D-01 section 8: one vocabulary for every game.
+     */
+    private val SPOKEN_COLOURS = listOf(
+        BoardColour.RED,
+        BoardColour.YELLOW,
+        BoardColour.GREEN,
+        BoardColour.BLUE,
+        BoardColour.ORANGE,
+        BoardColour.PURPLE,
+        BoardColour.BROWN,
+        BoardColour.LIGHT_BLUE,
+        BoardColour.LIGHT_GREEN,
+        BoardColour.PINK,
+    )
+
     private const val BORDER_L = 0x001
     private const val BORDER_R = 0x002
     private const val BORDER_U = 0x004
@@ -788,6 +805,54 @@ object Flood : Game {
         }
         if (u.cx != oldX || u.cy != oldY) return MoveResult.UiUpdate
         return MoveResult.NoEffect
+    }
+
+    /** The spoken name of tile colour 0..9, in the shared colour order. */
+    internal fun colourName(colour: Int): String =
+        SPOKEN_COLOURS.getOrNull(colour)?.spokenName ?: "unknown"
+
+    /**
+     * The board as a screen reader reads it (D-01).
+     *
+     * One unit per cell. The state is a colour, so the shared colour name
+     * is the cue (section 8), and the pointer path is one tap: any cell
+     * whose colour differs from the flooded region fills the region with
+     * its colour. A cell that already matches, or a completed board,
+     * offers no action.
+     */
+    override fun spokenBoard(
+        state: Game.State,
+        ui: Game.Ui,
+        tileSize: Int,
+    ): SpokenBoard {
+        val s = state as State
+        val u = ui as Ui
+        val t = tileSize
+        val start = s.grid[0]
+        val cells = gridSpeech(
+            width = s.width,
+            height = s.height,
+            tileSize = t,
+            left = t / 2,
+            top = t / 2,
+            summary = statusText(state, ui),
+            text = { x, y ->
+                val cursor = if (u.cursorVisible && u.cx == x && u.cy == y) {
+                    ", cursor"
+                } else {
+                    ""
+                }
+                colourName(s.colourAt(x, y)) + cursor
+            },
+            actions = { x, y ->
+                if (!s.complete && s.colourAt(x, y) != start) {
+                    listOf(SpokenAction("Fill", Buttons.LEFT_BUTTON))
+                } else {
+                    emptyList()
+                }
+            },
+        )
+        return cells.capped(cells.units.getOrNull(u.cy * s.width + u.cx))
     }
 
     /**
