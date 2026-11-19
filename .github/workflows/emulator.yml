@@ -1,0 +1,139 @@
+name: emulator
+
+# The instrumentation suite on the reference AVD (D-07).
+#
+# The suite needs a device: JNI, the activity lifecycle, real taps and
+# swipes, the accessibility tree, and the shell layout. Until this
+# workflow existed it ran on the local `puzzles_api36` AVD and on the
+# reference phone only, so a change could break a device path and stay
+# green on GitHub.
+#
+# The AVD is the reference device of `tools/perf/baseline.md`: API 36,
+# 1080x2400, 420 dpi, portrait, en-US, font scale 1.0. The hardware
+# profile is the Pixel 6 of the local AVD. No stock profile is exactly
+# 1080x2400 at 420 dpi, so the test step sets the display with
+# `wm size` and `wm density` and checks it before the suite runs.
+#
+# The pixel goldens are filtered out. `ChooserScreenshotTest` compares a
+# capture with pictures recorded on a physical phone, and those pictures
+# are not committed (D-04), so on a runner the class would skip today
+# and compare against the wrong renderer on the day the goldens land.
+# The `notClass` argument in the test step is the whole exclusion. Every
+# other class of the suite runs.
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  # A manual run is how the first verification and a re-run after a
+  # flaky failure are done without a new commit.
+  workflow_dispatch:
+
+# A new push to the same branch makes the older emulator run useless.
+concurrency:
+  group: emulator-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  instrumentation:
+    name: instrumentation (API 36, 1080x2400)
+    runs-on: ubuntu-latest
+    # The suite takes about 5 minutes on the reference phone. The native
+    # build, the emulator boot, and the suite fit in 40 minutes with a
+    # wide margin, and the bound stops a hung boot from holding a runner
+    # for the 6-hour default.
+    timeout-minutes: 40
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          # The debug version name comes from `git merge-base simon/main
+          # main`; a shallow clone would silently say UNOFFICIAL.
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up the Gradle caches
+        uses: gradle/actions/setup-gradle@v4
+
+      # Gradle configures the whole build, including the native build of
+      # :app, so the packages app/build.gradle.kts pins must be present.
+      - name: Install the SDK packages the build needs
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-36" "build-tools;35.0.0" "ndk;29.0.14206865" \
+            "platform-tools"
+
+      # The emulator needs /dev/kvm, and the runner user is not in the
+      # kvm group of the hosted image.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # The boot dominates the run, so the AVD directory and its boot
+      # snapshot are cached. A cache hit skips the creation step below.
+      - name: Cache the AVD
+        id: avd-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api36-google-apis-x86_64-1080x2400-420
+
+      - name: Create the AVD and its boot snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: puzzles_api36
+          force-avd-creation: false
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio
+            -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Saved the boot snapshot for the AVD cache."
+
+      - name: Run the instrumentation suite
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          avd-name: puzzles_api36
+          force-avd-creation: false
+          emulator-options: >-
+            -no-window -gpu swiftshader_indirect -noaudio
+            -no-boot-anim -camera-back none
+          disable-animations: true
+          # The action runs every line of `script` in its own `sh -c`,
+          # so the display setup, the suite, and the failure artefacts
+          # live in one file that can also be run by hand.
+          script: sh tools/ci/run-connected-tests.sh
+
+      - name: Upload the test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-api36
+          path: |
+            app/build/outputs/androidTest-results
+            app/build/reports/androidTests
+            build/emulator-artifacts
+          if-no-files-found: ignore
