@@ -59,7 +59,8 @@ class KotlinGamesTest {
     )
 
     /**
-     * The games enabled by the waves of 2026-11-18, in wave order.
+     * The games enabled by the waves of 2026-11-18 and 2026-11-19, in
+     * wave order. The eighth wave is the last two backends.
      */
     private val enabledGames = setOf(
         FIFTEEN, SAMEGAME, FLOOD, PEGS,
@@ -70,6 +71,7 @@ class KotlinGamesTest {
         GALAXIES, BRIDGES, UNRULY, FILLING, MINES,
         NETSLIDE, PALISADE, INERTIA, TENTS, NET, TRACKS,
         DOMINOSA, MAP, KEEN, SINGLES, PEARL, LOOPY,
+        SOLO, CUBE,
     )
 
     @Test
@@ -80,8 +82,6 @@ class KotlinGamesTest {
                 KotlinGames.handles(backend),
             )
         }
-        assertFalse(KotlinGames.handles(CUBE))
-        assertFalse(KotlinGames.handles(SOLO))
     }
 
     @Test
@@ -163,9 +163,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `cube is registered but the app still uses C`() {
+    fun `cube is registered and handled`() {
         assertEquals(Cube, KotlinGames.gameFor(CUBE))
-        assertFalse(KotlinGames.handles(CUBE))
+        assertTrue(KotlinGames.handles(CUBE))
     }
 
     @Test
@@ -235,9 +235,9 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `solo is registered but the app still uses C`() {
+    fun `solo is registered and handled`() {
         assertEquals(Solo, KotlinGames.gameFor(SOLO))
-        assertFalse(KotlinGames.handles(SOLO))
+        assertTrue(KotlinGames.handles(SOLO))
         val actual = KotlinGames.generate(SOLO, "3x3", "12345")
         assertTrue(actual.contains("GAME    :4:Solo"))
         assertTrue(actual.contains("DESC    :55:1_4c3_9b2a6_7j6a5_2b3_2e6b3a7b8e9_7b5_8a1j2_8a9b7_6c3_5"))
@@ -327,15 +327,15 @@ class KotlinGamesTest {
     }
 
     @Test
-    fun `the enabled set is exactly the seven waves`() {
+    fun `the enabled set is exactly the eight waves`() {
         val enabled = BackendName.all.filter { KotlinGames.handles(it) }.toSet()
         assertEquals(
-            "the seven waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
+            "the eight waves are fifteen, samegame, flood, pegs, sixteen, flip, " +
                 "twiddle, guess, blackbox, lightup, undead, rect, slant, range, " +
                 "towers, unequal, magnets, pattern, mosaic, signpost, untangle, " +
                 "galaxies, bridges, unruly, filling, mines, netslide, palisade, " +
                 "inertia, tents, net, tracks, dominosa, map, keen, singles, " +
-                "pearl, and loopy",
+                "pearl, loopy, solo, and cube",
             enabledGames,
             enabled,
         )
@@ -389,6 +389,8 @@ class KotlinGamesTest {
             Triple(SINGLES, "5x5de", "singles/5x5de.sgtp"),
             Triple(PEARL, "8x8de", "pearl/8x8de.sgtp"),
             Triple(LOOPY, "7x7t0de", "loopy/7x7t0de.sgtp"),
+            Triple(SOLO, "2x2", "solo/2x2.sgtp"),
+            Triple(CUBE, "c4x4", "cube/c4x4.sgtp"),
         )
         for ((backend, params, path) in cases) {
             val text = KotlinGames.generate(backend, params, "12345")

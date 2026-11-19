@@ -140,23 +140,25 @@ class BoardSemanticsTest {
 
     @Test
     fun theStatusLineIsSilentWhileTheBoardSpeaks() {
-        // The control: a C game has no board units, so its status line
-        // stays the polite live region of A-04.
-        launchCube()
-        setStatus("Moves: 1")
-        assertEquals(
-            "a C game has no board units, so its status line must stay polite",
-            View.ACCESSIBILITY_LIVE_REGION_POLITE,
-            statusLiveRegion(),
-        )
-
-        // The rule: a board with units speaks the change itself, so the
-        // status line must not say it a second time.
-        close()
+        // After D-01 wave 5 every ported backend has board units, so a
+        // board change must never be announced twice. The polite
+        // fallback for a board without units is pinned by
+        // `StatusLiveRegionTest`, which needs no device.
         launchTents()
         setStatus("Moves: 1")
         assertEquals(
             "the status line would announce a change that the board already speaks",
+            View.ACCESSIBILITY_LIVE_REGION_NONE,
+            statusLiveRegion(),
+        )
+
+        close()
+        // `cube` is the last backend with a status bar and it has units
+        // too.
+        launchCube()
+        setStatus("Moves: 1")
+        assertEquals(
+            "a unit board must keep its status line silent",
             View.ACCESSIBILITY_LIVE_REGION_NONE,
             statusLiveRegion(),
         )
@@ -222,8 +224,8 @@ class BoardSemanticsTest {
     }
 
     /**
-     * The C engine fallback: a board with no units. There is no Kotlin
-     * engine to await, so the board node is the ready signal.
+     * A `cube` launch, which now has a Kotlin engine and board units
+     * too; the board node is the ready signal.
      */
     private fun launchCube() {
         GamePlayTestSupport.clearBackendState(context, CUBE)
@@ -358,7 +360,7 @@ class BoardSemanticsTest {
         /** The frozen 8x8de tents game of seed 12345. */
         const val TENTS_ID = "8x8de:ae__ijcecgbcd,3,1,2,1,1,1,2,1,2,1,2,1,1,1,1,3"
 
-        /** The frozen 4x4 cube game of seed 12345, on the C engine. */
+        /** The frozen 4x4 cube game of seed 12345. */
         const val CUBE_ID = "c4x4:205E,4"
 
         /**

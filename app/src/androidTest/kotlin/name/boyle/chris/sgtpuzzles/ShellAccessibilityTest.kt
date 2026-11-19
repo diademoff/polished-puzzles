@@ -95,20 +95,19 @@ class ShellAccessibilityTest {
     }
 
     @Test
-    fun theStatusLineIsAPoliteLiveRegion() {
-        // Every Kotlin game has a spoken board after D-01 wave 4, so the
-        // status line as the polite live region of A-04 is checked on a
-        // game that still runs on the C engine: `cube` has a status bar
-        // and no units. A game with board units speaks its changes
-        // itself, and `BoardSemanticsTest` pins that side.
+    fun theStatusLineIsSilentForAUnitBoard() {
+        // Every ported game has a spoken board after D-01 wave 5, so the
+        // status line must not repeat a board change. The polite
+        // fallback for a board without units is pinned by
+        // `StatusLiveRegionTest`; `cube` is the last backend with a
+        // status bar and it has units too.
         val game = launch(CUBE, CUBE_ID)
-        // A C engine has no Kotlin engine to await, and its status line
-        // appears on the first draw, so the status line is the ready
+        // The status line appears on the first draw, so it is the ready
         // signal.
         val before = awaitStatusStartingWith(game, "Moves: 0")
         assertEquals(
-            "the status line '$before' is not a polite live region",
-            View.ACCESSIBILITY_LIVE_REGION_POLITE,
+            "the status line '$before' must stay silent while the board has units",
+            View.ACCESSIBILITY_LIVE_REGION_NONE,
             statusNode(game)?.liveRegion,
         )
 
@@ -120,8 +119,8 @@ class ShellAccessibilityTest {
             after.startsWith("Moves: 1"),
         )
         assertEquals(
-            "the live region was lost after a move to '$after'",
-            View.ACCESSIBILITY_LIVE_REGION_POLITE,
+            "the status line became a live region after a move to '$after'",
+            View.ACCESSIBILITY_LIVE_REGION_NONE,
             statusNode(game)?.liveRegion,
         )
     }
@@ -438,7 +437,7 @@ class ShellAccessibilityTest {
         /** A frozen Guess game: two colours, two pegs, an empty board. */
         const val GUESS_ID = "c2p2g2Bm:c2ab"
 
-        /** The frozen 4x4 cube game of seed 12345, a C game. */
+        /** The frozen 4x4 cube game of seed 12345. */
         const val CUBE_ID = "c4x4:205E,4"
 
         /** A frozen Keen game with a key bar of digits. */
