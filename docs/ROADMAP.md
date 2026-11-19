@@ -322,8 +322,8 @@ cap is added.
 Sixth wave, 2026-11-18: `galaxies`, `bridges`, `unruly`, `filling`,
 and `mines` are enabled. All five were the candidate list, so no
 reserve game was needed and `cube` waited for the eighth wave. Each
-device test is
-green at two tile sizes on the same phone and none of the five skipped.
+device test is green at two tile sizes on the same phone and none of the
+five skipped.
 None has a `Review:` deviation in `docs/DEVIATIONS.md`: `bridges` and
 `unruly` have no entry at all, `filling` is D-004, `mines` is D-002
 (the Android presets), and `galaxies` is D-023, and none of those three
