@@ -1541,7 +1541,7 @@ object Palisade : Game {
                 val index = y * w + x
                 val clue = s.shared.clues[index]
                 val words = if (clue == EMPTY) "empty" else "clue $clue"
-                val wrong = if (clueError(s, x, y)) SPOKEN_WRONG else ""
+                val wrong = if (clueError(s, u, x, y)) SPOKEN_WRONG else ""
                 val cursor = if (u.show && u.x == 2 * x + 1 && u.y == 2 * y + 1) {
                     ", cursor"
                 } else {
@@ -1642,13 +1642,21 @@ object Palisade : Game {
         return board.cappedUnits(cursor)
     }
 
-    /** True when the game marks this cell's clue as impossible. */
-    private fun clueError(s: State, x: Int, y: Int): Boolean {
+    /**
+     * True when the game marks this cell's clue as impossible, the rule
+     * of `game_redraw` with the `clear-complete-regions` preference: a
+     * full region counts its unsure borders as crossed out.
+     */
+    private fun clueError(s: State, u: Ui, x: Int, y: Int): Boolean {
         val clue = s.shared.clues[y * s.width + x]
         if (clue == EMPTY) return false
         val border = s.borderAt(x, y)
         val on = BITCOUNT[border and BORDER_MASK]
-        val off = BITCOUNT[(border shr 4) and BORDER_MASK]
+        val off = if (u.clearCompleteRegions) {
+            4 - on
+        } else {
+            BITCOUNT[(border shr 4) and BORDER_MASK]
+        }
         return on > clue || clue > 4 - off
     }
 
