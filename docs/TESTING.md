@@ -4311,10 +4311,11 @@ Jobs:
    upstream.
 2. **oracle-current** — parity against current upstream. A difference
    means behavior changed during sync.
-3. **android** — build, unit tests, lint. Instrumentation and
-   screenshots need a device and are not in the job yet.
-4. **fuzz** — scheduled, not on every PR.
-5. **upstream-diff** — vendored files were not changed.
+3. **android** — build, unit tests, lint.
+4. **emulator** — the instrumentation suite on the reference AVD, on a
+   pull request and on `main` (D-07). The device is in section 10.
+5. **fuzz** — scheduled, not on every PR.
+6. **upstream-diff** — vendored files were not changed.
 
 Requirements:
 
@@ -4342,12 +4343,33 @@ Do not use it for:
 
 CI:
 
-- one phone AVD on API 36 and one smoke AVD on API 21;
-- Gradle Managed Devices or an emulator action;
-- ATD images for speed;
-- fixed config: locale `en-US`, font scale 1.0, animations off,
-  `-no-window -no-audio -no-snapshot`, stable GPU mode;
-- keep the screenshot job separate from the fast JVM parity job.
+- one phone AVD on API 36, the reference device of
+  `tools/perf/baseline.md`: 1080x2400 at 420 dpi, portrait, en-US, font
+  scale 1.0;
+- the job is `emulator` in `.github/workflows/emulator.yml`, and it
+  runs on a pull request, on `main`, and by hand;
+- the AVD is named `puzzles_api36` and uses the Pixel 6 profile. No
+  stock profile is exactly 1080x2400 at 420 dpi, so the test step sets
+  `wm size` and `wm density` and checks both before the suite;
+- `:app:connectedDebugAndroidTest` is the only Gradle task; it builds
+  the debug and the test APK itself;
+- the three pixel cases of `ChooserScreenshotTest` are excluded with an
+  explicit `notClass` argument, because their goldens are recorded on a
+  physical phone and are not committed (D-04). Every other class runs,
+  including the accessibility tree of all 40 backends and the shell
+  layout at the reference size;
+- KVM comes from the udev rule in the emulator action, and the GPU is
+  the stable software one (`swiftshader_indirect`). Hardware
+  acceleration is not available on every runner: if the repository is
+  private, the job needs a runner that has `/dev/kvm`;
+- Gradle home, the AVD, and its boot snapshot are cached;
+- the job timeout is 40 minutes; the suite takes about 5 minutes on the
+  reference phone;
+- on failure the job keeps the JUnit XML, the HTML report, `adb
+  logcat`, and one screenshot;
+- an API 21 smoke AVD is not in the job yet. The suite has never run on
+  an API 21 image, and API 21 exists only as a 32-bit x86 image. Add it
+  as a second matrix entry after a recorded local API 21 run.
 
 Local:
 
