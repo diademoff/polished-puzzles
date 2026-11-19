@@ -2,8 +2,8 @@
 <!--
   The line between two settings sections. The outline role is the
   lightest neutral role that reaches the 3:1 UI contrast minimum, so a
-  section boundary stays visible; outlineVariant is only 1.6:1 on the
-  light surface and 1.3:1 on the dark one.
+  section boundary stays visible; outlineVariant is only 1.62:1 on the
+  light surface and 1.99:1 on the dark one.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="?attr/colorOutline" />

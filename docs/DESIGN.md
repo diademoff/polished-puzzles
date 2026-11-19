@@ -93,9 +93,9 @@ concrete instruction, without installing a tool.
 - Do not nest cards without a reason.
 - Dividers are thin. A divider that marks a section boundary uses
   `outline`, the lightest neutral role that reaches the 3:1 UI minimum
-  (4.3:1 light, 5.8:1 dark on the surface). `outlineVariant` is only
-  1.6:1 and 2.0:1 there, so it marks decoration inside a section, not a
-  boundary.
+  (measured 4.27:1 light and 5.84:1 dark on the surface).
+  `outlineVariant` measures only 1.62:1 and 1.99:1 there, so it marks
+  decoration inside a section, not a boundary.
 
 ## 7. Motion
 
@@ -110,6 +110,13 @@ concrete instruction, without installing a tool.
 ## 8. Icons and images
 
 - Material Symbols, 24dp, one style (outlined or filled) per screen.
+  The action and menu icons are Material Symbols vector drawables. They
+  keep the historical `ic_action_*` resource names: `undo`, `redo`,
+  `undo_disabled`, `redo_disabled`, `game`, `type`, `help`, `new`,
+  `restart`, `solve`, `load`, `save`, `share`, `settings`,
+  `view_as_grid`, `view_as_list`, and `swap_l_r`. `ic_content_copy`,
+  `ic_feedback`, and `ic_star` are the same conversion. A new icon is
+  converted from the same set, not added as a PNG.
 - No emoji instead of icons.
 - An icon without a label must have a `contentDescription`; a
   decorative icon uses `null`.
@@ -123,7 +130,8 @@ concrete instruction, without installing a tool.
 
 - `MaterialToolbar`; the title is the game name, not a slogan.
 - Actions: undo, redo, menu. Everything else goes into overflow.
-- In fullscreen the toolbar hides, but the action stays reachable.
+- Fullscreen hides the system bars and keeps the app toolbar and its
+  actions in place (`GamePlay.applyFullscreen`).
 
 ### Chooser
 
@@ -170,7 +178,11 @@ concrete instruction, without installing a tool.
 
 ### Help
 
-- Local HTML from assets, no JavaScript, no network.
+- Local HTML from assets, no network.
+- JavaScript is enabled for the activity's own two injections: the
+  `night` class and the bottom inset. The help pages contain no scripts,
+  and file and network access are off. Turning it off needs a
+  replacement for both injections (D-15).
 - Readable typography, dark theme, zoom.
 - External links open in the browser only after a user action.
 
@@ -197,7 +209,8 @@ Required for every screen:
 - Custom actions for undo/redo/solve when they are on screen.
 - Visible focus for keyboard and DPAD.
 - 48dp minimum; 8dp between targets.
-- Contrast 4.5:1 / 3:1.
+- Contrast 4.5:1 / 3:1. `ShellContrastTest` computes the shell token
+  ratios in both themes.
 - Font scale 200% without clipping.
 - RTL: the layout mirrors, text does not break, numbers stay readable.
 - Do not rely on color alone.
