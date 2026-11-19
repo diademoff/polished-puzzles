@@ -1,0 +1,54 @@
+# D-01 spoken table. game=lightup params= seed=12345
+# id=7x7:Be1j4e3aBeBj1e1
+rows=7
+columns=7
+summary=
+Row 1, column 1, wall
+Row 1, column 2, empty | Light (left), No light (right)
+Row 1, column 3, empty | Light (left), No light (right)
+Row 1, column 4, empty | Light (left), No light (right)
+Row 1, column 5, empty | Light (left), No light (right)
+Row 1, column 6, empty | Light (left), No light (right)
+Row 1, column 7, clue 1
+Row 2, column 1, empty | Light (left), No light (right)
+Row 2, column 2, empty | Light (left), No light (right)
+Row 2, column 3, empty | Light (left), No light (right)
+Row 2, column 4, empty | Light (left), No light (right)
+Row 2, column 5, empty | Light (left), No light (right)
+Row 2, column 6, empty | Light (left), No light (right)
+Row 2, column 7, empty | Light (left), No light (right)
+Row 3, column 1, empty | Light (left), No light (right)
+Row 3, column 2, empty | Light (left), No light (right)
+Row 3, column 3, empty | Light (left), No light (right)
+Row 3, column 4, clue 4
+Row 3, column 5, empty | Light (left), No light (right)
+Row 3, column 6, empty | Light (left), No light (right)
+Row 3, column 7, empty | Light (left), No light (right)
+Row 4, column 1, empty | Light (left), No light (right)
+Row 4, column 2, empty | Light (left), No light (right)
+Row 4, column 3, clue 3
+Row 4, column 4, empty | Light (left), No light (right)
+Row 4, column 5, wall
+Row 4, column 6, empty | Light (left), No light (right)
+Row 4, column 7, empty | Light (left), No light (right)
+Row 5, column 1, empty | Light (left), No light (right)
+Row 5, column 2, empty | Light (left), No light (right)
+Row 5, column 3, empty | Light (left), No light (right)
+Row 5, column 4, wall
+Row 5, column 5, empty | Light (left), No light (right)
+Row 5, column 6, empty | Light (left), No light (right)
+Row 5, column 7, empty | Light (left), No light (right)
+Row 6, column 1, empty | Light (left), No light (right)
+Row 6, column 2, empty | Light (left), No light (right)
+Row 6, column 3, empty | Light (left), No light (right)
+Row 6, column 4, empty | Light (left), No light (right)
+Row 6, column 5, empty | Light (left), No light (right)
+Row 6, column 6, empty | Light (left), No light (right)
+Row 6, column 7, empty | Light (left), No light (right)
+Row 7, column 1, clue 1
+Row 7, column 2, empty | Light (left), No light (right)
+Row 7, column 3, empty | Light (left), No light (right)
+Row 7, column 4, empty | Light (left), No light (right)
+Row 7, column 5, empty | Light (left), No light (right)
+Row 7, column 6, empty | Light (left), No light (right)
+Row 7, column 7, clue 1

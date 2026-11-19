@@ -42,6 +42,18 @@ class BoardSemanticsGoldenTest {
         "singles" to "5x5de",
         "unruly" to "8x8dt",
         "tents" to "8x8de",
+        "samegame" to "",
+        "flood" to "",
+        "filling" to "9x7",
+        "pegs" to "5x5random",
+        "lightup" to "",
+        "magnets" to "6x5de",
+        "range" to "9x6",
+        "towers" to "4de",
+        "unequal" to "4de",
+        "keen" to "4de",
+        "undead" to "4x4de",
+        "dominosa" to "3dt",
     )
 
     @Test

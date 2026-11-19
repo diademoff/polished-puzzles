@@ -1,0 +1,149 @@
+# D-01 spoken table. game=flood params= seed=12345
+# id=12x12:144213455020311230402553542320000102051001150511215302333534152035244051241432023324551101011211522022310121213214532552231503344231334355401013,24
+rows=12
+columns=12
+summary=0 / 24 moves
+Row 1, column 1, yellow
+Row 1, column 2, orange | Fill (left)
+Row 1, column 3, orange | Fill (left)
+Row 1, column 4, green | Fill (left)
+Row 1, column 5, yellow
+Row 1, column 6, blue | Fill (left)
+Row 1, column 7, orange | Fill (left)
+Row 1, column 8, purple | Fill (left)
+Row 1, column 9, purple | Fill (left)
+Row 1, column 10, red | Fill (left)
+Row 1, column 11, green | Fill (left)
+Row 1, column 12, red | Fill (left)
+Row 2, column 1, blue | Fill (left)
+Row 2, column 2, yellow
+Row 2, column 3, yellow
+Row 2, column 4, green | Fill (left)
+Row 2, column 5, blue | Fill (left)
+Row 2, column 6, red | Fill (left)
+Row 2, column 7, orange | Fill (left)
+Row 2, column 8, red | Fill (left)
+Row 2, column 9, green | Fill (left)
+Row 2, column 10, purple | Fill (left)
+Row 2, column 11, purple | Fill (left)
+Row 2, column 12, blue | Fill (left)
+Row 3, column 1, purple | Fill (left)
+Row 3, column 2, orange | Fill (left)
+Row 3, column 3, green | Fill (left)
+Row 3, column 4, blue | Fill (left)
+Row 3, column 5, green | Fill (left)
+Row 3, column 6, red | Fill (left)
+Row 3, column 7, red | Fill (left)
+Row 3, column 8, red | Fill (left)
+Row 3, column 9, red | Fill (left)
+Row 3, column 10, yellow
+Row 3, column 11, red | Fill (left)
+Row 3, column 12, green | Fill (left)
+Row 4, column 1, red | Fill (left)
+Row 4, column 2, purple | Fill (left)
+Row 4, column 3, yellow
+Row 4, column 4, red | Fill (left)
+Row 4, column 5, red | Fill (left)
+Row 4, column 6, yellow
+Row 4, column 7, yellow
+Row 4, column 8, purple | Fill (left)
+Row 4, column 9, red | Fill (left)
+Row 4, column 10, purple | Fill (left)
+Row 4, column 11, yellow
+Row 4, column 12, yellow
+Row 5, column 1, green | Fill (left)
+Row 5, column 2, yellow
+Row 5, column 3, purple | Fill (left)
+Row 5, column 4, blue | Fill (left)
+Row 5, column 5, red | Fill (left)
+Row 5, column 6, green | Fill (left)
+Row 5, column 7, blue | Fill (left)
+Row 5, column 8, blue | Fill (left)
+Row 5, column 9, blue | Fill (left)
+Row 5, column 10, purple | Fill (left)
+Row 5, column 11, blue | Fill (left)
+Row 5, column 12, orange | Fill (left)
+Row 6, column 1, yellow
+Row 6, column 2, purple | Fill (left)
+Row 6, column 3, green | Fill (left)
+Row 6, column 4, red | Fill (left)
+Row 6, column 5, blue | Fill (left)
+Row 6, column 6, purple | Fill (left)
+Row 6, column 7, green | Fill (left)
+Row 6, column 8, orange | Fill (left)
+Row 6, column 9, orange | Fill (left)
+Row 6, column 10, red | Fill (left)
+Row 6, column 11, purple | Fill (left)
+Row 6, column 12, yellow
+Row 7, column 1, green | Fill (left)
+Row 7, column 2, orange | Fill (left)
+Row 7, column 3, yellow
+Row 7, column 4, orange | Fill (left)
+Row 7, column 5, blue | Fill (left)
+Row 7, column 6, green | Fill (left)
+Row 7, column 7, red | Fill (left)
+Row 7, column 8, green | Fill (left)
+Row 7, column 9, blue | Fill (left)
+Row 7, column 10, blue | Fill (left)
+Row 7, column 11, green | Fill (left)
+Row 7, column 12, orange | Fill (left)
+Row 8, column 1, purple | Fill (left)
+Row 8, column 2, purple | Fill (left)
+Row 8, column 3, yellow
+Row 8, column 4, yellow
+Row 8, column 5, red | Fill (left)
+Row 8, column 6, yellow
+Row 8, column 7, red | Fill (left)
+Row 8, column 8, yellow
+Row 8, column 9, yellow
+Row 8, column 10, green | Fill (left)
+Row 8, column 11, yellow
+Row 8, column 12, yellow
+Row 9, column 1, purple | Fill (left)
+Row 9, column 2, green | Fill (left)
+Row 9, column 3, green | Fill (left)
+Row 9, column 4, red | Fill (left)
+Row 9, column 5, green | Fill (left)
+Row 9, column 6, green | Fill (left)
+Row 9, column 7, blue | Fill (left)
+Row 9, column 8, yellow
+Row 9, column 9, red | Fill (left)
+Row 9, column 10, yellow
+Row 9, column 11, green | Fill (left)
+Row 9, column 12, yellow
+Row 10, column 1, green | Fill (left)
+Row 10, column 2, yellow
+Row 10, column 3, blue | Fill (left)
+Row 10, column 4, green | Fill (left)
+Row 10, column 5, yellow
+Row 10, column 6, orange | Fill (left)
+Row 10, column 7, purple | Fill (left)
+Row 10, column 8, blue | Fill (left)
+Row 10, column 9, green | Fill (left)
+Row 10, column 10, purple | Fill (left)
+Row 10, column 11, purple | Fill (left)
+Row 10, column 12, green | Fill (left)
+Row 11, column 1, green | Fill (left)
+Row 11, column 2, blue | Fill (left)
+Row 11, column 3, yellow
+Row 11, column 4, purple | Fill (left)
+Row 11, column 5, red | Fill (left)
+Row 11, column 6, blue | Fill (left)
+Row 11, column 7, blue | Fill (left)
+Row 11, column 8, orange | Fill (left)
+Row 11, column 9, orange | Fill (left)
+Row 11, column 10, green | Fill (left)
+Row 11, column 11, blue | Fill (left)
+Row 11, column 12, yellow
+Row 12, column 1, blue | Fill (left)
+Row 12, column 2, blue | Fill (left)
+Row 12, column 3, orange | Fill (left)
+Row 12, column 4, blue | Fill (left)
+Row 12, column 5, purple | Fill (left)
+Row 12, column 6, purple | Fill (left)
+Row 12, column 7, orange | Fill (left)
+Row 12, column 8, red | Fill (left)
+Row 12, column 9, yellow
+Row 12, column 10, red | Fill (left)
+Row 12, column 11, yellow
+Row 12, column 12, blue | Fill (left)

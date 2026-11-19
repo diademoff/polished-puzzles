@@ -30,7 +30,7 @@ class SpokenBoardBoundsTest {
     )
 
     /**
-     * The backends that return a spoken board after wave 2. A backend
+     * The backends that return a spoken board after wave 3. A backend
      * outside this set must return the empty default.
      */
     private val covered = setOf(
@@ -45,6 +45,18 @@ class SpokenBoardBoundsTest {
         "singles",
         "unruly",
         "tents",
+        "samegame",
+        "flood",
+        "filling",
+        "pegs",
+        "lightup",
+        "magnets",
+        "range",
+        "towers",
+        "unequal",
+        "keen",
+        "undead",
+        "dominosa",
     )
 
     @Test

@@ -1,0 +1,30 @@
+# D-01 spoken table. game=pegs params=5x5random seed=12345
+# id=5x5:OPPOOPPPPOPPHPPOPPPPOOPPO
+rows=5
+columns=5
+summary=
+Row 1, column 1, blocked
+Row 1, column 2, peg
+Row 1, column 3, peg
+Row 1, column 4, blocked
+Row 1, column 5, blocked
+Row 2, column 1, peg
+Row 2, column 2, peg
+Row 2, column 3, peg
+Row 2, column 4, peg
+Row 2, column 5, blocked
+Row 3, column 1, peg
+Row 3, column 2, peg
+Row 3, column 3, hole
+Row 3, column 4, peg
+Row 3, column 5, peg
+Row 4, column 1, blocked
+Row 4, column 2, peg
+Row 4, column 3, peg
+Row 4, column 4, peg
+Row 4, column 5, peg
+Row 5, column 1, blocked
+Row 5, column 2, blocked
+Row 5, column 3, peg
+Row 5, column 4, peg
+Row 5, column 5, blocked

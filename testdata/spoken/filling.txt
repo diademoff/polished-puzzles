@@ -1,0 +1,68 @@
+# D-01 spoken table. game=filling params=9x7 seed=12345
+# id=9x7:a8a8a466a2b8b66a2a7777665d7b9e79c299b9c6c5b55
+rows=7
+columns=9
+summary=
+Row 1, column 1, empty | Select (left)
+Row 1, column 2, given 8
+Row 1, column 3, empty | Select (left)
+Row 1, column 4, given 8
+Row 1, column 5, empty | Select (left)
+Row 1, column 6, given 4
+Row 1, column 7, given 6, correct
+Row 1, column 8, given 6, correct
+Row 1, column 9, empty | Select (left)
+Row 2, column 1, given 2, correct
+Row 2, column 2, empty | Select (left)
+Row 2, column 3, empty | Select (left)
+Row 2, column 4, given 8
+Row 2, column 5, empty | Select (left)
+Row 2, column 6, empty | Select (left)
+Row 2, column 7, given 6, correct
+Row 2, column 8, given 6, correct
+Row 2, column 9, empty | Select (left)
+Row 3, column 1, given 2, correct
+Row 3, column 2, empty | Select (left)
+Row 3, column 3, given 7
+Row 3, column 4, given 7
+Row 3, column 5, given 7
+Row 3, column 6, given 7
+Row 3, column 7, given 6, correct
+Row 3, column 8, given 6, correct
+Row 3, column 9, given 5
+Row 4, column 1, empty | Select (left)
+Row 4, column 2, empty | Select (left)
+Row 4, column 3, empty | Select (left)
+Row 4, column 4, empty | Select (left)
+Row 4, column 5, given 7
+Row 4, column 6, empty | Select (left)
+Row 4, column 7, empty | Select (left)
+Row 4, column 8, given 9
+Row 4, column 9, empty | Select (left)
+Row 5, column 1, empty | Select (left)
+Row 5, column 2, empty | Select (left)
+Row 5, column 3, empty | Select (left)
+Row 5, column 4, empty | Select (left)
+Row 5, column 5, given 7
+Row 5, column 6, given 9
+Row 5, column 7, empty | Select (left)
+Row 5, column 8, empty | Select (left)
+Row 5, column 9, empty | Select (left)
+Row 6, column 1, given 2
+Row 6, column 2, given 9
+Row 6, column 3, given 9
+Row 6, column 4, empty | Select (left)
+Row 6, column 5, empty | Select (left)
+Row 6, column 6, given 9
+Row 6, column 7, empty | Select (left)
+Row 6, column 8, empty | Select (left)
+Row 6, column 9, empty | Select (left)
+Row 7, column 1, given 6
+Row 7, column 2, empty | Select (left)
+Row 7, column 3, empty | Select (left)
+Row 7, column 4, empty | Select (left)
+Row 7, column 5, given 5
+Row 7, column 6, empty | Select (left)
+Row 7, column 7, empty | Select (left)
+Row 7, column 8, given 5
+Row 7, column 9, given 5

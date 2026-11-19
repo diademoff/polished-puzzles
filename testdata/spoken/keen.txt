@@ -1,0 +1,21 @@
+# D-01 spoken table. game=keen params=4de seed=12345
+# id=4:__aa_4cc__aa_,d2m18d2m4s2a13
+rows=4
+columns=4
+summary=
+Row 1, column 1, empty, clue 2 divided by
+Row 1, column 2, empty, clue 18 times
+Row 1, column 3, empty, clue 2 divided by
+Row 1, column 4, empty
+Row 2, column 1, empty
+Row 2, column 2, empty
+Row 2, column 3, empty
+Row 2, column 4, empty, clue 4 times
+Row 3, column 1, empty, clue 2 minus
+Row 3, column 2, empty
+Row 3, column 3, empty, clue 13 plus
+Row 3, column 4, empty
+Row 4, column 1, empty
+Row 4, column 2, empty
+Row 4, column 3, empty
+Row 4, column 4, empty

@@ -1,0 +1,59 @@
+# D-01 spoken table. game=range params=9x6 seed=12345
+# id=9x6:7_5e4d5g8l7g9d11e8_13
+rows=6
+columns=9
+summary=
+Row 1, column 1, clue 7
+Row 1, column 2, clue 5
+Row 1, column 3, empty | Black (left), White (right)
+Row 1, column 4, empty | Black (left), White (right)
+Row 1, column 5, empty | Black (left), White (right)
+Row 1, column 6, empty | Black (left), White (right)
+Row 1, column 7, empty | Black (left), White (right)
+Row 1, column 8, clue 4
+Row 1, column 9, empty | Black (left), White (right)
+Row 2, column 1, empty | Black (left), White (right)
+Row 2, column 2, empty | Black (left), White (right)
+Row 2, column 3, empty | Black (left), White (right)
+Row 2, column 4, clue 5
+Row 2, column 5, empty | Black (left), White (right)
+Row 2, column 6, empty | Black (left), White (right)
+Row 2, column 7, empty | Black (left), White (right)
+Row 2, column 8, empty | Black (left), White (right)
+Row 2, column 9, empty | Black (left), White (right)
+Row 3, column 1, empty | Black (left), White (right)
+Row 3, column 2, empty | Black (left), White (right)
+Row 3, column 3, clue 8
+Row 3, column 4, empty | Black (left), White (right)
+Row 3, column 5, empty | Black (left), White (right)
+Row 3, column 6, empty | Black (left), White (right)
+Row 3, column 7, empty | Black (left), White (right)
+Row 3, column 8, empty | Black (left), White (right)
+Row 3, column 9, empty | Black (left), White (right)
+Row 4, column 1, empty | Black (left), White (right)
+Row 4, column 2, empty | Black (left), White (right)
+Row 4, column 3, empty | Black (left), White (right)
+Row 4, column 4, empty | Black (left), White (right)
+Row 4, column 5, empty | Black (left), White (right)
+Row 4, column 6, empty | Black (left), White (right)
+Row 4, column 7, clue 7
+Row 4, column 8, empty | Black (left), White (right)
+Row 4, column 9, empty | Black (left), White (right)
+Row 5, column 1, empty | Black (left), White (right)
+Row 5, column 2, empty | Black (left), White (right)
+Row 5, column 3, empty | Black (left), White (right)
+Row 5, column 4, empty | Black (left), White (right)
+Row 5, column 5, empty | Black (left), White (right)
+Row 5, column 6, clue 9
+Row 5, column 7, empty | Black (left), White (right)
+Row 5, column 8, empty | Black (left), White (right)
+Row 5, column 9, empty | Black (left), White (right)
+Row 6, column 1, empty | Black (left), White (right)
+Row 6, column 2, clue 11
+Row 6, column 3, empty | Black (left), White (right)
+Row 6, column 4, empty | Black (left), White (right)
+Row 6, column 5, empty | Black (left), White (right)
+Row 6, column 6, empty | Black (left), White (right)
+Row 6, column 7, empty | Black (left), White (right)
+Row 6, column 8, clue 8
+Row 6, column 9, clue 13

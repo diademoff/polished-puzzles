@@ -1,0 +1,25 @@
+# D-01 spoken table. game=dominosa params=3dt seed=12345
+# id=3:01012311032222033310
+rows=4
+columns=5
+summary=
+Row 1, column 1, 0
+Row 1, column 2, 1
+Row 1, column 3, 0
+Row 1, column 4, 1
+Row 1, column 5, 2
+Row 2, column 1, 3
+Row 2, column 2, 1
+Row 2, column 3, 1
+Row 2, column 4, 0
+Row 2, column 5, 3
+Row 3, column 1, 2
+Row 3, column 2, 2
+Row 3, column 3, 2
+Row 3, column 4, 2
+Row 3, column 5, 0
+Row 4, column 1, 3
+Row 4, column 2, 3
+Row 4, column 3, 3
+Row 4, column 4, 1
+Row 4, column 5, 0

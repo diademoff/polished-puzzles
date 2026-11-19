@@ -1,0 +1,40 @@
+# D-01 spoken table. game=undead params=4x4de seed=12345
+# id=4x4:2,4,2,LbRRdLaLaLRR,0,1,4,0,0,4,0,0,0,1,1,3,0,2,0,0
+rows=4
+columns=4
+summary=
+Row 1, column 1, mirror left
+Row 1, column 2, empty
+Row 1, column 3, empty
+Row 1, column 4, mirror right
+Row 2, column 1, mirror right
+Row 2, column 2, empty
+Row 2, column 3, empty
+Row 2, column 4, empty
+Row 3, column 1, empty
+Row 3, column 2, mirror left
+Row 3, column 3, empty
+Row 3, column 4, mirror left
+Row 4, column 1, empty
+Row 4, column 2, mirror left
+Row 4, column 3, mirror right
+Row 4, column 4, mirror right
+clue 0 | Done (left)
+clue 1 | Done (left)
+clue 4 | Done (left)
+clue 0 | Done (left)
+clue 3 | Done (left)
+clue 1 | Done (left)
+clue 1 | Done (left)
+clue 0 | Done (left)
+clue 0 | Done (left)
+clue 0 | Done (left)
+clue 2 | Done (left)
+clue 0 | Done (left)
+clue 0 | Done (left)
+clue 4 | Done (left)
+clue 0 | Done (left)
+clue 0 | Done (left)
+ghosts, 0 of 2
+vampires, 0 of 4
+zombies, 0 of 2
