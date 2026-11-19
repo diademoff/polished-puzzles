@@ -1,0 +1,21 @@
+# D-01 spoken table. game=cube params=c4x4 seed=12345
+# id=c4x4:205E,4
+rows=4
+columns=4
+summary=Moves: 0
+Row 1, column 1, empty | up (left)
+Row 1, column 2, empty | up (left)
+Row 1, column 3, blue | right (left)
+Row 1, column 4, empty | right (left)
+Row 2, column 1, empty, cursor
+Row 2, column 2, empty | right (left)
+Row 2, column 3, empty | right (left)
+Row 2, column 4, empty | right (left)
+Row 3, column 1, empty | down (left)
+Row 3, column 2, blue | down (left)
+Row 3, column 3, empty | right (left)
+Row 3, column 4, blue | right (left)
+Row 4, column 1, blue | down (left)
+Row 4, column 2, blue | down (left)
+Row 4, column 3, blue | down (left)
+Row 4, column 4, empty | right (left)

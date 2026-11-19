@@ -35,8 +35,17 @@ class SpokenBoardTest {
 
     @Test
     fun `a game without the seam returns an empty board`() {
-        val state = Cube.newState(Cube.defaultParams(), "")
-        val board = Cube.spokenBoard(state, Cube.newUi(state), TILE)
+        // Every ported game has the seam now, so this pins the default
+        // hook with a game that delegates to `cube` and keeps it.
+        val plain = object : Game by Cube {
+            override fun spokenBoard(
+                state: Game.State,
+                ui: Game.Ui,
+                tileSize: Int,
+            ): SpokenBoard = super<Game>.spokenBoard(state, ui, tileSize)
+        }
+        val state = plain.newState(plain.defaultParams(), "205E,4")
+        val board = plain.spokenBoard(state, plain.newUi(state), TILE)
         assertEquals(SpokenBoard(0, 0, "", emptyList()), board)
         assertTrue(board.units.isEmpty())
     }

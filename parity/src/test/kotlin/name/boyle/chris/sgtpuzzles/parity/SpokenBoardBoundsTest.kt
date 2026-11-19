@@ -73,7 +73,18 @@ class SpokenBoardBoundsTest {
         "inertia",
         "galaxies",
         "pattern",
+        // Wave 5: the last two backends.
+        "solo",
+        "cube",
     )
+
+    /**
+     * The backends whose cell grid is not a rectangle at every preset.
+     * `cube` lays the cube solid out as a rectangle and the other three
+     * solids as rows of triangles, so a preset may report no grid at
+     * all; a unit then names its row and triangle in its text.
+     */
+    private val shapedCells = setOf("cube")
 
     /**
      * The backends whose units are not one per cell, so their unit count
@@ -101,6 +112,7 @@ class SpokenBoardBoundsTest {
     @Test
     fun `every preset of every ported game reports a bounded board`() {
         var checked = 0
+        var shapedGridSeen = false
         for (game in PortedGames.all) {
             val entries = entries(game)
             assertTrue("${game.backendName} has no golden entry", entries.isNotEmpty())
@@ -123,7 +135,12 @@ class SpokenBoardBoundsTest {
                     assertInside(where, unit, size.width, size.height)
                 }
 
-                if (game.backendName in noGrid) {
+                // A game with no cell grid, and a shaped game at a preset
+                // whose cells are not a rectangle, report no grid at all.
+                val shapeless = game.backendName in noGrid ||
+                    (game.backendName in shapedCells &&
+                        (board.rows == 0 || board.columns == 0))
+                if (shapeless) {
                     assertTrue("$where: a board without a cell grid has rows", board.rows == 0)
                     assertTrue("$where: a board without a cell grid has columns", board.columns == 0)
                     for (unit in board.units) {
@@ -141,6 +158,7 @@ class SpokenBoardBoundsTest {
                     checked++
                     continue
                 }
+                if (game.backendName in shapedCells) shapedGridSeen = true
 
                 assertTrue("$where: the grid has no rows", board.rows > 0)
                 assertTrue("$where: the grid has no columns", board.columns > 0)
@@ -165,6 +183,7 @@ class SpokenBoardBoundsTest {
             }
         }
         assertTrue("checked only $checked boards", checked >= PortedGames.all.size)
+        assertTrue("no shaped board reported its rectangular preset", shapedGridSeen)
     }
 
     private fun assertGrid(where: String, board: SpokenBoard) {

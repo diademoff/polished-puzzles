@@ -70,6 +70,9 @@ class BoardSemanticsGoldenTest {
         "inertia" to "10x8",
         "galaxies" to "7x7dn",
         "pattern" to "10x10",
+        // Wave 5: the last two backends.
+        "cube" to "c4x4",
+        "solo" to "3x3",
     )
 
     @Test
